@@ -158,6 +158,37 @@
         font-family: 'Arial Black', sans-serif;
         margin-bottom: 20px;
         box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        position: relative;
+        overflow: hidden;
+      }
+      .scoreboard.scoring {
+        box-shadow: 0 0 20px gold;
+      }
+      .score-banner {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: gold;
+        color: black;
+        font-size: 48px;
+        font-weight: bold;
+        text-shadow: 0 0 10px #fff;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s ease;
+      }
+      .score-banner.show {
+        opacity: 1;
+        animation: flash 0.5s alternate 4;
+      }
+      @keyframes flash {
+        from { background: gold; color: black; }
+        to { background: orange; color: white; }
       }
       .scoreboard .team {
         text-align: center;
