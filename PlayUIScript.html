@@ -182,9 +182,7 @@
         } else {
           newDown++;
           if (newDown > 4) {
-            result = "TO on Downs";
-            const newPossession = state.Possession === "Home" ? "Away" : "Home";
-            updateGameState(1, 10, newPossession, newBall, state.BallOn, state.BallOn, playerName, carryResult.yards, tackler, result, predicted);
+            handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted);
           } else {
             updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
           }
@@ -213,6 +211,14 @@
         }
         updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
         return { newDown: 1, newDist: 10 };
+      }
+
+      function handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted){
+          result = "TO on Downs";
+          newBall = 100 - newBall; 
+          const newPossession = state.Possession === "Home" ? "Away" : "Home";
+          updateGameState(1, 10, newPossession, newBall, state.BallOn, state.BallOn, playerName, carryResult.yards, tackler, result, predicted);
+          loadPlayers();
       }
 
       function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted){
