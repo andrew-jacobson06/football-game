@@ -177,7 +177,7 @@
     let newDown = state.Down;
     let newDist = state.Distance - yardDelta;
 
-    let result = "";
+    let result = "Normal";
 
     let recordedYards = yardDelta;
     if (touchdown) {
@@ -226,7 +226,8 @@
 
     const newPossession = state.Possession === "Home" ? "Away" : "Home";
     const newBallOn = newPossession === "Home" ? 25 : 75;
-    updateGameState(1, 10, newPossession, newBall, newBall, newBall, playerName, carryResult.yards, tackler, null, predicted);
+    updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, playerName, carryResult.yards, tackler, null, predicted);
+    loadPlayers();
   }
 
   async function handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted) {
@@ -282,7 +283,9 @@
       ballOn: state.BallOn,
       homeScore: state.HomeScore,
       awayScore: state.AwayScore,
-      driveStart: state.DriveStart
+      driveStart: state.DriveStart,
+      previous: state.Previous,
+      possession: state.Possession
     });
   }
 
@@ -466,6 +469,7 @@
       // Handle drive line based on direction
       if (state.Possession == "Home") {
         drive.style.left = `${drivePX}px`;
+        drive.style.right = `auto`;
         drive.style.width = `${prevPX - drivePX}px`;
         driveDot.style.right = 'auto';
         driveDot.style.left = '0';
@@ -473,6 +477,7 @@
         drivePX = 1200 - drivePX;
         prevPX = 1200 - prevPX;
         currPX = 1200 - currPX;
+        drive.style.left = `auto`;
         drive.style.right = `${drivePX}px`;
         drive.style.width = `${prevPX - drivePX}px`;
         driveDot.style.right = '0';
@@ -498,10 +503,12 @@
           lastDot.style.right = `auto`;
           lastPlay.style.left = `${prevPX}px`;
           arrow.style.left = `0px`;
+          arrow.style.right = `auto`;
         } else{
           lastDot.style.right = `0`;
           lastDot.style.left = `auto`;
           lastPlay.style.right = `${prevPX}px`;
+          arrow.style.left = `auto`;
           arrow.style.right = `0px`;
         }
 
@@ -514,24 +521,37 @@
             if (state.Possession == "Home") {
               lastPlay.style.transition = "width 1.4s ease, left 1.4s ease";
               arrow.style.transition = "left 1.4s ease";
+              lastPlay.style.left = `${prevPX}px`;
+              lastPlay.style.right = `auto`;
               lastPlay.style.width = `${currPX - prevPX}px`;
               arrow.style.left = `${(currPX - prevPX) - 10}px`;
+              arrow.style.right = `auto`;
               arrow.style.transform = "rotate(0deg)";
             } else {
               lastPlay.style.transition = "width 1.4s ease, right 1.4s ease";
               arrow.style.transition = "right 1.4s ease";
+              lastPlay.style.left = `auto`;
               lastPlay.style.right = `${prevPX}px`;
-              lastPlay.style.width = `${currPX - prevPX}px`;
+              lastPlay.style.width = `${(currPX - prevPX)}px`;
+              arrow.style.left = `auto`;
               arrow.style.right = `${(currPX - prevPX) - 10}px`;
               arrow.style.transform = "rotate(180deg)";
             }
-            const onEnd = (e) => {
-              if (e.propertyName === 'width') {
-                lastPlay.removeEventListener('transitionend', onEnd);
+            const playWidth = currPX - prevPX;
+            if (playWidth <= 0) {
+              // No animation to wait for; resolve manually after short delay
+              setTimeout(() => {
                 resolve();
-              }
-            };
-            lastPlay.addEventListener('transitionend', onEnd);
+              }, 300);
+            } else {
+              const onEnd = (e) => {
+                if (e.propertyName === 'width') {
+                  lastPlay.removeEventListener('transitionend', onEnd);
+                  resolve();
+                }
+              };
+              lastPlay.addEventListener('transitionend', onEnd);
+            }
           }, 50);
         } else {
           lastDot.style.opacity = arrow.style.opacity = 0;

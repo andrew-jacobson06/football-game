@@ -259,7 +259,7 @@ function switchPossession(fromTurnover = false) {
   });
 }
 
-function pushGameState({ gameId, quarter, down, distance, ballOn, homeScore, awayScore, driveStart }) {
+function pushGameState({ gameId, quarter, down, distance, ballOn, homeScore, awayScore, driveStart, previous, possession }) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Games');
   if (!sheet) {
     throw new Error("Sheet 'Games' not found.");
@@ -280,7 +280,9 @@ function pushGameState({ gameId, quarter, down, distance, ballOn, homeScore, awa
     BallOn: ballOn,
     HomeScore: homeScore,
     AwayScore: awayScore,
-    DriveStart: driveStart
+    DriveStart: driveStart,
+    Previous: previous,
+    Possession: possession
   };
 
   Object.keys(updates).forEach(key => {
