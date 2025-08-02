@@ -103,13 +103,16 @@
         }
       }
       function animatePlay(){
+        // use current game state to drive the animation in the proper direction
         show3DDrive(state.DriveStart, state.Previous, state.BallOn, playType = 'run', passComplete = true); //CHANGE - dont hardcode run and pass
       }
 
       function formatBallOn(yard) {
         yard = parseInt(yard, 10);
-        if (yard <= 50) return "own " + yard;
-        return "opp " + (100 - yard);
+        // Convert field position to the perspective of the team with the ball
+        const perspectiveYard = state.Possession === "Home" ? yard : 100 - yard;
+        if (perspectiveYard <= 50) return "own " + perspectiveYard;
+        return "opp " + (100 - perspectiveYard);
       }
 
       function loadPlayers() {
@@ -162,35 +165,43 @@
         const carryResult = simulateSingleCarry(rbStats);
         const predicted = predictPlayType(state.Down, state.Distance);
 
-        const newBall = Math.min(100, Math.max(1, state.BallOn + carryResult.yards));
-        const touchdown = state.BallOn < 100 && newBall >= 100;
+        const yardDelta = carryResult.yards;
+        // Home drives left ➡ right (0 -> 100); Away drives right ➡ left (100 -> 0)
+        const newBall = state.Possession === "Home"
+          ? Math.min(100, Math.max(0, state.BallOn + yardDelta))
+          : Math.max(0, Math.min(100, state.BallOn - yardDelta));
+        const touchdown = state.Possession === "Home"
+          ? (state.BallOn < 100 && newBall >= 100)
+          : (state.BallOn > 0 && newBall <= 0);
 
         let newDown = state.Down;
-        let newDist = state.Distance - carryResult.yards;
+        let newDist = state.Distance - yardDelta;
 
         let result = "";
 
+        let recordedYards = yardDelta;
         if (touchdown) {
           const tdOutcome = handleTouchdown(newBall, playerName, carryResult, tackler, predicted);
           newDown = tdOutcome.newDown;
           newDist = tdOutcome.newDist;
+          recordedYards = carryResult.yards; // handleTouchdown adjusts yards
         } else if (newDist <= 0) {
           result = "First Down";
           newDown = 1;
           newDist = 10;
-          updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
+          updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
         } else {
           newDown++;
           if (newDown > 4) {
             handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted);
           } else {
-            updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
+            updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
           }
         }
 
         applyFatigue(playerName, "Run");
 
-        updateFrontendStats(playerName, carryResult.yards, touchdown);
+        updateFrontendStats(playerName, recordedYards, touchdown);
         console.log(carryResult);
 
         document.getElementById("result").innerHTML = `<strong>${rbStats.name}</strong> ran for <strong>${carryResult.yards} yards</strong><br/><br/>` +
@@ -203,7 +214,8 @@
 
       function handleTouchdown(newBall, playerName, carryResult, tackler, predicted) {
         const result = "Touchdown";
-        carryResult.yards = 100 - state.BallOn;
+        // Distance covered to reach the goal line differs by team direction
+        carryResult.yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
         if (state.Possession === "Home") {
           state.HomeScore = (parseInt(state.HomeScore, 10) || 0) + 6;
         } else if (state.Possession === "Away") {
@@ -215,9 +227,8 @@
 
       function handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted){
           result = "TO on Downs";
-          newBall = 100 - newBall; 
           const newPossession = state.Possession === "Home" ? "Away" : "Home";
-          updateGameState(1, 10, newPossession, newBall, state.BallOn, state.BallOn, playerName, carryResult.yards, tackler, result, predicted);
+          updateGameState(1, 10, newPossession, newBall, state.BallOn, newBall, playerName, carryResult.yards, tackler, result, predicted);
           loadPlayers();
       }
 
@@ -440,8 +451,15 @@
         const prevPX = (prevYard * 10) + 100;
         const currPX = (currentYard * 10) + 100;
         const drive = document.getElementById("drive3D");
-        drive.style.left = `${drivePX}px`;
-        drive.style.width = `${prevPX - drivePX}px`;
+        // Handle drive line based on direction
+        if (startYard <= prevYard) {
+          drive.style.left = `${drivePX}px`;
+          drive.style.width = `${prevPX - drivePX}px`;
+        } else {
+          drive.style.left = `${prevPX}px`;
+          drive.style.width = `${drivePX - prevPX}px`;
+        }
+
         const lastPlay = document.getElementById("lastPlayMarker");
         const lastDot = lastPlay.querySelector(".last-dot");
         const arrow = lastPlay.querySelector(".drive-arrow");
@@ -464,10 +482,19 @@
             lastPlay.style.height = `6px`;
             arrow.style.top = `-10px`;
             setTimeout(() => {
-              lastPlay.style.transition = "width 1.4s ease";
+              // Animate based on direction of play
+              lastPlay.style.transition = "width 1.4s ease, left 1.4s ease";
               arrow.style.transition = "left 1.4s ease";
-              lastPlay.style.width = `${currPX - prevPX}px`;
-              arrow.style.left = `${(currPX - prevPX) - 10}px`;
+              if (currPX >= prevPX) {
+                lastPlay.style.width = `${currPX - prevPX}px`;
+                arrow.style.left = `${(currPX - prevPX) - 10}px`;
+                arrow.style.transform = "rotate(0deg)";
+              } else {
+                lastPlay.style.left = `${currPX}px`;
+                lastPlay.style.width = `${prevPX - currPX}px`;
+                arrow.style.left = `${(prevPX - currPX) - 10}px`;
+                arrow.style.transform = "rotate(180deg)";
+              }
             }, 50);
           } else {
             lastDot.style.opacity = arrow.style.opacity = 0;
