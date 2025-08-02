@@ -4,9 +4,15 @@
     <base target="_top" />
     <?!= include('PlayUIstyle'); ?> 
   </head>
-  <body>    
-    <div id="scoreboard" class="scoreboard">
-      <div id="scoreBanner" class="score-banner"></div>
+  <body>
+    <div class="tabs">
+      <button class="tab-button active" data-tab="tracker">Game Tracker</button>
+      <button class="tab-button" data-tab="log">Play Log</button>
+    </div>
+
+    <div id="tracker" class="tab-content active">
+      <div id="scoreboard" class="scoreboard">
+        <div id="scoreBanner" class="score-banner"></div>
       <div class="team">
         <div class="team-name" id="home">Home</div>
         <div class="score-row">
@@ -24,16 +30,16 @@
           <div id="scoreAway" class="score">0</div>
         </div>
       </div>
-    </div>
+      </div>
 
-    <div class="game-info">
-      <span><strong>Down:</strong> <span id="down">...</span></span>
-      <span><strong>Distance:</strong> <span id="distance">...</span></span>
-      <span><strong>Ball On:</strong> <span id="ballOn">...</span></span>
-    </div>
+      <div class="game-info">
+        <span><strong>Down:</strong> <span id="down">...</span></span>
+        <span><strong>Distance:</strong> <span id="distance">...</span></span>
+        <span><strong>Ball On:</strong> <span id="ballOn">...</span></span>
+      </div>
 
-    <div class="field-wrapper">
-      <div id="field3D">
+      <div class="field-wrapper">
+        <div id="field3D">
         <!-- Yard lines -->
         <div class="yardline" style="left: 100px;"></div>
         <div class="yardline" style="left: 200px;">10</div>
@@ -59,23 +65,21 @@
         <canvas id="arcCanvas" width="1200" height="180" style="position: absolute; top: 0; left: 0; z-index: 1;"></canvas>
         <div id="catchPoint" style="position: absolute;  font-size: 22px;  color: black;  opacity: 0;  z-index: 4;  pointer-events: none;  transition: opacity 0.5s ease;"></div>
       </div>
-    </div>
+        </div>
 
-    <label>Select Player:
-      <select id="playerDropdown"></select>
-    </label>
+        <label>Select Player:
+          <select id="playerDropdown"></select>
+        </label>
 
-    <button onclick="runPlay()">▶️ Run Play</button>
-    <button onclick="nextDrive()">🔁 Next Drive</button>
+        <button onclick="runPlay()">▶️ Run Play</button>
+        <button onclick="nextDrive()">🔁 Next Drive</button>
 
-    <div id="result" class="result-box"></div>
+        <div id="result" class="result-box"></div>
 
-    <div id="playTimeline" class="play-timeline"></div>
-
-    <div id="fullStatsPanel" class="full-stats-panel">
-    <div class="stats-header">Session Stats</div>
-    <div class="stats-table-container">
-      <table class="stats-table" id="statsTable">
+        <div id="fullStatsPanel" class="full-stats-panel">
+        <div class="stats-header">Session Stats</div>
+        <div class="stats-table-container">
+          <table class="stats-table" id="statsTable">
         <thead>
           <tr>
             <th>Player</th>
@@ -89,8 +93,25 @@
       <tbody id="statsTableBody">
         <!-- rows added dynamically -->
       </tbody>
-      </table>
+          </table>
+        </div>
+      </div>
     </div>
+
+    <div id="log" class="tab-content">
+      <div class="play-log-card">
+        <table class="play-log-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Play</th>
+              <th>Offense</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody id="playTimeline"></tbody>
+        </table>
+      </div>
     </div>
 
     <?!= include('PlayUIScript'); ?>

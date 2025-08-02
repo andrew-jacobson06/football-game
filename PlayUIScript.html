@@ -9,6 +9,18 @@
   let gameId = 1;
   let playHistory = [];
 
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.tab-button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        const target = document.getElementById(btn.dataset.tab);
+        if (target) target.classList.add('active');
+      });
+    });
+  });
+
   function toggleMenu() {
     document.getElementById('playerMenu').classList.toggle('open');
   }
@@ -148,9 +160,10 @@
       const time = new Date(play.Timestamp).toLocaleTimeString();
       const downDist = formatDownDistance(play.Down, play.Distance);
       const text = buildPlayText(play);
-      const row = document.createElement("div");
-      row.className = "play-row";
-      row.innerHTML = `<div class="play-time">${time}</div><div class="play-desc"><div class="play-down">${downDist}</div><div class="play-text">${text}</div></div>`;
+      const offense = play.Possession || "";
+      const score = `${play.HomeScore !== undefined ? play.HomeScore : state.HomeScore} - ${play.AwayScore !== undefined ? play.AwayScore : state.AwayScore}`;
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${time}</td><td><div class="play-down">${downDist}</div><div class="play-text">${text}</div></td><td>${offense}</td><td>${score}</td>`;
       container.appendChild(row);
     });
   }
@@ -297,7 +310,10 @@
       Result: result || "Normal",
       NewBallOn: ballOn,
       Tackler: tackler,
-      Possession: state.Possession
+      Possession: state.Possession,
+      HomeScore: state.HomeScore,
+      AwayScore: state.AwayScore,
+      PlayType: "Run"
     };
     playHistory.push(localPlay);
     renderPlayTimeline();
@@ -320,7 +336,9 @@
       newdown: down,
       newdist: distance,
       newballon: ballOn,
-      drivestart: state.DriveStart
+      drivestart: state.DriveStart,
+      homescore: state.HomeScore,
+      awayscore: state.AwayScore
     });
   }
 

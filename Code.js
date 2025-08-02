@@ -179,7 +179,9 @@ function logPlayHistory(play) {
     newdown,
     newdist,
     newballon,
-    drivestart
+    drivestart,
+    homescore,
+    awayscore
   } = play;
 
   // Convert ISO string to Date object if needed
@@ -203,7 +205,9 @@ function logPlayHistory(play) {
     Number(newdown) || 0,
     Number(newdist) || 0,
     Number(newballon) || 0,
-    Number(drivestart) || 0
+    Number(drivestart) || 0,
+    Number(homescore) || 0,
+    Number(awayscore) || 0
   ]);
 }
 
