@@ -41,7 +41,7 @@
       loadPlayersTraits(function () {
         loadSettings(function () {
           google.script.run
-            .withSuccessHandler(function (data) {
+            .withSuccessHandler(async function (data) {
               console.log("✅ Loaded play history", data);
               playHistory = data;
               frontendStats = [];
@@ -76,6 +76,7 @@
                 console.log("✅ Rendering stats for", lastPlayer);
                 renderFullStatsPanel(lastPlayer);
               }
+              await animatePlay();
             })
             .withFailureHandler(function (error) {
               console.error("❌ Failed to load play history:", error.message);
@@ -87,7 +88,6 @@
       console.error("❌ Failed to load game state:", error.message);
     }).getGameState(gameId);
 
-    animatePlay();
   }
 
 
@@ -102,9 +102,9 @@
       }
     }
   }
-  function animatePlay() {
+  async function animatePlay() {
     // use current game state to drive the animation in the proper direction
-    show3DDrive(state.DriveStart, state.Previous, state.BallOn, playType = 'run', passComplete = true); //CHANGE - dont hardcode run and pass
+    await show3DDrive(state.DriveStart, state.Previous, state.BallOn, playType = 'run', passComplete = true); //CHANGE - dont hardcode run and pass
   }
 
   function formatBallOn(yard) {
@@ -155,7 +155,7 @@
   }
 
   // === MAIN PLAY ===
-  function runPlay() {
+  async function runPlay() {
     const playerName = document.getElementById("playerDropdown").value;
     if (!playerName) return;
 
@@ -181,21 +181,21 @@
 
     let recordedYards = yardDelta;
     if (touchdown) {
-      const tdOutcome = handleTouchdown(newBall, playerName, carryResult, tackler, predicted);
+      await handleTouchdown(newBall, playerName, carryResult, tackler, predicted);
       recordedYards = carryResult.yards; // handleTouchdown adjusts yards
     } else if (newDist <= 0) {
       result = "First Down";
       newDown = 1;
       newDist = 10;
       updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
-      animatePlay();
+      await animatePlay();
     } else {
       newDown++;
       if (newDown > 4) {
-        handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted);
+        await handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted);
       } else {
         updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
-        animatePlay();
+        await animatePlay();
       }
     }
 
@@ -211,7 +211,7 @@
     //refreshUI();
   }
 
-  function handleTouchdown(newBall, playerName, carryResult, tackler, predicted) {
+  async function handleTouchdown(newBall, playerName, carryResult, tackler, predicted) {
     const result = "Touchdown";
     // Distance covered to reach the goal line differs by team direction
     carryResult.yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
@@ -222,18 +222,18 @@
     }
     updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
 
-    animatePlay();
+    await animatePlay();
 
     const newPossession = state.Possession === "Home" ? "Away" : "Home";
     const newBallOn = newPossession === "Home" ? 25 : 75;
     updateGameState(1, 10, newPossession, newBall, newBall, newBall, playerName, carryResult.yards, tackler, null, predicted);
   }
 
-  function handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted) {
+  async function handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted) {
     result = "TO on Downs";
     updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
 
-    animatePlay();
+    await animatePlay();
 
     const newPossession = state.Possession === "Home" ? "Away" : "Home";
     updateGameState(1, 10, newPossession, newBall, newBall, newBall, playerName, carryResult.yards, tackler, null, predicted);
@@ -457,123 +457,137 @@
 
   //UI Functions ONLY - ANIMATIONS BELOW!
   function show3DDrive(startYard, prevYard, currentYard, playType = 'run', passComplete = true) {
-    let drivePX = (startYard * 10) + 100;
-    let prevPX = (prevYard * 10) + 100;
-    let currPX = (currentYard * 10) + 100;
-    let drive = document.getElementById("drive3D");
-    const driveDot = drive.querySelector(".drive-dot");
-    // Handle drive line based on direction
-    if (state.Possession == "Home") {
-      drive.style.left = `${drivePX}px`;
-      drive.style.width = `${prevPX - drivePX}px`;
-      driveDot.style.right = 'auto';
-      driveDot.style.left = '0';
-    } else {
-      drivePX = 1200 - drivePX;
-      prevPX = 1200 - prevPX;
-      currPX = 1200 - currPX;
-      drive.style.right = `${drivePX}px`;
-      drive.style.width = `${prevPX - drivePX}px`;
-      driveDot.style.right = '0';
-      driveDot.style.left = 'auto';
-    }
-
-    const lastPlay = document.getElementById("lastPlayMarker");
-    const lastDot = lastPlay.querySelector(".last-dot");
-    const arrow = lastPlay.querySelector(".drive-arrow");
-    const catchPoint = document.getElementById("catchPoint");
-    catchPoint.style.opacity = 0; // Hide previous catch point immediately
-    // Fade out old marker
-    lastPlay.style.opacity = lastDot.style.opacity = arrow.style.opacity = 0;
-    setTimeout(() => {
-      lastPlay.style.transition = "none";
-      lastPlay.style.backgroundColor = playType === 'pass' ? 'transparent' : 'black';
-      lastPlay.style.width = `0px`;
-      lastPlay.style.opacity = 1;
-      lastDot.style.opacity = 1;
-      arrow.style.opacity = 1;
-      if(state.Possession == "Home"){
-        lastDot.style.left = `0`;
-        lastDot.style.right = `auto`;
-        lastPlay.style.left = `${prevPX}px`;
-        arrow.style.left = `0px`;
-      } else{
-        lastDot.style.right = `0`;
-        lastDot.style.left = `auto`;
-        lastPlay.style.right = `${prevPX}px`;
-        arrow.style.right = `0px`;
-      }
-
-      if (playType === 'run') {
-        lastPlay.style.top = `50%`;
-        lastPlay.style.height = `6px`;
-        arrow.style.top = `-10px`;
-        setTimeout(() => {
-          // Animate based on direction of play
-          if (state.Possession == "Home") {
-            lastPlay.style.transition = "width 1.4s ease, left 1.4s ease";
-            arrow.style.transition = "left 1.4s ease";
-            lastPlay.style.width = `${currPX - prevPX}px`;
-            arrow.style.left = `${(currPX - prevPX) - 10}px`;
-            arrow.style.transform = "rotate(0deg)";
-          } else {
-            lastPlay.style.transition = "width 1.4s ease, right 1.4s ease";
-            arrow.style.transition = "right 1.4s ease";
-            lastPlay.style.right = `${prevPX}px`;
-            lastPlay.style.width = `${currPX - prevPX}px`;
-            arrow.style.right = `${(currPX - prevPX) - 10}px`;
-            arrow.style.transform = "rotate(180deg)";
-          }
-        }, 50);
+    return new Promise(resolve => {
+      let drivePX = (startYard * 10) + 100;
+      let prevPX = (prevYard * 10) + 100;
+      let currPX = (currentYard * 10) + 100;
+      let drive = document.getElementById("drive3D");
+      const driveDot = drive.querySelector(".drive-dot");
+      // Handle drive line based on direction
+      if (state.Possession == "Home") {
+        drive.style.left = `${drivePX}px`;
+        drive.style.width = `${prevPX - drivePX}px`;
+        driveDot.style.right = 'auto';
+        driveDot.style.left = '0';
       } else {
-        lastDot.style.opacity = arrow.style.opacity = 0;
-        drawPassArc(prevPX, currPX, passComplete);
+        drivePX = 1200 - drivePX;
+        prevPX = 1200 - prevPX;
+        currPX = 1200 - currPX;
+        drive.style.right = `${drivePX}px`;
+        drive.style.width = `${prevPX - drivePX}px`;
+        driveDot.style.right = '0';
+        driveDot.style.left = 'auto';
       }
-    }, 400);
+
+      const lastPlay = document.getElementById("lastPlayMarker");
+      const lastDot = lastPlay.querySelector(".last-dot");
+      const arrow = lastPlay.querySelector(".drive-arrow");
+      const catchPoint = document.getElementById("catchPoint");
+      catchPoint.style.opacity = 0; // Hide previous catch point immediately
+      // Fade out old marker
+      lastPlay.style.opacity = lastDot.style.opacity = arrow.style.opacity = 0;
+      setTimeout(() => {
+        lastPlay.style.transition = "none";
+        lastPlay.style.backgroundColor = playType === 'pass' ? 'transparent' : 'black';
+        lastPlay.style.width = `0px`;
+        lastPlay.style.opacity = 1;
+        lastDot.style.opacity = 1;
+        arrow.style.opacity = 1;
+        if(state.Possession == "Home"){
+          lastDot.style.left = `0`;
+          lastDot.style.right = `auto`;
+          lastPlay.style.left = `${prevPX}px`;
+          arrow.style.left = `0px`;
+        } else{
+          lastDot.style.right = `0`;
+          lastDot.style.left = `auto`;
+          lastPlay.style.right = `${prevPX}px`;
+          arrow.style.right = `0px`;
+        }
+
+        if (playType === 'run') {
+          lastPlay.style.top = `50%`;
+          lastPlay.style.height = `6px`;
+          arrow.style.top = `-10px`;
+          setTimeout(() => {
+            // Animate based on direction of play
+            if (state.Possession == "Home") {
+              lastPlay.style.transition = "width 1.4s ease, left 1.4s ease";
+              arrow.style.transition = "left 1.4s ease";
+              lastPlay.style.width = `${currPX - prevPX}px`;
+              arrow.style.left = `${(currPX - prevPX) - 10}px`;
+              arrow.style.transform = "rotate(0deg)";
+            } else {
+              lastPlay.style.transition = "width 1.4s ease, right 1.4s ease";
+              arrow.style.transition = "right 1.4s ease";
+              lastPlay.style.right = `${prevPX}px`;
+              lastPlay.style.width = `${currPX - prevPX}px`;
+              arrow.style.right = `${(currPX - prevPX) - 10}px`;
+              arrow.style.transform = "rotate(180deg)";
+            }
+            const onEnd = (e) => {
+              if (e.propertyName === 'width') {
+                lastPlay.removeEventListener('transitionend', onEnd);
+                resolve();
+              }
+            };
+            lastPlay.addEventListener('transitionend', onEnd);
+          }, 50);
+        } else {
+          lastDot.style.opacity = arrow.style.opacity = 0;
+          drawPassArc(prevPX, currPX, passComplete).then(resolve);
+        }
+      }, 400);
+    });
   }
   function drawPassArc(x0, x1, passComplete = true) {
-    const canvas = document.getElementById("arcCanvas");
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const midX = (x0 + x1) / 2;
-    const y = canvas.height * 0.45;
-    const peakHeight = Math.min(120, Math.max(50, ((x1 - x0) / 10) * 6));
-    ctx.setLineDash([10, 5]);
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "black";
-    ctx.lineCap = "round";
-    let offset = 0;
-    let startTime = null;
-    function animate(timestamp) {
-      if (!startTime) startTime = timestamp;
-      const elapsed = timestamp - startTime;
-      offset -= 2;
+    return new Promise(resolve => {
+      const canvas = document.getElementById("arcCanvas");
+      const ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const midX = (x0 + x1) / 2;
+      const y = canvas.height * 0.45;
+      const peakHeight = Math.min(120, Math.max(50, ((x1 - x0) / 10) * 6));
       ctx.setLineDash([10, 5]);
-      ctx.lineDashOffset = offset;
-      ctx.beginPath();
-      ctx.moveTo(x0, y);
-      ctx.quadraticCurveTo(midX, y - peakHeight, x1, y);
-      ctx.stroke();
-      if (elapsed < 3000) {
-        requestAnimationFrame(animate);
-      } else {
-        showCatchPoint(x1, y, passComplete);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "black";
+      ctx.lineCap = "round";
+      let offset = 0;
+      let startTime = null;
+      function animate(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+        offset -= 2;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.setLineDash([10, 5]);
+        ctx.lineDashOffset = offset;
+        ctx.beginPath();
+        ctx.moveTo(x0, y);
+        ctx.quadraticCurveTo(midX, y - peakHeight, x1, y);
+        ctx.stroke();
+        if (elapsed < 3000) {
+          requestAnimationFrame(animate);
+        } else {
+          showCatchPoint(x1, y, passComplete).then(resolve);
+        }
       }
-    }
-    requestAnimationFrame(animate);
+      requestAnimationFrame(animate);
+    });
   }
   function showCatchPoint(x, y, complete = true) {
-    const catchPoint = document.getElementById("catchPoint");
-    catchPoint.innerText = complete ? "➤" : "✖";
-    catchPoint.style.left = `${x - 8}px`;
-    catchPoint.style.top = `${y - 20}px`;
-    catchPoint.style.opacity = 0;
-    // Fade in and stay
-    setTimeout(() => {
-      catchPoint.style.transition = "opacity 0.8s ease";
-      catchPoint.style.opacity = 1;
-    }, 100);
+    return new Promise(resolve => {
+      const catchPoint = document.getElementById("catchPoint");
+      catchPoint.innerText = complete ? "➤" : "✖";
+      catchPoint.style.left = `${x - 8}px`;
+      catchPoint.style.top = `${y - 20}px`;
+      catchPoint.style.opacity = 0;
+      // Fade in and stay
+      setTimeout(() => {
+        catchPoint.style.transition = "opacity 0.8s ease";
+        catchPoint.style.opacity = 1;
+        setTimeout(resolve, 800);
+      }, 100);
+    });
   }
 
   function renderFullStatsPanel(latestPlayer = null) {
