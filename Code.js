@@ -258,19 +258,6 @@ function switchPossession(fromTurnover = false) {
     if (key === "Distance") sheet.getRange(i + 2, 2).setValue(10);
   });
 }
-function updateGameState({ down, distance, ballOn, possession, previous, driveStart }) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("GameState");
-  const keys = sheet.getRange("A2:A7").getValues().flat();
-
-  for (let i = 0; i < keys.length; i++) {
-    if (keys[i] === "Down") sheet.getRange(i + 2, 2).setValue(down);
-    if (keys[i] === "Distance") sheet.getRange(i + 2, 2).setValue(distance);
-    if (keys[i] === "BallOn") sheet.getRange(i + 2, 2).setValue(ballOn);
-    if (keys[i] === "Possession") sheet.getRange(i + 2, 2).setValue(possession);
-    if (keys[i] === "Previous") sheet.getRange(i + 2, 2).setValue(previous);
-    if (keys[i] === "DriveStart") sheet.getRange(i + 2, 2).setValue(driveStart);
-  }
-}
 
 function pushGameState({ gameId, quarter, down, distance, ballOn, homeScore, awayScore, driveStart }) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Games');
