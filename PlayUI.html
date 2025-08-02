@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <?!= HtmlService.createHtmlOutputFromFile("PlayUIStyle").getContent(); ?>
+  </head>
+  <body>    
+    <div id="scoreboard" class="scoreboard">
+      <div class="team">
+        <div class="team-name" id="home">Home</div>
+        <div id="scoreHome" class="score">0</div>
+      </div>
+      <div class="time-possession">
+        <div><strong>QTR:</strong> <span id="quarter">1</span></div>
+        <div><strong>Poss:</strong> <span id="possessionIndicator">Home</span></div>
+      </div>
+      <div class="team">
+        <div class="team-name" id="away">Away</div>
+        <div id="scoreAway" class="score">0</div>
+      </div>
+    </div>
+
+    <label>Possession:
+      <span id="possession">Loading...</span>
+    </label>
+
+    <label>Select Player:
+      <select id="playerDropdown"></select>
+    </label>
+
+    <div class="info-row">
+      <span><strong>Down:</strong> <span id="down">...</span></span>
+      <span><strong>Distance:</strong> <span id="distance">...</span></span>
+    </div>
+    <div class="info-row">
+      <span><strong>Ball On:</strong> <span id="ballOn">...</span></span>
+    </div>
+
+    <button onclick="runPlay()">▶️ Run Play</button>
+    <button onclick="nextDrive()">🔁 Next Drive</button>
+    <div class="field-wrapper">
+      <div id="field3D">
+        <!-- Yard lines -->
+        <div class="yardline" style="left: 100px;"></div>
+        <div class="yardline" style="left: 200px;">10</div>
+        <div class="yardline" style="left: 300px;">20</div>
+        <div class="yardline" style="left: 400px;">30</div>
+        <div class="yardline" style="left: 500px;">40</div>
+        <div class="yardline" style="left: 600px;">50</div>
+        <div class="yardline" style="left: 700px;">40</div>
+        <div class="yardline" style="left: 800px;">30</div>
+        <div class="yardline" style="left: 900px;">20</div>
+        <div class="yardline" style="left: 1000px;">10</div>
+        <div class="yardline" style="left: 1100px;"></div>
+        <div class="yardline" style="left: 1200px;"></div>
+        <!-- Drive Line (white line showing entire drive so far) -->
+        <div id="drive3D" class="driveSegment">
+          <div class="drive-dot"></div>
+        </div>
+        <!-- Last play marker (black line, dot, and arrow) -->
+        <div id="lastPlayMarker" class="driveSegment">
+          <div class="drive-arrow">➤</div>
+          <div class="last-dot"></div>
+        </div>
+        <canvas id="arcCanvas" width="1200" height="180" style="position: absolute; top: 0; left: 0; z-index: 1;"></canvas>
+        <div id="catchPoint" style="position: absolute;  font-size: 22px;  color: black;  opacity: 0;  z-index: 4;  pointer-events: none;  transition: opacity 0.5s ease;"></div>
+      </div>
+    </div>    
+
+    <div id="result" class="result-box"></div>
+
+    <div id="fullStatsPanel" class="full-stats-panel">
+    <div class="stats-header">Session Stats</div>
+    <div class="stats-table-container">
+      <table class="stats-table" id="statsTable">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>Carries</th>
+            <th>Yards</th>
+            <th>TDs</th>
+            <th>Fumbles</th>
+            <th>Long</th>
+          </tr>
+        </thead>
+        <tbody id="statsTableBody">
+          <!-- rows added dynamically -->
+        </tbody>
+      </table>
+    </div>
+
+    <?!= HtmlService.createHtmlOutputFromFile("PlayUIScript").getContent(); ?>
+  </body>
+</html>
