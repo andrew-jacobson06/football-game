@@ -8,36 +8,29 @@
     <div id="scoreboard" class="scoreboard">
       <div class="team">
         <div class="team-name" id="home">Home</div>
-        <div id="scoreHome" class="score">0</div>
+        <div class="score-row">
+          <div id="scoreHome" class="score">0</div>
+          <span id="homeFootball" class="football-icon">🏈</span>
+        </div>
       </div>
-      <div class="time-possession">
+      <div class="time-quarter">
         <div><strong>QTR:</strong> <span id="quarter">1</span></div>
-        <div><strong>Poss:</strong> <span id="possessionIndicator">Home</span></div>
       </div>
       <div class="team">
         <div class="team-name" id="away">Away</div>
-        <div id="scoreAway" class="score">0</div>
+        <div class="score-row">
+          <span id="awayFootball" class="football-icon">🏈</span>
+          <div id="scoreAway" class="score">0</div>
+        </div>
       </div>
     </div>
 
-    <label>Possession:
-      <span id="possession">Loading...</span>
-    </label>
-
-    <label>Select Player:
-      <select id="playerDropdown"></select>
-    </label>
-
-    <div class="info-row">
+    <div class="game-info">
       <span><strong>Down:</strong> <span id="down">...</span></span>
       <span><strong>Distance:</strong> <span id="distance">...</span></span>
-    </div>
-    <div class="info-row">
       <span><strong>Ball On:</strong> <span id="ballOn">...</span></span>
     </div>
 
-    <button onclick="runPlay()">▶️ Run Play</button>
-    <button onclick="nextDrive()">🔁 Next Drive</button>
     <div class="field-wrapper">
       <div id="field3D">
         <!-- Yard lines -->
@@ -65,7 +58,14 @@
         <canvas id="arcCanvas" width="1200" height="180" style="position: absolute; top: 0; left: 0; z-index: 1;"></canvas>
         <div id="catchPoint" style="position: absolute;  font-size: 22px;  color: black;  opacity: 0;  z-index: 4;  pointer-events: none;  transition: opacity 0.5s ease;"></div>
       </div>
-    </div>    
+    </div>
+
+    <label>Select Player:
+      <select id="playerDropdown"></select>
+    </label>
+
+    <button onclick="runPlay()">▶️ Run Play</button>
+    <button onclick="nextDrive()">🔁 Next Drive</button>
 
     <div id="result" class="result-box"></div>
 
