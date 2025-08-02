@@ -237,6 +237,17 @@
           state.Possession = poss;
           state.Previous = previousBallOn;
           state.DriveStart = driveStart;
+
+          google.script.run.pushGameState({
+            gameId: gameId,
+            quarter: state.Qtr,
+            down: state.Down,
+            distance: state.Distance,
+            ballOn: state.BallOn,
+            homeScore: state.HomeScore,
+            awayScore: state.AwayScore,
+            driveStart: state.DriveStart
+          });
       }
 
       function updateStateUI(){
