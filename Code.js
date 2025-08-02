@@ -1,5 +1,5 @@
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile("AAA - PlayUI");
+  return HtmlService.createHtmlOutputFromFile("PlayUI");
 }
 
 function onOpen() {
@@ -9,7 +9,7 @@ function onOpen() {
 }
 
 function showPlayUI() {
-  const html = HtmlService.createHtmlOutputFromFile("AAA - PlayUI")
+  const html = HtmlService.createHtmlOutputFromFile("PlayUI")
     .setWidth(400)
     .setHeight(400);
 }

@@ -1,0 +1,230 @@
+<style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f9f9f9;
+        padding: 20px;
+        margin: auto;
+      }
+
+      h3 {
+        text-align: center;
+        color: #333;
+      }
+
+      label {
+        display: block;
+        margin-top: 15px;
+        font-weight: bold;
+        color: #444;
+      }
+
+      select, button {
+        margin-top: 5px;
+        padding: 6px 10px;
+        font-size: 14px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      button {
+        margin-top: 10px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+        padding: 6px 0;
+        border-bottom: 1px solid #ccc;
+      }
+
+      .result-box {
+        margin-top: 20px;
+        padding: 12px;
+        background: #fff;
+        border-radius: 6px;
+        box-shadow: 0 0 6px rgba(0,0,0,0.1);
+      }
+
+      .highlight {
+        color: green;
+        font-weight: bold;
+      }
+
+      .turnover {
+        color: red;
+        font-weight: bold;
+      }
+
+      ul {
+        padding-left: 20px;
+        margin-top: 5px;
+      }
+
+      .section-title {
+        margin-top: 15px;
+        font-weight: bold;
+        text-decoration: underline;
+      }
+      
+      /* FIELD STUFF */
+      #field3D {
+        position: relative;
+        width: 1200px;
+        height: 180px;
+        transform: rotateX(45deg); /* no perspective here, moved to wrapper */
+        margin: 30px auto;
+        background: linear-gradient(to right, #007a33 0%, #006622 100%);
+        border: 3px solid #333;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        transform-style: preserve-3d;
+        overflow: hidden;
+      }
+      /* Yard lines and labels */
+      .yardline {
+        position: absolute;
+        bottom: 0;
+        width: 1px;
+        height: 100%;
+        background-color: white;
+        text-align: center;
+        font-size: 16px;
+        color: white;
+      }
+      /* Drive line (white) and last play (black) use same base style */
+      .driveSegment {
+        position: absolute;
+        top: 50%;
+        height: 6px;
+        background-color: white;
+        border-radius: 0px;
+        z-index: 2;
+      }
+      #field3D {
+        z-index: 3;
+      }
+      /* Dot at start of play */
+      .last-dot, .drive-dot {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background-color: black;
+        border-radius: 50%;
+        top: -2px;
+        left: 0;
+        z-index: 2; /* below arrow, above base */
+        opacity: 1;
+      }
+      .drive-dot {
+        background-color: white;
+      }
+      /* Arrow that moves with the last play */
+      .drive-arrow {
+        position: absolute;
+        font-size: 19px;
+        color: black;
+        left: 0;
+        top: -10px; /* raise the arrow slightly above the line */
+        opacity: 1;
+        z-index: 3; /* ensure it’s above all segments */
+        transition: left 1.4s ease, opacity 0.5s ease;
+      }
+      .field-wrapper {
+        width: 100%;
+        max-width: 1600px;
+        margin: 20px auto;
+        overflow-x: auto;
+        overflow-y: hidden;
+        perspective: 1000px;
+      }
+
+      .scoreboard {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #222;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-family: 'Arial Black', sans-serif;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      }
+      .scoreboard .team {
+        text-align: center;
+      }
+      .scoreboard .team-name {
+        font-size: 16px;
+        margin-bottom: 4px;
+      }
+      .scoreboard .score {
+        font-size: 28px;
+        font-weight: bold;
+      }
+      .scoreboard .time-possession {
+        font-size: 14px;
+        text-align: center;
+      }
+
+      .full-stats-panel {
+        margin-top: 40px;
+        padding: 20px;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 12px rgba(0,0,0,0.1);
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .stats-header {
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 6px;
+        color: #007bff;
+        text-align: center;
+      }
+
+      .stats-table-container {
+        overflow-x: auto;
+      }
+
+      .stats-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .stats-table th,
+      .stats-table td {
+        padding: 10px;
+        text-align: center;
+        border-bottom: 1px solid #ccc;
+        font-size: 14px;
+      }
+
+      .stats-table th {
+        background-color: #f2f2f2;
+        color: #333;
+      }
+
+      .stats-table tr.highlighted {
+        background-color: gold;
+        font-weight: bold;
+      }
+
+      .stats-table tr:not(.highlighted) {
+        background-color: #f8f9fa;
+      }
+
+    </style>
