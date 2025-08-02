@@ -1,11 +1,18 @@
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile("PlayUI");
+  return HtmlService.createTemplateFromFile('PlayUI')
+    .evaluate()
+    .setTitle('Football Game UI')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL); // optional
 }
-
 function onOpen() {
   SpreadsheetApp.getUi()
     .addItem("Open Play UI", "showPlayUI")
     .addToUi();
+}
+
+//INCLUDE HTML PARTS, EG. JAVASCRIPT, CSS, OTHER HTML FILES
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 function showPlayUI() {

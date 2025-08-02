@@ -2,7 +2,7 @@
 <html>
   <head>
     <base target="_top" />
-    <?!= HtmlService.createHtmlOutputFromFile("PlayUIStyle").getContent(); ?>
+    <?!= include('PlayUIstyle'); ?> 
   </head>
   <body>    
     <div id="scoreboard" class="scoreboard">
@@ -89,6 +89,6 @@
       </table>
     </div>
 
-    <?!= HtmlService.createHtmlOutputFromFile("PlayUIScript").getContent(); ?>
+    <?!= include('PlayUIScript'); ?> 
   </body>
 </html>
