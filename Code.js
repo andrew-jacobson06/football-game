@@ -1,0 +1,292 @@
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile("AAA - PlayUI");
+}
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .addItem("Open Play UI", "showPlayUI")
+    .addToUi();
+}
+
+function showPlayUI() {
+  const html = HtmlService.createHtmlOutputFromFile("AAA - PlayUI")
+    .setWidth(400)
+    .setHeight(400);
+}
+
+//********************** */
+function getGameState(gameId) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Games');
+  if (!sheet) {
+    throw new Error("Sheet 'Games' not found.");
+  }
+  Logger.log(gameId);
+  const data = sheet.getDataRange().getValues(); // includes header
+  const headers = data[0];
+  const row = data.slice(1).find(r => r[0] === gameId);
+
+  if (!row) {
+    return null; // or throw new Error("No row found for gameId: " + gameId);
+  }
+
+  const result = {};
+  headers.forEach((key, index) => {
+    result[key] = row[index];
+  });
+  Logger.log(result);
+
+  return result;
+}
+
+function getPlayerTraits() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Players");
+  if (!sheet) {
+    throw new Error("Sheet 'Players' not found.");
+  }
+
+  const data = sheet.getRange("A2:T" + sheet.getLastRow()).getValues();
+  Logger.log(data);
+  const result = data
+    .filter(row => row[0] != null && row[0] !== '') // Ensure 'team' field exists
+    .map(row => ({
+      team: row[0],
+      name: row[1],
+      size: row[5],
+      strength: row[6],
+      speed: row[7],
+      stamina: row[8],
+      juke: row[13],
+      vision: row[14],
+      acceleration: row[15],
+      // Local tracking only
+      carries: 0,
+      fatigue: row[8]
+    }));
+  Logger.log(result);
+
+  return result;
+}
+
+function getRunThresholdsFromSettings() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
+  const data = sheet.getDataRange().getValues();
+  const thresholds = [];
+  let cumulative = 0;
+
+  for (let i = 0; i < data.length; i++) {
+    const [label, pct, minYards, maxYards] = data[i];
+    if (!label.startsWith("RunType_")|| typeof pct !== "number" || pct <= 0) continue;
+    thresholds.push({
+      label,
+      minYards,
+      maxYards,
+      rollMin: cumulative,
+      rollMax: cumulative + pct
+    });
+    cumulative += pct;
+  }
+  return thresholds;
+}
+
+function getBreakawayYards() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
+  const data = sheet.getDataRange().getValues();
+  const breakRanges = data
+    .filter(row => typeof row[0] === "string" && row[0].startsWith("Break_"))
+    .map(row => ({
+      label: row[0],
+      percentage: parseFloat(row[1]),
+      minYards: parseInt(row[2], 10),
+      maxYards: parseInt(row[3], 10)
+    }));
+  return breakRanges;
+}
+
+function getStaminaDrains() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
+  const data = sheet.getDataRange().getValues();
+
+  const staminaDrainMap = {};
+
+  data.forEach(row => {
+    const key = row[0];
+    const drain = parseFloat(row[1]);
+    const playType = row[2];
+
+    if (key && typeof key === "string" && key.startsWith("Stamina_Drain_") && playType) {
+      staminaDrainMap[playType] = drain;
+    }
+  });
+
+  return staminaDrainMap;
+}
+
+function getFrontendSettings() {
+  return {
+    thresholds: getRunThresholdsFromSettings(),
+    breakaways: getBreakawayYards(),
+    staminaDrains: getStaminaDrains()
+  };
+}
+function predictPlayType(down, distance) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("PlayHistory");
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return "Run";
+
+  const filtered = data.slice(1)
+    .filter(row => {
+      const d = parseInt(row[1], 10);
+      const dist = parseInt(row[2], 10);
+      return d === down && Math.abs(dist - distance) <= 2;
+    });
+
+  if (filtered.length === 0) return "Run";
+
+  const runCount = filtered.filter(r => r[3] === "Run").length;
+  const pctRun = runCount / filtered.length;
+
+  return Math.random() < pctRun ? "Run" : "Pass";
+}
+function logPlayHistory(play) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("PlayHistory");
+  if (!sheet) {
+    Logger.log("Sheet 'PlayHistory' not found.");
+    return;
+  }
+
+  const {
+    gameid,
+    timestamp,  // ✅ use this
+    possession,
+    down,
+    distance,
+    ballon,
+    playtype,
+    player,
+    yards,
+    defensepredicted,
+    predictioncorrect,
+    tackler,
+    result,
+    desc,
+    newdown,
+    newdist,
+    newballon,
+    drivestart
+  } = play;
+
+  // Convert ISO string to Date object if needed
+  const ts = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+
+  sheet.appendRow([
+    String(gameid || ""),
+    ts,
+    String(possession || ""),
+    Number(down) || 0,
+    Number(distance) || 0,
+    Number(ballon) || 0,
+    String(playtype || ""),
+    String(player || ""),
+    Number(yards) || 0,
+    String(defensepredicted || ""),
+    predictioncorrect === true || predictioncorrect === "true" ? true : false,
+    String(tackler || ""),
+    String(result || ""),
+    String(desc || ""),
+    Number(newdown) || 0,
+    Number(newdist) || 0,
+    Number(newballon) || 0,
+    Number(drivestart) || 0
+  ]);
+}
+
+function getPlayHistory(gameId) {
+  Logger.log(gameId);
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("PlayHistory");
+  if (!sheet) {
+    throw new Error("Sheet 'PlayHistory' not found.");
+  }
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return []; // no data
+
+  const headers = data[0];
+  const rows = data.slice(1);
+  const timezone = Session.getScriptTimeZone();
+
+  const result = rows
+    .filter(row => row[0] == gameId) // column A = GameId
+    .map(row => {
+      const obj = {};
+      headers.forEach((key, i) => {
+        if (key === "Timestamp" && row[i] instanceof Date) {
+          obj[key] = Utilities.formatDate(row[i], timezone, "yyyy-MM-dd'T'HH:mm:ssXXX");
+        } else {
+          obj[key] = row[i];
+        }
+      });
+      return obj;
+    });
+
+  Logger.log(result[0]);
+  return result;
+}
+
+
+
+
+//JS function calls
+
+function switchPossession(fromTurnover = false) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("GameState");
+  const state = getGameState("3");
+  const newPossession = (state.possession === "Home") ? "Away" : "Home";
+
+  const newBallOn = fromTurnover ? state.ballOn : 25;
+  sheet.getRange("A2:B5").getValues().forEach((row, i) => {
+    const key = row[0];
+    if (key === "Possession") sheet.getRange(i + 2, 2).setValue(newPossession);
+    if (key === "BallOn") sheet.getRange(i + 2, 2).setValue(newBallOn);
+    if (key === "Down") sheet.getRange(i + 2, 2).setValue(1);
+    if (key === "Distance") sheet.getRange(i + 2, 2).setValue(10);
+  });
+}
+function updateGameState({ down, distance, ballOn, possession, previous, driveStart }) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("GameState");
+  const keys = sheet.getRange("A2:A7").getValues().flat();
+
+  for (let i = 0; i < keys.length; i++) {
+    if (keys[i] === "Down") sheet.getRange(i + 2, 2).setValue(down);
+    if (keys[i] === "Distance") sheet.getRange(i + 2, 2).setValue(distance);
+    if (keys[i] === "BallOn") sheet.getRange(i + 2, 2).setValue(ballOn);
+    if (keys[i] === "Possession") sheet.getRange(i + 2, 2).setValue(possession);
+    if (keys[i] === "Previous") sheet.getRange(i + 2, 2).setValue(previous);
+    if (keys[i] === "DriveStart") sheet.getRange(i + 2, 2).setValue(driveStart);
+  }
+}
+
+function logPlayResult({ player, playType, yards, down, distance, ballOn }) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("PlayHistory");
+  const ts = new Date();
+  sheet.appendRow([ts, down, distance, playType, player, yards]);
+
+  const gameSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("GameState");
+  const keys = ["Down", "Distance", "BallOn", "Previous"];
+  const values = [down, distance, ballOn, ballOn];
+
+  keys.forEach((k, i) => {
+    const row = gameSheet.getRange("A2:A7").getValues().findIndex(r => r[0] === k);
+    if (row >= 0) gameSheet.getRange(row + 2, 2).setValue(values[i]);
+  });
+}
+
+
+
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function average(a, b) {
+  return (a + b) / 2;
+}

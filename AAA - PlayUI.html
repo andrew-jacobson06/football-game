@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f9f9f9;
+        padding: 20px;
+        margin: auto;
+      }
+
+      h3 {
+        text-align: center;
+        color: #333;
+      }
+
+      label {
+        display: block;
+        margin-top: 15px;
+        font-weight: bold;
+        color: #444;
+      }
+
+      select, button {
+        margin-top: 5px;
+        padding: 6px 10px;
+        font-size: 14px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      button {
+        margin-top: 10px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+        padding: 6px 0;
+        border-bottom: 1px solid #ccc;
+      }
+
+      .result-box {
+        margin-top: 20px;
+        padding: 12px;
+        background: #fff;
+        border-radius: 6px;
+        box-shadow: 0 0 6px rgba(0,0,0,0.1);
+      }
+
+      .highlight {
+        color: green;
+        font-weight: bold;
+      }
+
+      .turnover {
+        color: red;
+        font-weight: bold;
+      }
+
+      ul {
+        padding-left: 20px;
+        margin-top: 5px;
+      }
+
+      .section-title {
+        margin-top: 15px;
+        font-weight: bold;
+        text-decoration: underline;
+      }
+      
+      /* FIELD STUFF */
+      #field3D {
+        position: relative;
+        width: 1200px;
+        height: 180px;
+        transform: rotateX(45deg); /* no perspective here, moved to wrapper */
+        margin: 30px auto;
+        background: linear-gradient(to right, #007a33 0%, #006622 100%);
+        border: 3px solid #333;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        transform-style: preserve-3d;
+        overflow: hidden;
+      }
+      /* Yard lines and labels */
+      .yardline {
+        position: absolute;
+        bottom: 0;
+        width: 1px;
+        height: 100%;
+        background-color: white;
+        text-align: center;
+        font-size: 16px;
+        color: white;
+      }
+      /* Drive line (white) and last play (black) use same base style */
+      .driveSegment {
+        position: absolute;
+        top: 50%;
+        height: 6px;
+        background-color: white;
+        border-radius: 0px;
+        z-index: 2;
+      }
+      #field3D {
+        z-index: 3;
+      }
+      /* Dot at start of play */
+      .last-dot, .drive-dot {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background-color: black;
+        border-radius: 50%;
+        top: -2px;
+        left: 0;
+        z-index: 2; /* below arrow, above base */
+        opacity: 1;
+      }
+      .drive-dot {
+        background-color: white;
+      }
+      /* Arrow that moves with the last play */
+      .drive-arrow {
+        position: absolute;
+        font-size: 19px;
+        color: black;
+        left: 0;
+        top: -10px; /* raise the arrow slightly above the line */
+        opacity: 1;
+        z-index: 3; /* ensure it’s above all segments */
+        transition: left 1.4s ease, opacity 0.5s ease;
+      }
+      .field-wrapper {
+        width: 100%;
+        max-width: 1600px;
+        margin: 20px auto;
+        overflow-x: auto;
+        overflow-y: hidden;
+        perspective: 1000px;
+      }
+
+      .scoreboard {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #222;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-family: 'Arial Black', sans-serif;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      }
+      .scoreboard .team {
+        text-align: center;
+      }
+      .scoreboard .team-name {
+        font-size: 16px;
+        margin-bottom: 4px;
+      }
+      .scoreboard .score {
+        font-size: 28px;
+        font-weight: bold;
+      }
+      .scoreboard .time-possession {
+        font-size: 14px;
+        text-align: center;
+      }
+
+      .full-stats-panel {
+        margin-top: 40px;
+        padding: 20px;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 12px rgba(0,0,0,0.1);
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .stats-header {
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 6px;
+        color: #007bff;
+        text-align: center;
+      }
+
+      .stats-table-container {
+        overflow-x: auto;
+      }
+
+      .stats-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .stats-table th,
+      .stats-table td {
+        padding: 10px;
+        text-align: center;
+        border-bottom: 1px solid #ccc;
+        font-size: 14px;
+      }
+
+      .stats-table th {
+        background-color: #f2f2f2;
+        color: #333;
+      }
+
+      .stats-table tr.highlighted {
+        background-color: gold;
+        font-weight: bold;
+      }
+
+      .stats-table tr:not(.highlighted) {
+        background-color: #f8f9fa;
+      }
+
+    </style>
+  </head>
+  <body>    
+    <div id="scoreboard" class="scoreboard">
+      <div class="team">
+        <div class="team-name" id="home">Home</div>
+        <div id="scoreHome" class="score">0</div>
+      </div>
+      <div class="time-possession">
+        <div><strong>QTR:</strong> <span id="quarter">1</span></div>
+        <div><strong>Poss:</strong> <span id="possessionIndicator">Home</span></div>
+      </div>
+      <div class="team">
+        <div class="team-name" id="away">Away</div>
+        <div id="scoreAway" class="score">0</div>
+      </div>
+    </div>
+
+    <label>Possession:
+      <span id="possession">Loading...</span>
+    </label>
+
+    <label>Select Player:
+      <select id="playerDropdown"></select>
+    </label>
+
+    <div class="info-row">
+      <span><strong>Down:</strong> <span id="down">...</span></span>
+      <span><strong>Distance:</strong> <span id="distance">...</span></span>
+    </div>
+    <div class="info-row">
+      <span><strong>Ball On:</strong> <span id="ballOn">...</span></span>
+    </div>
+
+    <button onclick="runPlay()">▶️ Run Play</button>
+    <button onclick="nextDrive()">🔁 Next Drive</button>
+    <div class="field-wrapper">
+      <div id="field3D">
+        <!-- Yard lines -->
+        <div class="yardline" style="left: 100px;"></div>
+        <div class="yardline" style="left: 200px;">10</div>
+        <div class="yardline" style="left: 300px;">20</div>
+        <div class="yardline" style="left: 400px;">30</div>
+        <div class="yardline" style="left: 500px;">40</div>
+        <div class="yardline" style="left: 600px;">50</div>
+        <div class="yardline" style="left: 700px;">40</div>
+        <div class="yardline" style="left: 800px;">30</div>
+        <div class="yardline" style="left: 900px;">20</div>
+        <div class="yardline" style="left: 1000px;">10</div>
+        <div class="yardline" style="left: 1100px;"></div>
+        <div class="yardline" style="left: 1200px;"></div>
+        <!-- Drive Line (white line showing entire drive so far) -->
+        <div id="drive3D" class="driveSegment">
+          <div class="drive-dot"></div>
+        </div>
+        <!-- Last play marker (black line, dot, and arrow) -->
+        <div id="lastPlayMarker" class="driveSegment">
+          <div class="drive-arrow">➤</div>
+          <div class="last-dot"></div>
+        </div>
+        <canvas id="arcCanvas" width="1200" height="180" style="position: absolute; top: 0; left: 0; z-index: 1;"></canvas>
+        <div id="catchPoint" style="position: absolute;  font-size: 22px;  color: black;  opacity: 0;  z-index: 4;  pointer-events: none;  transition: opacity 0.5s ease;"></div>
+      </div>
+    </div>    
+
+    <div id="result" class="result-box"></div>
+
+    <div id="fullStatsPanel" class="full-stats-panel">
+    <div class="stats-header">Session Stats</div>
+    <div class="stats-table-container">
+      <table class="stats-table" id="statsTable">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>Carries</th>
+            <th>Yards</th>
+            <th>TDs</th>
+            <th>Fumbles</th>
+            <th>Long</th>
+          </tr>
+        </thead>
+        <tbody id="statsTableBody">
+          <!-- rows added dynamically -->
+        </tbody>
+      </table>
+    </div>
+
+    <script>
+      let state = {};
+      let players = [];
+      let playerTraits = {};
+      let rollThresholds = [];
+      let breakawaySettings = [];
+      let drainSettings = {};  // Populated from backend on load
+      let frontendStats = [];
+      let gameId = 1;
+      let playHistory = [];
+
+      // === GAME SETUP ===
+      function refreshUI() {
+        google.script.run.withSuccessHandler(function(gameState) {
+          console.log("✅ Loaded game state");
+          state = gameState;
+          updateStateUI();
+
+          loadPlayersTraits(function () {
+            loadSettings(function () {
+              google.script.run
+                .withSuccessHandler(function (data) {
+                  console.log("✅ Loaded play history", data);
+                  playHistory = data;
+                  frontendStats = [];
+
+                  let lastPlayer = null;
+
+                  playHistory.forEach(play => {
+                    if (!play.Player || !play.PlayType || play.PlayType !== 'Run') return;
+
+                    const player = play.Player;
+                    const yards = parseFloat(play.Yards) || 0;
+                    const td = play.Result === "Touchdown";
+                    const fumble = play.Result === "Fumble";
+
+                    let p = frontendStats.find(s => s.playername === player);
+                    if (!p) {
+                      p = { playername: player, carries: 0, yards: 0, tds: 0, fumbles: 0, long: 0 };
+                      frontendStats.push(p);
+                    }
+
+                    p.carries++;
+                    p.yards += yards;
+                    if (td) p.tds++;
+                    if (fumble) p.fumbles++;
+                    if (yards > p.long) p.long = yards;
+
+                    lastPlayer = player;
+                  });
+
+                  updateFatigueBasedOnStatsOnInitialLoad();
+                  if (lastPlayer) {
+                    console.log("✅ Rendering stats for", lastPlayer);
+                    renderFullStatsPanel(lastPlayer);
+                  }
+                })
+                .withFailureHandler(function(error) {
+                  console.error("❌ Failed to load play history:", error.message);
+                })
+                .getPlayHistory(gameId);
+            });
+          });
+        }).withFailureHandler(function(error) {
+          console.error("❌ Failed to load game state:", error.message);
+        }).getGameState(gameId);
+
+        animatePlay();
+      }
+
+
+      function updateFatigueBasedOnStatsOnInitialLoad(){
+        if (playerTraits && drainSettings && drainSettings.Run) {
+          for (let i = 0; i < frontendStats.length; i++) {
+            const stat = frontendStats[i];
+            const pt = playerTraits[stat.playername];
+            if (pt) {
+              pt.fatigue = pt.stamina - (stat.carries * drainSettings.Run);
+            }
+          }
+        }
+      }
+      function animatePlay(){
+        show3DDrive(state.DriveStart, state.Previous, state.BallOn, playType = 'run', passComplete = true); //CHANGE - dont hardcode run and pass
+      }
+
+      function formatBallOn(yard) {
+        yard = parseInt(yard, 10);
+        if (yard <= 50) return "own " + yard;
+        return "opp " + (100 - yard);
+      }
+
+      function loadPlayers() {
+        const dropdown = document.getElementById("playerDropdown");
+        dropdown.innerHTML = "";
+
+        const teamName = state[state.Possession];
+
+        Object.entries(playerTraits).forEach(([name, traits]) => {
+          if (traits.team === teamName) {
+            const option = document.createElement("option");
+            option.value = name;
+            option.text = name;
+            dropdown.appendChild(option);
+          }
+        });
+      }
+
+      function loadPlayersTraits(callback) {
+        google.script.run.withSuccessHandler(function(playerData) {
+          console.log("✅ Loaded player traits");
+          const playerMap = {};
+          playerData.forEach(player => {
+            playerTraits[player.name] = player;
+          });
+          loadPlayers();
+          if (callback) callback();
+        }).getPlayerTraits();
+      }
+
+      function loadSettings(callback) {
+        console.log("✅ Loaded drain settings");
+        google.script.run.withSuccessHandler(function(data) {
+          rollThresholds = data.thresholds;
+          breakawaySettings = data.breakaways;
+          drainSettings = data.staminaDrains;
+          if (callback) callback();
+        }).getFrontendSettings();
+      }
+
+      // === MAIN PLAY ===
+      function runPlay() {
+        const playerName = document.getElementById("playerDropdown").value;
+        if (!playerName) return;
+
+        let tackler = "NA";
+        
+        const rbStats = playerTraits[playerName];
+        const carryResult = simulateSingleCarry(rbStats);
+        const predicted = predictPlayType(state.Down, state.Distance);
+
+        const newBall = Math.min(100, Math.max(1, state.BallOn + carryResult.yards));
+        const touchdown = state.BallOn < 100 && newBall >= 100;
+
+        let newDown = state.Down;
+        let newDist = state.Distance - carryResult.yards;
+
+        let result = "";
+
+        if (touchdown) {
+          result = "Touchdown";
+          carryResult.yards = 100 - state.BallOn;
+          updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
+          newDown = 1;
+          newDist = 10;
+          const newPossession = state.Possession === "Home" ? "Away" : "Home";
+        } else if (newDist <= 0) {
+          result = "First Down";
+          newDown = 1;
+          newDist = 10;
+          updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
+        } else {
+          newDown++;
+          if (newDown > 4) {
+            result = "TO on Downs";
+            const newPossession = state.Possession === "Home" ? "Away" : "Home";
+            updateGameState(1, 10, newPossession, newBall, state.BallOn, state.BallOn, playerName, carryResult.yards, tackler, result, predicted);
+          } else {
+            updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
+          }
+        }
+
+        applyFatigue(playerName, "Run");
+
+        updateFrontendStats(playerName, carryResult.yards, touchdown);
+        console.log(carryResult);
+
+        document.getElementById("result").innerHTML = `<strong>${rbStats.name}</strong> ran for <strong>${carryResult.yards} yards</strong><br/><br/>` +
+          `Modifiers: <ul>${carryResult.modLog.map(m => `<li>${m}</li>`).join('')}</ul>`;
+
+        animatePlay();
+        updateStateUI();
+        //refreshUI();
+      }
+
+      function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted){   
+        google.script.run.logPlayHistory({
+          gameid: 1,
+          timestamp: new Date().toISOString(), // ✅ passed in from frontend
+          possession: state.Possession,
+          down: state.Down,
+          distance: state.Distance,
+          ballon: state.BallOn,
+          playtype: "Run",
+          player: playerName,
+          yards: yards,
+          defensepredicted: predicted,
+          predictioncorrect: "",
+          tackler: tackler,
+          result: result,
+          desc: "", 
+          newdown: down,
+          newdist: distance,
+          newballon: ballOn,
+          drivestart: state.DriveStart
+        });
+      }
+
+      function updateGameState(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted){
+          logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted);
+          state.Down = down;
+          state.Distance = distance;
+          state.BallOn = ballOn
+          state.Possession = poss;
+          state.Previous = previousBallOn;
+          state.DriveStart = driveStart;
+      }
+
+      function updateStateUI(){
+        console.log(state);
+          document.getElementById("down").innerText = state.Down;
+          document.getElementById("distance").innerText = state.Distance;
+          document.getElementById("ballOn").innerText = formatBallOn(state.BallOn);
+          document.getElementById("possession").innerText = state.Possession;
+          document.getElementById("home").innerText = state.Home;
+          document.getElementById("away").innerText = state.Away;
+          document.getElementById("scoreHome").innerText = state.HomeScore
+          document.getElementById("scoreAway").innerText = state.AwayScore;
+          document.getElementById("quarter").innerText = state.Qtr
+          document.getElementById("possessionIndicator").innerText = state.Possession;
+      }
+
+      function updateFrontendStats(player, yards, td) {
+        let p = frontendStats.find(s => s.playername === player);
+        if (!p) {
+          p = { playername: player, carries: 0, yards: 0, tds: 0, fumbles: 0, long: 0 };
+          frontendStats.push(p);
+        }
+        p.carries++;
+        p.yards += yards;
+        if (td) p.tds++;
+        if (yards > p.long) p.long = yards;
+
+        renderFullStatsPanel(player);
+      }
+
+      function applyFatigue(playerName, actionType) {
+        const drain = drainSettings[actionType] || 0;
+        playerTraits[playerName].fatigue = playerTraits[playerName].fatigue - drain;
+      }
+    
+      // === FRONTEND LOGIC ENGINE ===
+      function simulateSingleCarry(stats) {
+        const modLog = [];
+        let roll = getModifiedRoll(stats, modLog);
+        roll = maybeBoostRollForAcceleration(roll, stats, modLog);
+        let yards = getYardageOutcome(roll, stats, modLog);
+        yards = maybeAvoidLoss(yards, stats, modLog);
+        yards = adjustChunkRunForSpeed(yards, stats, modLog);
+
+        if (yards <= 2) yards += applyTraitEffect("Vision", stats.vision + Math.min(0,stats.fatigue), true, modLog);
+        if (yards <= 4) yards += applyTraitEffect("Power", average(stats.size, stats.strength + Math.min(0,stats.fatigue)), true, modLog);
+        if (yards >= 3 && yards <= 4) yards += applyTraitEffect("Acceleration", stats.acceleration + Math.min(0,stats.fatigue), true, modLog);
+        if (yards > 0 && yards < 10) yards += applyTraitEffect("Juke", stats.juke + Math.min(0,stats.fatigue), true, modLog);
+
+        return { name: stats.name, roll, yards, modLog };
+      }
+
+      function getModifiedRoll(stats, modLog) {
+        // Float base roll from 1.000 to ~100.000
+        const baseRoll = Math.random() * 99 + 1; // 1–100 float
+
+        // Calculate vision mod
+        let visionMod = (stats.vision + Math.min(0,stats.fatigue) - 60) * 0.055;
+        modLog.push(`Pre ${visionMod > 0 ? "+" : ""}${visionMod.toFixed(1)} Vision`);
+        
+        const modified = baseRoll + visionMod;
+
+        // Clamp final result to valid roll range
+        return Math.max(1, Math.min(100, modified));
+      }
+
+      function maybeBoostRollForAcceleration(roll, stats, modLog) {
+        if (roll < 88) { //CHANGE - solid gain or less. No hard code
+          const chance = (stats.acceleration + Math.min(0,stats.fatigue) - 60) / 200;
+          if (Math.random() < Math.max(0, chance)) {
+            const maxBoost = Math.floor((stats.acceleration + Math.min(0,stats.fatigue) - 60) / 4);
+            const boost = randomInt(1, Math.min(10, maxBoost));
+            modLog.push(`Pre +${boost} Accel (Boost Roll)`);
+            return Math.min(99, roll + boost);
+          }
+        }
+        return roll;
+      }
+
+      function getYardageOutcome(roll, stats, modLog) {
+        for (const r of rollThresholds) {
+          if (roll >= r.rollMin && roll < r.rollMax) {
+            if (r.label === "RunType_Breakaway") {
+              return getStrictBreakawayYards(stats, modLog);
+            }
+            return randomInt(r.minYards, r.maxYards);
+          }
+        }
+        return 0;
+      }
+
+      function getStrictBreakawayYards(stats, modLog) {
+        const baseRoll = Math.floor(Math.random() * 100) + 1;
+        const speedBoost = Math.floor((stats.speed + Math.min(0,stats.fatigue) - 60) * 0.3);
+        const adjustedRoll = Math.min(100, baseRoll + Math.max(0, speedBoost));
+        if (speedBoost !== 0) modLog.push(`Pre +${speedBoost} Speed`);
+
+        let cumulative = 0;
+        for (const range of breakawaySettings) {
+          cumulative += range.percentage;
+          if (adjustedRoll <= cumulative) {
+            return randomInt(range.minYards, range.maxYards);
+          }
+        }
+        return 16;
+      }
+
+      function maybeAvoidLoss(yards, stats, modLog) {
+        if (yards < 0) {
+          const power = stats.size + stats.strength + Math.min(0,stats.fatigue);
+          const chanceToAvoid = power / 2.2; //CHANGE - no hard code
+          if (Math.random() < chanceToAvoid / 100) {
+            const newYards = randomInt(1, 2);
+            modLog.push(`Loss Avoided by Power → ${newYards} yds`);
+            return newYards;
+          }
+        }
+        return yards;
+      }
+
+      function adjustChunkRunForSpeed(yards, stats, modLog) {
+        if (yards >= 10 && yards <= 15) { //CHANGE no hard code
+          const bonus = Math.floor((stats.speed + Math.min(0,stats.fatigue) - 60) / 10); //CHANGE no hard code
+          if (bonus !== 0) modLog.push(`Yard ${bonus > 0 ? "+" : ""}${bonus} Speed`);
+          return yards + bonus;
+        }
+        return yards;
+      }
+
+      function applyTraitEffect(traitName, traitValue, condition, modLog) {
+        if (!condition) return 0;
+        const deviation = traitValue - 60;
+        const triggerChance = Math.abs(deviation) / 100;
+        if (Math.random() < triggerChance) {
+          const effect = Math.sign(deviation) * Math.min(2, Math.floor(Math.abs(deviation) / 15));
+          if (effect !== 0) {
+            modLog.push(`Yard ${effect > 0 ? "+" : ""}${effect} ${traitName}`);
+            return effect;
+          }
+        }
+        return 0;
+      }
+
+      function average(a, b) {
+        return (a + b) / 2;
+      }
+
+      function randomInt(min, max) {
+        const range = max - min + 1;
+        if (range <= 0) throw new Error("Invalid range");
+
+        const maxUint32 = 0xFFFFFFFF;
+        const bucketSize = Math.floor(maxUint32 / range);
+        const maxAcceptable = bucketSize * range;
+
+        let rand;
+        const uint32 = new Uint32Array(1);
+
+        do {
+          window.crypto.getRandomValues(uint32);
+          rand = uint32[0];
+        } while (rand >= maxAcceptable);
+
+        return min + (rand % range);
+      }
+
+      function predictPlayType(down, distance) {
+        return "Run"; // Stub, can be enhanced with real logic
+      }
+
+
+      //UI Functions ONLY - ANIMATIONS BELOW!
+      function show3DDrive(startYard, prevYard, currentYard, playType = 'run', passComplete = true) {
+        const drivePX = (startYard * 10) + 100;
+        const prevPX = (prevYard * 10) + 100;
+        const currPX = (currentYard * 10) + 100;
+        const drive = document.getElementById("drive3D");
+        drive.style.left = `${drivePX}px`;
+        drive.style.width = `${prevPX - drivePX}px`;
+        const lastPlay = document.getElementById("lastPlayMarker");
+        const lastDot = lastPlay.querySelector(".last-dot");
+        const arrow = lastPlay.querySelector(".drive-arrow");
+        const catchPoint = document.getElementById("catchPoint");
+        catchPoint.style.opacity = 0; // Hide previous catch point immediately
+        // Fade out old marker
+        lastPlay.style.opacity = lastDot.style.opacity = arrow.style.opacity = 0;
+        setTimeout(() => {
+          lastPlay.style.transition = "none";
+          lastPlay.style.backgroundColor = playType === 'pass' ? 'transparent' : 'black';
+          lastPlay.style.width = `0px`;
+          lastPlay.style.left = `${prevPX}px`;
+          lastPlay.style.opacity = 1;
+          lastDot.style.left = `0px`;
+          lastDot.style.opacity = 1;
+          arrow.style.left = `0px`;
+          arrow.style.opacity = 1;
+          if (playType === 'run') {
+            lastPlay.style.top = `50%`;
+            lastPlay.style.height = `6px`;
+            arrow.style.top = `-10px`;
+            setTimeout(() => {
+              lastPlay.style.transition = "width 1.4s ease";
+              arrow.style.transition = "left 1.4s ease";
+              lastPlay.style.width = `${currPX - prevPX}px`;
+              arrow.style.left = `${(currPX - prevPX) - 10}px`;
+            }, 50);
+          } else {
+            lastDot.style.opacity = arrow.style.opacity = 0;
+            drawPassArc(prevPX, currPX, passComplete);
+          }
+        }, 400);
+      }
+      function drawPassArc(x0, x1, passComplete = true) {
+        const canvas = document.getElementById("arcCanvas");
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const midX = (x0 + x1) / 2;
+        const y = canvas.height * 0.45;
+        const peakHeight = Math.min(120, Math.max(50, ((x1 - x0) / 10) * 6));
+        ctx.setLineDash([10, 5]);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "black";
+        ctx.lineCap = "round";
+        let offset = 0;
+        let startTime = null;
+        function animate(timestamp) {
+          if (!startTime) startTime = timestamp;
+          const elapsed = timestamp - startTime;
+          offset -= 2;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.setLineDash([10, 5]);
+          ctx.lineDashOffset = offset;
+          ctx.beginPath();
+          ctx.moveTo(x0, y);
+          ctx.quadraticCurveTo(midX, y - peakHeight, x1, y);
+          ctx.stroke();
+          if (elapsed < 3000) {
+            requestAnimationFrame(animate);
+          } else {
+            showCatchPoint(x1, y, passComplete);
+          }
+        }
+        requestAnimationFrame(animate);
+      }
+      function showCatchPoint(x, y, complete = true) {
+        const catchPoint = document.getElementById("catchPoint");
+        catchPoint.innerText = complete ? "➤" : "✖";
+        catchPoint.style.left = `${x - 8}px`;
+        catchPoint.style.top = `${y - 20}px`;
+        catchPoint.style.opacity = 0;
+        // Fade in and stay
+        setTimeout(() => {
+          catchPoint.style.transition = "opacity 0.8s ease";
+          catchPoint.style.opacity = 1;
+        }, 100);
+      }
+
+      function renderFullStatsPanel(latestPlayer = null) {
+        const tbody = document.getElementById("statsTableBody");
+        tbody.innerHTML = "";
+
+        frontendStats.forEach(player => {
+          const tr = document.createElement("tr");
+          if (player.playername === latestPlayer) {
+            tr.classList.add("highlighted");
+          }
+
+          const fatigue = playerTraits[player.playername]?.fatigue ?? 0;
+          const { emoji, color } = getFatigueFace(fatigue);
+
+          tr.innerHTML = `
+            <td><span style="color: ${color}; font-size: 20px;">${emoji}</span> ${player.playername}</td>
+            <td>${player.carries}</td>
+            <td>${player.yards}</td>
+            <td>${player.tds}</td>
+            <td>${player.fumbles}</td>
+            <td>${player.long}</td>
+          `;
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      function getFatigueFace(fatigue) {
+        if (fatigue > 20) return { emoji: "😄", color: "darkgreen" };
+        if (fatigue > 0) return { emoji: "🙂", color: "lightgreen" };
+        if (fatigue > -15) return { emoji: "😐", color: "goldenrod" };
+        if (fatigue > -30) return { emoji: "😰", color: "orange" };
+        return { emoji: "😢", color: "red" };
+      }
+
+      // On load
+      refreshUI();
+    </script>
+  </body>
+</html>
