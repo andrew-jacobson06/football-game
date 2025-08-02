@@ -171,12 +171,9 @@
         let result = "";
 
         if (touchdown) {
-          result = "Touchdown";
-          carryResult.yards = 100 - state.BallOn;
-          updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
-          newDown = 1;
-          newDist = 10;
-          const newPossession = state.Possession === "Home" ? "Away" : "Home";
+          const tdOutcome = touchdown(newBall, playerName, carryResult, tackler, predicted);
+          newDown = tdOutcome.newDown;
+          newDist = tdOutcome.newDist;
         } else if (newDist <= 0) {
           result = "First Down";
           newDown = 1;
@@ -206,7 +203,19 @@
         //refreshUI();
       }
 
-      function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted){   
+      function touchdown(newBall, playerName, carryResult, tackler, predicted) {
+        const result = "Touchdown";
+        carryResult.yards = 100 - state.BallOn;
+        updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
+        if (state.Possession === "Home") {
+          state.HomeScore = (parseInt(state.HomeScore, 10) || 0) + 6;
+        } else if (state.Possession === "Away") {
+          state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 6;
+        }
+        return { newDown: 1, newDist: 10 };
+      }
+
+      function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted){
         google.script.run.logPlayHistory({
           gameid: 1,
           timestamp: new Date().toISOString(), // ✅ passed in from frontend
