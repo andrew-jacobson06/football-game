@@ -171,7 +171,7 @@
         let result = "";
 
         if (touchdown) {
-          const tdOutcome = touchdown(newBall, playerName, carryResult, tackler, predicted);
+          const tdOutcome = handleTouchdown(newBall, playerName, carryResult, tackler, predicted);
           newDown = tdOutcome.newDown;
           newDist = tdOutcome.newDist;
         } else if (newDist <= 0) {
@@ -203,15 +203,15 @@
         //refreshUI();
       }
 
-      function touchdown(newBall, playerName, carryResult, tackler, predicted) {
+      function handleTouchdown(newBall, playerName, carryResult, tackler, predicted) {
         const result = "Touchdown";
         carryResult.yards = 100 - state.BallOn;
-        updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
         if (state.Possession === "Home") {
           state.HomeScore = (parseInt(state.HomeScore, 10) || 0) + 6;
         } else if (state.Possession === "Away") {
           state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 6;
         }
+        updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
         return { newDown: 1, newDist: 10 };
       }
 
