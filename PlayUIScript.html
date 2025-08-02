@@ -71,6 +71,8 @@
                 lastPlayer = player;
               });
 
+              renderPlayTimeline();
+
               updateFatigueBasedOnStatsOnInitialLoad();
               if (lastPlayer) {
                 console.log("✅ Rendering stats for", lastPlayer);
@@ -113,6 +115,44 @@
     const perspectiveYard = state.Possession === "Home" ? yard : 100 - yard;
     if (perspectiveYard <= 50) return "own " + perspectiveYard;
     return "opp " + (100 - perspectiveYard);
+  }
+
+  function formatBallOnForPoss(yard, possession) {
+    yard = parseInt(yard, 10);
+    const perspectiveYard = possession === "Home" ? yard : 100 - yard;
+    if (perspectiveYard <= 50) return "own " + perspectiveYard;
+    return "opp " + (100 - perspectiveYard);
+  }
+
+  function formatDownDistance(down, distance) {
+    const ord = ["1st", "2nd", "3rd", "4th"];
+    const d = ord[down - 1] || down + "th";
+    return `${d} & ${distance}`;
+  }
+
+  function buildPlayText(play) {
+    let text = `${play.Player} runs for ${play.Yards} Yards.`;
+    if (play.Result && play.Result !== "Normal") {
+      text += ` ${play.Result}!`;
+    }
+    text += ` Tackle made at the ${formatBallOnForPoss(play.NewBallOn, play.Possession)} by ${play.Tackler}.`;
+    return text;
+  }
+
+  function renderPlayTimeline() {
+    const container = document.getElementById("playTimeline");
+    if (!container) return;
+    container.innerHTML = "";
+    playHistory.forEach(play => {
+      if (!play.Player || (play.PlayType && play.PlayType !== "Run")) return;
+      const time = new Date(play.Timestamp).toLocaleTimeString();
+      const downDist = formatDownDistance(play.Down, play.Distance);
+      const text = buildPlayText(play);
+      const row = document.createElement("div");
+      row.className = "play-row";
+      row.innerHTML = `<div class="play-time">${time}</div><div class="play-desc"><div class="play-down">${downDist}</div><div class="play-text">${text}</div></div>`;
+      container.appendChild(row);
+    });
   }
 
   function loadPlayers() {
@@ -247,9 +287,24 @@
   }
 
   function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted) {
+    const timestamp = new Date().toISOString();
+    const localPlay = {
+      Timestamp: timestamp,
+      Down: state.Down,
+      Distance: state.Distance,
+      Player: playerName,
+      Yards: yards,
+      Result: result || "Normal",
+      NewBallOn: ballOn,
+      Tackler: tackler,
+      Possession: state.Possession
+    };
+    playHistory.push(localPlay);
+    renderPlayTimeline();
+
     google.script.run.logPlayHistory({
       gameid: 1,
-      timestamp: new Date().toISOString(), // ✅ passed in from frontend
+      timestamp: timestamp, // ✅ passed in from frontend
       possession: state.Possession,
       down: state.Down,
       distance: state.Distance,
