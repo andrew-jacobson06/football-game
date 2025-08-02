@@ -143,11 +143,20 @@
   }
 
   function buildPlayText(play) {
-    let text = `${play.Player} runs for ${play.Yards} Yards.`;
+    let text = `<strong>${play.Player}</strong> runs for ${play.Yards} Yards.`;
+
     if (play.Result && play.Result !== "Normal") {
-      text += ` ${play.Result}!`;
+      if (play.Result === "Touchdown") {
+        text += ` <span style="color:green; font-weight:bold;">${play.Result}!</span>`;
+      } else if (play.Result === "TO on Downs") {
+        text += ` <span style="color:red; font-weight:bold;">${play.Result}!</span>`;
+      } else {
+        text += ` <strong>${play.Result}!</strong>`;
+      }
     }
+
     text += ` Tackle made at the ${formatBallOnForPoss(play.NewBallOn, play.Possession)} by ${play.Tackler}.`;
+
     return text;
   }
 
