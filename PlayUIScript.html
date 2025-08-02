@@ -166,6 +166,10 @@
     const predicted = predictPlayType(state.Down, state.Distance);
 
     const yardDelta = carryResult.yards;
+    const scoringTeam = state.Possession;
+    const oldScore = scoringTeam === "Home"
+      ? parseInt(state.HomeScore, 10) || 0
+      : parseInt(state.AwayScore, 10) || 0;
     // Home drives left ➡ right (0 -> 100); Away drives right ➡ left (100 -> 0)
     const newBall = state.Possession === "Home"
       ? Math.min(100, Math.max(0, state.BallOn + yardDelta))
@@ -183,6 +187,7 @@
     if (touchdown) {
       await handleTouchdown(newBall, playerName, carryResult, tackler, predicted);
       recordedYards = carryResult.yards; // handleTouchdown adjusts yards
+      await celebrateTouchdown(scoringTeam, oldScore, oldScore + 6);
     } else if (newDist <= 0) {
       result = "First Down";
       newDown = 1;
@@ -301,6 +306,32 @@
     document.getElementById("quarter").innerText = state.Qtr;
     document.getElementById("homeFootball").style.visibility = state.Possession === "Home" ? "visible" : "hidden";
     document.getElementById("awayFootball").style.visibility = state.Possession === "Away" ? "visible" : "hidden";
+  }
+
+  function celebrateTouchdown(team, oldScore, newScore) {
+    return new Promise(resolve => {
+      const scoreboard = document.getElementById("scoreboard");
+      const banner = document.getElementById("scoreBanner");
+      banner.textContent = "TOUCHDOWN!";
+      scoreboard.classList.add("scoring");
+      banner.classList.add("show");
+
+      setTimeout(() => {
+        banner.classList.remove("show");
+        const scoreEl = document.getElementById(team === "Home" ? "scoreHome" : "scoreAway");
+        let current = oldScore;
+        const increment = newScore > oldScore ? 1 : -1;
+        const interval = setInterval(() => {
+          current += increment;
+          scoreEl.innerText = current;
+          if (current === newScore) {
+            clearInterval(interval);
+            scoreboard.classList.remove("scoring");
+            resolve();
+          }
+        }, 100);
+      }, 2000);
+    });
   }
 
   function updateFrontendStats(player, yards, td) {
