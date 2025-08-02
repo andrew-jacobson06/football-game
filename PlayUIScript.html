@@ -244,13 +244,13 @@
           document.getElementById("down").innerText = state.Down;
           document.getElementById("distance").innerText = state.Distance;
           document.getElementById("ballOn").innerText = formatBallOn(state.BallOn);
-          document.getElementById("possession").innerText = state.Possession;
           document.getElementById("home").innerText = state.Home;
           document.getElementById("away").innerText = state.Away;
-          document.getElementById("scoreHome").innerText = state.HomeScore
+          document.getElementById("scoreHome").innerText = state.HomeScore;
           document.getElementById("scoreAway").innerText = state.AwayScore;
-          document.getElementById("quarter").innerText = state.Qtr
-          document.getElementById("possessionIndicator").innerText = state.Possession;
+          document.getElementById("quarter").innerText = state.Qtr;
+          document.getElementById("homeFootball").style.visibility = state.Possession === "Home" ? "visible" : "hidden";
+          document.getElementById("awayFootball").style.visibility = state.Possession === "Away" ? "visible" : "hidden";
       }
 
       function updateFrontendStats(player, yards, td) {
