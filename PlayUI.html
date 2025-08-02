@@ -13,29 +13,29 @@
     <div id="tracker" class="tab-content active">
       <div id="scoreboard" class="scoreboard">
         <div id="scoreBanner" class="score-banner"></div>
-      <div class="team">
-        <div class="team-name" id="home">Home</div>
-        <div class="score-row">
-          <div id="scoreHome" class="score">0</div>
-          <span id="homeFootball" class="football-icon">🏈</span>
+        <div class="team">
+          <div class="team-name" id="home">Home</div>
+          <div class="score-row">
+            <div id="scoreHome" class="score">0</div>
+            <span id="homeFootball" class="football-icon">🏈</span>
+          </div>
         </div>
-      </div>
-      <div class="time-quarter">
-        <div><strong>QTR:</strong> <span id="quarter">1</span></div>
-      </div>
-      <div class="team">
-        <div class="team-name" id="away">Away</div>
-        <div class="score-row">
-          <span id="awayFootball" class="football-icon">🏈</span>
-          <div id="scoreAway" class="score">0</div>
+        <div class="time-quarter">
+          <div><strong>QTR:</strong> <span id="quarter">1</span></div>
         </div>
-      </div>
+        <div class="team">
+          <div class="team-name" id="away">Away</div>
+          <div class="score-row">
+            <span id="awayFootball" class="football-icon">🏈</span>
+            <div id="scoreAway" class="score">0</div>
+          </div>
+        </div>
       </div>
 
       <div class="game-info">
-        <span><strong>Down:</strong> <span id="down">...</span></span>
-        <span><strong>Distance:</strong> <span id="distance">...</span></span>
-        <span><strong>Ball On:</strong> <span id="ballOn">...</span></span>
+        <div><strong>Down:</strong> <span id="down">...</span></div>
+        <div><strong>Distance:</strong> <span id="distance">...</span></div>
+        <div><strong>Ball On:</strong> <span id="ballOn">...</span></div>
       </div>
 
       <div class="field-wrapper">
@@ -67,14 +67,15 @@
       </div>
         </div>
 
-        <label>Select Player:
+        <div class="control-panel">
+          <label for="playerDropdown">Select Player:</label>
           <select id="playerDropdown"></select>
-        </label>
-
-        <button onclick="runPlay()">▶️ Run Play</button>
-        <button onclick="nextDrive()">🔁 Next Drive</button>
-
-        <div id="result" class="result-box"></div>
+          <div class="button-row">
+            <button onclick="runPlay()">▶️ Run Play</button>
+            <button onclick="nextDrive()">🔁 Next Drive</button>
+          </div>
+          <div id="result" class="result-box"></div>
+        </div>
 
         <div id="fullStatsPanel" class="full-stats-panel">
         <div class="stats-header">Session Stats</div>

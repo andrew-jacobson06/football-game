@@ -1,352 +1,331 @@
 <style>
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #f9f9f9;
-        padding: 20px;
-        margin: auto;
-      }
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
 
-      h3 {
-        text-align: center;
-        color: #333;
-      }
+  :root {
+    --ue-red: #C10206;
+    --carmine: #A50113;
+    --floral-white: #FFFBF2;
+    --chinese-white: #DFE2DB;
+    --raisin-black: #211D21;
+    --rich-black: #010A10;
+  }
 
-      label {
-        display: block;
-        margin-top: 15px;
-        font-weight: bold;
-        color: #444;
-      }
+  body {
+    margin: 0;
+    padding: 20px;
+    font-family: 'Roboto', Arial, sans-serif;
+    background: linear-gradient(135deg, var(--rich-black) 0%, var(--raisin-black) 100%);
+    color: var(--floral-white);
+  }
 
-      select, button {
-        margin-top: 5px;
-        padding: 6px 10px;
-        font-size: 14px;
-        width: 100%;
-        box-sizing: border-box;
-      }
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .tab-button {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid var(--ue-red);
+    background: var(--raisin-black);
+    color: var(--floral-white);
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s, transform 0.2s;
+  }
+  .tab-button:hover {
+    background: var(--ue-red);
+    transform: translateY(-2px);
+  }
+  .tab-button.active {
+    background: var(--ue-red);
+  }
+  .tab-content {
+    display: none;
+  }
+  .tab-content.active {
+    display: block;
+  }
 
-      button {
-        margin-top: 10px;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        cursor: pointer;
-        border-radius: 4px;
-      }
+  /* Scoreboard */
+  .scoreboard {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(90deg, var(--ue-red), var(--carmine));
+    padding: 15px 20px;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(193, 2, 6, 0.5);
+    position: relative;
+    overflow: hidden;
+  }
+  .scoreboard.scoring {
+    box-shadow: 0 0 25px gold;
+  }
+  .score-banner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: gold;
+    color: var(--rich-black);
+    font-size: 48px;
+    font-weight: bold;
+    text-shadow: 0 0 10px #fff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  .score-banner.show {
+    opacity: 1;
+    animation: flash 0.5s alternate 4;
+  }
+  @keyframes flash {
+    from { background: gold; color: var(--rich-black); }
+    to { background: orange; color: var(--floral-white); }
+  }
+  .scoreboard .team {
+    text-align: center;
+  }
+  .scoreboard .team-name {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .scoreboard .score {
+    font-size: 36px;
+    font-weight: 700;
+  }
+  .score-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .time-quarter {
+    font-size: 18px;
+    font-weight: 500;
+  }
+  .football-icon {
+    font-size: 22px;
+    visibility: hidden;
+  }
 
-      button:hover {
-        background-color: #0056b3;
-      }
+  /* Game information */
+  .game-info {
+    display: flex;
+    gap: 10px;
+    justify-content: space-around;
+    background: var(--raisin-black);
+    border: 1px solid var(--ue-red);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 20px;
+  }
+  .game-info div {
+    flex: 1;
+    text-align: center;
+    font-weight: 500;
+  }
+  .game-info strong {
+    color: var(--chinese-white);
+  }
 
-      .info-row {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 10px;
-        padding: 6px 0;
-        border-bottom: 1px solid #ccc;
-      }
+  /* Field (unchanged except for wrapper positioning) */
+  .field-wrapper {
+    width: 100%;
+    max-width: 1600px;
+    margin: 20px auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    perspective: 1000px;
+  }
+  #field3D {
+    position: relative;
+    width: 1200px;
+    height: 180px;
+    transform: rotateX(45deg);
+    margin: 30px auto;
+    background: linear-gradient(to right, #007a33 0%, #006622 100%);
+    border: 3px solid #333;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    transform-style: preserve-3d;
+    overflow: hidden;
+    z-index: 3;
+  }
+  .yardline {
+    position: absolute;
+    bottom: 0;
+    width: 1px;
+    height: 100%;
+    background-color: white;
+    text-align: center;
+    font-size: 16px;
+    color: white;
+  }
+  .driveSegment {
+    position: absolute;
+    top: 50%;
+    height: 6px;
+    background-color: white;
+    border-radius: 0px;
+    z-index: 2;
+  }
+  .drive-dot, .last-dot {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: black;
+    border-radius: 50%;
+    top: -2px;
+    left: 0;
+    z-index: 2;
+    opacity: 1;
+  }
+  .drive-dot {
+    background-color: white;
+  }
+  .drive-arrow {
+    position: absolute;
+    font-size: 19px;
+    color: black;
+    left: 0;
+    top: -10px;
+    opacity: 1;
+    z-index: 3;
+    transition: left 1.4s ease, opacity 0.5s ease;
+  }
 
-      .result-box {
-        margin-top: 20px;
-        padding: 12px;
-        background: #fff;
-        border-radius: 6px;
-        box-shadow: 0 0 6px rgba(0,0,0,0.1);
-      }
+  /* Control panel */
+  .control-panel {
+    max-width: 900px;
+    margin: 30px auto;
+    background: var(--raisin-black);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+  }
+  .control-panel label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .control-panel select {
+    width: 100%;
+    padding: 8px;
+    background: var(--rich-black);
+    color: var(--floral-white);
+    border: 1px solid var(--chinese-white);
+    border-radius: 6px;
+  }
+  .button-row {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+  }
+  .button-row button {
+    flex: 1;
+  }
 
-      .highlight {
-        color: green;
-        font-weight: bold;
-      }
+  button {
+    padding: 12px;
+    font-size: 16px;
+    background: var(--ue-red);
+    color: var(--floral-white);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+  }
+  button:hover {
+    background: var(--carmine);
+    transform: scale(1.03);
+  }
 
-      .turnover {
-        color: red;
-        font-weight: bold;
-      }
+  .result-box {
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--rich-black);
+    border-left: 4px solid var(--ue-red);
+    border-radius: 8px;
+    min-height: 40px;
+  }
+  .highlight {
+    color: lightgreen;
+    font-weight: bold;
+  }
+  .turnover {
+    color: var(--ue-red);
+    font-weight: bold;
+  }
 
-      ul {
-        padding-left: 20px;
-        margin-top: 5px;
-      }
+  /* Stats panel */
+  .full-stats-panel {
+    max-width: 900px;
+    margin: 40px auto;
+    background: var(--raisin-black);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 0 12px rgba(0,0,0,0.4);
+  }
+  .stats-header {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 15px;
+    border-bottom: 2px solid var(--ue-red);
+    padding-bottom: 6px;
+    text-align: center;
+  }
+  .stats-table-container {
+    overflow-x: auto;
+  }
+  .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .stats-table th,
+  .stats-table td {
+    padding: 10px;
+    text-align: center;
+  }
+  .stats-table th {
+    background: var(--ue-red);
+    color: var(--floral-white);
+  }
+  .stats-table tr:nth-child(even) {
+    background: var(--rich-black);
+  }
+  .stats-table tr:nth-child(odd) {
+    background: var(--raisin-black);
+  }
+  .stats-table tr.highlighted {
+    background: var(--ue-red);
+    color: var(--floral-white);
+    font-weight: bold;
+  }
 
-      .section-title {
-        margin-top: 15px;
-        font-weight: bold;
-        text-decoration: underline;
-      }
-
-      .play-timeline {
-        margin-top: 20px;
-      }
-      .play-row {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 8px;
-      }
-      .play-time {
-        width: 80px;
-        font-weight: bold;
-      }
-      .play-desc {
-        flex: 1;
-      }
-      .play-down {
-        font-size: 0.9em;
-        color: #555;
-      }
-
-      /* Tabs */
-      .tabs {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-      }
-      .tab-button {
-        flex: 1;
-        padding: 8px 12px;
-        background: #f2f2f2;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: bold;
-      }
-      .tab-button.active {
-        background: #007bff;
-        color: #fff;
-      }
-      .tab-content {
-        display: none;
-      }
-      .tab-content.active {
-        display: block;
-      }
-
-      /* Play Log */
-      .play-log-card {
-        margin-top: 20px;
-        padding: 10px;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 0 6px rgba(0,0,0,0.1);
-      }
-      .play-log-table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-      .play-log-table th,
-      .play-log-table td {
-        padding: 8px;
-        border-bottom: 1px solid #ccc;
-        text-align: left;
-      }
-      .play-log-table th {
-        background: #f2f2f2;
-      }
-      
-      /* FIELD STUFF */
-      #field3D {
-        position: relative;
-        width: 1200px;
-        height: 180px;
-        transform: rotateX(45deg); /* no perspective here, moved to wrapper */
-        margin: 30px auto;
-        background: linear-gradient(to right, #007a33 0%, #006622 100%);
-        border: 3px solid #333;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        transform-style: preserve-3d;
-        overflow: hidden;
-      }
-      /* Yard lines and labels */
-      .yardline {
-        position: absolute;
-        bottom: 0;
-        width: 1px;
-        height: 100%;
-        background-color: white;
-        text-align: center;
-        font-size: 16px;
-        color: white;
-      }
-      /* Drive line (white) and last play (black) use same base style */
-      .driveSegment {
-        position: absolute;
-        top: 50%;
-        height: 6px;
-        background-color: white;
-        border-radius: 0px;
-        z-index: 2;
-      }
-      #field3D {
-        z-index: 3;
-      }
-      /* Dot at start of play */
-      .last-dot, .drive-dot {
-        position: absolute;
-        width: 10px;
-        height: 10px;
-        background-color: black;
-        border-radius: 50%;
-        top: -2px;
-        left: 0;
-        z-index: 2; /* below arrow, above base */
-        opacity: 1;
-      }
-      .drive-dot {
-        background-color: white;
-      }
-      /* Arrow that moves with the last play */
-      .drive-arrow {
-        position: absolute;
-        font-size: 19px;
-        color: black;
-        left: 0;
-        top: -10px; /* raise the arrow slightly above the line */
-        opacity: 1;
-        z-index: 3; /* ensure it’s above all segments */
-        transition: left 1.4s ease, opacity 0.5s ease;
-      }
-      .field-wrapper {
-        width: 100%;
-        max-width: 1600px;
-        margin: 20px auto;
-        overflow-x: auto;
-        overflow-y: hidden;
-        perspective: 1000px;
-      }
-
-      .scoreboard {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #222;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-family: 'Arial Black', sans-serif;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-        position: relative;
-        overflow: hidden;
-      }
-      .scoreboard.scoring {
-        box-shadow: 0 0 20px gold;
-      }
-      .score-banner {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background: gold;
-        color: black;
-        font-size: 48px;
-        font-weight: bold;
-        text-shadow: 0 0 10px #fff;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.5s ease;
-      }
-      .score-banner.show {
-        opacity: 1;
-        animation: flash 0.5s alternate 4;
-      }
-      @keyframes flash {
-        from { background: gold; color: black; }
-        to { background: orange; color: white; }
-      }
-      .scoreboard .team {
-        text-align: center;
-      }
-      .scoreboard .team-name {
-        font-size: 16px;
-        margin-bottom: 4px;
-      }
-      .scoreboard .score {
-        font-size: 28px;
-        font-weight: bold;
-      }
-      .scoreboard .time-quarter {
-        font-size: 14px;
-        text-align: center;
-      }
-      .score-row {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        justify-content: center;
-      }
-      .football-icon {
-        font-size: 20px;
-        visibility: hidden;
-      }
-      .game-info {
-        display: flex;
-        justify-content: space-between;
-        margin: 10px 0 20px 0;
-        padding: 8px 10px;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 0 6px rgba(0,0,0,0.1);
-      }
-      .game-info span {
-        flex: 1;
-        text-align: center;
-      }
-
-      .full-stats-panel {
-        margin-top: 40px;
-        padding: 20px;
-        background: #fff;
-        border-radius: 10px;
-        box-shadow: 0 0 12px rgba(0,0,0,0.1);
-        max-width: 900px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      .stats-header {
-        font-size: 22px;
-        font-weight: bold;
-        margin-bottom: 15px;
-        border-bottom: 2px solid #007bff;
-        padding-bottom: 6px;
-        color: #007bff;
-        text-align: center;
-      }
-
-      .stats-table-container {
-        overflow-x: auto;
-      }
-
-      .stats-table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-
-      .stats-table th,
-      .stats-table td {
-        padding: 10px;
-        text-align: center;
-        border-bottom: 1px solid #ccc;
-        font-size: 14px;
-      }
-
-      .stats-table th {
-        background-color: #f2f2f2;
-        color: #333;
-      }
-
-      .stats-table tr.highlighted {
-        background-color: gold;
-        font-weight: bold;
-      }
-
-      .stats-table tr:not(.highlighted) {
-        background-color: #f8f9fa;
-      }
-
-    </style>
+  /* Play log */
+  .play-log-card {
+    margin-top: 20px;
+    padding: 20px;
+    background: var(--raisin-black);
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.4);
+  }
+  .play-log-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .play-log-table th,
+  .play-log-table td {
+    padding: 8px;
+    border-bottom: 1px solid var(--chinese-white);
+    text-align: left;
+  }
+  .play-log-table th {
+    background: var(--ue-red);
+    color: var(--floral-white);
+  }
+</style>
