@@ -272,6 +272,38 @@ function updateGameState({ down, distance, ballOn, possession, previous, driveSt
   }
 }
 
+function pushGameState({ gameId, quarter, down, distance, ballOn, homeScore, awayScore, driveStart }) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Games');
+  if (!sheet) {
+    throw new Error("Sheet 'Games' not found.");
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const rowIndex = data.slice(1).findIndex(r => r[0] === gameId);
+  if (rowIndex === -1) {
+    throw new Error("No row found for gameId: " + gameId);
+  }
+
+  const rowNumber = rowIndex + 2;
+  const updates = {
+    Qtr: quarter,
+    Down: down,
+    Distance: distance,
+    BallOn: ballOn,
+    HomeScore: homeScore,
+    AwayScore: awayScore,
+    DriveStart: driveStart
+  };
+
+  Object.keys(updates).forEach(key => {
+    const col = headers.indexOf(key);
+    if (col !== -1) {
+      sheet.getRange(rowNumber, col + 1).setValue(updates[key]);
+    }
+  });
+}
+
 function logPlayResult({ player, playType, yards, down, distance, ballOn }) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("PlayHistory");
   const ts = new Date();
