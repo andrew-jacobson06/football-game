@@ -231,9 +231,50 @@
         background-color: #f8f9fa;
       }
 
+      /* Collapsible player menu */
+      #menuToggle {
+        position: fixed;
+        left: 10px;
+        top: 10px;
+        background: #007bff;
+        color: #fff;
+        padding: 8px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        z-index: 1001;
+      }
+
+      .player-menu {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 0;
+        overflow-x: hidden;
+        background: #fff;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+        transition: width 0.3s ease;
+        z-index: 1000;
+      }
+
+      .player-menu.open {
+        width: 250px;
+      }
+
+      .player-card {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .player-card h4 {
+        margin: 0 0 5px 0;
+      }
+
     </style>
   </head>
-  <body>    
+  <body>
+    <div id="menuToggle" onclick="toggleMenu()">☰ Players</div>
+    <div id="playerMenu" class="player-menu"></div>
     <div id="scoreboard" class="scoreboard">
       <div class="team">
         <div class="team-name" id="home">Home</div>
@@ -328,6 +369,28 @@
       let frontendStats = [];
       let gameId = 1;
       let playHistory = [];
+
+      function toggleMenu() {
+        document.getElementById('playerMenu').classList.toggle('open');
+      }
+
+      function renderPlayerCards() {
+        const menu = document.getElementById('playerMenu');
+        if (!menu) return;
+        menu.innerHTML = '';
+        Object.values(playerTraits).forEach(p => {
+          const card = document.createElement('div');
+          card.className = 'player-card';
+          card.innerHTML = `
+            <h4>${p.name}</h4>
+            <div>Size: ${p.size}</div>
+            <div>Strength: ${p.strength}</div>
+            <div>Speed: ${p.speed}</div>
+            <div>Stamina: ${p.stamina}</div>
+          `;
+          menu.appendChild(card);
+        });
+      }
 
       // === GAME SETUP ===
       function refreshUI() {
@@ -434,6 +497,7 @@
             playerTraits[player.name] = player;
           });
           loadPlayers();
+          renderPlayerCards();
           if (callback) callback();
         }).getPlayerTraits();
       }
