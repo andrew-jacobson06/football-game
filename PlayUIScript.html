@@ -196,7 +196,8 @@
     const yards = state.Possession === "Home"
       ? state.BallOn - state.DriveStart
       : state.DriveStart - state.BallOn;
-    return { plays, yards: Math.max(0, yards) };
+    //return { plays, yards: Math.max(0, yards) };
+    document.getElementById("driveInfo").innerText = `${plays} plays, ${yards} yards`;
   }
 
   function updateTimeoutDots(id, count) {
@@ -241,6 +242,7 @@
       row.innerHTML = `<td>${time}</td><td><div class="play-down">${downDist}</div><div class="play-text">${text}</div></td><td>${offense}</td><td>${score}</td>`;
       container.appendChild(row);
     });
+    computeDriveInfo();
   }
 
   function loadPlayers() {
@@ -394,7 +396,6 @@
       PlayType: "Run"
     };
     playHistory.push(localPlay);
-    renderPlayTimeline();
 
     google.script.run.logPlayHistory({
       gameid: gameId,
@@ -430,6 +431,7 @@
     state.Possession = poss;
     state.Previous = previousBallOn;
     state.DriveStart = driveStart;
+    renderPlayTimeline();
 
     google.script.run.pushGameState({
       gameId: gameId,
@@ -449,8 +451,6 @@
     console.log(state);
     document.getElementById("downDistance").innerText = formatDownDistance(state.Down, state.Distance);
     document.getElementById("ballOn").innerText = formatBallOn(state.BallOn);
-    const drive = computeDriveInfo();
-    document.getElementById("driveInfo").innerText = `${drive.plays} plays, ${drive.yards} yards`;
     document.getElementById("homeName").innerText = state.Home;
     document.getElementById("awayName").innerText = state.Away;
     document.getElementById("homeRecord").innerText = state.HomeRecord || "";
