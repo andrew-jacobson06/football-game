@@ -10,21 +10,37 @@
     <div id="gameCarousel" class="game-carousel"></div>
     <div id="scoreboard" class="scoreboard">
       <div id="scoreBanner" class="score-banner"></div>
-      <div class="team">
-        <div class="team-name" id="home">Home</div>
-        <div class="score-row">
-          <div id="scoreHome" class="score">0</div>
+      <div class="team-block home">
+        <div class="team-info">
+          <img id="homeLogo" class="team-logo" src="" alt="Home Logo" />
+          <div id="homeName" class="team-name">Home</div>
+          <div id="homeRecord" class="team-record">0-0</div>
+        </div>
+        <div class="score-section">
           <span id="homeFootball" class="football-icon">🏈</span>
+          <div id="scoreHome" class="team-score">0</div>
+          <div id="homeTimeouts" class="timeouts">
+            <span class="timeout-dot"></span>
+            <span class="timeout-dot"></span>
+            <span class="timeout-dot"></span>
+          </div>
         </div>
       </div>
-      <div class="time-quarter">
-        <div><strong>QTR:</strong> <span id="quarter">1</span></div>
-      </div>
-      <div class="team">
-        <div class="team-name" id="away">Away</div>
-        <div class="score-row">
+      <div id="timeQuarter" class="center-info">0:00 - 1st</div>
+      <div class="team-block away">
+        <div class="team-info">
+          <img id="awayLogo" class="team-logo" src="" alt="Away Logo" />
+          <div id="awayName" class="team-name">Away</div>
+          <div id="awayRecord" class="team-record">0-0</div>
+        </div>
+        <div class="score-section">
           <span id="awayFootball" class="football-icon">🏈</span>
-          <div id="scoreAway" class="score">0</div>
+          <div id="scoreAway" class="team-score">0</div>
+          <div id="awayTimeouts" class="timeouts">
+            <span class="timeout-dot"></span>
+            <span class="timeout-dot"></span>
+            <span class="timeout-dot"></span>
+          </div>
         </div>
       </div>
     </div>
