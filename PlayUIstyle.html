@@ -18,6 +18,57 @@
     color: var(--floral-white);
   }
 
+  /* Game carousel */
+  .game-carousel {
+    display: flex;
+    overflow-x: auto;
+    gap: 12px;
+    padding: 10px;
+    margin-bottom: 20px;
+    height: 10vh;
+    box-sizing: border-box;
+    scroll-behavior: smooth;
+
+    /* Hide scrollbar - Chrome, Safari */
+    scrollbar-width: none;           /* Firefox */
+    -ms-overflow-style: none;        /* IE/Edge */
+  }
+  .game-carousel::-webkit-scrollbar {
+    display: none;                   /* Chrome/Safari */
+  }
+
+  .game-card {
+    flex: 0 0 auto;
+    width: 20vw; /* 20% of screen width */
+    height: 100%;
+    background: var(--raisin-black);
+    border: 1px solid var(--ue-red);
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .game-card.active {
+    background: var(--ue-red);
+  }
+
+  .game-card .teams {
+    font-weight: 600;
+    font-size: 1.1vw;
+    line-height: 1.2em;
+  }
+
+  .game-card .score {
+    font-size: 0.9vw;
+    margin-top: 4px;
+  }
+
+
   /* Tabs */
   .tabs {
     display: flex;

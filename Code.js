@@ -45,6 +45,28 @@ function getGameState(gameId) {
   return result;
 }
 
+function getGamesList() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Games');
+  if (!sheet) {
+    throw new Error("Sheet 'Games' not found.");
+  }
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idxId = headers.indexOf('Id');
+  const idxHome = headers.indexOf('Home');
+  const idxAway = headers.indexOf('Away');
+  const idxHomeScore = headers.indexOf('HomeScore');
+  const idxAwayScore = headers.indexOf('AwayScore');
+
+  return data.slice(1).map(row => ({
+    GameId: row[idxId],
+    Home: row[idxHome],
+    Away: row[idxAway],
+    HomeScore: row[idxHomeScore],
+    AwayScore: row[idxAwayScore]
+  }));
+}
+
 function getPlayerTraits() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Players");
   if (!sheet) {

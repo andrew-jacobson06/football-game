@@ -19,7 +19,30 @@
         if (target) target.classList.add('active');
       });
     });
+    loadGamesList();
   });
+
+  function loadGamesList() {
+    google.script.run.withSuccessHandler(renderGameCards).getGamesList();
+  }
+
+  function renderGameCards(games) {
+    const container = document.getElementById('gameCarousel');
+    if (!container) return;
+    container.innerHTML = '';
+    games.forEach(g => {
+      const card = document.createElement('div');
+      const id = Number(g.GameId);
+      card.className = 'game-card' + (id === gameId ? ' active' : '');
+      card.innerHTML = `<div class="teams">${g.Away} @ ${g.Home}</div><div class="score">${g.AwayScore} - ${g.HomeScore}</div>`;
+      card.addEventListener('click', () => {
+        refreshUI(id);
+        document.querySelectorAll('.game-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+      });
+      container.appendChild(card);
+    });
+  }
 
   function toggleMenu() {
     document.getElementById('playerMenu').classList.toggle('open');
@@ -44,7 +67,18 @@
   }
 
   // === GAME SETUP ===
-  function refreshUI() {
+  function refreshUI(selectedGameId) {
+    state = {};
+    players = [];
+    playerTraits = {};
+    rollThresholds = [];
+    breakawaySettings = [];
+    drainSettings = {};  // Populated from backend on load
+    frontendStats = [];
+    playHistory = [];
+    if (typeof selectedGameId !== 'undefined') {
+      gameId = selectedGameId;
+    }
     google.script.run.withSuccessHandler(function (gameState) {
       console.log("✅ Loaded game state");
       state = gameState;
@@ -170,7 +204,7 @@
       const downDist = formatDownDistance(play.Down, play.Distance);
       const text = buildPlayText(play);
       const offense = play.Possession || "";
-      const score = `${play.HomeScore !== undefined ? play.HomeScore : state.HomeScore} - ${play.AwayScore !== undefined ? play.AwayScore : state.AwayScore}`;
+      const score = `${play.homeScore !== undefined ? play.homeScore : state.HomeScore} - ${play.AwayScore !== undefined ? play.AwayScore : state.AwayScore}`;
       const row = document.createElement("tr");
       row.innerHTML = `<td>${time}</td><td><div class="play-down">${downDist}</div><div class="play-text">${text}</div></td><td>${offense}</td><td>${score}</td>`;
       container.appendChild(row);
@@ -328,7 +362,7 @@
     renderPlayTimeline();
 
     google.script.run.logPlayHistory({
-      gameid: 1,
+      gameid: gameId,
       timestamp: timestamp, // ✅ passed in from frontend
       possession: state.Possession,
       down: state.Down,
