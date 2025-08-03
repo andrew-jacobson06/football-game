@@ -73,20 +73,22 @@
   /* Tabs */
   .tabs {
     display: flex;
-    margin-bottom: 20px;
+    margin: 0 0 20px 0;
     background: var(--gray-medium);
-    border-radius: 4px;
+    border: 1px solid var(--gray-light);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
     overflow: hidden;
   }
   .tab-button {
     flex: 1;
     padding: 10px 15px;
     background: var(--gray-medium);
-    color: var(--text-light);
+    color: var(--text-muted);
     border: none;
     border-bottom: 3px solid transparent;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 400;
     transition: background 0.3s, color 0.3s;
   }
   .tab-button:hover {
@@ -95,6 +97,7 @@
   .tab-button.active {
     color: var(--accent-red);
     border-bottom: 3px solid var(--accent-red);
+    font-weight: 400;
   }
   .tab-content {
     display: none;
@@ -111,12 +114,13 @@
     background: var(--gray-medium);
     padding: 15px 20px;
     border: 1px solid var(--gray-light);
-    border-radius: 4px;
+    border-radius: 4px 4px 0 0;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
     position: relative;
     overflow: hidden;
-    margin-bottom: 20px;
+    margin-bottom: 0;
     height: 120px;
+    border-bottom: none;
   }
   .scoreboard.scoring {
     box-shadow: 0 0 25px var(--accent-red);
@@ -185,6 +189,10 @@
     justify-content: center;
     margin: 0 10px;
   }
+  .score-row {
+    display: flex;
+    align-items: center;
+  }
   .team-score {
     font-size: 48px;
     font-weight: 700;
@@ -214,32 +222,41 @@
     font-size: 22px;
     visibility: hidden;
   }
+  .team-block.home .football-icon {
+    margin-left: 6px;
+  }
+  .team-block.away .football-icon {
+    margin-right: 6px;
+  }
 
   /* Game information */
   .game-info {
     display: flex;
-    gap: 10px;
     justify-content: space-around;
-    background: var(--gray-medium);
-    border: 1px solid var(--gray-light);
-    border-radius: 4px;
     padding: 8px 10px;
-    margin-bottom: 20px;
+    border-bottom: 1px solid var(--gray-light);
+    margin-bottom: 0;
+    background: none;
+    gap: 10px;
   }
-  .game-info div {
+  .game-info .info-block {
     flex: 1;
     text-align: center;
-    font-weight: 500;
   }
-  .game-info strong {
+  .game-info .info-label {
     color: var(--text-muted);
+    font-size: 14px;
+  }
+  .game-info .info-value {
+    color: black;
+    font-weight: 500;
   }
 
   /* Field (unchanged except for wrapper positioning) */
   .field-wrapper {
     width: 100%;
     max-width: 1600px;
-    margin: 20px auto;
+    margin: 0 auto 20px;
     overflow-x: auto;
     overflow-y: hidden;
     perspective: 1000px;
@@ -249,7 +266,7 @@
     width: 1200px;
     height: 180px;
     transform: rotateX(45deg);
-    margin: 30px auto;
+    margin: 0 auto;
     background: linear-gradient(to right, #007a33 0%, #006622 100%);
     border: 3px solid #333;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
