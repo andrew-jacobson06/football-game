@@ -5,12 +5,15 @@
     <?!= include('PlayUIstyle'); ?> 
   </head>
   <body>
+    <div id="gameCarousel" class="game-carousel"></div>
     <div class="tabs">
-      <button class="tab-button active" data-tab="tracker">Game Tracker</button>
-      <button class="tab-button" data-tab="log">Play Log</button>
+      <button class="tab-button active" data-tab="gamecast">Gamecast</button>
+      <button class="tab-button" data-tab="playbyplay">Play-by-Play</button>
+      <button class="tab-button" data-tab="boxscore">Box Score</button>
+      <button class="tab-button" data-tab="teamstats">Team Stats</button>
     </div>
 
-    <div id="tracker" class="tab-content active">
+    <div id="gamecast" class="tab-content active">
       <div id="scoreboard" class="scoreboard">
         <div id="scoreBanner" class="score-banner"></div>
         <div class="team">
@@ -77,29 +80,9 @@
           <div id="result" class="result-box"></div>
         </div>
 
-        <div id="fullStatsPanel" class="full-stats-panel">
-        <div class="stats-header">Session Stats</div>
-        <div class="stats-table-container">
-          <table class="stats-table" id="statsTable">
-        <thead>
-          <tr>
-            <th>Player</th>
-            <th>Carries</th>
-            <th>Yards</th>
-            <th>TDs</th>
-            <th>Fumbles</th>
-            <th>Long</th>
-          </tr>
-        </thead>
-      <tbody id="statsTableBody">
-        <!-- rows added dynamically -->
-      </tbody>
-          </table>
-        </div>
-      </div>
     </div>
 
-    <div id="log" class="tab-content">
+    <div id="playbyplay" class="tab-content">
       <div class="play-log-card">
         <table class="play-log-table">
           <thead>
@@ -112,6 +95,35 @@
           </thead>
           <tbody id="playTimeline"></tbody>
         </table>
+      </div>
+    </div>
+
+    <div id="boxscore" class="tab-content">
+      <div id="fullStatsPanel" class="full-stats-panel">
+        <div class="stats-header">Session Stats</div>
+        <div class="stats-table-container">
+          <table class="stats-table" id="statsTable">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Carries</th>
+                <th>Yards</th>
+                <th>TDs</th>
+                <th>Fumbles</th>
+                <th>Long</th>
+              </tr>
+            </thead>
+            <tbody id="statsTableBody">
+              <!-- rows added dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="teamstats" class="tab-content">
+      <div class="play-log-card">
+        <p>Team stats coming soon...</p>
       </div>
     </div>
 

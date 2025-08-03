@@ -18,6 +18,36 @@
     color: var(--floral-white);
   }
 
+  /* Game carousel */
+  .game-carousel {
+    display: flex;
+    overflow-x: auto;
+    gap: 12px;
+    padding: 10px 0;
+    margin-bottom: 20px;
+  }
+  .game-card {
+    flex: 0 0 auto;
+    background: var(--raisin-black);
+    border: 1px solid var(--ue-red);
+    border-radius: 8px;
+    padding: 10px;
+    min-width: 150px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .game-card.active {
+    background: var(--ue-red);
+  }
+  .game-card .teams {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .game-card .score {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
   /* Tabs */
   .tabs {
     display: flex;
