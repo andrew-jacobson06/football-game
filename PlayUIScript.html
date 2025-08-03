@@ -19,7 +19,31 @@
         if (target) target.classList.add('active');
       });
     });
+    loadGamesList();
   });
+
+  function loadGamesList() {
+    google.script.run.withSuccessHandler(renderGameCards).getGamesList();
+  }
+
+  function renderGameCards(games) {
+    const container = document.getElementById('gameCarousel');
+    if (!container) return;
+    container.innerHTML = '';
+    games.forEach(g => {
+      const card = document.createElement('div');
+      const id = Number(g.GameId);
+      card.className = 'game-card' + (id === gameId ? ' active' : '');
+      card.innerHTML = `<div class="teams">${g.Away} @ ${g.Home}</div><div class="score">${g.AwayScore} - ${g.HomeScore}</div>`;
+      card.addEventListener('click', () => {
+        gameId = id;
+        refreshUI();
+        document.querySelectorAll('.game-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+      });
+      container.appendChild(card);
+    });
+  }
 
   function toggleMenu() {
     document.getElementById('playerMenu').classList.toggle('open');
