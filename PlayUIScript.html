@@ -19,7 +19,31 @@
         if (target) target.classList.add('active');
       });
     });
+    loadGames();
   });
+
+  function loadGames() {
+    google.script.run.withSuccessHandler(renderGames).getGames();
+  }
+
+  function renderGames(games) {
+    const container = document.getElementById('gameCarousel');
+    if (!container) return;
+    container.innerHTML = '';
+    games.forEach(g => {
+      const card = document.createElement('div');
+      card.className = 'game-card' + (g.GameId === gameId ? ' active' : '');
+      card.innerHTML = `
+        <div>${g.Home} vs ${g.Away}</div>
+        <div>${g.HomeScore}-${g.AwayScore}</div>`;
+      card.addEventListener('click', () => {
+        gameId = g.GameId;
+        refreshUI();
+        loadGames();
+      });
+      container.appendChild(card);
+    });
+  }
 
   function toggleMenu() {
     document.getElementById('playerMenu').classList.toggle('open');

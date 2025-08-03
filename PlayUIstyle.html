@@ -18,6 +18,31 @@
     color: var(--floral-white);
   }
 
+  /* Game carousel */
+  .game-carousel {
+    display: flex;
+    overflow-x: auto;
+    gap: 12px;
+    padding-bottom: 15px;
+  }
+  .game-card {
+    flex: 0 0 auto;
+    min-width: 160px;
+    background: var(--raisin-black);
+    border: 1px solid var(--ue-red);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  .game-card:hover {
+    background: var(--ue-red);
+  }
+  .game-card.active {
+    background: var(--ue-red);
+  }
+
   /* Tabs */
   .tabs {
     display: flex;
@@ -47,6 +72,13 @@
   }
   .tab-content.active {
     display: block;
+  }
+
+  .team-stats-placeholder {
+    padding: 20px;
+    text-align: center;
+    background: var(--raisin-black);
+    border-radius: 12px;
   }
 
   /* Scoreboard */

@@ -22,6 +22,22 @@ function showPlayUI() {
 }
 
 //********************** */
+function getGames() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Games');
+  if (!sheet) {
+    throw new Error("Sheet 'Games' not found.");
+  }
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  return data.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => {
+      obj[h] = row[i];
+    });
+    return obj;
+  });
+}
+
 function getGameState(gameId) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Games');
   if (!sheet) {
