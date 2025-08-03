@@ -194,7 +194,7 @@
       const downDist = formatDownDistance(play.Down, play.Distance);
       const text = buildPlayText(play);
       const offense = play.Possession || "";
-      const score = `${play.HomeScore !== undefined ? play.HomeScore : state.HomeScore} - ${play.AwayScore !== undefined ? play.AwayScore : state.AwayScore}`;
+      const score = `${play.homeScore !== undefined ? play.homeScore : state.HomeScore} - ${play.AwayScore !== undefined ? play.AwayScore : state.AwayScore}`;
       const row = document.createElement("tr");
       row.innerHTML = `<td>${time}</td><td><div class="play-down">${downDist}</div><div class="play-text">${text}</div></td><td>${offense}</td><td>${score}</td>`;
       container.appendChild(row);
