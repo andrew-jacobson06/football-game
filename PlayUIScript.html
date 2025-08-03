@@ -36,8 +36,7 @@
       card.className = 'game-card' + (id === gameId ? ' active' : '');
       card.innerHTML = `<div class="teams">${g.Away} @ ${g.Home}</div><div class="score">${g.AwayScore} - ${g.HomeScore}</div>`;
       card.addEventListener('click', () => {
-        gameId = id;
-        refreshUI();
+        refreshUI(id);
         document.querySelectorAll('.game-card').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
       });
@@ -68,7 +67,10 @@
   }
 
   // === GAME SETUP ===
-  function refreshUI() {
+  function refreshUI(selectedGameId) {
+    if (typeof selectedGameId !== 'undefined') {
+      gameId = selectedGameId;
+    }
     google.script.run.withSuccessHandler(function (gameState) {
       console.log("✅ Loaded game state");
       state = gameState;
