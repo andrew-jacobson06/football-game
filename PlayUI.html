@@ -8,6 +8,26 @@
     <audio id="crowdRoar" src="https://andrew-jacobson06.github.io/public-audio/crowd-cheering-379666.mp3" preload="auto"></audio>
 
     <div id="gameCarousel" class="game-carousel"></div>
+    <div id="scoreboard" class="scoreboard">
+      <div id="scoreBanner" class="score-banner"></div>
+      <div class="team">
+        <div class="team-name" id="home">Home</div>
+        <div class="score-row">
+          <div id="scoreHome" class="score">0</div>
+          <span id="homeFootball" class="football-icon">🏈</span>
+        </div>
+      </div>
+      <div class="time-quarter">
+        <div><strong>QTR:</strong> <span id="quarter">1</span></div>
+      </div>
+      <div class="team">
+        <div class="team-name" id="away">Away</div>
+        <div class="score-row">
+          <span id="awayFootball" class="football-icon">🏈</span>
+          <div id="scoreAway" class="score">0</div>
+        </div>
+      </div>
+    </div>
     <div class="tabs">
       <button class="tab-button active" data-tab="gamecast">Gamecast</button>
       <button class="tab-button" data-tab="playbyplay">Play-by-Play</button>
@@ -16,27 +36,6 @@
     </div>
 
     <div id="gamecast" class="tab-content active">
-      <div id="scoreboard" class="scoreboard">
-        <div id="scoreBanner" class="score-banner"></div>
-        <div class="team">
-          <div class="team-name" id="home">Home</div>
-          <div class="score-row">
-            <div id="scoreHome" class="score">0</div>
-            <span id="homeFootball" class="football-icon">🏈</span>
-          </div>
-        </div>
-        <div class="time-quarter">
-          <div><strong>QTR:</strong> <span id="quarter">1</span></div>
-        </div>
-        <div class="team">
-          <div class="team-name" id="away">Away</div>
-          <div class="score-row">
-            <span id="awayFootball" class="football-icon">🏈</span>
-            <div id="scoreAway" class="score">0</div>
-          </div>
-        </div>
-      </div>
-
       <div class="game-info">
         <div><strong>Down:</strong> <span id="down">...</span></div>
         <div><strong>Distance:</strong> <span id="distance">...</span></div>
