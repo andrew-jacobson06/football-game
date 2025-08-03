@@ -8,6 +8,7 @@
   let frontendStats = [];
   let gameId = 1;
   let playHistory = [];
+  
 
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.tab-button').forEach(btn => {
@@ -154,7 +155,7 @@
       }
     }
   }
-  async function animatePlay() {
+  async function animatePlay() { 
     // use current game state to drive the animation in the proper direction
     await show3DDrive(state.DriveStart, state.Previous, state.BallOn, playType = 'run', passComplete = true); //CHANGE - dont hardcode run and pass
   }
@@ -294,6 +295,7 @@
       newDist = 10;
       updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
       await animatePlay();
+      playSound("crowdRoar");
     } else {
       newDown++;
       if (newDown > 4) {
@@ -328,6 +330,7 @@
     updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
 
     await animatePlay();
+    playSound("crowdRoar");
 
     const newPossession = state.Possession === "Home" ? "Away" : "Home";
     const newBallOn = newPossession === "Home" ? 25 : 75;
@@ -340,6 +343,7 @@
     updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
 
     await animatePlay();
+    playSound("crowdRoar");
 
     const newPossession = state.Possession === "Home" ? "Away" : "Home";
     updateGameState(1, 10, newPossession, newBall, newBall, newBall, playerName, carryResult.yards, tackler, null, predicted);
@@ -793,6 +797,14 @@
     if (fatigue > -15) return { emoji: "😐", color: "goldenrod" };
     if (fatigue > -30) return { emoji: "😰", color: "orange" };
     return { emoji: "😢", color: "red" };
+  }
+
+   function playSound(id) {
+    const sound = document.getElementById(id);
+    if (sound) {
+      sound.currentTime = 0; // rewind
+      sound.play();
+    }
   }
 
   // On load

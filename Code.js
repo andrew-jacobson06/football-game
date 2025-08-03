@@ -57,7 +57,7 @@ function getGamesList() {
   }
   const data = sheet.getDataRange().getValues();
   const headers = data[0];
-  const idxId = headers.indexOf('GameId');
+  const idxId = headers.indexOf('Id');
   const idxHome = headers.indexOf('Home');
   const idxAway = headers.indexOf('Away');
   const idxHomeScore = headers.indexOf('HomeScore');
