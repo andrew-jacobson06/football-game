@@ -81,6 +81,10 @@
     }
     google.script.run.withSuccessHandler(function (gameState) {
       console.log("✅ Loaded game state");
+      if (!gameState) {
+        console.error(`❌ No game state returned for game ${gameId}`);
+        return;
+      }
       state = gameState;
       updateStateUI();
 

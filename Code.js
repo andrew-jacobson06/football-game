@@ -30,7 +30,12 @@ function getGameState(gameId) {
   Logger.log(gameId);
   const data = sheet.getDataRange().getValues(); // includes header
   const headers = data[0];
-  const row = data.slice(1).find(r => r[0] === gameId);
+  // GameId values coming from the sheet can be either numbers or strings.
+  // Ensure we compare them as strings so clicking a game card reliably
+  // retrieves the corresponding row regardless of type coercion.
+  const row = data
+    .slice(1)
+    .find(r => String(r[0]) === String(gameId));
 
   if (!row) {
     return null; // or throw new Error("No row found for gameId: " + gameId);
