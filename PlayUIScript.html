@@ -181,6 +181,20 @@
     return `${d} & ${distance}`;
   }
 
+  function formatQuarter(qtr) {
+    const ord = ["1st", "2nd", "3rd", "4th", "OT"];
+    return ord[qtr - 1] || qtr + "th";
+  }
+
+  function updateTimeoutDots(id, count) {
+    const container = document.getElementById(id);
+    if (!container) return;
+    const dots = Array.from(container.children);
+    dots.forEach((dot, idx) => {
+      dot.classList.toggle('used', idx >= count);
+    });
+  }
+
   function buildPlayText(play) {
     let text = `<strong>${play.Player}</strong> runs for ${play.Yards} Yards.`;
 
@@ -423,11 +437,17 @@
     document.getElementById("down").innerText = state.Down;
     document.getElementById("distance").innerText = state.Distance;
     document.getElementById("ballOn").innerText = formatBallOn(state.BallOn);
-    document.getElementById("home").innerText = state.Home;
-    document.getElementById("away").innerText = state.Away;
+    document.getElementById("homeName").innerText = state.Home;
+    document.getElementById("awayName").innerText = state.Away;
+    document.getElementById("homeRecord").innerText = state.HomeRecord || "";
+    document.getElementById("awayRecord").innerText = state.AwayRecord || "";
+    if (document.getElementById("homeLogo")) document.getElementById("homeLogo").src = state.HomeLogo || "";
+    if (document.getElementById("awayLogo")) document.getElementById("awayLogo").src = state.AwayLogo || "";
     document.getElementById("scoreHome").innerText = state.HomeScore;
     document.getElementById("scoreAway").innerText = state.AwayScore;
-    document.getElementById("quarter").innerText = state.Qtr;
+    document.getElementById("timeQuarter").innerText = `${state.Time} - ${formatQuarter(state.Qtr)}`;
+    updateTimeoutDots("homeTimeouts", state.HomeTimeouts || 0);
+    updateTimeoutDots("awayTimeouts", state.AwayTimeouts || 0);
     document.getElementById("homeFootball").style.visibility = state.Possession === "Home" ? "visible" : "hidden";
     document.getElementById("awayFootball").style.visibility = state.Possession === "Away" ? "visible" : "hidden";
   }
