@@ -17,8 +17,10 @@
           <div id="homeRecord" class="team-record">0-0</div>
         </div>
         <div class="score-section">
-          <span id="homeFootball" class="football-icon">🏈</span>
-          <div id="scoreHome" class="team-score">0</div>
+          <div class="score-row">
+            <div id="scoreHome" class="team-score">0</div>
+            <span id="homeFootball" class="football-icon">🏈</span>
+          </div>
           <div id="homeTimeouts" class="timeouts">
             <span class="timeout-dot"></span>
             <span class="timeout-dot"></span>
@@ -34,8 +36,10 @@
           <div id="awayRecord" class="team-record">0-0</div>
         </div>
         <div class="score-section">
-          <span id="awayFootball" class="football-icon">🏈</span>
-          <div id="scoreAway" class="team-score">0</div>
+          <div class="score-row">
+            <span id="awayFootball" class="football-icon">🏈</span>
+            <div id="scoreAway" class="team-score">0</div>
+          </div>
           <div id="awayTimeouts" class="timeouts">
             <span class="timeout-dot"></span>
             <span class="timeout-dot"></span>
@@ -53,9 +57,18 @@
 
     <div id="gamecast" class="tab-content active">
       <div class="game-info">
-        <div><strong>Down:</strong> <span id="down">...</span></div>
-        <div><strong>Distance:</strong> <span id="distance">...</span></div>
-        <div><strong>Ball On:</strong> <span id="ballOn">...</span></div>
+        <div class="info-block">
+          <div class="info-label">DOWN:</div>
+          <div id="downDistance" class="info-value">...</div>
+        </div>
+        <div class="info-block">
+          <div class="info-label">BALL ON:</div>
+          <div id="ballOn" class="info-value">...</div>
+        </div>
+        <div class="info-block">
+          <div class="info-label">DRIVE:</div>
+          <div id="driveInfo" class="info-value">0 plays, 0 yards</div>
+        </div>
       </div>
 
       <div class="field-wrapper">
