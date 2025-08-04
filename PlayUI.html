@@ -129,24 +129,127 @@
     </div>
 
     <div id="boxscore" class="tab-content">
-      <div id="fullStatsPanel" class="full-stats-panel">
-        <div class="stats-header">Session Stats</div>
-        <div class="stats-table-container">
-          <table class="stats-table" id="statsTable">
-            <thead>
-              <tr>
-                <th>Player</th>
-                <th>Carries</th>
-                <th>Yards</th>
-                <th>TDs</th>
-                <th>Fumbles</th>
-                <th>Long</th>
-              </tr>
-            </thead>
-            <tbody id="statsTableBody">
-              <!-- rows added dynamically -->
-            </tbody>
-          </table>
+      <div class="boxscore-card">
+        <div class="boxscore-pill-container">
+          <button id="boxHomeTab" class="boxscore-pill active" data-subtab="boxHomeContent">Home</button>
+          <button class="boxscore-pill" data-subtab="boxOverviewContent">Overview</button>
+          <button id="boxAwayTab" class="boxscore-pill" data-subtab="boxAwayContent">Away</button>
+        </div>
+
+        <div id="boxHomeContent" class="boxscore-subtab active">
+          <div class="stats-group">
+            <div id="homePassingTitle" class="stats-title"></div>
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>C/ATT</th>
+                  <th>YDS</th>
+                  <th>AVG</th>
+                  <th>TD</th>
+                  <th>INT</th>
+                  <th>SACKS</th>
+                  <th>RTG</th>
+                </tr>
+              </thead>
+              <tbody id="homePassingBody"></tbody>
+            </table>
+          </div>
+
+          <div class="stats-group">
+            <div id="homeRushingTitle" class="stats-title"></div>
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>CAR</th>
+                  <th>YDS</th>
+                  <th>AVG</th>
+                  <th>TD</th>
+                  <th>LONG</th>
+                </tr>
+              </thead>
+              <tbody id="homeRushingBody"></tbody>
+            </table>
+          </div>
+
+          <div class="stats-group">
+            <div id="homeReceivingTitle" class="stats-title"></div>
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>REC</th>
+                  <th>YDS</th>
+                  <th>AVG</th>
+                  <th>TD</th>
+                  <th>LONG</th>
+                  <th>TGTS</th>
+                </tr>
+              </thead>
+              <tbody id="homeReceivingBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="boxOverviewContent" class="boxscore-subtab">
+          <div class="stats-placeholder">Overview coming soon...</div>
+        </div>
+
+        <div id="boxAwayContent" class="boxscore-subtab">
+          <div class="stats-group">
+            <div id="awayPassingTitle" class="stats-title"></div>
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>C/ATT</th>
+                  <th>YDS</th>
+                  <th>AVG</th>
+                  <th>TD</th>
+                  <th>INT</th>
+                  <th>SACKS</th>
+                  <th>RTG</th>
+                </tr>
+              </thead>
+              <tbody id="awayPassingBody"></tbody>
+            </table>
+          </div>
+
+          <div class="stats-group">
+            <div id="awayRushingTitle" class="stats-title"></div>
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>CAR</th>
+                  <th>YDS</th>
+                  <th>AVG</th>
+                  <th>TD</th>
+                  <th>LONG</th>
+                </tr>
+              </thead>
+              <tbody id="awayRushingBody"></tbody>
+            </table>
+          </div>
+
+          <div class="stats-group">
+            <div id="awayReceivingTitle" class="stats-title"></div>
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>REC</th>
+                  <th>YDS</th>
+                  <th>AVG</th>
+                  <th>TD</th>
+                  <th>LONG</th>
+                  <th>TGTS</th>
+                </tr>
+              </thead>
+              <tbody id="awayReceivingBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

@@ -428,6 +428,42 @@
     font-weight: bold;
   }
 
+  /* Box score card */
+  .boxscore-card {
+    max-width: 900px;
+    margin: 40px auto;
+    background: var(--gray-medium);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 0 12px rgba(0,0,0,0.4);
+  }
+  .boxscore-pill-container {
+    display: flex;
+    background: #d0d0d0;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .boxscore-pill {
+    flex: 1;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--gray-dark);
+    font-weight: 600;
+  }
+  .boxscore-pill.active {
+    background: var(--gray-medium);
+    color: var(--text-light);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  }
+  .boxscore-subtab { display: none; }
+  .boxscore-subtab.active { display: block; }
+  .stats-group { margin-bottom: 30px; }
+  .stats-title { font-weight: 700; margin: 10px 0; }
+  .stats-placeholder { text-align: center; padding: 40px 0; color: var(--text-muted); }
+
   /* Play log */
   .play-log-card {
     margin-top: 20px;
