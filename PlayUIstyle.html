@@ -13,7 +13,7 @@
 
   body {
     margin: 0;
-    padding: 20px;
+    padding: 5vw;
     min-height: 100vh;
     font-family: 'Roboto', Arial, sans-serif;
     background: linear-gradient(135deg, var(--gray-dark) 0%, var(--gray-medium) 100%);
@@ -24,9 +24,9 @@
   .game-carousel {
     display: flex;
     overflow-x: auto;
-    gap: 12px;
-    padding: 10px;
-    margin-bottom: 20px;
+    gap: 3vw;
+    padding: 2.5vw;
+    margin-bottom: 5vw;
     height: 10vh;
     box-sizing: border-box;
     scroll-behavior: smooth;
@@ -46,7 +46,7 @@
     background: var(--gray-medium);
     border: 1px solid var(--gray-light);
     border-radius: 4px;
-    padding: 10px;
+    padding: 2.5vw;
     cursor: pointer;
     text-align: center;
     box-sizing: border-box;
@@ -61,20 +61,20 @@
 
   .game-card .teams {
     font-weight: 600;
-    font-size: 1.1vw;
+    font-size: 4vw;
     line-height: 1.2em;
   }
 
   .game-card .score {
-    font-size: 0.9vw;
-    margin-top: 4px;
+    font-size: 3vw;
+    margin-top: 1vw;
   }
 
 
   /* Tabs */
   .tabs {
     display: flex;
-    margin: 0 0 20px 0;
+    margin: 0 0 5vw 0;
     background: var(--gray-medium);
     border: 1px solid var(--gray-light);
     border-top: none;
@@ -83,11 +83,11 @@
   }
   .tab-button {
     flex: 1;
-    padding: 10px 15px;
+    padding: 2.5vw 3.75vw;
     background: var(--gray-medium);
     color: var(--text-muted);
     border: none;
-    border-bottom: 3px solid transparent;
+    border-bottom: 0.75vw solid transparent;
     cursor: pointer;
     font-weight: 400;
     transition: background 0.3s, color 0.3s;
@@ -97,7 +97,7 @@
   }
   .tab-button.active {
     color: var(--accent-red);
-    border-bottom: 3px solid var(--accent-red);
+    border-bottom: 0.75vw solid var(--accent-red);
     font-weight: 400;
   }
   .tab-content {
@@ -113,14 +113,14 @@
     justify-content: space-between;
     align-items: center;
     background: var(--gray-medium);
-    padding: 15px 20px;
+    padding: 3.75vw 5vw;
     border: 1px solid var(--gray-light);
     border-radius: 4px 4px 0 0;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
     position: relative;
     overflow: hidden;
     margin-bottom: 0;
-    height: 120px;
+    height: 30vw;
     border-bottom: none;
   }
   .scoreboard.scoring {
@@ -134,7 +134,7 @@
     align-items: center;
     background: gold;
     color: var(--gray-dark);
-    font-size: 48px;
+    font-size: 12vw;
     font-weight: bold;
     text-shadow: 0 0 10px #fff;
     opacity: 0;
@@ -162,7 +162,7 @@
     flex-direction: column;
     align-items: center;
     height: 100%;
-    width: 120px;
+    width: 30vw;
   }
   .team-logo {
     flex: 0 0 50%;
@@ -175,14 +175,14 @@
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 16px;
+    font-size: 4vw;
   }
   .team-record {
     flex: 0 0 25%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 4.5vw;
     color: var(--text-muted);
   }
   .score-section {
@@ -190,24 +190,24 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin: 0 10px;
+    margin: 0 2.5vw;
   }
   .score-row {
     display: flex;
     align-items: center;
   }
   .team-score {
-    font-size: 48px;
+    font-size: 12vw;
     font-weight: 700;
   }
   .timeouts {
     display: flex;
-    gap: 4px;
-    margin-top: 4px;
+    gap: 1vw;
+    margin-top: 1vw;
   }
   .timeout-dot {
-    width: 8px;
-    height: 8px;
+    width: 2vw;
+    height: 2vw;
     border-radius: 50%;
     background: yellow;
   }
@@ -215,32 +215,32 @@
     opacity: 0.2;
   }
   .center-info {
-    font-size: 24px;
+    font-size: 6vw;
     font-weight: 700;
     color: var(--accent-red);
     text-align: center;
-    min-width: 120px;
+    min-width: 30vw;
   }
   .football-icon {
-    font-size: 22px;
+    font-size: 5.5vw;
     visibility: hidden;
   }
   .team-block.home .football-icon {
-    margin-left: 6px;
+    margin-left: 1.5vw;
   }
   .team-block.away .football-icon {
-    margin-right: 6px;
+    margin-right: 1.5vw;
   }
 
   /* Game information */
   .game-info {
     display: flex;
     justify-content: space-around;
-    padding: 8px 10px;
+    padding: 2vw 2.5vw;
     border-bottom: 1px solid var(--gray-light);
     margin-bottom: 0;
     background: none;
-    gap: 10px;
+    gap: 2.5vw;
   }
   .game-info .info-block {
     flex: 1;
@@ -248,18 +248,19 @@
   }
   .game-info .info-label {
     color: var(--text-muted);
-    font-size: 18px;
+    font-size: 4.5vw;
   }
   .game-info .info-value {
     color: white;
     font-weight: 500;
+    font-size: 4.5vw;
   }
 
   /* Field (unchanged except for wrapper positioning) */
   .field-wrapper {
     width: 100%;
     max-width: 1600px;
-    margin: 0 auto 20px;
+    margin: 0 auto 5vw;
     overflow-x: auto;
     overflow-y: hidden;
     perspective: 1000px;
@@ -284,7 +285,7 @@
     height: 100%;
     background-color: white;
     text-align: center;
-    font-size: 16px;
+    font-size: 4vw;
     color: white;
   }
   .first-down-line {
@@ -315,7 +316,7 @@
   }
   .drive-arrow {
     position: absolute;
-    font-size: 19px;
+    font-size: 4.75vw;
     color: black;
     left: 0;
     top: -10px;
@@ -327,20 +328,20 @@
   /* Control panel */
   .control-panel {
     max-width: 900px;
-    margin: 30px auto;
+    margin: 7.5vw auto;
     background: var(--gray-medium);
     border-radius: 4px;
-    padding: 20px;
+    padding: 5vw;
     box-shadow: 0 0 10px rgba(0,0,0,0.5);
   }
   .control-panel label {
     display: block;
     font-weight: 600;
-    margin-bottom: 6px;
+    margin-bottom: 1.5vw;
   }
   .control-panel select {
     width: 100%;
-    padding: 8px;
+    padding: 2vw;
     background: var(--gray-dark);
     color: var(--text-light);
     border: 1px solid var(--gray-light);
@@ -348,16 +349,16 @@
   }
   .button-row {
     display: flex;
-    gap: 15px;
-    margin-top: 20px;
+    gap: 3.75vw;
+    margin-top: 5vw;
   }
   .button-row button {
     flex: 1;
   }
 
   button {
-    padding: 12px;
-    font-size: 16px;
+    padding: 3vw;
+    font-size: 4vw;
     background: var(--gray-light);
     color: var(--text-light);
     border: 1px solid var(--accent-red);
@@ -371,12 +372,12 @@
   }
 
   .result-box {
-    margin-top: 20px;
-    padding: 15px;
+    margin-top: 5vw;
+    padding: 3.75vw;
     background: var(--gray-dark);
-    border-left: 4px solid var(--accent-red);
+    border-left: 1vw solid var(--accent-red);
     border-radius: 4px;
-    min-height: 40px;
+    min-height: 10vw;
   }
   .highlight {
     color: lightgreen;
@@ -390,18 +391,18 @@
   /* Stats panel */
   .full-stats-panel {
     max-width: 900px;
-    margin: 40px auto;
+    margin: 10vw auto;
     background: var(--gray-medium);
     border-radius: 4px;
-    padding: 20px;
+    padding: 5vw;
     box-shadow: 0 0 12px rgba(0,0,0,0.4);
   }
   .stats-header {
-    font-size: 24px;
+    font-size: 6vw;
     font-weight: 700;
-    margin-bottom: 15px;
+    margin-bottom: 3.75vw;
     border-bottom: 2px solid var(--accent-red);
-    padding-bottom: 6px;
+    padding-bottom: 1.5vw;
     text-align: center;
   }
   .stats-table-container {
@@ -413,7 +414,7 @@
   }
   .stats-table th,
   .stats-table td {
-    padding: 10px;
+    padding: 2.5vw;
     text-align: center;
   }
   .stats-table th {
@@ -436,23 +437,23 @@
   /* Box score card */
   .boxscore-card {
     max-width: 900px;
-    margin: 40px auto;
+    margin: 10vw auto;
     background: var(--gray-medium);
     border-radius: 8px;
-    padding: 20px;
+    padding: 5vw;
     box-shadow: 0 0 12px rgba(0,0,0,0.4);
   }
   .boxscore-pill-container {
     display: flex;
     background: var(--gray-light);
     border-radius: 20px;
-    padding: 4px;
-    gap: 4px;
-    margin-bottom: 20px;
+    padding: 1vw;
+    gap: 1vw;
+    margin-bottom: 5vw;
   }
   .boxscore-pill {
     flex: 1;
-    padding: 8px 12px;
+    padding: 2vw 3vw;
     background: transparent;
     border: none;
     cursor: pointer;
@@ -466,15 +467,15 @@
   }
   .boxscore-subtab { display: none; }
   .boxscore-subtab.active { display: block; }
-  .stats-group { margin-bottom: 30px; }
-  .stats-title { font-weight: 700; margin: 10px 0; }
-  .stats-placeholder { text-align: center; padding: 40px 0; color: var(--text-muted); }
+  .stats-group { margin-bottom: 7.5vw; }
+  .stats-title { font-weight: 700; margin: 2.5vw 0; }
+  .stats-placeholder { text-align: center; padding: 10vw 0; color: var(--text-muted); }
 
-  .overview-section { margin-bottom: 30px; }
+  .overview-section { margin-bottom: 7.5vw; }
   .stats-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 5vw;
   }
   .team-table {
     display: flex;
@@ -482,90 +483,16 @@
   }
   .stats-table.condensed th,
   .stats-table.condensed td {
-    padding: 6px 8px;
+    padding: 1.5vw 2vw;
   }
   .stats-table .team-row td {
     font-weight: 700;
   }
-  @media (max-width: 768px) {
-    body {
-      font-size: 20px;
-      padding: 40px 30px;
-    }
-    .game-carousel {
-      gap: 20px;
-      padding: 20px;
-      height: 14vh;
-    }
-    .game-card {
-      width: 40vw;
-      padding: 18px;
-    }
-    .game-card .teams {
-      font-size: 18px;
-    }
-    .game-card .score {
-      font-size: 16px;
-    }
-    .tabs {
-      margin-bottom: 40px;
-    }
-    .tab-button {
-      padding: 16px 24px;
-      font-size: 20px;
-    }
-    .scoreboard {
-      padding: 24px;
-      height: 160px;
-    }
-    .team-name { font-size: 20px; }
-    .team-record { font-size: 22px; }
-    .team-score { font-size: 64px; }
-    .game-info {
-      padding: 16px 18px;
-      gap: 18px;
-    }
-    .game-info .info-label,
-    .game-info .info-value {
-      font-size: 22px;
-    }
-    .control-panel {
-      padding: 28px;
-    }
-    .button-row {
-      gap: 20px;
-      margin-top: 24px;
-    }
-    button {
-      padding: 20px;
-      font-size: 20px;
-    }
-    .full-stats-panel,
-    .boxscore-card,
-    .play-log-card {
-      padding: 28px;
-    }
-    .stats-header {
-      font-size: 32px;
-    }
-    .stats-table th,
-    .stats-table td {
-      padding: 14px;
-      font-size: 20px;
-    }
-    .boxscore-pill {
-      padding: 12px 18px;
-      font-size: 20px;
-    }
-    .stats-row {
-      grid-template-columns: 1fr;
-    }
-  }
 
   /* Play log */
   .play-log-card {
-    margin-top: 20px;
-    padding: 20px;
+    margin-top: 5vw;
+    padding: 5vw;
     background: var(--gray-medium);
     border-radius: 4px;
     box-shadow: 0 0 10px rgba(0,0,0,0.4);
@@ -576,7 +503,7 @@
   }
   .play-log-table th,
   .play-log-table td {
-    padding: 8px;
+    padding: 2vw;
     border-bottom: 1px solid var(--gray-light);
     text-align: left;
   }
