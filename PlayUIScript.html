@@ -650,9 +650,16 @@
   //UI Functions ONLY - ANIMATIONS BELOW!
   function show3DDrive(startYard, prevYard, currentYard, playType = 'run', passComplete = true) {
     return new Promise(resolve => {
-      let drivePX = (startYard * 10) + 100;
-      let prevPX = (prevYard * 10) + 100;
-      let currPX = (currentYard * 10) + 100;
+      const field = document.getElementById("field3D");
+      const fieldWidth = field.offsetWidth;
+      const yardPx = fieldWidth / 120;
+      const fieldHeight = field.offsetHeight;
+      const canvas = document.getElementById("arcCanvas");
+      canvas.width = fieldWidth;
+      canvas.height = fieldHeight;
+      let drivePX = (startYard + 10) * yardPx;
+      let prevPX = (prevYard + 10) * yardPx;
+      let currPX = (currentYard + 10) * yardPx;
       let drive = document.getElementById("drive3D");
       const driveDot = drive.querySelector(".drive-dot");
       // Handle drive line based on direction
@@ -663,9 +670,9 @@
         driveDot.style.right = 'auto';
         driveDot.style.left = '0';
       } else {
-        drivePX = 1200 - drivePX;
-        prevPX = 1200 - prevPX;
-        currPX = 1200 - currPX;
+        drivePX = fieldWidth - drivePX;
+        prevPX = fieldWidth - prevPX;
+        currPX = fieldWidth - currPX;
         drive.style.left = `auto`;
         drive.style.right = `${drivePX}px`;
         drive.style.width = `${prevPX - drivePX}px`;
@@ -753,10 +760,11 @@
     return new Promise(resolve => {
       const canvas = document.getElementById("arcCanvas");
       const ctx = canvas.getContext("2d");
+      const yardPx = canvas.width / 120;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const midX = (x0 + x1) / 2;
       const y = canvas.height * 0.45;
-      const peakHeight = Math.min(120, Math.max(50, ((x1 - x0) / 10) * 6));
+      const peakHeight = Math.min(yardPx * 12, Math.max(yardPx * 5, (x1 - x0) * 0.6));
       ctx.setLineDash([10, 5]);
       ctx.lineWidth = 2;
       ctx.strokeStyle = "black";
