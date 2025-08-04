@@ -522,4 +522,70 @@
     border-bottom: 2px solid var(--accent-red);
     color: var(--text-light);
   }
+
+  /* Limit sizing on larger screens */
+  @media (min-width: 1024px) {
+    body {
+      padding: 40px;
+    }
+
+    .game-carousel {
+      gap: 24px;
+      padding: 20px;
+      margin-bottom: 40px;
+      height: 120px;
+    }
+
+    .game-card {
+      width: 200px;
+      padding: 20px;
+    }
+
+    .game-card .teams {
+      font-size: 32px;
+    }
+
+    .game-card .score {
+      font-size: 24px;
+      margin-top: 8px;
+    }
+
+    .tabs {
+      margin: 0 0 40px 0;
+    }
+
+    .tab-button {
+      padding: 20px 30px;
+      border-bottom: 6px solid transparent;
+    }
+
+    .tab-button.active {
+      border-bottom: 6px solid var(--accent-red);
+    }
+
+    .full-stats-panel,
+    .boxscore-card,
+    .play-log-card {
+      margin: 40px auto;
+      padding: 40px;
+    }
+
+    .stats-header {
+      font-size: 36px;
+      margin-bottom: 30px;
+      padding-bottom: 10px;
+    }
+
+    .stats-table th,
+    .stats-table td,
+    .play-log-table th,
+    .play-log-table td {
+      padding: 16px;
+    }
+
+    .stats-title {
+      font-size: 24px;
+      margin: 20px 0;
+    }
+  }
 </style>
