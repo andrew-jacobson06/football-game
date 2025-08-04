@@ -546,6 +546,13 @@
   }
 
   function updateFrontendStats(player, yards, td, team) {
+    if(td){
+      if(team == "Home"){
+        team = "Away";
+      } else{
+        team = "Home";
+      }
+    }
     let p = frontendStats.find(s => s.playername === player && s.team === team);
     if (!p) {
       p = { playername: player, team, carries: 0, yards: 0, tds: 0, fumbles: 0, long: 0 };
