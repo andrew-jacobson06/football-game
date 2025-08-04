@@ -477,11 +477,29 @@
       ["homeReceivingTitle", `${state.Home} Receiving`],
       ["awayPassingTitle", `${state.Away} Passing`],
       ["awayRushingTitle", `${state.Away} Rushing`],
-      ["awayReceivingTitle", `${state.Away} Receiving`]
+      ["awayReceivingTitle", `${state.Away} Receiving`],
+      ["overviewHomePassingTitle", `${state.Home} Passing`],
+      ["overviewHomeRushingTitle", `${state.Home} Rushing`],
+      ["overviewHomeReceivingTitle", `${state.Home} Receiving`],
+      ["overviewAwayPassingTitle", `${state.Away} Passing`],
+      ["overviewAwayRushingTitle", `${state.Away} Rushing`],
+      ["overviewAwayReceivingTitle", `${state.Away} Receiving`]
     ];
     titles.forEach(([id, text]) => {
       const el = document.getElementById(id);
       if (el) el.innerText = text;
+    });
+    highlightTeamRows();
+  }
+
+  function highlightTeamRows() {
+    document.querySelectorAll('.stats-table tbody').forEach(tb => {
+      tb.querySelectorAll('tr').forEach(row => {
+        const cell = row.querySelector('td');
+        if (cell && cell.textContent.trim().toUpperCase() === 'TEAM') {
+          row.classList.add('team-row');
+        }
+      });
     });
   }
 
