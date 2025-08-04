@@ -490,6 +490,7 @@
       if (el) el.innerText = text;
     });
     highlightTeamRows();
+    updateFirstDownLine();
   }
 
   function highlightTeamRows() {
@@ -501,6 +502,21 @@
         }
       });
     });
+  }
+
+  function updateFirstDownLine() {
+    const line = document.getElementById('firstDownLine');
+    const field = document.getElementById('field3D');
+    if (!line || !field) return;
+    const fieldWidth = field.offsetWidth;
+    const yardPx = fieldWidth / 120;
+    const ball = Number(state.BallOn) || 0;
+    const dist = Number(state.Distance) || 0;
+    let targetYard = state.Possession === 'Home'
+      ? ball + dist
+      : ball - dist;
+    targetYard = Math.max(0, Math.min(100, targetYard));
+    line.style.left = `${(targetYard + 10) * yardPx}px`;
   }
 
   function celebrateTouchdown(team, oldScore, newScore) {
