@@ -462,7 +462,8 @@
     if (document.getElementById("awayLogo")) document.getElementById("awayLogo").src = state.AwayLogo || "";
     document.getElementById("scoreHome").innerText = state.HomeScore;
     document.getElementById("scoreAway").innerText = state.AwayScore;
-    document.getElementById("timeQuarter").innerText = `${state.Time} - ${formatQuarter(state.Qtr)}`;
+    document.getElementById("Quarter").innerText = `${formatQuarter(state.Qtr)}`;
+    document.getElementById("Time").innerText = `${state.Time}`;
     updateTimeoutDots("homeTimeouts", state.HomeTimeouts || 0);
     updateTimeoutDots("awayTimeouts", state.AwayTimeouts || 0);
     document.getElementById("homeFootball").style.visibility = state.Possession === "Home" ? "visible" : "hidden";
