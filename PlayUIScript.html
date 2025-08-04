@@ -546,13 +546,14 @@
   function renderBoxScore() {
     renderRushingTable("Home");
     renderRushingTable("Away");
+    sortBoxScoreTables();
   }
 
   function renderRushingTable(team) {
     const body = document.getElementById(team === "Home" ? "homeRushingBody" : "awayRushingBody");
     if (!body) return;
     body.innerHTML = "";
-    const players = frontendStats.filter(p => p.team === team);
+    const players = frontendStats.filter(p => p.team === team).sort((a, b) => b.yards - a.yards);
     let total = { carries: 0, yards: 0, tds: 0, long: 0 };
     players.forEach(p => {
       const avg = p.carries ? (p.yards / p.carries).toFixed(1) : "0.0";
@@ -570,6 +571,22 @@
       tr.innerHTML = `<td>TEAM</td><td>${total.carries}</td><td>${total.yards}</td><td>${avgTeam}</td><td>${total.tds}</td><td>${total.long}</td>`;
       body.appendChild(tr);
     }
+  }
+
+  function sortBoxScoreTables() {
+    document.querySelectorAll('#boxscore .stats-table tbody').forEach(tbody => {
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const teamRow = rows.find(r => r.firstElementChild && r.firstElementChild.textContent.trim().toUpperCase() === 'TEAM');
+      const playerRows = teamRow ? rows.filter(r => r !== teamRow) : rows;
+      playerRows.sort((a, b) => {
+        const aYards = parseFloat(a.children[2].textContent) || 0;
+        const bYards = parseFloat(b.children[2].textContent) || 0;
+        return bYards - aYards;
+      });
+      tbody.innerHTML = '';
+      playerRows.forEach(r => tbody.appendChild(r));
+      if (teamRow) tbody.appendChild(teamRow);
+    });
   }
 
   function applyFatigue(playerName, actionType) {
