@@ -439,9 +439,10 @@
   }
   .boxscore-pill-container {
     display: flex;
-    background: #d0d0d0;
+    background: var(--gray-light);
     border-radius: 20px;
-    overflow: hidden;
+    padding: 4px;
+    gap: 4px;
     margin-bottom: 20px;
   }
   .boxscore-pill {
@@ -452,17 +453,40 @@
     cursor: pointer;
     color: var(--gray-dark);
     font-weight: 600;
+    border-radius: 16px;
   }
   .boxscore-pill.active {
-    background: var(--gray-medium);
+    background: var(--accent-red);
     color: var(--text-light);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
   }
   .boxscore-subtab { display: none; }
   .boxscore-subtab.active { display: block; }
   .stats-group { margin-bottom: 30px; }
   .stats-title { font-weight: 700; margin: 10px 0; }
   .stats-placeholder { text-align: center; padding: 40px 0; color: var(--text-muted); }
+
+  .overview-section { margin-bottom: 30px; }
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .team-table {
+    display: flex;
+    flex-direction: column;
+  }
+  .stats-table.condensed th,
+  .stats-table.condensed td {
+    padding: 6px 8px;
+  }
+  .stats-table .team-row td {
+    font-weight: 700;
+  }
+  @media (max-width: 768px) {
+    .stats-row {
+      grid-template-columns: 1fr;
+    }
+  }
 
   /* Play log */
   .play-log-card {
