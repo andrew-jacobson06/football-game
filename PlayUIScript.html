@@ -20,6 +20,15 @@
         if (target) target.classList.add('active');
       });
     });
+    document.querySelectorAll('.boxscore-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.boxscore-pill').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.boxscore-subtab').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        const target = document.getElementById(btn.dataset.subtab);
+        if (target) target.classList.add('active');
+      });
+    });
     loadGamesList();
   });
 
@@ -97,19 +106,18 @@
               playHistory = data;
               frontendStats = [];
 
-              let lastPlayer = null;
-
               playHistory.forEach(play => {
                 if (!play.Player || !play.PlayType || play.PlayType !== 'Run') return;
 
                 const player = play.Player;
+                const team = play.Possession || '';
                 const yards = parseFloat(play.Yards) || 0;
                 const td = play.Result === "Touchdown";
                 const fumble = play.Result === "Fumble";
 
-                let p = frontendStats.find(s => s.playername === player);
+                let p = frontendStats.find(s => s.playername === player && s.team === team);
                 if (!p) {
-                  p = { playername: player, carries: 0, yards: 0, tds: 0, fumbles: 0, long: 0 };
+                  p = { playername: player, team, carries: 0, yards: 0, tds: 0, fumbles: 0, long: 0 };
                   frontendStats.push(p);
                 }
 
@@ -118,17 +126,12 @@
                 if (td) p.tds++;
                 if (fumble) p.fumbles++;
                 if (yards > p.long) p.long = yards;
-
-                lastPlayer = player;
               });
 
               renderPlayTimeline();
 
               updateFatigueBasedOnStatsOnInitialLoad();
-              if (lastPlayer) {
-                console.log("✅ Rendering stats for", lastPlayer);
-                renderFullStatsPanel(lastPlayer);
-              }
+              renderBoxScore();
               await animatePlay();
             })
             .withFailureHandler(function (error) {
@@ -337,7 +340,7 @@
 
     applyFatigue(playerName, "Run");
 
-    updateFrontendStats(playerName, recordedYards, touchdown);
+    updateFrontendStats(playerName, recordedYards, touchdown, state.Possession);
     console.log(carryResult);
 
     document.getElementById("result").innerHTML = `<strong>${rbStats.name}</strong> ran for <strong>${carryResult.yards} yards</strong><br/><br/>` +
@@ -464,6 +467,22 @@
     updateTimeoutDots("awayTimeouts", state.AwayTimeouts || 0);
     document.getElementById("homeFootball").style.visibility = state.Possession === "Home" ? "visible" : "hidden";
     document.getElementById("awayFootball").style.visibility = state.Possession === "Away" ? "visible" : "hidden";
+    const homeTab = document.getElementById("boxHomeTab");
+    const awayTab = document.getElementById("boxAwayTab");
+    if (homeTab) homeTab.innerText = state.Home;
+    if (awayTab) awayTab.innerText = state.Away;
+    const titles = [
+      ["homePassingTitle", `${state.Home} Passing`],
+      ["homeRushingTitle", `${state.Home} Rushing`],
+      ["homeReceivingTitle", `${state.Home} Receiving`],
+      ["awayPassingTitle", `${state.Away} Passing`],
+      ["awayRushingTitle", `${state.Away} Rushing`],
+      ["awayReceivingTitle", `${state.Away} Receiving`]
+    ];
+    titles.forEach(([id, text]) => {
+      const el = document.getElementById(id);
+      if (el) el.innerText = text;
+    });
   }
 
   function celebrateTouchdown(team, oldScore, newScore) {
@@ -492,10 +511,10 @@
     });
   }
 
-  function updateFrontendStats(player, yards, td) {
-    let p = frontendStats.find(s => s.playername === player);
+  function updateFrontendStats(player, yards, td, team) {
+    let p = frontendStats.find(s => s.playername === player && s.team === team);
     if (!p) {
-      p = { playername: player, carries: 0, yards: 0, tds: 0, fumbles: 0, long: 0 };
+      p = { playername: player, team, carries: 0, yards: 0, tds: 0, fumbles: 0, long: 0 };
       frontendStats.push(p);
     }
     p.carries++;
@@ -503,7 +522,36 @@
     if (td) p.tds++;
     if (yards > p.long) p.long = yards;
 
-    renderFullStatsPanel(player);
+    renderBoxScore();
+  }
+
+  function renderBoxScore() {
+    renderRushingTable("Home");
+    renderRushingTable("Away");
+  }
+
+  function renderRushingTable(team) {
+    const body = document.getElementById(team === "Home" ? "homeRushingBody" : "awayRushingBody");
+    if (!body) return;
+    body.innerHTML = "";
+    const players = frontendStats.filter(p => p.team === team);
+    let total = { carries: 0, yards: 0, tds: 0, long: 0 };
+    players.forEach(p => {
+      const avg = p.carries ? (p.yards / p.carries).toFixed(1) : "0.0";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${p.playername}</td><td>${p.carries}</td><td>${p.yards}</td><td>${avg}</td><td>${p.tds}</td><td>${p.long}</td>`;
+      body.appendChild(tr);
+      total.carries += p.carries;
+      total.yards += p.yards;
+      total.tds += p.tds;
+      if (p.long > total.long) total.long = p.long;
+    });
+    if (players.length) {
+      const avgTeam = total.carries ? (total.yards / total.carries).toFixed(1) : "0.0";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>TEAM</td><td>${total.carries}</td><td>${total.yards}</td><td>${avgTeam}</td><td>${total.tds}</td><td>${total.long}</td>`;
+      body.appendChild(tr);
+    }
   }
 
   function applyFatigue(playerName, actionType) {
@@ -807,41 +855,7 @@
     });
   }
 
-  function renderFullStatsPanel(latestPlayer = null) {
-    const tbody = document.getElementById("statsTableBody");
-    tbody.innerHTML = "";
-
-    frontendStats.forEach(player => {
-      const tr = document.createElement("tr");
-      if (player.playername === latestPlayer) {
-        tr.classList.add("highlighted");
-      }
-
-      const fatigue = playerTraits[player.playername]?.fatigue ?? 0;
-      const { emoji, color } = getFatigueFace(fatigue);
-
-      tr.innerHTML = `
-            <td><span style="color: ${color}; font-size: 20px;">${emoji}</span> ${player.playername}</td>
-            <td>${player.carries}</td>
-            <td>${player.yards}</td>
-            <td>${player.tds}</td>
-            <td>${player.fumbles}</td>
-            <td>${player.long}</td>
-          `;
-
-      tbody.appendChild(tr);
-    });
-  }
-
-  function getFatigueFace(fatigue) {
-    if (fatigue > 20) return { emoji: "😄", color: "darkgreen" };
-    if (fatigue > 0) return { emoji: "🙂", color: "lightgreen" };
-    if (fatigue > -15) return { emoji: "😐", color: "goldenrod" };
-    if (fatigue > -30) return { emoji: "😰", color: "orange" };
-    return { emoji: "😢", color: "red" };
-  }
-
-   function playSound(id) {
+  function playSound(id) {
     const sound = document.getElementById(id);
     if (sound) {
       sound.currentTime = 0; // rewind
