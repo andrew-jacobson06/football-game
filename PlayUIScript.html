@@ -8,7 +8,26 @@
   let frontendStats = [];
   let gameId = 1;
   let playHistory = [];
-  
+
+
+  function updateStickyOffsets() {
+    const carousel = document.getElementById('gameCarousel');
+    const scoreboard = document.getElementById('scoreboard');
+    if (!carousel || !scoreboard) return;
+    const root = document.documentElement;
+    const carouselHeight = carousel.classList.contains('collapsed') ? 0 : carousel.offsetHeight;
+    root.style.setProperty('--carouselHeight', carouselHeight + 'px');
+    root.style.setProperty('--scoreboardHeight', scoreboard.offsetHeight + 'px');
+  }
+
+  function toggleCarousel() {
+    const carousel = document.getElementById('gameCarousel');
+    const toggle = document.getElementById('carouselToggle');
+    if (!carousel || !toggle) return;
+    carousel.classList.toggle('collapsed');
+    toggle.textContent = carousel.classList.contains('collapsed') ? '▼' : '▲';
+    updateStickyOffsets();
+  }
 
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.tab-button').forEach(btn => {
@@ -29,6 +48,10 @@
         if (target) target.classList.add('active');
       });
     });
+    const toggle = document.getElementById('carouselToggle');
+    if (toggle) toggle.addEventListener('click', toggleCarousel);
+    updateStickyOffsets();
+    window.addEventListener('resize', updateStickyOffsets);
     loadGamesList();
   });
 
@@ -52,6 +75,7 @@
       });
       container.appendChild(card);
     });
+    updateStickyOffsets();
   }
 
   function toggleMenu() {
