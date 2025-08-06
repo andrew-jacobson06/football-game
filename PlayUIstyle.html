@@ -694,11 +694,37 @@
 
   /* Formation builder */
   .formation-panel {
-    margin-top: 5vw;
     padding: 5vw;
     background: var(--gray-medium);
     border-radius: 4px;
     box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    position: relative;
+  }
+
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal.open {
+    display: flex;
+  }
+
+  .close-button {
+    position: absolute;
+    top: 1vw;
+    right: 1vw;
+    font-size: 4vw;
+    line-height: 1;
+    cursor: pointer;
   }
 
   .formation-field {
@@ -725,22 +751,38 @@
   .formation-slot {
     width: 10vw;
     height: 10vw;
-    border: 2px dashed var(--text-muted);
+    border: 2px dotted var(--text-muted);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: clamp(10px, 3vw, 14px);
+    position: relative;
+    color: var(--text-muted);
   }
 
+  .formation-slot::before {
+    content: attr(data-position);
+  }
+
+  .formation-slot.filled::before {
+    content: '';
+  }
+
+  .formation-slot.qb { border-color: #2196f3; color: #2196f3; }
+  .formation-slot.rb { border-color: #4caf50; color: #4caf50; }
+  .formation-slot.wr { border-color: #ff9800; color: #ff9800; }
+  .formation-slot.teol { border-color: #9c27b0; color: #9c27b0; }
+
   .formation-slot.required {
-    border-color: var(--accent-red);
+    box-shadow: 0 0 0 2px var(--accent-red);
   }
 
   .formation-slot.filled {
     border-style: solid;
   }
 
-  .player-bank {
+  .bench {
     display: flex;
     flex-wrap: wrap;
     gap: 1vw;
@@ -752,6 +794,7 @@
     border: 1px solid var(--text-light);
     border-radius: 4px;
     cursor: grab;
+    color: var(--text-light);
   }
 
   .formation-actions {

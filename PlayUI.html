@@ -111,40 +111,8 @@
       </div>
         </div>
 
-        <div id="formationPanel" class="formation-panel">
-          <h3>Offensive Formation</h3>
-          <div class="formation-field">
-            <div class="formation-row top-row">
-              <div class="formation-slot wr" data-position="WR1"></div>
-              <div class="te-group">
-                <div class="formation-slot teol" data-position="TEOL1"></div>
-                <div class="formation-slot teol required" data-position="TEOL2"></div>
-                <div class="formation-slot teol required" data-position="TEOL3"></div>
-                <div class="formation-slot teol required" data-position="TEOL4"></div>
-                <div class="formation-slot teol" data-position="TEOL5"></div>
-              </div>
-              <div class="formation-slot wr" data-position="WR2"></div>
-              <div class="formation-slot wr" data-position="WR3"></div>
-            </div>
-            <div class="formation-row middle-row">
-              <div class="formation-slot qb required" data-position="QB"></div>
-            </div>
-            <div class="formation-row bottom-row">
-              <div class="formation-slot rb" data-position="RB1"></div>
-              <div class="formation-slot rb" data-position="RB2"></div>
-            </div>
-          </div>
-          <div class="player-bank-wrapper">
-            <h4>Player Bank</h4>
-            <div id="playerBank" class="player-bank"></div>
-          </div>
-          <div class="formation-actions">
-            <button id="clearFormation">Clear</button>
-            <button id="saveFormation">Save</button>
-          </div>
-        </div>
-
         <div class="control-panel">
+          <button id="openFormation">Edit Formation</button>
           <label for="playerDropdown">Select Player:</label>
           <select id="playerDropdown"></select>
           <div class="button-row">
@@ -406,6 +374,42 @@
     <div id="teamstats" class="tab-content">
       <div class="play-log-card">
         <p>Team stats coming soon...</p>
+      </div>
+    </div>
+
+    <div id="formationModal" class="modal">
+      <div id="formationPanel" class="formation-panel">
+        <span id="closeFormation" class="close-button">&times;</span>
+        <h3>Offensive Formation</h3>
+        <div class="formation-field">
+          <div class="formation-row top-row">
+            <div class="formation-slot wr" data-position="WR1"></div>
+            <div class="te-group">
+              <div class="formation-slot teol" data-position="TEOL1"></div>
+              <div class="formation-slot teol required" data-position="TEOL2"></div>
+              <div class="formation-slot teol required" data-position="TEOL3"></div>
+              <div class="formation-slot teol required" data-position="TEOL4"></div>
+              <div class="formation-slot teol" data-position="TEOL5"></div>
+            </div>
+            <div class="formation-slot wr" data-position="WR2"></div>
+            <div class="formation-slot wr" data-position="WR3"></div>
+          </div>
+          <div class="formation-row middle-row">
+            <div class="formation-slot qb required" data-position="QB"></div>
+          </div>
+          <div class="formation-row bottom-row">
+            <div class="formation-slot rb" data-position="RB1"></div>
+            <div class="formation-slot rb" data-position="RB2"></div>
+          </div>
+        </div>
+        <div class="bench-wrapper">
+          <h4>Bench</h4>
+          <div id="bench" class="bench"></div>
+        </div>
+        <div class="formation-actions">
+          <button id="clearFormation">Clear</button>
+          <button id="saveFormation">Save</button>
+        </div>
       </div>
     </div>
 
