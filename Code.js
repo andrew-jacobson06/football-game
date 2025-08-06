@@ -85,6 +85,7 @@ function getPlayerTraits() {
     .map(row => ({
       team: row[0],
       name: row[1],
+      position: row[2],
       size: row[5],
       strength: row[6],
       speed: row[7],

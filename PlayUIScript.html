@@ -58,15 +58,23 @@
         slot.addEventListener('dragover', allowDrop);
         slot.addEventListener('drop', handleDrop);
       });
-      const bank = document.getElementById('playerBank');
-      if (bank) {
-        bank.addEventListener('dragover', allowDrop);
-        bank.addEventListener('drop', handleDrop);
+      const bench = document.getElementById('bench');
+      if (bench) {
+        bench.addEventListener('dragover', allowDrop);
+        bench.addEventListener('drop', handleDrop);
       }
       const clearBtn = document.getElementById('clearFormation');
       if (clearBtn) clearBtn.addEventListener('click', clearFormation);
       const saveBtn = document.getElementById('saveFormation');
       if (saveBtn) saveBtn.addEventListener('click', saveFormation);
+      const openBtn = document.getElementById('openFormation');
+      if (openBtn) openBtn.addEventListener('click', () => {
+        document.getElementById('formationModal').classList.add('open');
+      });
+      const closeBtn = document.getElementById('closeFormation');
+      if (closeBtn) closeBtn.addEventListener('click', () => {
+        document.getElementById('formationModal').classList.remove('open');
+      });
     });
 
   function loadGamesList() {
@@ -300,21 +308,21 @@
           dropdown.appendChild(option);
         }
       });
-      populatePlayerBank();
+      populateBench();
     }
 
-    function populatePlayerBank() {
-      const bank = document.getElementById('playerBank');
-      if (!bank) return;
+    function populateBench() {
+      const bench = document.getElementById('bench');
+      if (!bench) return;
       // Clear existing assignments
       document.querySelectorAll('.formation-slot').forEach(slot => {
         if (slot.firstChild) {
-          bank.appendChild(slot.firstChild);
+          bench.appendChild(slot.firstChild);
         }
         slot.classList.remove('filled');
         slot.dataset.player = '';
       });
-      bank.innerHTML = '';
+      bench.innerHTML = '';
       const teamName = state[state.Possession];
       Object.entries(playerTraits).forEach(([name, traits]) => {
         if (traits.team === teamName) {
@@ -322,9 +330,9 @@
           item.className = 'player-item';
           item.draggable = true;
           item.dataset.player = name;
-          item.textContent = name;
+          item.textContent = `${name} (${traits.position})`;
           item.addEventListener('dragstart', dragStart);
-          bank.appendChild(item);
+          bench.appendChild(item);
         }
       });
     }
@@ -346,7 +354,7 @@
       const target = e.currentTarget;
       if (target.classList.contains('formation-slot')) {
         if (target.firstChild) {
-          document.getElementById('playerBank').appendChild(target.firstChild);
+          document.getElementById('bench').appendChild(target.firstChild);
         }
         target.appendChild(item);
         target.classList.add('filled');
@@ -361,11 +369,11 @@
     }
 
     function clearFormation() {
-      const bank = document.getElementById('playerBank');
-      if (!bank) return;
+      const bench = document.getElementById('bench');
+      if (!bench) return;
       document.querySelectorAll('.formation-slot').forEach(slot => {
         if (slot.firstChild) {
-          bank.appendChild(slot.firstChild);
+          bench.appendChild(slot.firstChild);
         }
         slot.classList.remove('filled');
         slot.dataset.player = '';
