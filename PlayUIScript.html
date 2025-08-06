@@ -87,22 +87,25 @@
       card.innerHTML = `
         <div class="team-row">
           <img class="team-logo" src="${g.HomeLogo || ''}" alt="Home Logo" />
-          <span class="team-name">${g.Home}</span>
-          <span class="poss-indicator">${g.Possession === 'Home' ? '🏈' : ''}</span>
+          <div class="team-name-wrap">
+            <span class="team-name">${g.Home}</span>
+            <span class="poss-indicator">${g.Possession === 'Home' ? '🏈' : ''}</span>
+          </div>
           <span class="team-score">${g.HomeScore}</span>
-          <span class="info-sep">|</span>
           <span class="team-time">${g.Time || ''}</span>
           <span class="team-down">${formatDownDistance(g.Down, g.Distance)}</span>
         </div>
         <div class="team-row">
           <img class="team-logo" src="${g.AwayLogo || ''}" alt="Away Logo" />
-          <span class="team-name">${g.Away}</span>
-          <span class="poss-indicator">${g.Possession === 'Away' ? '🏈' : ''}</span>
+          <div class="team-name-wrap">
+            <span class="team-name">${g.Away}</span>
+            <span class="poss-indicator">${g.Possession === 'Away' ? '🏈' : ''}</span>
+          </div>
           <span class="team-score">${g.AwayScore}</span>
-          <span class="info-sep">|</span>
           <span class="team-qtr">${formatQuarter(g.Qtr)}</span>
           <span class="team-ball">${formatBallOnForPoss(g.BallOn, g.Possession)}</span>
-        </div>`;
+        </div>
+        `;
       card.addEventListener('click', () => {
         gameId = id;
         refreshUI(id);

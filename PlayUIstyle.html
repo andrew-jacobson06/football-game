@@ -50,8 +50,8 @@
   }
 
   .game-card .team-logo {
-    width: 8vw;
-    height: 8vw;
+    width: 2vw;
+    height: 2vw;
     object-fit: contain;
   }
 
@@ -70,6 +70,59 @@
   .game-card .info-sep {
     margin: 0 2vw;
   }
+
+  .game-card .team-row {
+    display: flex;
+    align-items: center;
+    font-size: 4vw;
+    gap: 0; /* we control spacing via width % now */
+  }
+
+  .game-card .team-logo {
+    flex: 0 0 10%;
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .game-card .team-name-wrap {
+    flex: 0 0 40%;
+    display: flex;
+    align-items: center;
+    gap: 1vw;
+  }
+
+  .game-card .team-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    justify-content: left;
+    padding-left: 2vw;
+  }
+
+  .game-card .poss-indicator {
+    white-space: nowrap;
+  }
+
+  .game-card .team-score {
+    flex: 0 0 10%;
+    font-weight: bold;
+    text-align: center;
+    font-size: clamp(16px, 6vw, 60px) !important;
+  }
+
+  .game-card .team-time,
+  .game-card .team-qtr {
+    flex: 0 0 20%;
+    text-align: center;
+  }
+
+  .game-card .team-down,
+  .game-card .team-ball {
+    flex: 0 0 20%;
+    text-align: center;
+  }
+
 
 
   /* Tabs */
