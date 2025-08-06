@@ -12,22 +12,10 @@
 
 
   function updateStickyOffsets() {
-    const carousel = document.getElementById('gameCarousel');
     const scoreboard = document.getElementById('scoreboard');
-    if (!carousel || !scoreboard) return;
+    if (!scoreboard) return;
     const root = document.documentElement;
-    const carouselHeight = carousel.classList.contains('collapsed') ? 0 : carousel.offsetHeight;
-    root.style.setProperty('--carouselHeight', carouselHeight + 'px');
     root.style.setProperty('--scoreboardHeight', scoreboard.offsetHeight + 'px');
-  }
-
-  function toggleCarousel() {
-    const carousel = document.getElementById('gameCarousel');
-    const toggle = document.getElementById('carouselToggle');
-    if (!carousel || !toggle) return;
-    carousel.classList.toggle('collapsed');
-    toggle.textContent = carousel.classList.contains('collapsed') ? '▼' : '▲';
-    updateStickyOffsets();
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -49,11 +37,18 @@
         if (target) target.classList.add('active');
       });
     });
-      const toggle = document.getElementById('carouselToggle');
-      if (toggle) toggle.addEventListener('click', toggleCarousel);
       updateStickyOffsets();
       window.addEventListener('resize', updateStickyOffsets);
       loadGamesList();
+      const backBtn = document.getElementById('backButton');
+      if (backBtn) {
+        backBtn.addEventListener('click', () => {
+          document.getElementById('gameUI').style.display = 'none';
+          document.getElementById('gameList').style.display = 'block';
+          backBtn.style.display = 'none';
+          loadGamesList();
+        });
+      }
       document.querySelectorAll('.formation-slot').forEach(slot => {
         slot.addEventListener('dragover', allowDrop);
         slot.addEventListener('drop', handleDrop);
@@ -82,22 +77,43 @@
   }
 
   function renderGameCards(games) {
-    const container = document.getElementById('gameCarousel');
+    const container = document.getElementById('gameList');
     if (!container) return;
     container.innerHTML = '';
     games.forEach(g => {
       const card = document.createElement('div');
       const id = Number(g.GameId);
-      card.className = 'game-card' + (id === gameId ? ' active' : '');
-      card.innerHTML = `<div class="teams">${g.Away} @ ${g.Home}</div><div class="score">${g.AwayScore} - ${g.HomeScore}</div>`;
+      card.className = 'game-card';
+      card.innerHTML = `
+        <div class="team-row">
+          <img class="team-logo" src="${g.HomeLogo || ''}" alt="Home Logo" />
+          <span class="team-name">${g.Home}</span>
+          <span class="poss-indicator">${g.Possession === 'Home' ? '🏈' : ''}</span>
+          <span class="team-score">${g.HomeScore}</span>
+          <span class="info-sep">|</span>
+          <span class="team-time">${g.Time || ''}</span>
+          <span class="team-down">${formatDownDistance(g.Down, g.Distance)}</span>
+        </div>
+        <div class="team-row">
+          <img class="team-logo" src="${g.AwayLogo || ''}" alt="Away Logo" />
+          <span class="team-name">${g.Away}</span>
+          <span class="poss-indicator">${g.Possession === 'Away' ? '🏈' : ''}</span>
+          <span class="team-score">${g.AwayScore}</span>
+          <span class="info-sep">|</span>
+          <span class="team-qtr">${formatQuarter(g.Qtr)}</span>
+          <span class="team-ball">${formatBallOnForPoss(g.BallOn, g.Possession)}</span>
+        </div>`;
       card.addEventListener('click', () => {
+        gameId = id;
         refreshUI(id);
-        document.querySelectorAll('.game-card').forEach(c => c.classList.remove('active'));
-        card.classList.add('active');
+        document.getElementById('gameList').style.display = 'none';
+        document.getElementById('gameUI').style.display = 'block';
+        const backBtn = document.getElementById('backButton');
+        if (backBtn) backBtn.style.display = 'block';
+        updateStickyOffsets();
       });
       container.appendChild(card);
     });
-    updateStickyOffsets();
   }
 
   function toggleMenu() {

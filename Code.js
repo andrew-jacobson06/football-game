@@ -62,13 +62,29 @@ function getGamesList() {
   const idxAway = headers.indexOf('Away');
   const idxHomeScore = headers.indexOf('HomeScore');
   const idxAwayScore = headers.indexOf('AwayScore');
+  const idxQtr = headers.indexOf('Qtr');
+  const idxTime = headers.indexOf('Time');
+  const idxDown = headers.indexOf('Down');
+  const idxDistance = headers.indexOf('Distance');
+  const idxBallOn = headers.indexOf('BallOn');
+  const idxPoss = headers.indexOf('Possession');
+  const idxHomeLogo = headers.indexOf('HomeLogo');
+  const idxAwayLogo = headers.indexOf('AwayLogo');
 
   return data.slice(1).map(row => ({
     GameId: row[idxId],
     Home: row[idxHome],
     Away: row[idxAway],
     HomeScore: row[idxHomeScore],
-    AwayScore: row[idxAwayScore]
+    AwayScore: row[idxAwayScore],
+    Qtr: row[idxQtr],
+    Time: row[idxTime],
+    Down: row[idxDown],
+    Distance: row[idxDistance],
+    BallOn: row[idxBallOn],
+    Possession: row[idxPoss],
+    HomeLogo: row[idxHomeLogo],
+    AwayLogo: row[idxAwayLogo]
   }));
 }
 
