@@ -19,7 +19,6 @@
 
   body {
     margin: 0;
-    padding: 2vw;
     min-height: 100vh;
     font-family: 'Roboto', Arial, sans-serif;
     background: linear-gradient(135deg, var(--gray-dark) 0%, var(--gray-medium) 100%);
@@ -128,6 +127,7 @@
     border-bottom: 0.75vw solid transparent;
     cursor: pointer;
     font-weight: 400;
+    font-size: clamp(16px, 4vw, 26px) !important;
     transition: background 0.3s, color 0.3s;
   }
   .tab-button:hover {
@@ -365,6 +365,13 @@
     background-color: yellow;
     z-index: 1;
   }
+  .driveWrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    height: 100%; /* Or a fixed height if needed */
+  }
   .driveSegment {
     position: absolute;
     top: 50%;
@@ -379,7 +386,7 @@
     height: clamp(10px, 4vw, 18px);
     background-color: black;
     border-radius: 50%;
-    top: -2px;
+    top: -100%;
     left: 0;
     z-index: 2;
     opacity: 1;
@@ -393,7 +400,7 @@
     font-size: clamp(16px, 5vw, 32px);
     color: black;
     left: 0;
-    top: -10px;
+    top: -300% !important;
     opacity: 1;
     z-index: 3;
     transition: left 1.4s ease, opacity 0.5s ease;
@@ -517,7 +524,6 @@
     margin: 10vw auto;
     background: var(--gray-medium);
     border-radius: 8px;
-    padding: 5vw;
     box-shadow: 0 0 12px rgba(0,0,0,0.4);
   }
   .boxscore-pill-container {
@@ -534,13 +540,14 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    color: var(--gray-dark);
     font-weight: 600;
     border-radius: 16px;
+    color: var(--text-light);
+    font-size: clamp(12px, 4vw, 30px);
   }
   .boxscore-pill.active {
     background: var(--accent-red);
-    color: var(--text-light);
+    color: var(--gray-dark);
   }
   .boxscore-subtab { display: none; }
   .boxscore-subtab.active { display: block; }
@@ -626,10 +633,6 @@
       font-size: 24px;
     }
 
-    body {
-      padding: 10px;
-    }
-
     .game-carousel {
       gap: 24px;
       padding: 20px;
@@ -668,7 +671,6 @@
     .boxscore-card,
     .play-log-card {
       margin: 40px auto;
-      padding: 10px;
     }
 
     .stats-header {
