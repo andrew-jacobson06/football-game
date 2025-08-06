@@ -7,12 +7,10 @@
   </head>
   <body>
     <audio id="crowdRoar" src="https://andrew-jacobson06.github.io/public-audio/crowd-cheering-379666.mp3" preload="auto"></audio>
-
-    <div class="carousel-wrapper">
-      <button id="carouselToggle" class="carousel-toggle">▲</button>
-      <div id="gameCarousel" class="game-carousel"></div>
-    </div>
-    <div id="scoreboard" class="scoreboard">
+    <div id="gameList" class="game-list"></div>
+    <div id="gameUI" style="display:none;">
+      <button id="backButton" class="back-button">← Back</button>
+      <div id="scoreboard" class="scoreboard">
       <div id="scoreBanner" class="score-banner"></div>
       <div class="team-block home">
         <div class="team-info">
@@ -54,15 +52,15 @@
           </div>
         </div>
       </div>
-    </div>
-    <div class="tabs">
-      <button class="tab-button active" data-tab="gamecast">Gamecast</button>
-      <button class="tab-button" data-tab="playbyplay">Play-by-Play</button>
-      <button class="tab-button" data-tab="boxscore">Box Score</button>
-      <button class="tab-button" data-tab="teamstats">Team Stats</button>
-    </div>
+      </div>
+      <div class="tabs">
+        <button class="tab-button active" data-tab="gamecast">Gamecast</button>
+        <button class="tab-button" data-tab="playbyplay">Play-by-Play</button>
+        <button class="tab-button" data-tab="boxscore">Box Score</button>
+        <button class="tab-button" data-tab="teamstats">Team Stats</button>
+      </div>
 
-    <div id="gamecast" class="tab-content active">
+      <div id="gamecast" class="tab-content active">
       <div class="game-info">
         <div class="info-block">
           <div class="info-label">DOWN:</div>
@@ -407,11 +405,12 @@
           <h4>Bench</h4>
           <div id="bench" class="bench"></div>
         </div>
-        <div class="formation-actions">
-          <button id="clearFormation">Clear</button>
-          <button id="saveFormation">Save</button>
-        </div>
+      <div class="formation-actions">
+        <button id="clearFormation">Clear</button>
+        <button id="saveFormation">Save</button>
       </div>
+    </div>
+    </div>
     </div>
 
     <?!= include('PlayUIScript'); ?>
