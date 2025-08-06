@@ -8,6 +8,7 @@
   let frontendStats = [];
   let gameId = 1;
   let playHistory = [];
+  let savedFormations = [];
 
 
   function updateStickyOffsets() {
@@ -48,12 +49,25 @@
         if (target) target.classList.add('active');
       });
     });
-    const toggle = document.getElementById('carouselToggle');
-    if (toggle) toggle.addEventListener('click', toggleCarousel);
-    updateStickyOffsets();
-    window.addEventListener('resize', updateStickyOffsets);
-    loadGamesList();
-  });
+      const toggle = document.getElementById('carouselToggle');
+      if (toggle) toggle.addEventListener('click', toggleCarousel);
+      updateStickyOffsets();
+      window.addEventListener('resize', updateStickyOffsets);
+      loadGamesList();
+      document.querySelectorAll('.formation-slot').forEach(slot => {
+        slot.addEventListener('dragover', allowDrop);
+        slot.addEventListener('drop', handleDrop);
+      });
+      const bank = document.getElementById('playerBank');
+      if (bank) {
+        bank.addEventListener('dragover', allowDrop);
+        bank.addEventListener('drop', handleDrop);
+      }
+      const clearBtn = document.getElementById('clearFormation');
+      if (clearBtn) clearBtn.addEventListener('click', clearFormation);
+      const saveBtn = document.getElementById('saveFormation');
+      if (saveBtn) saveBtn.addEventListener('click', saveFormation);
+    });
 
   function loadGamesList() {
     google.script.run.withSuccessHandler(renderGameCards).getGamesList();
@@ -272,21 +286,112 @@
     computeDriveInfo();
   }
 
-  function loadPlayers() {
-    const dropdown = document.getElementById("playerDropdown");
-    dropdown.innerHTML = "";
+    function loadPlayers() {
+      const dropdown = document.getElementById("playerDropdown");
+      dropdown.innerHTML = "";
 
-    const teamName = state[state.Possession];
+      const teamName = state[state.Possession];
 
-    Object.entries(playerTraits).forEach(([name, traits]) => {
-      if (traits.team === teamName) {
-        const option = document.createElement("option");
-        option.value = name;
-        option.text = name;
-        dropdown.appendChild(option);
+      Object.entries(playerTraits).forEach(([name, traits]) => {
+        if (traits.team === teamName) {
+          const option = document.createElement("option");
+          option.value = name;
+          option.text = name;
+          dropdown.appendChild(option);
+        }
+      });
+      populatePlayerBank();
+    }
+
+    function populatePlayerBank() {
+      const bank = document.getElementById('playerBank');
+      if (!bank) return;
+      // Clear existing assignments
+      document.querySelectorAll('.formation-slot').forEach(slot => {
+        if (slot.firstChild) {
+          bank.appendChild(slot.firstChild);
+        }
+        slot.classList.remove('filled');
+        slot.dataset.player = '';
+      });
+      bank.innerHTML = '';
+      const teamName = state[state.Possession];
+      Object.entries(playerTraits).forEach(([name, traits]) => {
+        if (traits.team === teamName) {
+          const item = document.createElement('div');
+          item.className = 'player-item';
+          item.draggable = true;
+          item.dataset.player = name;
+          item.textContent = name;
+          item.addEventListener('dragstart', dragStart);
+          bank.appendChild(item);
+        }
+      });
+    }
+
+    function dragStart(e) {
+      e.dataTransfer.setData('text/plain', e.target.dataset.player);
+    }
+
+    function allowDrop(e) {
+      e.preventDefault();
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      const name = e.dataTransfer.getData('text/plain');
+      const item = document.querySelector(`.player-item[data-player="${name}"]`);
+      if (!item) return;
+      const source = item.parentElement;
+      const target = e.currentTarget;
+      if (target.classList.contains('formation-slot')) {
+        if (target.firstChild) {
+          document.getElementById('playerBank').appendChild(target.firstChild);
+        }
+        target.appendChild(item);
+        target.classList.add('filled');
+        target.dataset.player = name;
+      } else {
+        target.appendChild(item);
       }
-    });
-  }
+      if (source.classList && source.classList.contains('formation-slot')) {
+        source.classList.remove('filled');
+        source.dataset.player = '';
+      }
+    }
+
+    function clearFormation() {
+      const bank = document.getElementById('playerBank');
+      if (!bank) return;
+      document.querySelectorAll('.formation-slot').forEach(slot => {
+        if (slot.firstChild) {
+          bank.appendChild(slot.firstChild);
+        }
+        slot.classList.remove('filled');
+        slot.dataset.player = '';
+      });
+    }
+
+    function saveFormation() {
+      const required = ['QB','TEOL2','TEOL3','TEOL4'];
+      const formation = [];
+      let valid = true;
+      document.querySelectorAll('.formation-slot').forEach(slot => {
+        const pos = slot.dataset.position;
+        const playerEl = slot.querySelector('.player-item');
+        if (playerEl) {
+          formation.push({ position: pos, player: playerEl.dataset.player });
+        } else if (required.includes(pos)) {
+          valid = false;
+        }
+      });
+      if (!valid) {
+        alert('Please fill all required positions');
+        return;
+      }
+      savedFormations.push(formation);
+      console.log('Saved formation', formation);
+    }
 
   function loadPlayersTraits(callback) {
     google.script.run.withSuccessHandler(function (playerData) {

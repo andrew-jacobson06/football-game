@@ -686,9 +686,77 @@
       padding: 16px;
     }
 
-    .stats-title {
+  .stats-title {
       font-size: 24px;
       margin: 20px 0;
     }
+  }
+
+  /* Formation builder */
+  .formation-panel {
+    margin-top: 5vw;
+    padding: 5vw;
+    background: var(--gray-medium);
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.4);
+  }
+
+  .formation-field {
+    margin-bottom: 4vw;
+  }
+
+  .formation-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2vw;
+    margin-bottom: 2vw;
+  }
+
+  .formation-row.top-row {
+    justify-content: space-between;
+  }
+
+  .te-group {
+    display: flex;
+    gap: 2vw;
+  }
+
+  .formation-slot {
+    width: 10vw;
+    height: 10vw;
+    border: 2px dashed var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(10px, 3vw, 14px);
+  }
+
+  .formation-slot.required {
+    border-color: var(--accent-red);
+  }
+
+  .formation-slot.filled {
+    border-style: solid;
+  }
+
+  .player-bank {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1vw;
+  }
+
+  .player-item {
+    padding: 1vw 2vw;
+    background: var(--gray-light);
+    border: 1px solid var(--text-light);
+    border-radius: 4px;
+    cursor: grab;
+  }
+
+  .formation-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 2vw;
   }
 </style>
