@@ -722,11 +722,19 @@
 
   .close-button {
     position: absolute;
-    top: 1vw;
-    right: 1vw;
-    font-size: 4vw;
+    top: -2vw;
+    right: -2vw;
+    width: clamp(24px, 6vw, 32px);
+    height: clamp(24px, 6vw, 32px);
+    font-size: clamp(16px, 4vw, 24px);
     line-height: 1;
     cursor: pointer;
+    background: var(--gray-medium);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
   }
 
   .formation-field {
@@ -742,7 +750,7 @@
   }
 
   .formation-row.top-row {
-    justify-content: space-between;
+    justify-content: center;
   }
 
   .te-group {
@@ -778,6 +786,11 @@
   .formation-slot.wr { border-color: #ffb74d; color: #ffb74d; }
   .formation-slot.teol { border-color: #ba68c8; color: #ba68c8; }
 
+  .formation-slot.gap {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
   .formation-slot.required {
     box-shadow: none;
   }
@@ -800,17 +813,28 @@
   .bench {
     display: flex;
     flex-wrap: wrap;
-    gap: 1vw;
+    gap: 3vw;
   }
 
   .player-item {
-    padding: 1vw 2vw;
-    background: var(--gray-light);
-    border: 1px solid var(--text-light);
-    border-radius: 4px;
+    width: clamp(40px, 12vw, 70px);
+    height: clamp(40px, 12vw, 70px);
+    border: 2px solid var(--text-muted);
+    border-radius: 50%;
+    background: var(--gray-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(10px, 3vw, 14px);
+    font-weight: 500;
+    color: var(--text-muted);
     cursor: grab;
-    color: var(--text-light);
   }
+
+  .player-item.qb { border-color: #64b5f6; color: #64b5f6; }
+  .player-item.rb { border-color: #81c784; color: #81c784; }
+  .player-item.wr { border-color: #ffb74d; color: #ffb74d; }
+  .player-item.teol { border-color: #ba68c8; color: #ba68c8; }
 
   .formation-actions {
     display: flex;
