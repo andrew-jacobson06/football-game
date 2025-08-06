@@ -327,10 +327,14 @@
       Object.entries(playerTraits).forEach(([name, traits]) => {
         if (traits.team === teamName) {
           const item = document.createElement('div');
-          item.className = 'player-item';
+          let posClass = traits.position.toLowerCase();
+          if (posClass === 'te' || posClass === 'ol') posClass = 'teol';
+          item.className = `player-item ${posClass}`;
           item.draggable = true;
           item.dataset.player = name;
-          item.textContent = `${name} (${traits.position})`;
+          const initials = name.split(' ').map(n => n[0]).join('');
+          item.textContent = initials;
+          item.title = `${name} (${traits.position})`;
           item.addEventListener('dragstart', dragStart);
           bench.appendChild(item);
         }
