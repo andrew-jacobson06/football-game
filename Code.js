@@ -94,8 +94,8 @@ function getPlayerTraits() {
     throw new Error("Sheet 'Players' not found.");
   }
 
-  // Pull columns A through AF (0 - 31)
-  const numCols = 32;
+  // Pull columns A through AG (0 - 32) to include DefPos
+  const numCols = 33;
   const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
   Logger.log(data);
   const result = data
@@ -133,6 +133,7 @@ function getPlayerTraits() {
       ballHawk: row[29],
       readQB: row[30],
       coverage: row[31],
+      defPos: row[32],
       // Local tracking only
       carries: 0,
       fatigue: row[8]
