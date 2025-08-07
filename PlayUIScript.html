@@ -9,6 +9,8 @@
   let gameId = 1;
   let playHistory = [];
   let savedFormations = [];
+  let currentFormation = [];
+  const RUN_POSITIONS = ['WR1','RB1','RB2','QB'];
 
 
   function updateStickyOffsets() {
@@ -314,20 +316,8 @@
   }
 
     function loadPlayers() {
-      const dropdown = document.getElementById("playerDropdown");
-      dropdown.innerHTML = "";
-
-      const teamName = state[state.Possession];
-
-      Object.entries(playerTraits).forEach(([name, traits]) => {
-        if (traits.team === teamName) {
-          const option = document.createElement("option");
-          option.value = name;
-          option.text = name;
-          dropdown.appendChild(option);
-        }
-      });
       populateBench();
+      updateRunnerDropdown();
     }
 
     function populateBench() {
@@ -357,6 +347,26 @@
           item.addEventListener('dragstart', dragStart);
           bench.appendChild(item);
         }
+      });
+    }
+
+    function updateRunnerDropdown() {
+      const dropdown = document.getElementById('playerDropdown');
+      if (!dropdown) return;
+      dropdown.innerHTML = '';
+      const teamName = state[state.Possession];
+      let runners = [];
+      if (currentFormation.length > 0) {
+        runners = currentFormation
+          .filter(f => RUN_POSITIONS.includes(f.position) && f.player)
+          .map(f => f.player)
+          .filter(name => playerTraits[name] && playerTraits[name].team === teamName);
+      }
+      runners.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.text = name;
+        dropdown.appendChild(option);
       });
     }
 
@@ -401,6 +411,8 @@
         slot.classList.remove('filled');
         slot.dataset.player = '';
       });
+      currentFormation = [];
+      updateRunnerDropdown();
     }
 
     function saveFormation() {
@@ -420,6 +432,8 @@
         alert('Please fill all required positions');
         return;
       }
+      currentFormation = formation;
+      updateRunnerDropdown();
       savedFormations.push(formation);
       console.log('Saved formation', formation);
     }
