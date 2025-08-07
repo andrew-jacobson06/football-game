@@ -470,6 +470,10 @@
       .map(f => ({ pos: f.position, player: f.player, stars: playerTraits[f.player]?.offStars || 0 }))
       .sort((a,b) => b.stars - a.stars);
 
+    const olPositions = ['TEOL1','TEOL2','TEOL3','TEOL4','TEOL5'].filter(pos =>
+      currentFormation.some(f => f.position === pos)
+    );
+
     // DB assignments – fill from DBs, then LBs if needed
     const dbAssignments = [];
     for (let i = 0; i < wrs.length; i++) {
@@ -487,7 +491,6 @@
     }
 
     // DL assignments – fill from DLs, then LBs if needed
-    const olPositions = ['TEOL1','TEOL2','TEOL3','TEOL4','TEOL5'];
     const dlAssignments = [];
     olPositions.forEach((ol, i) => {
       let player = null;
@@ -503,10 +506,14 @@
       });
     });
 
+    let assigned = dbAssignments.length + dlAssignments.length;
+    let remaining = Math.max(0, 7 - assigned);
+
     const predicted = predictPlayType(state.Down, state.Distance).toLowerCase();
     const lbAssignments = [];
     const backs = ['QB','RB1','RB2'];
-    const lbNeeded = (predicted === 'run' || predicted === 'screen') ? backs.length : 2;
+    let lbNeeded = (predicted === 'run' || predicted === 'screen') ? backs.length : 2;
+    lbNeeded = Math.min(lbNeeded, remaining);
     for (let i = 0; i < lbNeeded; i++) {
       let player = null;
       if (lbs.length > 0) {
@@ -525,20 +532,25 @@
       }
     }
 
+    assigned += lbAssignments.length;
+    remaining = Math.max(0, 7 - assigned);
+
     // Safety – pick from safeties, then remaining LBs, DBs, DLs
     let safetyAssignment = null;
-    if (safeties.length > 0) {
-      const s = safeties.shift();
-      safetyAssignment = { position: 'S', player: s.name };
-    } else if (lbs.length > 0) {
-      const s = lbs.shift();
-      safetyAssignment = { position: 'S', player: s.name };
-    } else if (dbs.length > 0) {
-      const s = dbs.shift();
-      safetyAssignment = { position: 'S', player: s.name };
-    } else if (dls.length > 0) {
-      const s = dls.shift();
-      safetyAssignment = { position: 'S', player: s.name };
+    if (remaining > 0) {
+      if (safeties.length > 0) {
+        const s = safeties.shift();
+        safetyAssignment = { position: 'S', player: s.name };
+      } else if (lbs.length > 0) {
+        const s = lbs.shift();
+        safetyAssignment = { position: 'S', player: s.name };
+      } else if (dbs.length > 0) {
+        const s = dbs.shift();
+        safetyAssignment = { position: 'S', player: s.name };
+      } else if (dls.length > 0) {
+        const s = dls.shift();
+        safetyAssignment = { position: 'S', player: s.name };
+      }
     }
 
     defensiveFormation = [...dbAssignments, ...dlAssignments, ...lbAssignments];
@@ -599,8 +611,10 @@
 
   function createLosPlayer(name) {
     const div = document.createElement('div');
-    div.className = 'los-player';
-    div.textContent = name || '';
+    div.className = name ? 'los-player' : 'los-player empty';
+    if (name) {
+      div.textContent = name;
+    }
     return div;
   }
 
