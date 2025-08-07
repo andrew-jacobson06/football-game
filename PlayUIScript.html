@@ -345,8 +345,8 @@
           item.className = `player-item ${posClass}`;
           item.draggable = true;
           item.dataset.player = name;
-          const initials = name.split(' ').map(n => n[0]).join('');
-          item.textContent = initials;
+          //const initials = name.split(' ').map(n => n[0]).join('');
+          item.textContent = name;
           item.title = `${name} (${traits.position})`;
           item.addEventListener('dragstart', dragStart);
           bench.appendChild(item);
