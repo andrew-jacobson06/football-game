@@ -94,7 +94,9 @@ function getPlayerTraits() {
     throw new Error("Sheet 'Players' not found.");
   }
 
-  const data = sheet.getRange("A2:X" + sheet.getLastRow()).getValues();
+  // Pull columns A through AD (0 - 29)
+  const numCols = 30;
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
   Logger.log(data);
   const result = data
     .filter(row => row[0] != null && row[0] !== '') // Ensure 'team' field exists
@@ -102,17 +104,33 @@ function getPlayerTraits() {
       team: row[0],
       name: row[1],
       position: row[2],
+      offStars: row[3],
+      defStars: row[4],
       size: row[5],
       strength: row[6],
       speed: row[7],
       stamina: row[8],
+      poise: row[9],
+      accuracy: row[10],
+      armStrength: row[11],
+      readDefense: row[12],
       juke: row[13],
       vision: row[14],
       acceleration: row[15],
+      routeRunning: row[16],
+      jump: row[17],
+      hands: row[18],
+      qbFavorite: row[19],
       runStop: row[20],
       tackling: row[21],
       runDef: row[22],
       tackleChance: row[23],
+      strip: row[24],
+      passRush: row[25],
+      sackChance: row[26],
+      ballHawk: row[27],
+      readQB: row[28],
+      coverage: row[29],
       // Local tracking only
       carries: 0,
       fatigue: row[8]
