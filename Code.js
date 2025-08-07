@@ -94,8 +94,8 @@ function getPlayerTraits() {
     throw new Error("Sheet 'Players' not found.");
   }
 
-  // Pull columns A through AD (0 - 29)
-  const numCols = 30;
+  // Pull columns A through AF (0 - 31)
+  const numCols = 32;
   const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
   Logger.log(data);
   const result = data
@@ -121,16 +121,18 @@ function getPlayerTraits() {
       jump: row[17],
       hands: row[18],
       qbFavorite: row[19],
-      runStop: row[20],
-      tackling: row[21],
-      runDef: row[22],
-      tackleChance: row[23],
-      strip: row[24],
-      passRush: row[25],
-      sackChance: row[26],
-      ballHawk: row[27],
-      readQB: row[28],
-      coverage: row[29],
+      runBlocking: row[20],
+      passProtect: row[21],
+      runStop: row[22],
+      tackling: row[23],
+      runDef: row[24],
+      tackleChance: row[25],
+      strip: row[26],
+      passRush: row[27],
+      sackChance: row[28],
+      ballHawk: row[29],
+      readQB: row[30],
+      coverage: row[31],
       // Local tracking only
       carries: 0,
       fatigue: row[8]
