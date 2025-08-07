@@ -131,17 +131,21 @@
     menu.innerHTML = '';
     Object.values(playerTraits).forEach(p => {
       const card = document.createElement('div');
-      card.className = 'player-card';
-      card.innerHTML = `
-            <h4>${p.name}</h4>
-            <div>Size: ${p.size}</div>
-            <div>Strength: ${p.strength}</div>
-            <div>Speed: ${p.speed}</div>
-            <div>Stamina: ${p.stamina}</div>
-          `;
-      menu.appendChild(card);
-    });
-  }
+        card.className = 'player-card';
+        card.innerHTML = `
+              <h4>${p.name}</h4>
+              <div>Size: ${p.size}</div>
+              <div>Strength: ${p.strength}</div>
+              <div>Speed: ${p.speed}</div>
+              <div>Stamina: ${p.stamina}</div>
+              <div>Run Stop: ${p.runStop}</div>
+              <div>Tackling: ${p.tackling}</div>
+              <div>Run Def: ${p.runDef}</div>
+              <div>Tackle Chance: ${p.tackleChance}</div>
+            `;
+        menu.appendChild(card);
+      });
+    }
 
   // === GAME SETUP ===
   function refreshUI(selectedGameId) {

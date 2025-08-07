@@ -94,7 +94,7 @@ function getPlayerTraits() {
     throw new Error("Sheet 'Players' not found.");
   }
 
-  const data = sheet.getRange("A2:T" + sheet.getLastRow()).getValues();
+  const data = sheet.getRange("A2:X" + sheet.getLastRow()).getValues();
   Logger.log(data);
   const result = data
     .filter(row => row[0] != null && row[0] !== '') // Ensure 'team' field exists
@@ -109,6 +109,10 @@ function getPlayerTraits() {
       juke: row[13],
       vision: row[14],
       acceleration: row[15],
+      runStop: row[20],
+      tackling: row[21],
+      runDef: row[22],
+      tackleChance: row[23],
       // Local tracking only
       carries: 0,
       fatigue: row[8]
