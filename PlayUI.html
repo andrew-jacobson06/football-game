@@ -111,6 +111,7 @@
 
         <div class="control-panel">
           <button id="openFormation">Edit Formation</button>
+          <button id="viewLOS">View LOS</button>
           <label for="playerDropdown">Select Player:</label>
           <select id="playerDropdown"></select>
           <div class="button-row">
@@ -411,6 +412,14 @@
       </div>
     </div>
     </div>
+    </div>
+
+    <div id="losModal" class="modal">
+      <div class="formation-panel los-panel">
+        <span id="closeLOS" class="close-button">&times;</span>
+        <h3>Line of Scrimmage</h3>
+        <div id="losField" class="los-field"></div>
+      </div>
     </div>
 
     <?!= include('PlayUIScript'); ?>
