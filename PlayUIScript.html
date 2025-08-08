@@ -777,7 +777,7 @@
     let recordedYards = yardDelta;
     if (touchdown) {
       result = "Touchdown";
-      await handleTouchdown(newBall, playerName, carryResult, tackler, predicted);
+      await handleTouchdown(newBall, playerName, carryResult, result, tackler, predicted);
       recordedYards = carryResult.yards; // handleTouchdown adjusts yards
       await celebrateTouchdown(scoringTeam, oldScore, oldScore + 6);
     } else if (newDist <= 0) {
@@ -791,7 +791,7 @@
       newDown++;
       if (newDown > 4) {
       result = "TO on Downs";
-        await handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted);
+        await handleTOonDowns(result, newBall, playerName, carryResult, result, tackler, predicted);
       } else {
         updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
         await animatePlay();
@@ -811,7 +811,7 @@
     afterPlayComplete();
   }
 
-  async function handleTouchdown(newBall, playerName, carryResult, tackler, predicted) {
+  async function handleTouchdown(newBall, playerName, carryResult, result, tackler, predicted) {
     // Distance covered to reach the goal line differs by team direction
     carryResult.yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
     if (state.Possession === "Home") {
@@ -830,7 +830,7 @@
     loadPlayers();
   }
 
-  async function handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted) {
+  async function handleTOonDowns(result, newBall, playerName, carryResult, result, tackler, predicted) {
     updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
 
     await animatePlay();
