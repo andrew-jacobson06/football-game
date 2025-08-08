@@ -13,6 +13,8 @@
   let defensiveFormation = [];
   let autoStuff = false;
   let autoRelease = false;
+  let offStarPower = false;
+  let defStarPower = false;
   const RUN_POSITIONS = ['WR1','RB1','RB2','QB'];
 
 
@@ -693,9 +695,44 @@
     return roll <= starPower;
   }
 
+  function rollOffStarPower(ballCarrier) {
+    const stars = Number(playerTraits[ballCarrier]?.offStars || 0);
+    const threshold = Math.pow(stars, 2);
+    const roll = Math.random() * 100;
+    return roll <= threshold;
+  }
+
+  function rollDefStarPower() {
+    const candidates = defensiveFormation
+      .filter(f => f.player && (f.position.startsWith('DL') || f.position.startsWith('LB')))
+      .map(f => {
+        const stars = Number(playerTraits[f.player]?.defStars || 0);
+        return { name: f.player, stars, weight: Math.pow(stars, 2) };
+      });
+
+    const totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
+    if (totalWeight <= 0) return false;
+
+    let roll = Math.random() * totalWeight;
+    let chosen = candidates[0];
+    for (const c of candidates) {
+      if (roll < c.weight) {
+        chosen = c;
+        break;
+      }
+      roll -= c.weight;
+    }
+
+    const threshold = Math.pow(chosen.stars, 2);
+    const activationRoll = Math.random() * 100;
+    return activationRoll <= threshold;
+  }
+
   function afterPlayComplete() {
     autoStuff = false;
     autoRelease = false;
+    offStarPower = false;
+    defStarPower = false;
   }
 
   // === MAIN PLAY ===
@@ -704,6 +741,9 @@
     if (!playerName) return;
 
     let tackler = "NA";
+
+    offStarPower = rollOffStarPower(playerName);
+    defStarPower = rollDefStarPower();
 
     const blockResult = runBlockVsRunDef(playerName);
     if (blockResult.defenseWins) {
