@@ -11,6 +11,8 @@
   let savedFormations = [];
   let currentFormation = [];
   let defensiveFormation = [];
+  let autoStuff = false;
+  let autoRelease = false;
   const RUN_POSITIONS = ['WR1','RB1','RB2','QB'];
 
 
@@ -641,12 +643,74 @@
     }).getFrontendSettings();
   }
 
+  function runBlockVsRunDef(ballCarrier) {
+    let dlTotal = 0;
+    let olTotal = 0;
+
+    defensiveFormation.forEach(f => {
+      if (f.player && (f.position.startsWith('DL') || f.position.startsWith('LB'))) {
+        dlTotal += Number(playerTraits[f.player]?.runDef || 0);
+      }
+    });
+
+    currentFormation.forEach(f => {
+      if (!f.player) return;
+      const pos = f.position;
+      const isOffensive = ['QB','RB1','RB2','TEOL1','TEOL2','TEOL3','TEOL4','TEOL5'].includes(pos);
+      if (isOffensive && f.player !== ballCarrier) {
+        olTotal += Number(playerTraits[f.player]?.runDef || 0);
+      }
+    });
+
+    const total = dlTotal + olTotal;
+    if (total <= 0) return { defenseWins: false };
+    const roll = Math.floor(Math.random() * total) + 1;
+    return { defenseWins: roll <= dlTotal };
+  }
+
+  function tryAutoStuff() {
+    let starPower = 0;
+    defensiveFormation.forEach(f => {
+      if (f.player && (f.position.startsWith('DL') || f.position.startsWith('LB'))) {
+        starPower += Number(playerTraits[f.player]?.defStars || 0);
+      }
+    });
+    const roll = Math.floor(Math.random() * 100) + 1;
+    return roll <= starPower;
+  }
+
+  function tryAutoRelease(ballCarrier) {
+    let starPower = 0;
+    currentFormation.forEach(f => {
+      if (!f.player) return;
+      const pos = f.position;
+      const isOffensive = ['QB','RB1','RB2','TEOL1','TEOL2','TEOL3','TEOL4','TEOL5'].includes(pos);
+      if (isOffensive && f.player !== ballCarrier) {
+        starPower += Number(playerTraits[f.player]?.offStars || 0);
+      }
+    });
+    const roll = Math.floor(Math.random() * 100) + 1;
+    return roll <= starPower;
+  }
+
+  function afterPlayComplete() {
+    autoStuff = false;
+    autoRelease = false;
+  }
+
   // === MAIN PLAY ===
   async function runPlay() {
     const playerName = document.getElementById("playerDropdown").value;
     if (!playerName) return;
 
     let tackler = "NA";
+
+    const blockResult = runBlockVsRunDef(playerName);
+    if (blockResult.defenseWins) {
+      autoStuff = tryAutoStuff();
+    } else {
+      autoRelease = tryAutoRelease(playerName);
+    }
 
     const rbStats = playerTraits[playerName];
     const carryResult = simulateSingleCarry(rbStats);
@@ -702,6 +766,7 @@
 
     updateStateUI();
     //refreshUI();
+    afterPlayComplete();
   }
 
   async function handleTouchdown(newBall, playerName, carryResult, tackler, predicted) {
