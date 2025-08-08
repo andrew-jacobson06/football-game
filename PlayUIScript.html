@@ -776,6 +776,7 @@
 
     let recordedYards = yardDelta;
     if (touchdown) {
+      result = "Touchdown";
       await handleTouchdown(newBall, playerName, carryResult, tackler, predicted);
       recordedYards = carryResult.yards; // handleTouchdown adjusts yards
       await celebrateTouchdown(scoringTeam, oldScore, oldScore + 6);
@@ -789,6 +790,7 @@
     } else {
       newDown++;
       if (newDown > 4) {
+      result = "TO on Downs";
         await handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted);
       } else {
         updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
@@ -798,7 +800,7 @@
 
     applyFatigue(playerName, "Run");
 
-    updateFrontendStats(playerName, recordedYards, touchdown, state.Possession);
+    updateFrontendStats(playerName, recordedYards, result, state.Possession);
     console.log(carryResult);
 
     document.getElementById("result").innerHTML = `<strong>${rbStats.name}</strong> ran for <strong>${carryResult.yards} yards</strong><br/><br/>` +
@@ -810,7 +812,6 @@
   }
 
   async function handleTouchdown(newBall, playerName, carryResult, tackler, predicted) {
-    const result = "Touchdown";
     // Distance covered to reach the goal line differs by team direction
     carryResult.yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
     if (state.Possession === "Home") {
@@ -830,7 +831,6 @@
   }
 
   async function handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted) {
-    result = "TO on Downs";
     updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
 
     await animatePlay();
@@ -1005,8 +1005,9 @@
     });
   }
 
-  function updateFrontendStats(player, yards, td, team) {
-    if(td){
+  function updateFrontendStats(player, yards, result, team) {
+
+    if(result == "Touchdown" || result == "TO on Downs"){
       if(team == "Home"){
         team = "Away";
       } else{
@@ -1020,7 +1021,7 @@
     }
     p.carries++;
     p.yards += yards;
-    if (td) p.tds++;
+    if (result == "Touchdown") p.tds++;
     if (yards > p.long) p.long = yards;
 
     renderBoxScore();
@@ -1104,7 +1105,7 @@
 
   function getModifiedRoll(stats, modLog) {
     // Float base roll from 1.000 to ~100.000
-    let baseRoll = Math.random() * 99 + 1; // 1–100 float
+    let baseRoll = Math.random() * 100; // 1–100 float
 
     if (autoRelease) {
       baseRoll += 7;
@@ -1139,6 +1140,9 @@
   }
 
   function getYardageOutcome(roll, stats, modLog) {
+    if (roll >= 100){
+      return getStrictBreakawayYards(stats, modLog);
+    }
     for (const r of rollThresholds) {
       if (roll >= r.rollMin && roll < r.rollMax) {
         if (r.label === "RunType_Breakaway") {
@@ -1151,13 +1155,16 @@
   }
 
   function getStrictBreakawayYards(stats, modLog) {
-    const baseRoll = Math.floor(Math.random() * 100) + 1;
+    const baseRoll = Math.floor(Math.random() * 100);
     const speedBoost = Math.floor((stats.speed + Math.min(0, stats.fatigue) - 60) * 0.3);
     const adjustedRoll = Math.min(100, baseRoll + Math.max(0, speedBoost));
     if (speedBoost !== 0) modLog.push(`Pre +${speedBoost} Speed`);
 
     let cumulative = 0;
     for (const range of breakawaySettings) {
+      if (adjustedRoll >= 100){
+        return randomInt(81, 100);
+      }
       cumulative += range.percentage;
       if (adjustedRoll <= cumulative) {
         return randomInt(range.minYards, range.maxYards);
