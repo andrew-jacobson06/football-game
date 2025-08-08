@@ -1056,7 +1056,16 @@
 
   function getModifiedRoll(stats, modLog) {
     // Float base roll from 1.000 to ~100.000
-    const baseRoll = Math.random() * 99 + 1; // 1–100 float
+    let baseRoll = Math.random() * 99 + 1; // 1–100 float
+
+    if (autoRelease) {
+      baseRoll += 7;
+      modLog.push('Pre +7 Auto Release');
+    }
+    if (autoStuff) {
+      baseRoll -= 10;
+      modLog.push('Pre -10 Auto Stuff');
+    }
 
     // Calculate vision mod
     let visionMod = (stats.vision + Math.min(0, stats.fatigue) - 60) * 0.055;
