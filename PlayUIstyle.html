@@ -768,6 +768,7 @@
 
   .formation-field {
     margin-bottom: 4vw;
+    overflow-x: auto;
   }
 
   .formation-row {
@@ -785,9 +786,11 @@
   .te-group {
     display: flex;
     gap: 2vw;
+    flex-shrink: 0;
   }
 
   .formation-slot {
+    flex: 0 0 clamp(60px, 16vw, 90px);
     width: clamp(60px, 16vw, 90px);
     height: clamp(60px, 16vw, 90px);
     border: 2px solid var(--text-muted);
