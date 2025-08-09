@@ -742,11 +742,11 @@
 
   .close-button {
     position: absolute;
-    top: -2vw;
-    right: -2vw;
-    width: clamp(24px, 6vw, 32px);
-    height: clamp(24px, 6vw, 32px);
-    font-size: clamp(16px, 4vw, 24px);
+    top: -3vw;
+    right: -3vw;
+    width: clamp(32px, 10vw, 60px);
+    height: clamp(32px, 10vw, 60px);
+    font-size: clamp(24px, 8vw, 40px);
     line-height: 1;
     cursor: pointer;
     background: var(--gray-medium);
@@ -765,8 +765,8 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 3vw;
-    margin-bottom: 3vw;
+    gap: 4vw;
+    margin-bottom: 4vw;
   }
 
   .formation-row.top-row {
@@ -779,22 +779,23 @@
   }
 
   .formation-slot {
-    width: clamp(40px, 12vw, 70px);
-    height: clamp(40px, 12vw, 70px);
+    width: clamp(60px, 16vw, 90px);
+    height: clamp(60px, 16vw, 90px);
     border: 2px solid var(--text-muted);
     border-radius: 50%;
     background: var(--gray-dark);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: clamp(10px, 3vw, 14px);
+    font-size: clamp(12px, 4vw, 18px);
     font-weight: 500;
     position: relative;
     color: var(--text-muted);
+    touch-action: manipulation;
   }
 
   .formation-slot::before {
-    content: attr(data-position);
+    content: attr(data-label);
   }
 
   .formation-slot.filled::before {
@@ -837,18 +838,24 @@
   }
 
   .player-item {
-    width: clamp(40px, 12vw, 70px);
-    height: clamp(40px, 12vw, 70px);
+    width: clamp(60px, 16vw, 90px);
+    height: clamp(60px, 16vw, 90px);
     border: 2px solid var(--text-muted);
     border-radius: 50%;
     background: var(--gray-dark);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: clamp(10px, 3vw, 14px);
+    font-size: clamp(12px, 4vw, 18px);
     font-weight: 500;
     color: var(--text-muted);
     cursor: grab;
+    touch-action: manipulation;
+  }
+
+  .player-item.selected {
+    border-color: var(--accent-red);
+    border-width: 4px;
   }
 
   .player-item.qb { border-color: #64b5f6; color: #64b5f6; }

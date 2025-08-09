@@ -16,6 +16,7 @@
   let offStarPower = false;
   let defStarPower = false;
   const RUN_POSITIONS = ['WR1','RB1','RB2','QB'];
+  let selectedPlayer = null;
 
 
   function updateStickyOffsets() {
@@ -59,11 +60,15 @@
       document.querySelectorAll('.formation-slot').forEach(slot => {
         slot.addEventListener('dragover', allowDrop);
         slot.addEventListener('drop', handleDrop);
+        slot.addEventListener('click', () => moveSelectedTo(slot));
+        slot.addEventListener('touchstart', e => { e.preventDefault(); moveSelectedTo(slot); });
       });
       const bench = document.getElementById('bench');
       if (bench) {
         bench.addEventListener('dragover', allowDrop);
         bench.addEventListener('drop', handleDrop);
+        bench.addEventListener('click', e => { if (e.target === bench) moveSelectedTo(bench); });
+        bench.addEventListener('touchstart', e => { if (e.target === bench) { e.preventDefault(); moveSelectedTo(bench); } });
       }
       const clearBtn = document.getElementById('clearFormation');
       if (clearBtn) clearBtn.addEventListener('click', clearFormation);
@@ -365,6 +370,8 @@
           item.textContent = name;
           item.title = `${name} (${traits.position})`;
           item.addEventListener('dragstart', dragStart);
+          item.addEventListener('touchstart', selectPlayer);
+          item.addEventListener('click', selectPlayer);
           bench.appendChild(item);
         }
       });
@@ -421,6 +428,44 @@
       }
     }
 
+    function selectPlayer(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const item = e.currentTarget;
+      if (selectedPlayer === item) {
+        item.classList.remove('selected');
+        selectedPlayer = null;
+        return;
+      }
+      if (selectedPlayer) selectedPlayer.classList.remove('selected');
+      selectedPlayer = item;
+      item.classList.add('selected');
+    }
+
+    function moveSelectedTo(target) {
+      if (!selectedPlayer) return;
+      const bench = document.getElementById('bench');
+      const item = selectedPlayer;
+      const source = item.parentElement;
+      if (target.classList.contains('formation-slot')) {
+        if (target.firstChild) {
+          bench.appendChild(target.firstChild);
+          target.classList.remove('filled');
+        }
+        target.appendChild(item);
+        target.classList.add('filled');
+        target.dataset.player = item.dataset.player;
+      } else {
+        target.appendChild(item);
+      }
+      if (source.classList && source.classList.contains('formation-slot')) {
+        source.classList.remove('filled');
+        source.dataset.player = '';
+      }
+      item.classList.remove('selected');
+      selectedPlayer = null;
+    }
+
     function clearFormation() {
       const bench = document.getElementById('bench');
       if (!bench) return;
@@ -432,6 +477,8 @@
         slot.dataset.player = '';
       });
       currentFormation = [];
+      selectedPlayer = null;
+      document.querySelectorAll('.player-item.selected').forEach(p => p.classList.remove('selected'));
       updateRunnerDropdown();
     }
 
@@ -457,6 +504,7 @@
       savedFormations.push(formation);
       console.log('Saved formation', formation);
       setDefensiveFormation();
+      document.getElementById('formationModal').classList.remove('open');
     }
 
   function setDefensiveFormation() {
