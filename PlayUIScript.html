@@ -104,6 +104,8 @@
     games.forEach(g => {
       const card = document.createElement('div');
       const id = Number(g.GameId);
+      const redZone = (g.Possession === 'Home' && g.BallOn >= 80) || (g.Possession === 'Away' && g.BallOn <= 20);
+      const downDisplay = formatDownDistance(g.Down, g.Distance, g.BallOn, g.Possession);
       card.className = 'game-card';
       card.innerHTML = `
         <div class="team-row">
@@ -114,7 +116,7 @@
           </div>
           <span class="team-score">${g.HomeScore}</span>
           <span class="team-time">${g.Time || ''}</span>
-          <span class="team-down">${formatDownDistance(g.Down, g.Distance)}</span>
+          <span class="team-down${redZone ? ' red-zone' : ''}">${downDisplay}</span>
         </div>
         <div class="team-row">
           <img class="team-logo" src="${g.AwayLogo || ''}" alt="Away Logo" />
@@ -270,10 +272,12 @@
     return "opp " + (100 - perspectiveYard);
   }
 
-  function formatDownDistance(down, distance) {
+  function formatDownDistance(down, distance, ballOn = state.BallOn, possession = state.Possession) {
     const ord = ["1st", "2nd", "3rd", "4th"];
     const d = ord[down - 1] || down + "th";
-    return `${d} & ${distance}`;
+    const yardsToGoal = possession === "Home" ? 100 - ballOn : ballOn;
+    const distText = (yardsToGoal < 10 && distance <= yardsToGoal) ? "Goal" : distance;
+    return `${d} & ${distText}`;
   }
 
   function formatQuarter(qtr) {
@@ -322,6 +326,18 @@
     return text;
   }
 
+  function updateLastPlayDesc() {
+    const el = document.getElementById('lastPlayDesc');
+    if (!el) return;
+    if (playHistory.length === 0) {
+      el.innerHTML = '';
+      return;
+    }
+    const lastPlay = playHistory[playHistory.length - 1];
+    const text = buildPlayText(lastPlay);
+    el.innerHTML = `<strong>Last Play:</strong> ${text}`;
+  }
+
   function renderPlayTimeline() {
     const container = document.getElementById("playTimeline");
     if (!container) return;
@@ -329,15 +345,18 @@
     playHistory.forEach(play => {
       if (!play.Player || (play.PlayType && play.PlayType !== "Run")) return;
       const time = new Date(play.Timestamp).toLocaleTimeString();
-      const downDist = formatDownDistance(play.Down, play.Distance);
+      const downDist = formatDownDistance(play.Down, play.Distance, play.BallOn || play.ballon || state.BallOn, play.Possession);
       const text = buildPlayText(play);
       const offense = play.Possession || "";
-      const score = `${play.homeScore !== undefined ? play.homeScore : state.HomeScore} - ${play.AwayScore !== undefined ? play.AwayScore : state.AwayScore}`;
+      const homeScoreVal = play.HomeScore !== undefined ? play.HomeScore : play.homeScore !== undefined ? play.homeScore : state.HomeScore;
+      const awayScoreVal = play.AwayScore !== undefined ? play.AwayScore : play.awayScore !== undefined ? play.awayScore : state.AwayScore;
+      const score = `${homeScoreVal} - ${awayScoreVal}`;
       const row = document.createElement("tr");
       row.innerHTML = `<td>${time}</td><td><div class="play-down">${downDist}</div><div class="play-text">${text}</div></td><td>${offense}</td><td>${score}</td>`;
       container.appendChild(row);
     });
     computeDriveInfo();
+    updateLastPlayDesc();
   }
 
     function loadPlayers() {
@@ -831,8 +850,9 @@
     } else if (newDist <= 0) {
       result = "First Down";
       newDown = 1;
-      newDist = 10;
-      updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
+      const yardsToGoal = state.Possession === "Home" ? 100 - newBall : newBall;
+      newDist = yardsToGoal < 10 ? yardsToGoal : 10;
+      updateGameState(1, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
       await animatePlay();
       playSound("crowdRoar");
     } else {
@@ -899,6 +919,7 @@
       Yards: yards,
       Result: result || "Normal",
       NewBallOn: ballOn,
+      BallOn: previousBallOn,
       Tackler: tackler,
       Possession: state.Possession,
       HomeScore: state.HomeScore,
@@ -959,7 +980,10 @@
 
   function updateStateUI() {
     console.log(state);
-    document.getElementById("downDistance").innerText = formatDownDistance(state.Down, state.Distance);
+    const downEl = document.getElementById("downDistance");
+    downEl.innerText = formatDownDistance(state.Down, state.Distance, state.BallOn, state.Possession);
+    const inRedZone = (state.Possession === "Home" && state.BallOn >= 80) || (state.Possession === "Away" && state.BallOn <= 20);
+    downEl.classList.toggle('red-zone', inRedZone);
     document.getElementById("ballOn").innerText = formatBallOn(state.BallOn);
     document.getElementById("homeName").innerText = state.Home;
     document.getElementById("awayName").innerText = state.Away;
