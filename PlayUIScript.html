@@ -104,11 +104,29 @@
     games.forEach(g => {
       const card = document.createElement('div');
       const id = Number(g.GameId);
-      const redZone = (g.Possession === 'Home' && g.BallOn >= 80) || (g.Possession === 'Away' && g.BallOn <= 20);
-      const downDisplay = formatDownDistance(g.Down, g.Distance, g.BallOn, g.Possession);
-      card.className = 'game-card';
-      card.innerHTML = `
-        <div class="team-row">
+      const isFinal = g.Qtr === 'FINAL';
+      const homeRowClass = g.HomeScore > g.AwayScore ? 'team-row winner' : g.HomeScore < g.AwayScore ? 'team-row loser' : 'team-row';
+      const awayRowClass = g.AwayScore > g.HomeScore ? 'team-row winner' : g.AwayScore < g.HomeScore ? 'team-row loser' : 'team-row';
+      card.className = 'game-card' + (isFinal ? ' final' : '');
+
+      if (isFinal) {
+        card.innerHTML = `
+        <div class="${homeRowClass}">
+          <img class="team-logo" src="${g.HomeLogo || ''}" alt="Home Logo" />
+          <span class="team-name">${g.Home}</span>
+          <span class="team-score">${g.HomeScore}</span>
+        </div>
+        <div class="${awayRowClass}">
+          <img class="team-logo" src="${g.AwayLogo || ''}" alt="Away Logo" />
+          <span class="team-name">${g.Away}</span>
+          <span class="team-score">${g.AwayScore}</span>
+        </div>
+        `;
+      } else {
+        const redZone = (g.Possession === 'Home' && g.BallOn >= 80) || (g.Possession === 'Away' && g.BallOn <= 20);
+        const downDisplay = formatDownDistance(g.Down, g.Distance, g.BallOn, g.Possession);
+        card.innerHTML = `
+        <div class="${homeRowClass}">
           <img class="team-logo" src="${g.HomeLogo || ''}" alt="Home Logo" />
           <div class="team-name-wrap">
             <span class="team-name">${g.Home}</span>
@@ -118,7 +136,7 @@
           <span class="team-time">${g.Time || ''}</span>
           <span class="team-down${redZone ? ' red-zone' : ''}">${downDisplay}</span>
         </div>
-        <div class="team-row">
+        <div class="${awayRowClass}">
           <img class="team-logo" src="${g.AwayLogo || ''}" alt="Away Logo" />
           <div class="team-name-wrap">
             <span class="team-name">${g.Away}</span>
@@ -129,6 +147,7 @@
           <span class="team-ball">${formatBallOnForPoss(g.BallOn, g.Possession)}</span>
         </div>
         `;
+      }
       card.addEventListener('click', () => {
         gameId = id;
         refreshUI(id);
@@ -281,6 +300,7 @@
   }
 
   function formatQuarter(qtr) {
+    if (qtr === 'FINAL') return 'FINAL';
     const ord = ["1st", "2nd", "3rd", "4th", "OT"];
     return ord[qtr - 1] || qtr + "th";
   }
