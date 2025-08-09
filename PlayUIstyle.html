@@ -111,6 +111,20 @@
     font-size: clamp(16px, 6vw, 60px) !important;
   }
 
+  .game-card .team-row.winner {
+    color: var(--text-light);
+    font-weight: bold;
+  }
+
+  .game-card .team-row.loser {
+    color: var(--text-muted);
+    font-weight: normal;
+  }
+
+  .game-card .team-row.loser .team-score {
+    font-weight: normal;
+  }
+
   .game-card .team-time,
   .game-card .team-qtr {
     flex: 0 0 20%;
