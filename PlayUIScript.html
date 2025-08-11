@@ -296,7 +296,7 @@
     const d = ord[down - 1] || down + "th";
     const yardsToGoal = possession === "Home" ? 100 - Number(ballOn) : Number(ballOn);
     const dist = Number(distance);
-    const distText = dist === yardsToGoal ? "Goal" : dist;
+    const distText = dist >= yardsToGoal ? "Goal" : dist;
     return `${d} & ${distText}`;
   }
 
