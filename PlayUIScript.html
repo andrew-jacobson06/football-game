@@ -1005,7 +1005,9 @@
     downEl.innerText = formatDownDistance(state.Down, state.Distance, state.BallOn, state.Possession);
     const inRedZone = (state.Possession === "Home" && state.BallOn >= 80) || (state.Possession === "Away" && state.BallOn <= 20);
     downEl.classList.toggle('red-zone', inRedZone);
-    document.getElementById("ballOn").innerText = formatBallOn(state.BallOn);
+    const ballEl = document.getElementById("ballOn");
+    ballEl.innerText = formatBallOn(state.BallOn);
+    ballEl.classList.toggle('red-zone', inRedZone);
     document.getElementById("homeName").innerText = state.Home;
     document.getElementById("awayName").innerText = state.Away;
     document.getElementById("homeRecord").innerText = state.HomeRecord || "";
