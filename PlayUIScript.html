@@ -406,9 +406,15 @@
           item.className = `player-item ${posClass}`;
           item.draggable = true;
           item.dataset.player = name;
-          //const initials = name.split(' ').map(n => n[0]).join('');
-          item.textContent = name;
           item.title = `${name} (${traits.position})`;
+          const offStars = '★'.repeat(Number(traits.offStars) || 0);
+          const defStars = '★'.repeat(Number(traits.defStars) || 0);
+          item.innerHTML = `
+            <div class="player-name">${name}</div>
+            <div class="star-row"><span>Off:</span><span class="stars off">${offStars}</span></div>
+            <div class="star-row"><span>Def:</span><span class="stars def">${defStars}</span></div>
+            <div class="player-attributes"><span>Size: ${traits.size}</span><span>Speed: ${traits.speed}</span></div>
+          `;
           item.addEventListener('dragstart', dragStart);
           item.addEventListener('touchstart', selectPlayer);
           item.addEventListener('click', selectPlayer);
