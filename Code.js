@@ -62,13 +62,29 @@ function getGamesList() {
   const idxAway = headers.indexOf('Away');
   const idxHomeScore = headers.indexOf('HomeScore');
   const idxAwayScore = headers.indexOf('AwayScore');
+  const idxQtr = headers.indexOf('Qtr');
+  const idxTime = headers.indexOf('Time');
+  const idxDown = headers.indexOf('Down');
+  const idxDistance = headers.indexOf('Distance');
+  const idxBallOn = headers.indexOf('BallOn');
+  const idxPoss = headers.indexOf('Possession');
+  const idxHomeLogo = headers.indexOf('HomeLogo');
+  const idxAwayLogo = headers.indexOf('AwayLogo');
 
   return data.slice(1).map(row => ({
     GameId: row[idxId],
     Home: row[idxHome],
     Away: row[idxAway],
     HomeScore: row[idxHomeScore],
-    AwayScore: row[idxAwayScore]
+    AwayScore: row[idxAwayScore],
+    Qtr: row[idxQtr],
+    Time: row[idxTime],
+    Down: row[idxDown],
+    Distance: row[idxDistance],
+    BallOn: row[idxBallOn],
+    Possession: row[idxPoss],
+    HomeLogo: row[idxHomeLogo],
+    AwayLogo: row[idxAwayLogo]
   }));
 }
 
@@ -78,20 +94,46 @@ function getPlayerTraits() {
     throw new Error("Sheet 'Players' not found.");
   }
 
-  const data = sheet.getRange("A2:T" + sheet.getLastRow()).getValues();
+  // Pull columns A through AG (0 - 32) to include DefPos
+  const numCols = 33;
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
   Logger.log(data);
   const result = data
     .filter(row => row[0] != null && row[0] !== '') // Ensure 'team' field exists
     .map(row => ({
       team: row[0],
       name: row[1],
+      position: row[2],
+      offStars: row[3],
+      defStars: row[4],
       size: row[5],
       strength: row[6],
       speed: row[7],
       stamina: row[8],
+      poise: row[9],
+      accuracy: row[10],
+      armStrength: row[11],
+      readDefense: row[12],
       juke: row[13],
       vision: row[14],
       acceleration: row[15],
+      routeRunning: row[16],
+      jump: row[17],
+      hands: row[18],
+      qbFavorite: row[19],
+      runBlocking: row[20],
+      passProtect: row[21],
+      runStop: row[22],
+      tackling: row[23],
+      runDef: row[24],
+      tackleChance: row[25],
+      strip: row[26],
+      passRush: row[27],
+      sackChance: row[28],
+      ballHawk: row[29],
+      readQB: row[30],
+      coverage: row[31],
+      defPos: row[32],
       // Local tracking only
       carries: 0,
       fatigue: row[8]

@@ -8,7 +8,23 @@
   let frontendStats = [];
   let gameId = 1;
   let playHistory = [];
-  
+  let savedFormations = [];
+  let currentFormation = [];
+  let defensiveFormation = [];
+  let autoStuff = false;
+  let autoRelease = false;
+  let offStarPower = false;
+  let defStarPower = false;
+  const RUN_POSITIONS = ['WR1','RB1','RB2','QB'];
+  let selectedPlayer = null;
+
+
+  function updateStickyOffsets() {
+    const scoreboard = document.getElementById('scoreboard');
+    if (!scoreboard) return;
+    const root = document.documentElement;
+    root.style.setProperty('--scoreboardHeight', scoreboard.offsetHeight + 'px');
+  }
 
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.tab-button').forEach(btn => {
@@ -29,26 +45,117 @@
         if (target) target.classList.add('active');
       });
     });
-    loadGamesList();
-  });
+      updateStickyOffsets();
+      window.addEventListener('resize', updateStickyOffsets);
+      loadGamesList();
+      const backBtn = document.getElementById('backButton');
+      if (backBtn) {
+        backBtn.addEventListener('click', () => {
+          document.getElementById('gameUI').style.display = 'none';
+          document.getElementById('gameList').style.display = 'block';
+          backBtn.style.display = 'none';
+          loadGamesList();
+        });
+      }
+      document.querySelectorAll('.formation-slot').forEach(slot => {
+        slot.addEventListener('dragover', allowDrop);
+        slot.addEventListener('drop', handleDrop);
+        slot.addEventListener('click', () => moveSelectedTo(slot));
+        slot.addEventListener('touchstart', e => { e.preventDefault(); moveSelectedTo(slot); });
+      });
+      const bench = document.getElementById('bench');
+      if (bench) {
+        bench.addEventListener('dragover', allowDrop);
+        bench.addEventListener('drop', handleDrop);
+        bench.addEventListener('click', e => { if (e.target === bench) moveSelectedTo(bench); });
+        bench.addEventListener('touchstart', e => { if (e.target === bench) { e.preventDefault(); moveSelectedTo(bench); } });
+      }
+      const clearBtn = document.getElementById('clearFormation');
+      if (clearBtn) clearBtn.addEventListener('click', clearFormation);
+      const saveBtn = document.getElementById('saveFormation');
+      if (saveBtn) saveBtn.addEventListener('click', saveFormation);
+      const openBtn = document.getElementById('openFormation');
+      if (openBtn) openBtn.addEventListener('click', () => {
+        document.getElementById('formationModal').classList.add('open');
+      });
+      const closeBtn = document.getElementById('closeFormation');
+      if (closeBtn) closeBtn.addEventListener('click', () => {
+        document.getElementById('formationModal').classList.remove('open');
+      });
+      const losBtn = document.getElementById('viewLOS');
+      if (losBtn) losBtn.addEventListener('click', () => {
+        renderLOS();
+        document.getElementById('losModal').classList.add('open');
+      });
+      const closeLOS = document.getElementById('closeLOS');
+      if (closeLOS) closeLOS.addEventListener('click', () => {
+        document.getElementById('losModal').classList.remove('open');
+      });
+    });
 
   function loadGamesList() {
     google.script.run.withSuccessHandler(renderGameCards).getGamesList();
   }
 
   function renderGameCards(games) {
-    const container = document.getElementById('gameCarousel');
+    const container = document.getElementById('gameList');
     if (!container) return;
     container.innerHTML = '';
     games.forEach(g => {
       const card = document.createElement('div');
       const id = Number(g.GameId);
-      card.className = 'game-card' + (id === gameId ? ' active' : '');
-      card.innerHTML = `<div class="teams">${g.Away} @ ${g.Home}</div><div class="score">${g.AwayScore} - ${g.HomeScore}</div>`;
+      const isFinal = g.Qtr === 'FINAL';
+      const homeRowClass = g.HomeScore > g.AwayScore ? 'team-row winner' : g.HomeScore < g.AwayScore ? 'team-row loser' : 'team-row';
+      const awayRowClass = g.AwayScore > g.HomeScore ? 'team-row winner' : g.AwayScore < g.HomeScore ? 'team-row loser' : 'team-row';
+      card.className = 'game-card' + (isFinal ? ' final' : '');
+
+      if (isFinal) {
+        card.innerHTML = `
+        <div class="${homeRowClass}">
+          <img class="team-logo" src="${g.HomeLogo || ''}" alt="Home Logo" />
+          <span class="team-name">${g.Home}</span>
+          <span class="team-score">${g.HomeScore}</span>
+        </div>
+        <div class="${awayRowClass}">
+          <img class="team-logo" src="${g.AwayLogo || ''}" alt="Away Logo" />
+          <span class="team-name">${g.Away}</span>
+          <span class="team-score">${g.AwayScore}</span>
+        </div>
+        `;
+      } else {
+        const redZone = (g.Possession === 'Home' && g.BallOn >= 80) || (g.Possession === 'Away' && g.BallOn <= 20);
+        const downDisplay = formatDownDistance(g.Down, g.Distance, g.BallOn, g.Possession);
+        card.innerHTML = `
+        <div class="${homeRowClass}">
+          <img class="team-logo" src="${g.HomeLogo || ''}" alt="Home Logo" />
+          <div class="team-name-wrap">
+            <span class="team-name">${g.Home}</span>
+            <span class="poss-indicator">${g.Possession === 'Home' ? '🏈' : ''}</span>
+          </div>
+          <span class="team-score">${g.HomeScore}</span>
+          <span class="team-time">${g.Time || ''}</span>
+          <span class="team-down${redZone ? ' red-zone' : ''}">${downDisplay}</span>
+        </div>
+        <div class="${awayRowClass}">
+          <img class="team-logo" src="${g.AwayLogo || ''}" alt="Away Logo" />
+          <div class="team-name-wrap">
+            <span class="team-name">${g.Away}</span>
+            <span class="poss-indicator">${g.Possession === 'Away' ? '🏈' : ''}</span>
+          </div>
+          <span class="team-score">${g.AwayScore}</span>
+          <span class="team-qtr">${formatQuarter(g.Qtr)}</span>
+          <span class="team-ball">${formatBallOnForPoss(g.BallOn, g.Possession)}</span>
+        </div>
+        `;
+      }
       card.addEventListener('click', () => {
+        gameId = id;
         refreshUI(id);
-        document.querySelectorAll('.game-card').forEach(c => c.classList.remove('active'));
-        card.classList.add('active');
+        document.getElementById('gameList').style.display = 'none';
+        document.getElementById('gameUI').style.display = 'block';
+        const backBtn = document.getElementById('backButton');
+        if (backBtn) backBtn.style.display = 'block';
+        updateStickyOffsets();
       });
       container.appendChild(card);
     });
@@ -64,17 +171,23 @@
     menu.innerHTML = '';
     Object.values(playerTraits).forEach(p => {
       const card = document.createElement('div');
-      card.className = 'player-card';
-      card.innerHTML = `
-            <h4>${p.name}</h4>
-            <div>Size: ${p.size}</div>
-            <div>Strength: ${p.strength}</div>
-            <div>Speed: ${p.speed}</div>
-            <div>Stamina: ${p.stamina}</div>
-          `;
-      menu.appendChild(card);
-    });
-  }
+        card.className = 'player-card';
+        card.innerHTML = `
+              <h4>${p.name}</h4>
+              <div>Size: ${p.size}</div>
+              <div>Strength: ${p.strength}</div>
+              <div>Speed: ${p.speed}</div>
+              <div>Stamina: ${p.stamina}</div>
+              <div>Run Blocking: ${p.runBlocking}</div>
+              <div>Pass Protect: ${p.passProtect}</div>
+              <div>Run Stop: ${p.runStop}</div>
+              <div>Tackling: ${p.tackling}</div>
+              <div>Run Def: ${p.runDef}</div>
+              <div>Tackle Chance: ${p.tackleChance}</div>
+            `;
+        menu.appendChild(card);
+      });
+    }
 
   // === GAME SETUP ===
   function refreshUI(selectedGameId) {
@@ -178,13 +291,17 @@
     return "opp " + (100 - perspectiveYard);
   }
 
-  function formatDownDistance(down, distance) {
+  function formatDownDistance(down, distance, ballOn = state.BallOn, possession = state.Possession) {
     const ord = ["1st", "2nd", "3rd", "4th"];
     const d = ord[down - 1] || down + "th";
-    return `${d} & ${distance}`;
+    const yardsToGoal = possession === "Home" ? 100 - Number(ballOn) : Number(ballOn);
+    const dist = Number(distance);
+    const distText = dist >= yardsToGoal ? "Goal" : dist;
+    return `${d} & ${distText}`;
   }
 
   function formatQuarter(qtr) {
+    if (qtr === 'FINAL') return 'FINAL';
     const ord = ["1st", "2nd", "3rd", "4th", "OT"];
     return ord[qtr - 1] || qtr + "th";
   }
@@ -230,6 +347,18 @@
     return text;
   }
 
+  function updateLastPlayDesc() {
+    const el = document.getElementById('lastPlayDesc');
+    if (!el) return;
+    if (playHistory.length === 0) {
+      el.innerHTML = '';
+      return;
+    }
+    const lastPlay = playHistory[playHistory.length - 1];
+    const text = buildPlayText(lastPlay);
+    el.innerHTML = `<strong>Last Play:</strong> ${text}`;
+  }
+
   function renderPlayTimeline() {
     const container = document.getElementById("playTimeline");
     if (!container) return;
@@ -237,31 +366,354 @@
     playHistory.forEach(play => {
       if (!play.Player || (play.PlayType && play.PlayType !== "Run")) return;
       const time = new Date(play.Timestamp).toLocaleTimeString();
-      const downDist = formatDownDistance(play.Down, play.Distance);
+      const downDist = formatDownDistance(play.Down, play.Distance, play.BallOn || play.ballon || state.BallOn, play.Possession);
       const text = buildPlayText(play);
       const offense = play.Possession || "";
-      const score = `${play.homeScore !== undefined ? play.homeScore : state.HomeScore} - ${play.AwayScore !== undefined ? play.AwayScore : state.AwayScore}`;
+      const homeScoreVal = play.HomeScore !== undefined ? play.HomeScore : play.homeScore !== undefined ? play.homeScore : state.HomeScore;
+      const awayScoreVal = play.AwayScore !== undefined ? play.AwayScore : play.awayScore !== undefined ? play.awayScore : state.AwayScore;
+      const score = `${homeScoreVal} - ${awayScoreVal}`;
       const row = document.createElement("tr");
       row.innerHTML = `<td>${time}</td><td><div class="play-down">${downDist}</div><div class="play-text">${text}</div></td><td>${offense}</td><td>${score}</td>`;
       container.appendChild(row);
     });
     computeDriveInfo();
+    updateLastPlayDesc();
   }
 
-  function loadPlayers() {
-    const dropdown = document.getElementById("playerDropdown");
-    dropdown.innerHTML = "";
+    function loadPlayers() {
+      populateBench();
+      updateRunnerDropdown();
+    }
 
-    const teamName = state[state.Possession];
+    function populateBench() {
+      const bench = document.getElementById('bench');
+      if (!bench) return;
+      // Clear existing assignments
+      document.querySelectorAll('.formation-slot').forEach(slot => {
+        if (slot.firstChild) {
+          bench.appendChild(slot.firstChild);
+        }
+        slot.classList.remove('filled');
+        slot.dataset.player = '';
+      });
+      bench.innerHTML = '';
+      const teamName = state[state.Possession];
+      Object.entries(playerTraits).forEach(([name, traits]) => {
+        if (traits.team === teamName) {
+          const item = document.createElement('div');
+          let posClass = traits.position.toLowerCase();
+          if (posClass === 'te' || posClass === 'ol') posClass = 'teol';
+          item.className = `player-item ${posClass}`;
+          item.draggable = true;
+          item.dataset.player = name;
+          item.title = `${name} (${traits.position})`;
+          const offStars = '★'.repeat(Number(traits.offStars) || 0);
+          const defStars = '★'.repeat(Number(traits.defStars) || 0);
+          item.innerHTML = `
+            <div class="player-name">${name}</div>
+            <div class="star-row"><span>Off:</span><span class="stars off">${offStars}</span></div>
+            <div class="star-row"><span>Def:</span><span class="stars def">${defStars}</span></div>
+            <div class="player-attributes"><span>Size: ${traits.size}</span><span>Speed: ${traits.speed}</span></div>
+          `;
+          item.addEventListener('dragstart', dragStart);
+          item.addEventListener('touchstart', selectPlayer);
+          item.addEventListener('click', selectPlayer);
+          bench.appendChild(item);
+        }
+      });
+    }
 
-    Object.entries(playerTraits).forEach(([name, traits]) => {
-      if (traits.team === teamName) {
-        const option = document.createElement("option");
+    function updateRunnerDropdown() {
+      const dropdown = document.getElementById('playerDropdown');
+      if (!dropdown) return;
+      dropdown.innerHTML = '';
+      const teamName = state[state.Possession];
+      let runners = [];
+      if (currentFormation.length > 0) {
+        runners = currentFormation
+          .filter(f => RUN_POSITIONS.includes(f.position) && f.player)
+          .map(f => f.player)
+          .filter(name => playerTraits[name] && playerTraits[name].team === teamName);
+      }
+      runners.forEach(name => {
+        const option = document.createElement('option');
         option.value = name;
         option.text = name;
         dropdown.appendChild(option);
+      });
+    }
+
+    function dragStart(e) {
+      e.dataTransfer.setData('text/plain', e.target.dataset.player);
+    }
+
+    function allowDrop(e) {
+      e.preventDefault();
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      const name = e.dataTransfer.getData('text/plain');
+      const item = document.querySelector(`.player-item[data-player="${name}"]`);
+      if (!item) return;
+      const source = item.parentElement;
+      const target = e.currentTarget;
+      if (target.classList.contains('formation-slot')) {
+        if (target.firstChild) {
+          document.getElementById('bench').appendChild(target.firstChild);
+        }
+        target.appendChild(item);
+        target.classList.add('filled');
+        target.dataset.player = name;
+      } else {
+        target.appendChild(item);
       }
+      if (source.classList && source.classList.contains('formation-slot')) {
+        source.classList.remove('filled');
+        source.dataset.player = '';
+      }
+    }
+
+    function selectPlayer(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const item = e.currentTarget;
+      if (selectedPlayer === item) {
+        item.classList.remove('selected');
+        selectedPlayer = null;
+        return;
+      }
+      if (selectedPlayer) selectedPlayer.classList.remove('selected');
+      selectedPlayer = item;
+      item.classList.add('selected');
+    }
+
+    function moveSelectedTo(target) {
+      if (!selectedPlayer) return;
+      const bench = document.getElementById('bench');
+      const item = selectedPlayer;
+      const source = item.parentElement;
+      if (target.classList.contains('formation-slot')) {
+        if (target.firstChild) {
+          bench.appendChild(target.firstChild);
+          target.classList.remove('filled');
+        }
+        target.appendChild(item);
+        target.classList.add('filled');
+        target.dataset.player = item.dataset.player;
+      } else {
+        target.appendChild(item);
+      }
+      if (source.classList && source.classList.contains('formation-slot')) {
+        source.classList.remove('filled');
+        source.dataset.player = '';
+      }
+      item.classList.remove('selected');
+      selectedPlayer = null;
+    }
+
+    function clearFormation() {
+      const bench = document.getElementById('bench');
+      if (!bench) return;
+      document.querySelectorAll('.formation-slot').forEach(slot => {
+        if (slot.firstChild) {
+          bench.appendChild(slot.firstChild);
+        }
+        slot.classList.remove('filled');
+        slot.dataset.player = '';
+      });
+      currentFormation = [];
+      selectedPlayer = null;
+      document.querySelectorAll('.player-item.selected').forEach(p => p.classList.remove('selected'));
+      updateRunnerDropdown();
+    }
+
+    function saveFormation() {
+      const required = ['QB','TEOL2','TEOL3','TEOL4'];
+      const formation = [];
+      let valid = true;
+      document.querySelectorAll('.formation-slot').forEach(slot => {
+        const pos = slot.dataset.position;
+        const playerEl = slot.querySelector('.player-item');
+        if (playerEl) {
+          formation.push({ position: pos, player: playerEl.dataset.player });
+        } else if (required.includes(pos)) {
+          valid = false;
+        }
+      });
+      if (!valid) {
+        alert('Please fill all required positions');
+        return;
+      }
+      currentFormation = formation;
+      updateRunnerDropdown();
+      savedFormations.push(formation);
+      console.log('Saved formation', formation);
+      setDefensiveFormation();
+      document.getElementById('formationModal').classList.remove('open');
+    }
+
+  function setDefensiveFormation() {
+    const offenseTeam = state[state.Possession];
+    const defenseTeam = state[state.Possession === 'Home' ? 'Away' : 'Home'];
+    const defenders = Object.values(playerTraits).filter(p => p.team === defenseTeam);
+
+    const dbs = defenders.filter(p => p.defPos === 'DB').sort((a,b) => b.defStars - a.defStars);
+    const dls = defenders.filter(p => p.defPos === 'DL').sort((a,b) => b.defStars - a.defStars);
+    const lbs = defenders.filter(p => p.defPos === 'LB').sort((a,b) => b.defStars - a.defStars);
+    const safeties = defenders.filter(p => p.defPos === 'S').sort((a,b) => b.defStars - a.defStars);
+
+    const wrs = currentFormation
+      .filter(f => f.position.startsWith('WR'))
+      .map(f => ({ pos: f.position, player: f.player, stars: playerTraits[f.player]?.offStars || 0 }))
+      .sort((a,b) => b.stars - a.stars);
+
+    const olPositions = ['TEOL1','TEOL2','TEOL3','TEOL4','TEOL5'].filter(pos =>
+      currentFormation.some(f => f.position === pos)
+    );
+
+    // DB assignments – fill from DBs, then LBs if needed
+    const dbAssignments = [];
+    for (let i = 0; i < wrs.length; i++) {
+      let player = null;
+      if (dbs.length > 0) {
+        player = dbs.shift();
+      } else if (lbs.length > 0) {
+        player = lbs.shift();
+      }
+      dbAssignments.push({
+        position: `DB${i+1}`,
+        player: player ? player.name : '',
+        align: wrs[i].pos
+      });
+    }
+
+    // DL assignments – fill from DLs, then LBs if needed
+    const dlAssignments = [];
+    olPositions.forEach((ol, i) => {
+      let player = null;
+      if (dls.length > 0) {
+        player = dls.shift();
+      } else if (lbs.length > 0) {
+        player = lbs.shift();
+      }
+      dlAssignments.push({
+        position: `DL${i+1}`,
+        player: player ? player.name : '',
+        align: ol
+      });
     });
+
+    let assigned = dbAssignments.length + dlAssignments.length;
+    let remaining = Math.max(0, 7 - assigned);
+
+    const predicted = predictPlayType(state.Down, state.Distance).toLowerCase();
+    const lbAssignments = [];
+    const backs = ['QB','RB1','RB2'];
+    let lbNeeded = (predicted === 'run' || predicted === 'screen') ? backs.length : 2;
+    lbNeeded = Math.min(lbNeeded, remaining);
+    for (let i = 0; i < lbNeeded; i++) {
+      let player = null;
+      if (lbs.length > 0) {
+        player = lbs.shift();
+      } else if (dls.length > 0) {
+        player = dls.shift();
+      } else if (dbs.length > 0) {
+        player = dbs.shift();
+      }
+      if (player) {
+        const assignment = { position: `LB${i+1}`, player: player.name };
+        if (predicted === 'run' || predicted === 'screen') {
+          assignment.align = backs[i];
+        }
+        lbAssignments.push(assignment);
+      }
+    }
+
+    assigned += lbAssignments.length;
+    remaining = Math.max(0, 7 - assigned);
+
+    // Safety – pick from safeties, then remaining LBs, DBs, DLs
+    let safetyAssignment = null;
+    if (remaining > 0) {
+      if (safeties.length > 0) {
+        const s = safeties.shift();
+        safetyAssignment = { position: 'S', player: s.name };
+      } else if (lbs.length > 0) {
+        const s = lbs.shift();
+        safetyAssignment = { position: 'S', player: s.name };
+      } else if (dbs.length > 0) {
+        const s = dbs.shift();
+        safetyAssignment = { position: 'S', player: s.name };
+      } else if (dls.length > 0) {
+        const s = dls.shift();
+        safetyAssignment = { position: 'S', player: s.name };
+      }
+    }
+
+    defensiveFormation = [...dbAssignments, ...dlAssignments, ...lbAssignments];
+    if (safetyAssignment) defensiveFormation.push(safetyAssignment);
+    console.log('Defensive formation', defensiveFormation);
+  }
+
+  function renderLOS() {
+    const field = document.getElementById('losField');
+    if (!field) return;
+    field.innerHTML = '';
+    const line = document.createElement('div');
+    line.className = 'los-line';
+    field.appendChild(line);
+
+    const safetyRow = document.createElement('div');
+    safetyRow.className = 'los-row';
+    defensiveFormation.filter(d => d.position.startsWith('S')).forEach(s => {
+      safetyRow.appendChild(createLosPlayer(s.player));
+    });
+    if (safetyRow.childElementCount > 0) field.appendChild(safetyRow);
+
+    const lbRow = document.createElement('div');
+    lbRow.className = 'los-row';
+    defensiveFormation.filter(d => d.position.startsWith('LB')).forEach(lb => {
+      lbRow.appendChild(createLosPlayer(lb.player));
+    });
+    if (lbRow.childElementCount > 0) field.appendChild(lbRow);
+
+    const grid = document.createElement('div');
+    grid.className = 'los-grid';
+    const losSlots = ['WR1','TEOL1','TEOL2','TEOL3','TEOL4','TEOL5','WR2','WR3'];
+    losSlots.forEach(pos => {
+      const col = document.createElement('div');
+      col.className = 'los-col';
+      const def = defensiveFormation.find(d => d.align === pos);
+      col.appendChild(createLosPlayer(def ? def.player : ''));
+      const off = currentFormation.find(f => f.position === pos);
+      col.appendChild(createLosPlayer(off ? off.player : ''));
+      grid.appendChild(col);
+    });
+    field.appendChild(grid);
+
+    const qbRow = document.createElement('div');
+    qbRow.className = 'los-row';
+    const qb = currentFormation.find(f => f.position === 'QB');
+    qbRow.appendChild(createLosPlayer(qb ? qb.player : ''));
+    field.appendChild(qbRow);
+
+    const rbRow = document.createElement('div');
+    rbRow.className = 'los-row';
+    ['RB1','RB2'].forEach(pos => {
+      const p = currentFormation.find(f => f.position === pos);
+      rbRow.appendChild(createLosPlayer(p ? p.player : ''));
+    });
+    field.appendChild(rbRow);
+  }
+
+  function createLosPlayer(name) {
+    const div = document.createElement('div');
+    div.className = name ? 'los-player' : 'los-player empty';
+    if (name) {
+      div.textContent = name;
+    }
+    return div;
   }
 
   function loadPlayersTraits(callback) {
@@ -287,12 +739,112 @@
     }).getFrontendSettings();
   }
 
+  function runBlockVsRunDef(ballCarrier) {
+    let dlTotal = 0;
+    let olTotal = 0;
+
+    defensiveFormation.forEach(f => {
+      if (f.player && (f.position.startsWith('DL') || f.position.startsWith('LB'))) {
+        dlTotal += Number(playerTraits[f.player]?.runDef || 0);
+      }
+    });
+
+    currentFormation.forEach(f => {
+      if (!f.player) return;
+      const pos = f.position;
+      const isOffensive = ['QB','RB1','RB2','TEOL1','TEOL2','TEOL3','TEOL4','TEOL5'].includes(pos);
+      if (isOffensive && f.player !== ballCarrier) {
+        olTotal += Number(playerTraits[f.player]?.runDef || 0);
+      }
+    });
+
+    const total = dlTotal + olTotal;
+    if (total <= 0) return { defenseWins: false };
+    const roll = Math.floor(Math.random() * total) + 1;
+    return { defenseWins: roll <= dlTotal };
+  }
+
+  function tryAutoStuff() {
+    let starPower = 0;
+    defensiveFormation.forEach(f => {
+      if (f.player && (f.position.startsWith('DL') || f.position.startsWith('LB'))) {
+        starPower += Number(playerTraits[f.player]?.defStars || 0);
+      }
+    });
+    const roll = Math.floor(Math.random() * 100) + 1;
+    return roll <= starPower;
+  }
+
+  function tryAutoRelease(ballCarrier) {
+    let starPower = 0;
+    currentFormation.forEach(f => {
+      if (!f.player) return;
+      const pos = f.position;
+      const isOffensive = ['QB','RB1','RB2','TEOL1','TEOL2','TEOL3','TEOL4','TEOL5'].includes(pos);
+      if (isOffensive && f.player !== ballCarrier) {
+        starPower += Number(playerTraits[f.player]?.offStars || 0);
+      }
+    });
+    const roll = Math.floor(Math.random() * 100) + 1;
+    return roll <= starPower;
+  }
+
+  function rollOffStarPower(ballCarrier) {
+    const stars = Number(playerTraits[ballCarrier]?.offStars || 0);
+    const threshold = Math.pow(stars, 2);
+    const roll = Math.random() * 100;
+    return roll <= threshold;
+  }
+
+  function rollDefStarPower() {
+    const candidates = defensiveFormation
+      .filter(f => f.player && (f.position.startsWith('DL') || f.position.startsWith('LB')))
+      .map(f => {
+        const stars = Number(playerTraits[f.player]?.defStars || 0);
+        return { name: f.player, stars, weight: Math.pow(stars, 2) };
+      });
+
+    const totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
+    if (totalWeight <= 0) return false;
+
+    let roll = Math.random() * totalWeight;
+    let chosen = candidates[0];
+    for (const c of candidates) {
+      if (roll < c.weight) {
+        chosen = c;
+        break;
+      }
+      roll -= c.weight;
+    }
+
+    const threshold = Math.pow(chosen.stars, 2);
+    const activationRoll = Math.random() * 100;
+    return activationRoll <= threshold;
+  }
+
+  function afterPlayComplete() {
+    autoStuff = false;
+    autoRelease = false;
+    offStarPower = false;
+    defStarPower = false;
+  }
+
   // === MAIN PLAY ===
   async function runPlay() {
     const playerName = document.getElementById("playerDropdown").value;
     if (!playerName) return;
 
     let tackler = "NA";
+
+    offStarPower = rollOffStarPower(playerName);
+    defStarPower = rollDefStarPower();
+
+    const blockResult = runBlockVsRunDef(playerName);
+    if (blockResult.defenseWins) {
+      autoStuff = tryAutoStuff();
+    } else {
+      autoRelease = tryAutoRelease(playerName);
+    }
 
     const rbStats = playerTraits[playerName];
     const carryResult = simulateSingleCarry(rbStats);
@@ -318,20 +870,23 @@
 
     let recordedYards = yardDelta;
     if (touchdown) {
-      await handleTouchdown(newBall, playerName, carryResult, tackler, predicted);
+      result = "Touchdown";
+      await handleTouchdown(newBall, playerName, carryResult, result, tackler, predicted);
       recordedYards = carryResult.yards; // handleTouchdown adjusts yards
       await celebrateTouchdown(scoringTeam, oldScore, oldScore + 6);
     } else if (newDist <= 0) {
       result = "First Down";
       newDown = 1;
-      newDist = 10;
-      updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
+      const yardsToGoal = state.Possession === "Home" ? 100 - newBall : newBall;
+      newDist = yardsToGoal < 10 ? yardsToGoal : 10;
+      updateGameState(1, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
       await animatePlay();
       playSound("crowdRoar");
     } else {
       newDown++;
       if (newDown > 4) {
-        await handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted);
+      result = "TO on Downs";
+        await handleTOonDowns(result, newBall, playerName, carryResult, result, tackler, predicted);
       } else {
         updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
         await animatePlay();
@@ -340,7 +895,7 @@
 
     applyFatigue(playerName, "Run");
 
-    updateFrontendStats(playerName, recordedYards, touchdown, state.Possession);
+    updateFrontendStats(playerName, recordedYards, result, state.Possession);
     console.log(carryResult);
 
     document.getElementById("result").innerHTML = `<strong>${rbStats.name}</strong> ran for <strong>${carryResult.yards} yards</strong><br/><br/>` +
@@ -348,10 +903,10 @@
 
     updateStateUI();
     //refreshUI();
+    afterPlayComplete();
   }
 
-  async function handleTouchdown(newBall, playerName, carryResult, tackler, predicted) {
-    const result = "Touchdown";
+  async function handleTouchdown(newBall, playerName, carryResult, result, tackler, predicted) {
     // Distance covered to reach the goal line differs by team direction
     carryResult.yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
     if (state.Possession === "Home") {
@@ -370,8 +925,7 @@
     loadPlayers();
   }
 
-  async function handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted) {
-    result = "TO on Downs";
+  async function handleTOonDowns(result, newBall, playerName, carryResult, result, tackler, predicted) {
     updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
 
     await animatePlay();
@@ -392,6 +946,7 @@
       Yards: yards,
       Result: result || "Normal",
       NewBallOn: ballOn,
+      BallOn: previousBallOn,
       Tackler: tackler,
       Possession: state.Possession,
       HomeScore: state.HomeScore,
@@ -452,8 +1007,13 @@
 
   function updateStateUI() {
     console.log(state);
-    document.getElementById("downDistance").innerText = formatDownDistance(state.Down, state.Distance);
-    document.getElementById("ballOn").innerText = formatBallOn(state.BallOn);
+    const downEl = document.getElementById("downDistance");
+    downEl.innerText = formatDownDistance(state.Down, state.Distance, state.BallOn, state.Possession);
+    const inRedZone = (state.Possession === "Home" && state.BallOn >= 80) || (state.Possession === "Away" && state.BallOn <= 20);
+    downEl.classList.toggle('red-zone', inRedZone);
+    const ballEl = document.getElementById("ballOn");
+    ballEl.innerText = formatBallOn(state.BallOn);
+    ballEl.classList.toggle('red-zone', inRedZone);
     document.getElementById("homeName").innerText = state.Home;
     document.getElementById("awayName").innerText = state.Away;
     document.getElementById("homeRecord").innerText = state.HomeRecord || "";
@@ -462,7 +1022,8 @@
     if (document.getElementById("awayLogo")) document.getElementById("awayLogo").src = state.AwayLogo || "";
     document.getElementById("scoreHome").innerText = state.HomeScore;
     document.getElementById("scoreAway").innerText = state.AwayScore;
-    document.getElementById("timeQuarter").innerText = `${state.Time} - ${formatQuarter(state.Qtr)}`;
+    document.getElementById("Quarter").innerText = `${formatQuarter(state.Qtr)}`;
+    document.getElementById("Time").innerText = `${state.Time}`;
     updateTimeoutDots("homeTimeouts", state.HomeTimeouts || 0);
     updateTimeoutDots("awayTimeouts", state.AwayTimeouts || 0);
     document.getElementById("homeFootball").style.visibility = state.Possession === "Home" ? "visible" : "hidden";
@@ -490,6 +1051,7 @@
       if (el) el.innerText = text;
     });
     highlightTeamRows();
+    updateFirstDownLine();
   }
 
   function highlightTeamRows() {
@@ -501,6 +1063,21 @@
         }
       });
     });
+  }
+
+  function updateFirstDownLine() {
+    const line = document.getElementById('firstDownLine');
+    const field = document.getElementById('field3D');
+    if (!line || !field) return;
+    const fieldWidth = field.offsetWidth;
+    const yardPx = fieldWidth / 120;
+    const ball = Number(state.BallOn) || 0;
+    const dist = Number(state.Distance) || 0;
+    let targetYard = state.Possession === 'Home'
+      ? ball + dist
+      : ball - dist;
+    targetYard = Math.max(0, Math.min(100, targetYard));
+    line.style.left = `${(targetYard + 10) * yardPx}px`;
   }
 
   function celebrateTouchdown(team, oldScore, newScore) {
@@ -529,7 +1106,15 @@
     });
   }
 
-  function updateFrontendStats(player, yards, td, team) {
+  function updateFrontendStats(player, yards, result, team) {
+
+    if(result == "Touchdown" || result == "TO on Downs"){
+      if(team == "Home"){
+        team = "Away";
+      } else{
+        team = "Home";
+      }
+    }
     if(td){
       if(team == "Home"){
         team = "Away";
@@ -544,7 +1129,7 @@
     }
     p.carries++;
     p.yards += yards;
-    if (td) p.tds++;
+    if (result == "Touchdown") p.tds++;
     if (yards > p.long) p.long = yards;
 
     renderBoxScore();
@@ -614,13 +1199,30 @@
     if (yards <= 4) yards += applyTraitEffect("Power", average(stats.size, stats.strength + Math.min(0, stats.fatigue)), true, modLog);
     if (yards >= 3 && yards <= 4) yards += applyTraitEffect("Acceleration", stats.acceleration + Math.min(0, stats.fatigue), true, modLog);
     if (yards > 0 && yards < 10) yards += applyTraitEffect("Juke", stats.juke + Math.min(0, stats.fatigue), true, modLog);
+    if (offStarPower) {
+      yards += 5;
+      modLog.push(`Yard +5 : offStarPower`);
+    }
+    if (defStarPower) {
+      yards += -5;
+      modLog.push(`Yard -5 : defStarPower`);
+    }
 
     return { name: stats.name, roll, yards, modLog };
   }
 
   function getModifiedRoll(stats, modLog) {
     // Float base roll from 1.000 to ~100.000
-    const baseRoll = Math.random() * 99 + 1; // 1–100 float
+    let baseRoll = Math.random() * 100; // 1–100 float
+
+    if (autoRelease) {
+      baseRoll += 7;
+      modLog.push('Pre +7 Auto Release');
+    }
+    if (autoStuff) {
+      baseRoll -= 10;
+      modLog.push('Pre -10 Auto Stuff');
+    }
 
     // Calculate vision mod
     let visionMod = (stats.vision + Math.min(0, stats.fatigue) - 60) * 0.055;
@@ -646,6 +1248,9 @@
   }
 
   function getYardageOutcome(roll, stats, modLog) {
+    if (roll >= 100){
+      return getStrictBreakawayYards(stats, modLog);
+    }
     for (const r of rollThresholds) {
       if (roll >= r.rollMin && roll < r.rollMax) {
         if (r.label === "RunType_Breakaway") {
@@ -658,13 +1263,16 @@
   }
 
   function getStrictBreakawayYards(stats, modLog) {
-    const baseRoll = Math.floor(Math.random() * 100) + 1;
+    const baseRoll = Math.floor(Math.random() * 100);
     const speedBoost = Math.floor((stats.speed + Math.min(0, stats.fatigue) - 60) * 0.3);
     const adjustedRoll = Math.min(100, baseRoll + Math.max(0, speedBoost));
     if (speedBoost !== 0) modLog.push(`Pre +${speedBoost} Speed`);
 
     let cumulative = 0;
     for (const range of breakawaySettings) {
+      if (adjustedRoll >= 100){
+        return randomInt(81, 100);
+      }
       cumulative += range.percentage;
       if (adjustedRoll <= cumulative) {
         return randomInt(range.minYards, range.maxYards);

@@ -2,13 +2,15 @@
 <html>
   <head>
     <base target="_top" />
-    <?!= include('PlayUIstyle'); ?> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <?!= include('PlayUIstyle'); ?>
   </head>
   <body>
     <audio id="crowdRoar" src="https://andrew-jacobson06.github.io/public-audio/crowd-cheering-379666.mp3" preload="auto"></audio>
-
-    <div id="gameCarousel" class="game-carousel"></div>
-    <div id="scoreboard" class="scoreboard">
+    <div id="gameList" class="game-list"></div>
+    <div id="gameUI" style="display:none;">
+      <button id="backButton" class="back-button">← Back</button>
+      <div id="scoreboard" class="scoreboard">
       <div id="scoreBanner" class="score-banner"></div>
       <div class="team-block home">
         <div class="team-info">
@@ -28,7 +30,10 @@
           </div>
         </div>
       </div>
-      <div id="timeQuarter" class="center-info">0:00 - 1st</div>
+      <div id="timeQuarter" class="center-info">
+        <span id="Quarter" class="quarter">1st</span>
+        <span id="Time" class="clock">0:00</span>
+      </div>
       <div class="team-block away">
         <div class="team-info">
           <img id="awayLogo" class="team-logo" src="" alt="Away Logo" />
@@ -47,15 +52,15 @@
           </div>
         </div>
       </div>
-    </div>
-    <div class="tabs">
-      <button class="tab-button active" data-tab="gamecast">Gamecast</button>
-      <button class="tab-button" data-tab="playbyplay">Play-by-Play</button>
-      <button class="tab-button" data-tab="boxscore">Box Score</button>
-      <button class="tab-button" data-tab="teamstats">Team Stats</button>
-    </div>
+      </div>
+      <div class="tabs">
+        <button class="tab-button active" data-tab="gamecast">Gamecast</button>
+        <button class="tab-button" data-tab="playbyplay">Play-by-Play</button>
+        <button class="tab-button" data-tab="boxscore">Box Score</button>
+        <button class="tab-button" data-tab="teamstats">Team Stats</button>
+      </div>
 
-    <div id="gamecast" class="tab-content active">
+      <div id="gamecast" class="tab-content active">
       <div class="game-info">
         <div class="info-block">
           <div class="info-label">DOWN:</div>
@@ -86,29 +91,36 @@
         <div class="yardline" style="left: 83.3333%;">10</div>
         <div class="yardline" style="left: 91.6667%;"></div>
         <div class="yardline" style="left: 100%;"></div>
+        <!-- First down line -->
+        <div id="firstDownLine" class="yardline first-down-line"></div>
         <!-- Drive Line (white line showing entire drive so far) -->
-        <div id="drive3D" class="driveSegment">
-          <div class="drive-dot"></div>
+        <div class="driveWrapper">
+          <div id="drive3D" class="driveSegment">
+            <div class="drive-dot"></div>
+          </div>
+          <!-- Last play marker (black line, dot, and arrow) -->
+          <div id="lastPlayMarker" class="driveSegment">
+            <div class="drive-arrow">➤</div>
+            <div class="last-dot"></div>
+          </div>
+          <canvas id="arcCanvas" style="position: absolute; top: 0; left: 0; z-index: 1; width: 100%; height: 100%;"></canvas>
+        <div id="catchPoint" style="position: absolute;  font-size: 5.5vw;  color: black;  opacity: 0;  z-index: 4;  pointer-events: none;  transition: opacity 0.5s ease;"></div>
         </div>
-        <!-- Last play marker (black line, dot, and arrow) -->
-        <div id="lastPlayMarker" class="driveSegment">
-          <div class="drive-arrow">➤</div>
-          <div class="last-dot"></div>
-        </div>
-        <canvas id="arcCanvas" style="position: absolute; top: 0; left: 0; z-index: 1; width: 100%; height: 100%;"></canvas>
-        <div id="catchPoint" style="position: absolute;  font-size: 22px;  color: black;  opacity: 0;  z-index: 4;  pointer-events: none;  transition: opacity 0.5s ease;"></div>
       </div>
         </div>
 
         <div class="control-panel">
+          <button id="openFormation">Edit Formation</button>
+          <button id="viewLOS">View LOS</button>
           <label for="playerDropdown">Select Player:</label>
           <select id="playerDropdown"></select>
           <div class="button-row">
-            <button onclick="runPlay()">▶️ Run Play</button>
-            <button onclick="nextDrive()">🔁 Next Drive</button>
-          </div>
-          <div id="result" class="result-box"></div>
+          <button onclick="runPlay()">▶️ Run Play</button>
+          <button onclick="nextDrive()">🔁 Next Drive</button>
         </div>
+        <div id="result" class="result-box"></div>
+        <div id="lastPlayDesc" class="last-play-desc"></div>
+      </div>
 
     </div>
 
@@ -362,6 +374,52 @@
     <div id="teamstats" class="tab-content">
       <div class="play-log-card">
         <p>Team stats coming soon...</p>
+      </div>
+    </div>
+
+    <div id="formationModal" class="modal">
+      <div id="formationPanel" class="formation-panel">
+        <span id="closeFormation" class="close-button">&times;</span>
+        <h3>Offensive Formation</h3>
+        <div class="formation-field">
+          <div class="formation-row top-row">
+            <div class="formation-slot wr" data-position="WR1" data-label="WR 1"></div>
+            <div class="formation-slot gap" aria-hidden="true"></div>
+            <div class="te-group">
+              <div class="formation-slot teol" data-position="TEOL1" data-label="TEOL1"></div>
+              <div class="formation-slot teol required" data-position="TEOL2" data-label="TEOL2"></div>
+              <div class="formation-slot teol required" data-position="TEOL3" data-label="TEOL3"></div>
+              <div class="formation-slot teol required" data-position="TEOL4" data-label="TEOL4"></div>
+              <div class="formation-slot teol" data-position="TEOL5" data-label="TEOL5"></div>
+            </div>
+            <div class="formation-slot wr" data-position="WR2" data-label="Slot WR"></div>
+            <div class="formation-slot wr" data-position="WR3" data-label="WR 2"></div>
+          </div>
+          <div class="formation-row middle-row">
+            <div class="formation-slot qb required" data-position="QB" data-label="QB"></div>
+          </div>
+          <div class="formation-row bottom-row">
+            <div class="formation-slot rb" data-position="RB1" data-label="RB Left"></div>
+            <div class="formation-slot rb" data-position="RB2" data-label="RB Right"></div>
+          </div>
+        </div>
+        <div class="bench-wrapper">
+          <h4>Bench</h4>
+          <div id="bench" class="bench"></div>
+        </div>
+      <div class="formation-actions">
+        <button id="clearFormation">Clear</button>
+        <button id="saveFormation">Save</button>
+      </div>
+    </div>
+    </div>
+    </div>
+
+    <div id="losModal" class="modal">
+      <div class="formation-panel los-panel">
+        <span id="closeLOS" class="close-button">&times;</span>
+        <h3>Line of Scrimmage</h3>
+        <div id="losField" class="los-field"></div>
       </div>
     </div>
 
