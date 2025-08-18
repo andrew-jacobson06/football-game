@@ -432,11 +432,22 @@
       logo.className = 'drive-logo';
       logo.src = drive.possession === 'Home' ? (state.HomeLogo || '') : (state.AwayLogo || '');
 
-      const info = document.createElement('div');
-      const resultDiv = document.createElement('div');
+      /**const info = document.createElement('div');
+      const resultDiv = document.createElement('span');
       resultDiv.className = 'drive-result';
       resultDiv.textContent = drive.result;
-      const summaryDiv = document.createElement('div');
+      const summaryDiv = document.createElement('span');
+      summaryDiv.className = 'drive-summary';
+      summaryDiv.textContent = `${drive.playsCount} Plays, ${drive.yards} Yards`;
+      info.appendChild(resultDiv);
+      info.appendChild(summaryDiv);**/
+      
+      const info = document.createElement('div');
+      info.className = 'drive-overview';
+      const resultDiv = document.createElement('span');
+      resultDiv.className = 'drive-result';
+      resultDiv.textContent = drive.result;
+      const summaryDiv = document.createElement('span');
       summaryDiv.className = 'drive-summary';
       summaryDiv.textContent = `${drive.playsCount} Plays, ${drive.yards} Yards`;
       info.appendChild(resultDiv);

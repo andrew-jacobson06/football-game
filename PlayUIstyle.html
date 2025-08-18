@@ -668,8 +668,8 @@
   }
   .drive-header {
     display: grid;
-    grid-template-columns: 24px 40px 1fr auto;
-    grid-template-rows: auto auto;
+    grid-template-columns: 7% 13% 60% 20%;
+    grid-template-rows: 50% 50%;
     align-items: center;
     padding: 2vw;
     color: var(--text-muted);
@@ -679,33 +679,42 @@
     color: #4169e1;
     cursor: pointer;
     text-align: center;
+    font-size: 8vw;
   }
   .drive-logo {
     grid-row: span 2;
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-    margin: 0 2vw;
+    width: 7vw;
+    height: 7vw;
   }
   .drive-result {
     font-weight: bold;
     color: var(--text-light);
+    font-size:3vw;
   }
   .drive-summary {
-    font-size: 0.9em;
+    font-size:3vw;
+  }
+  .drive-overview {
+    grid-row: span 2;
+    display: grid;
+    grid-template-rows: 50% 50%;
   }
   .drive-score {
     grid-row: span 2;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
+    display: grid;
+    grid-template-columns: 50% 50%;
+    grid-template-rows: 50% 50%;
   }
   .drive-score .team-name {
     color: var(--text-muted);
+    font-size:3vw;
   }
   .drive-score .score-value {
     font-weight: bold;
     color: var(--text-light);
+    font-size:3vw;
+    display: flex;
+    justify-content: center;
   }
   .drive-plays.collapsed {
     display: none;
