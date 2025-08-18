@@ -659,6 +659,70 @@
     color: var(--text-light);
   }
 
+  /* Play-by-play drive view */
+  .drive-log {
+    width: 100%;
+  }
+  .drive-section {
+    border-bottom: 1px solid var(--gray-light);
+  }
+  .drive-header {
+    display: grid;
+    grid-template-columns: 24px 40px 1fr auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    padding: 2vw;
+    color: var(--text-muted);
+  }
+  .drive-toggle {
+    grid-row: span 2;
+    color: #4169e1;
+    cursor: pointer;
+    text-align: center;
+  }
+  .drive-logo {
+    grid-row: span 2;
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    margin: 0 2vw;
+  }
+  .drive-result {
+    font-weight: bold;
+    color: var(--text-light);
+  }
+  .drive-summary {
+    font-size: 0.9em;
+  }
+  .drive-score {
+    grid-row: span 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .drive-score .team-name {
+    color: var(--text-muted);
+  }
+  .drive-score .score-value {
+    font-weight: bold;
+    color: var(--text-light);
+  }
+  .drive-plays.collapsed {
+    display: none;
+  }
+  .play-row {
+    border-top: 1px solid var(--gray-light);
+    padding: 2vw 4vw;
+  }
+  .play-situation {
+    font-weight: bold;
+    color: var(--text-light);
+  }
+  .play-desc {
+    color: var(--text-muted);
+    margin-top: 0.5vw;
+  }
+
   /* Limit sizing on larger screens */
   @media (min-width: 768px) {
     .game-info .info-label,

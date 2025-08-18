@@ -217,6 +217,7 @@
             .withSuccessHandler(async function (data) {
               console.log("✅ Loaded play history", data);
               playHistory = data;
+              normalizeBallOn(playHistory);
               frontendStats = [];
 
               playHistory.forEach(play => {
@@ -347,6 +348,47 @@
     return text;
   }
 
+  function normalizeBallOn(history) {
+    let prevBall = null;
+    let prevDrive = null;
+    let prevPoss = null;
+    history.forEach(play => {
+      if (prevDrive === null || play.DriveStart !== prevDrive || play.Possession !== prevPoss) {
+        prevBall = Number(play.DriveStart);
+        prevDrive = play.DriveStart;
+        prevPoss = play.Possession;
+      }
+      play.BallOn = Number(prevBall);
+      if (play.NewBallOn !== undefined && play.NewBallOn !== "") {
+        prevBall = Number(play.NewBallOn);
+      }
+    });
+  }
+
+  function groupPlaysByDrive(plays) {
+    const drives = [];
+    let current = null;
+    plays.forEach(play => {
+      if (!play.Player || (play.PlayType && play.PlayType !== "Run")) return;
+      const key = play.Possession + '-' + play.DriveStart;
+      if (!current || current.key !== key) {
+        current = { key, possession: play.Possession, driveStart: Number(play.DriveStart), plays: [] };
+        drives.push(current);
+      }
+      current.plays.push(play);
+    });
+    drives.forEach(drive => {
+      const last = drive.plays[drive.plays.length - 1];
+      drive.result = last.Result || '';
+      drive.homeScore = last.HomeScore !== undefined ? last.HomeScore : state.HomeScore;
+      drive.awayScore = last.AwayScore !== undefined ? last.AwayScore : state.AwayScore;
+      const end = Number(last.NewBallOn || last.BallOn || drive.driveStart);
+      drive.yards = drive.possession === 'Home' ? end - drive.driveStart : drive.driveStart - end;
+      drive.playsCount = drive.plays.length;
+    });
+    return drives;
+  }
+
   function updateLastPlayDesc() {
     const el = document.getElementById('lastPlayDesc');
     if (!el) return;
@@ -363,18 +405,72 @@
     const container = document.getElementById("playTimeline");
     if (!container) return;
     container.innerHTML = "";
-    playHistory.forEach(play => {
-      if (!play.Player || (play.PlayType && play.PlayType !== "Run")) return;
-      const time = new Date(play.Timestamp).toLocaleTimeString();
-      const downDist = formatDownDistance(play.Down, play.Distance, play.BallOn || play.ballon || state.BallOn, play.Possession);
-      const text = buildPlayText(play);
-      const offense = play.Possession || "";
-      const homeScoreVal = play.HomeScore !== undefined ? play.HomeScore : play.homeScore !== undefined ? play.homeScore : state.HomeScore;
-      const awayScoreVal = play.AwayScore !== undefined ? play.AwayScore : play.awayScore !== undefined ? play.awayScore : state.AwayScore;
-      const score = `${homeScoreVal} - ${awayScoreVal}`;
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${time}</td><td><div class="play-down">${downDist}</div><div class="play-text">${text}</div></td><td>${offense}</td><td>${score}</td>`;
-      container.appendChild(row);
+    const drives = groupPlaysByDrive(playHistory);
+    drives.forEach(drive => {
+      const section = document.createElement('div');
+      section.className = 'drive-section';
+
+      const header = document.createElement('div');
+      header.className = 'drive-header';
+
+      const toggle = document.createElement('div');
+      toggle.className = 'drive-toggle';
+      toggle.textContent = '^';
+
+      const logo = document.createElement('img');
+      logo.className = 'drive-logo';
+      logo.src = drive.possession === 'Home' ? (state.HomeLogo || '') : (state.AwayLogo || '');
+
+      const info = document.createElement('div');
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'drive-result';
+      resultDiv.textContent = drive.result;
+      const summaryDiv = document.createElement('div');
+      summaryDiv.className = 'drive-summary';
+      summaryDiv.textContent = `${drive.playsCount} Plays, ${drive.yards} Yards`;
+      info.appendChild(resultDiv);
+      info.appendChild(summaryDiv);
+
+      const scoreDiv = document.createElement('div');
+      scoreDiv.className = 'drive-score';
+      scoreDiv.innerHTML = `<div><span class="team-name">${state.Home}</span> <span class="score-value">${drive.homeScore}</span></div><div><span class="team-name">${state.Away}</span> <span class="score-value">${drive.awayScore}</span></div>`;
+
+      header.appendChild(toggle);
+      header.appendChild(logo);
+      header.appendChild(info);
+      header.appendChild(scoreDiv);
+      section.appendChild(header);
+
+      const playsDiv = document.createElement('div');
+      playsDiv.className = 'drive-plays';
+      drive.plays.forEach(play => {
+        const playRow = document.createElement('div');
+        playRow.className = 'play-row';
+        const sitDiv = document.createElement('div');
+        sitDiv.className = 'play-situation';
+        const downDist = formatDownDistance(play.Down, play.Distance, play.BallOn, play.Possession);
+        const spot = formatBallOnForPoss(play.BallOn, play.Possession);
+        sitDiv.innerHTML = `${downDist} at ${spot}`;
+        const descDiv = document.createElement('div');
+        descDiv.className = 'play-desc';
+        const time = new Date(play.Timestamp).toLocaleTimeString();
+        const qtr = formatQuarter(play.Qtr || state.Qtr);
+        const text = buildPlayText(play);
+        descDiv.innerHTML = `(${time} - ${qtr}) ${text}`;
+        playRow.appendChild(sitDiv);
+        playRow.appendChild(descDiv);
+        playsDiv.appendChild(playRow);
+      });
+      section.appendChild(playsDiv);
+
+      function toggleSection() {
+        const collapsed = playsDiv.classList.toggle('collapsed');
+        toggle.textContent = collapsed ? 'v' : '^';
+      }
+      header.addEventListener('click', toggleSection);
+      toggle.addEventListener('click', function(e) { e.stopPropagation(); toggleSection(); });
+
+      container.appendChild(section);
     });
     computeDriveInfo();
     updateLastPlayDesc();
