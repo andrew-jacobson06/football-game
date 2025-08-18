@@ -768,7 +768,7 @@
     let starPower = 0;
     defensiveFormation.forEach(f => {
       if (f.player && (f.position.startsWith('DL') || f.position.startsWith('LB'))) {
-        starPower += Number(playerTraits[f.player]?.defStars || 0);
+        starPower += ((Number(playerTraits[f.player]?.defStars || 0))^2)/2;
       }
     });
     const roll = Math.floor(Math.random() * 100) + 1;
@@ -782,7 +782,7 @@
       const pos = f.position;
       const isOffensive = ['QB','RB1','RB2','TEOL1','TEOL2','TEOL3','TEOL4','TEOL5'].includes(pos);
       if (isOffensive && f.player !== ballCarrier) {
-        starPower += Number(playerTraits[f.player]?.offStars || 0);
+        starPower += ((Number(playerTraits[f.player]?.offStars || 0))^2)/2;
       }
     });
     const roll = Math.floor(Math.random() * 100) + 1;
