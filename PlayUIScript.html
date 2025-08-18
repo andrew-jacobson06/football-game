@@ -45,6 +45,17 @@
         if (target) target.classList.add('active');
       });
     });
+    document.querySelectorAll('.playbyplay-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.playbyplay-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const showSummary = btn.dataset.subtab === 'summary';
+        document.getElementById('playTimeline').style.display = showSummary ? 'none' : '';
+        const summaryDiv = document.getElementById('scoringSummary');
+        if (showSummary) renderScoringSummary();
+        summaryDiv.style.display = showSummary ? '' : 'none';
+      });
+    });
       updateStickyOffsets();
       window.addEventListener('resize', updateStickyOffsets);
       loadGamesList();
@@ -474,6 +485,60 @@
     });
     computeDriveInfo();
     updateLastPlayDesc();
+    renderScoringSummary();
+  }
+
+  function renderScoringSummary() {
+    const container = document.getElementById('scoringSummary');
+    if (!container) return;
+    container.innerHTML = '';
+    const scoringPlays = playHistory.filter(p => ['Touchdown', 'Field Goal', 'Safety'].includes(p.Result));
+    const byQuarter = {};
+    scoringPlays.forEach(p => {
+      const q = p.Qtr || state.Qtr;
+      if (!byQuarter[q]) byQuarter[q] = [];
+      byQuarter[q].push(p);
+    });
+    Object.keys(byQuarter).sort((a,b) => a - b).forEach(q => {
+      const qLabel = formatQuarter(q).toUpperCase();
+      const qText = qLabel === 'OT' ? 'OVERTIME' : `${qLabel} QUARTER`;
+      const header = document.createElement('div');
+      header.className = 'summary-quarter';
+      header.innerHTML = `<span class="quarter-label">${qText}</span><span class="home-name">${state.Home}</span><span class="away-name">${state.Away}</span>`;
+      container.appendChild(header);
+      const line = document.createElement('div');
+      line.className = 'summary-line';
+      container.appendChild(line);
+      let idx = 0;
+      byQuarter[q].forEach(play => {
+        const row = document.createElement('div');
+        row.className = 'summary-play' + (idx % 2 ? ' alt' : '');
+        const logo = document.createElement('img');
+        logo.className = 'summary-logo';
+        logo.src = play.Possession === 'Home' ? (state.HomeLogo || '') : (state.AwayLogo || '');
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'summary-result-time';
+        const map = { 'Touchdown':'TD', 'Field Goal':'FG', 'Safety':'Safety' };
+        const time = new Date(play.Timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        resultDiv.textContent = `${map[play.Result] || play.Result} ${time}`;
+        const homeScore = document.createElement('div');
+        homeScore.className = 'summary-home-score';
+        homeScore.textContent = play.HomeScore;
+        const awayScore = document.createElement('div');
+        awayScore.className = 'summary-away-score';
+        awayScore.textContent = play.AwayScore;
+        const desc = document.createElement('div');
+        desc.className = 'summary-description';
+        desc.innerHTML = buildPlayText(play);
+        row.appendChild(logo);
+        row.appendChild(resultDiv);
+        row.appendChild(homeScore);
+        row.appendChild(awayScore);
+        row.appendChild(desc);
+        container.appendChild(row);
+        idx++;
+      });
+    });
   }
 
     function loadPlayers() {
