@@ -394,7 +394,7 @@
       drive.result = last.Result || '';
       drive.homeScore = last.HomeScore !== undefined ? last.HomeScore : state.HomeScore;
       drive.awayScore = last.AwayScore !== undefined ? last.AwayScore : state.AwayScore;
-      const end = Number(last.NewBallOn || last.BallOn || drive.driveStart);
+      const end = Number(last.NewBallOn);
       drive.yards = drive.possession === 'Home' ? end - drive.driveStart : drive.driveStart - end;
       drive.playsCount = drive.plays.length;
     });
@@ -516,7 +516,7 @@
       const qText = qLabel === 'OT' ? 'OVERTIME' : `${qLabel} QUARTER`;
       const header = document.createElement('div');
       header.className = 'summary-quarter';
-      header.innerHTML = `<span class="quarter-label">${qText}</span><span class="home-name">${state.Home}</span><span class="away-name">${state.Away}</span>`;
+      header.innerHTML = `<div class="quarter-label">${qText}</div><div class="summary-home-scorehead">${state.Home}</div><div class="summary-away-scorehead">${state.Away}</div>`;
       container.appendChild(header);
       const line = document.createElement('div');
       line.className = 'summary-line';
@@ -940,7 +940,7 @@
 
   function determineTackler(yards) {
     if (!tackleSettings || tackleSettings.length === 0) return "NA";
-    const gain = Math.max(0, Math.floor(Math.abs(yards)));
+    const gain = Math.max(0, Math.floor(yards));
     let range = tackleSettings.find(r => gain <= r.yardageCap);
     if (!range) range = tackleSettings[tackleSettings.length - 1];
 

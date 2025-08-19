@@ -1107,11 +1107,12 @@
   /* Scoring summary */
   .summary-quarter {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 84% 8% 8%;
     align-items: center;
     padding: 2vw;
     font-weight: 700;
     color: var(--text-light);
+    font-size: 3vw;
   }
   .summary-quarter .home-name,
   .summary-quarter .away-name {
@@ -1123,11 +1124,12 @@
   }
   .summary-play {
     display: grid;
-    grid-template-columns: auto 1fr auto auto;
+    grid-template-columns: 10% 74% 8% 8%;
     grid-template-rows: auto auto;
     align-items: center;
     padding: 2vw;
     background: var(--gray-dark);
+    font-size: 3vw;
   }
   .summary-play.alt {
     background: var(--gray-medium);
@@ -1146,6 +1148,7 @@
     grid-row: 1;
     grid-column: 2;
     font-weight: 700;
+    font-size: 3vw;
   }
   .summary-home-score,
   .summary-away-score {
@@ -1154,6 +1157,18 @@
     align-items: center;
     justify-content: center;
     font-weight: bold;
+    font-size: 3vw;
+  }
+  .summary-home-scorehead { grid-column: 2; }
+  .summary-away-scorehead { grid-column: 3; }
+  .summary-home-scorehead,
+  .summary-away-scorehead {
+    grid-row: 1 / span 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 3vw;
   }
   .summary-home-score { grid-column: 3; }
   .summary-away-score { grid-column: 4; }
@@ -1161,5 +1176,7 @@
     grid-row: 2;
     grid-column: 2 / span 3;
     margin-top: 0.5vw;
+    font-size: 3vw;
+    max-width: 75%;
   }
 </style>
