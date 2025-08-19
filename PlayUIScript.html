@@ -5,6 +5,7 @@
   let rollThresholds = [];
   let breakawaySettings = [];
   let drainSettings = {};  // Populated from backend on load
+  let tackleSettings = [];
   let frontendStats = [];
   let gameId = 1;
   let playHistory = [];
@@ -907,6 +908,7 @@
       rollThresholds = data.thresholds;
       breakawaySettings = data.breakaways;
       drainSettings = data.staminaDrains;
+      tackleSettings = data.tackleTable || [];
       if (callback) callback();
     }).getFrontendSettings();
   }
@@ -934,6 +936,39 @@
     if (total <= 0) return { defenseWins: false };
     const roll = Math.floor(Math.random() * total) + 1;
     return { defenseWins: roll <= dlTotal };
+  }
+
+  function determineTackler(yards) {
+    if (!tackleSettings || tackleSettings.length === 0) return "NA";
+    const gain = Math.max(0, Math.floor(Math.abs(yards)));
+    let range = tackleSettings.find(r => gain <= r.yardageCap);
+    if (!range) range = tackleSettings[tackleSettings.length - 1];
+
+    const roll = Math.random() * 100;
+    let group = "DBS";
+    if (roll < range.DL) {
+      group = "DL";
+    } else if (roll < range.DL + range.LB) {
+      group = "LB";
+    }
+
+    const inGroup = defensiveFormation.filter(f => {
+      if (!f.player) return false;
+      if (group === "DL") return f.position.startsWith("DL");
+      if (group === "LB") return f.position.startsWith("LB");
+      return f.position.startsWith("DB") || f.position.startsWith("S");
+    });
+    if (inGroup.length === 0) return "NA";
+
+    const total = inGroup.reduce((sum, f) => sum + Number(playerTraits[f.player]?.tackleChance || 0), 0);
+    if (total <= 0) return inGroup[Math.floor(Math.random() * inGroup.length)].player;
+
+    let r = Math.random() * total;
+    for (const f of inGroup) {
+      r -= Number(playerTraits[f.player]?.tackleChance || 0);
+      if (r <= 0) return f.player;
+    }
+    return inGroup[inGroup.length - 1].player;
   }
 
   function tryAutoStuff() {
@@ -1034,6 +1069,10 @@
     const touchdown = state.Possession === "Home"
       ? (state.BallOn < 100 && newBall >= 100)
       : (state.BallOn > 0 && newBall <= 0);
+
+    if (!touchdown) {
+      tackler = determineTackler(yardDelta);
+    }
 
     let newDown = state.Down;
     let newDist = state.Distance - yardDelta;
