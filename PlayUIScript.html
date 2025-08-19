@@ -355,7 +355,9 @@
       }
     }
 
-    text += ` Tackle made at the ${formatBallOnForPoss(play.NewBallOn, play.Possession)} by ${play.Tackler}.`;
+    if (play.Result !== "Touchdown" && play.Tackler && play.Tackler !== "NA") {
+      text += ` Tackle made at the ${formatBallOnForPoss(play.NewBallOn, play.Possession)} by ${play.Tackler}.`;
+    }
 
     return text;
   }
@@ -944,12 +946,28 @@
     let range = tackleSettings.find(r => gain <= r.yardageCap);
     if (!range) range = tackleSettings[tackleSettings.length - 1];
 
-    const roll = Math.random() * 100;
-    let group = "DBS";
-    if (roll < range.DL) {
-      group = "DL";
-    } else if (roll < range.DL + range.LB) {
-      group = "LB";
+    const hasDL = defensiveFormation.some(f => f.player && f.position.startsWith("DL"));
+    const hasLB = defensiveFormation.some(f => f.player && f.position.startsWith("LB"));
+    const hasDBS = defensiveFormation.some(
+      f => f.player && (f.position.startsWith("DB") || f.position.startsWith("S"))
+    );
+
+    const groups = [];
+    if (hasDL && range.DL > 0) groups.push({ name: "DL", chance: range.DL });
+    if (hasLB && range.LB > 0) groups.push({ name: "LB", chance: range.LB });
+    if (hasDBS && range.DBS > 0) groups.push({ name: "DBS", chance: range.DBS });
+
+    const totalChance = groups.reduce((sum, g) => sum + g.chance, 0);
+    if (totalChance <= 0) return "NA";
+
+    let roll = Math.random() * totalChance;
+    let group = groups[groups.length - 1].name;
+    for (const g of groups) {
+      if (roll < g.chance) {
+        group = g.name;
+        break;
+      }
+      roll -= g.chance;
     }
 
     const inGroup = defensiveFormation.filter(f => {
@@ -1041,7 +1059,7 @@
     const playerName = document.getElementById("playerDropdown").value;
     if (!playerName) return;
 
-    let tackler = "NA";
+    let tackler = null;
 
     offStarPower = rollOffStarPower(playerName);
     defStarPower = rollDefStarPower();
@@ -1082,7 +1100,7 @@
     let recordedYards = yardDelta;
     if (touchdown) {
       result = "Touchdown";
-      await handleTouchdown(newBall, playerName, carryResult, result, tackler, predicted);
+      await handleTouchdown(newBall, playerName, carryResult, result, predicted);
       recordedYards = carryResult.yards; // handleTouchdown adjusts yards
       await celebrateTouchdown(scoringTeam, oldScore, oldScore + 6);
     } else if (newDist <= 0) {
@@ -1117,7 +1135,7 @@
     afterPlayComplete();
   }
 
-  async function handleTouchdown(newBall, playerName, carryResult, result, tackler, predicted) {
+  async function handleTouchdown(newBall, playerName, carryResult, result, predicted) {
     // Distance covered to reach the goal line differs by team direction
     carryResult.yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
     if (state.Possession === "Home") {
@@ -1125,14 +1143,14 @@
     } else if (state.Possession === "Away") {
       state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 6;
     }
-    updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
+    updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, null, result, predicted);
 
     await animatePlay();
     playSound("crowdRoar");
 
     const newPossession = state.Possession === "Home" ? "Away" : "Home";
     const newBallOn = newPossession === "Home" ? 25 : 75;
-    updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, playerName, carryResult.yards, tackler, null, predicted);
+    updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, playerName, carryResult.yards, null, null, predicted);
     loadPlayers();
   }
 
