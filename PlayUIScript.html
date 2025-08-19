@@ -502,7 +502,8 @@
         const descDiv = document.createElement('div');
         descDiv.className = 'play-desc';
         const time = formatClock(play.Time);
-        const qtr = formatQuarter(play.Qtr || state.Qtr);
+        const playQuarter = play.QTR ?? play.Qtr ?? state.Qtr;
+        const qtr = formatQuarter(playQuarter);
         const text = buildPlayText(play);
         descDiv.innerHTML = `(${time} - ${qtr}) ${text}`;
         playRow.appendChild(sitDiv);
@@ -532,7 +533,7 @@
     const scoringPlays = playHistory.filter(p => ['Touchdown', 'Field Goal', 'Safety'].includes(p.Result));
     const byQuarter = {};
     scoringPlays.forEach(p => {
-      const q = p.Qtr || state.Qtr;
+      const q = p.QTR ?? p.Qtr ?? state.Qtr;
       if (!byQuarter[q]) byQuarter[q] = [];
       byQuarter[q].push(p);
     });
@@ -1198,7 +1199,9 @@
         Time: time,
         Down: state.Down,
         Distance: state.Distance,
+        QTR: qtr,
         Qtr: qtr,
+        DriveStart: Number(driveStart),
         Player: playerName,
         Yards: yards,
         Result: result || "Normal",
