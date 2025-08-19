@@ -18,6 +18,7 @@
   let defStarPower = false;
   const RUN_POSITIONS = ['WR1','RB1','RB2','QB'];
   let selectedPlayer = null;
+  let runningClock = false;
 
 
   function updateStickyOffsets() {
@@ -222,6 +223,7 @@
       }
       state = gameState;
       state.Time = parseTimeToSeconds(state.Time);
+      runningClock = false;
       updateStateUI();
 
       loadPlayersTraits(function () {
@@ -1238,14 +1240,25 @@
     });
   }
 
+  function updateRunningClock(result) {
+    const stopResults = ['Touchdown','Timeout','Field Goal','Kickoff','Punt','Safety','End of Quarter','TO on Downs'];
+    if (result) {
+      runningClock = !stopResults.includes(result);
+    }
+  }
+
   function updateGameState(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, timeTaken) {
     let playQuarter = state.Qtr;
-    let timeAfter = state.Time;
+    let newTime = state.Time;
     if (typeof timeTaken === 'number') {
-      timeAfter = Math.max(state.Time - timeTaken, 0);
+      if (runningClock) {
+        timeTaken += randomInt(20, 36);
+      }
+      newTime = state.Time - timeTaken;
     }
-    if(result != null){
-      logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, playQuarter, timeAfter);
+    const logTime = Math.max(newTime, 0);
+    if (result != null) {
+      logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, playQuarter, logTime);
     }
     state.Down = down;
     state.Distance = distance;
@@ -1253,12 +1266,18 @@
     state.Possession = poss;
     state.Previous = previousBallOn;
     state.DriveStart = driveStart;
-    state.Time = timeAfter;
-    state.Qtr = playQuarter;
-    if (typeof timeTaken === 'number' && timeAfter === 0 && playQuarter < 4) {
-      state.Qtr = playQuarter + 1;
-      state.Time = 900;
+
+    if (typeof timeTaken === 'number' && newTime <= 0) {
+      playQuarter += 1;
+      newTime = 900;
+      updateRunningClock('End of Quarter');
+    } else {
+      newTime = logTime;
+      updateRunningClock(result);
     }
+
+    state.Time = newTime;
+    state.Qtr = playQuarter;
     renderPlayTimeline();
 
     google.script.run.pushGameState({
