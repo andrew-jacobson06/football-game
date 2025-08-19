@@ -197,11 +197,28 @@ function getStaminaDrains() {
   return staminaDrainMap;
 }
 
+function getTackleDistributions() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
+  const data = sheet.getDataRange().getValues();
+
+  return data
+    .filter(row => typeof row[0] === "string" && row[0].startsWith("Tackle_"))
+    .map(row => ({
+      label: row[0],
+      yardageCap: Number(row[1]),
+      DL: Number(row[2]) || 0,
+      LB: Number(row[3]) || 0,
+      DBS: Number(row[4]) || 0
+    }))
+    .sort((a, b) => a.yardageCap - b.yardageCap);
+}
+
 function getFrontendSettings() {
   return {
     thresholds: getRunThresholdsFromSettings(),
     breakaways: getBreakawayYards(),
-    staminaDrains: getStaminaDrains()
+    staminaDrains: getStaminaDrains(),
+    tackleTable: getTackleDistributions()
   };
 }
 function predictPlayType(down, distance) {
