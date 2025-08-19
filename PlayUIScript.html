@@ -1114,6 +1114,7 @@
       Timestamp: timestamp,
       Down: state.Down,
       Distance: state.Distance,
+      Qtr: state.Qtr,
       Player: playerName,
       Yards: yards,
       Result: result || "Normal",
@@ -1130,6 +1131,7 @@
     google.script.run.logPlayHistory({
       gameid: gameId,
       timestamp: timestamp, // ✅ passed in from frontend
+      qtr: state.Qtr,
       possession: state.Possession,
       down: state.Down,
       distance: state.Distance,

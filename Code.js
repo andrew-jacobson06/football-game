@@ -233,6 +233,7 @@ function logPlayHistory(play) {
   const {
     gameid,
     timestamp,  // ✅ use this
+    qtr,
     possession,
     down,
     distance,
@@ -259,6 +260,7 @@ function logPlayHistory(play) {
   sheet.appendRow([
     String(gameid || ""),
     ts,
+    Number(qtr) || 0,
     String(possession || ""),
     Number(down) || 0,
     Number(distance) || 0,
@@ -305,6 +307,22 @@ function getPlayHistory(gameId) {
           obj[key] = row[i];
         }
       });
+      if (obj.newballon !== undefined && obj.NewBallOn === undefined) {
+        obj.NewBallOn = obj.newballon;
+        delete obj.newballon;
+      }
+      if (obj.quarter !== undefined && obj.Qtr === undefined) {
+        obj.Qtr = obj.quarter;
+        delete obj.quarter;
+      }
+      if (obj.homescore !== undefined && obj.HomeScore === undefined) {
+        obj.HomeScore = obj.homescore;
+        delete obj.homescore;
+      }
+      if (obj.awayscore !== undefined && obj.AwayScore === undefined) {
+        obj.AwayScore = obj.awayscore;
+        delete obj.awayscore;
+      }
       return obj;
     });
 
