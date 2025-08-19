@@ -501,7 +501,7 @@
         sitDiv.innerHTML = `${downDist} at ${spot}`;
         const descDiv = document.createElement('div');
         descDiv.className = 'play-desc';
-        const time = new Date(play.Timestamp).toLocaleTimeString();
+        const time = formatClock(play.Time);
         const qtr = formatQuarter(play.Qtr || state.Qtr);
         const text = buildPlayText(play);
         descDiv.innerHTML = `(${time} - ${qtr}) ${text}`;
@@ -556,7 +556,7 @@
         const resultDiv = document.createElement('div');
         resultDiv.className = 'summary-result-time';
         const map = { 'Touchdown':'TD', 'Field Goal':'FG', 'Safety':'Safety' };
-        const time = new Date(play.Timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        const time = formatClock(play.Time);
         resultDiv.textContent = `${map[play.Result] || play.Result} ${time}`;
         const homeScore = document.createElement('div');
         homeScore.className = 'summary-home-score';
@@ -1193,52 +1193,49 @@
     loadPlayers();
   }
 
-  function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, qtr, time) {
-    const timestamp = new Date().toISOString();
-    const localPlay = {
-      Timestamp: timestamp,
-      Down: state.Down,
-      Distance: state.Distance,
-      Qtr: qtr,
-      Time: time,
-      Player: playerName,
-      Yards: yards,
-      Result: result || "Normal",
-      NewBallOn: ballOn,
-      BallOn: previousBallOn,
-      Tackler: tackler,
-      Possession: poss,
-      HomeScore: state.HomeScore,
-      AwayScore: state.AwayScore,
-      PlayType: "Run"
-    };
-    playHistory.push(localPlay);
+    function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, qtr, time) {
+      const localPlay = {
+        Time: time,
+        Down: state.Down,
+        Distance: state.Distance,
+        Qtr: qtr,
+        Player: playerName,
+        Yards: yards,
+        Result: result || "Normal",
+        NewBallOn: ballOn,
+        BallOn: previousBallOn,
+        Tackler: tackler,
+        Possession: poss,
+        HomeScore: state.HomeScore,
+        AwayScore: state.AwayScore,
+        PlayType: "Run"
+      };
+      playHistory.push(localPlay);
 
-    google.script.run.logPlayHistory({
-      gameid: gameId,
-      timestamp: timestamp, // ✅ passed in from frontend
-      qtr: qtr,
-      time: time,
-      possession: poss,
-      down: state.Down,
-      distance: state.Distance,
-      ballon: state.BallOn,
-      playtype: "Run",
-      player: playerName,
-      yards: yards,
-      defensepredicted: predicted,
-      predictioncorrect: "",
-      tackler: tackler,
-      result: result,
-      desc: "",
-      newdown: down,
-      newdist: distance,
-      newballon: ballOn,
-      drivestart: state.DriveStart,
-      homescore: state.HomeScore,
-      awayscore: state.AwayScore
-    });
-  }
+      google.script.run.logPlayHistory({
+        gameid: gameId,
+        time: time,
+        qtr: qtr,
+        possession: poss,
+        down: state.Down,
+        distance: state.Distance,
+        ballon: state.BallOn,
+        playtype: "Run",
+        player: playerName,
+        yards: yards,
+        defensepredicted: predicted,
+        predictioncorrect: "",
+        tackler: tackler,
+        result: result,
+        desc: "",
+        newdown: down,
+        newdist: distance,
+        newballon: ballOn,
+        drivestart: state.DriveStart,
+        homescore: state.HomeScore,
+        awayscore: state.AwayScore
+      });
+    }
 
   function updateRunningClock(result) {
     const stopResults = ['Touchdown','Timeout','Field Goal','Kickoff','Punt','Safety','End of Quarter','TO on Downs'];
@@ -1751,10 +1748,10 @@
       ctx.strokeStyle = "black";
       ctx.lineCap = "round";
       let offset = 0;
-      let startTime = null;
-      function animate(timestamp) {
-        if (!startTime) startTime = timestamp;
-        const elapsed = timestamp - startTime;
+        let startTime = null;
+        function animate(time) {
+          if (!startTime) startTime = time;
+          const elapsed = time - startTime;
         offset -= 2;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.setLineDash([10, 5]);

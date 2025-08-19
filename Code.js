@@ -247,44 +247,39 @@ function logPlayHistory(play) {
     return;
   }
 
-  const {
-    gameid,
-    timestamp,  // ✅ use this
-    qtr,
-    time,
-    possession,
-    down,
-    distance,
-    ballon,
-    playtype,
-    player,
-    yards,
-    defensepredicted,
-    predictioncorrect,
-    tackler,
-    result,
-    desc,
-    newdown,
-    newdist,
-    newballon,
-    drivestart,
-    homescore,
-    awayscore
-  } = play;
+    const {
+      gameid,
+      time,
+      qtr,
+      possession,
+      down,
+      distance,
+      ballon,
+      playtype,
+      player,
+      yards,
+      defensepredicted,
+      predictioncorrect,
+      tackler,
+      result,
+      desc,
+      newdown,
+      newdist,
+      newballon,
+      drivestart,
+      homescore,
+      awayscore
+    } = play;
 
-  // Convert ISO string to Date object if needed
-  const ts = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
-
-  sheet.appendRow([
-    String(gameid || ""),
-    ts,
-    Number(qtr) || 0,
-    Number(time) || 0,
-    String(possession || ""),
-    Number(down) || 0,
-    Number(distance) || 0,
-    Number(ballon) || 0,
-    String(playtype || ""),
+    sheet.appendRow([
+      String(gameid || ""),
+      Number(time) || 0,
+      Number(qtr) || 0,
+      String(possession || ""),
+      Number(down) || 0,
+      Number(distance) || 0,
+      Number(ballon) || 0,
+      String(playtype || ""),
     String(player || ""),
     Number(yards) || 0,
     String(defensepredicted || ""),
@@ -311,25 +306,20 @@ function getPlayHistory(gameId) {
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return []; // no data
 
-  const headers = data[0];
-  const rows = data.slice(1);
-  const timezone = Session.getScriptTimeZone();
+    const headers = data[0];
+    const rows = data.slice(1);
 
-  const result = rows
-    .filter(row => row[0] == gameId) // column A = GameId
-    .map(row => {
-      const obj = {};
-      headers.forEach((key, i) => {
-        if (key === "Timestamp" && row[i] instanceof Date) {
-          obj[key] = Utilities.formatDate(row[i], timezone, "yyyy-MM-dd'T'HH:mm:ssXXX");
-        } else {
+    const result = rows
+      .filter(row => row[0] == gameId) // column A = GameId
+      .map(row => {
+        const obj = {};
+        headers.forEach((key, i) => {
           obj[key] = row[i];
+        });
+        if (obj.newballon !== undefined && obj.NewBallOn === undefined) {
+          obj.NewBallOn = obj.newballon;
+          delete obj.newballon;
         }
-      });
-      if (obj.newballon !== undefined && obj.NewBallOn === undefined) {
-        obj.NewBallOn = obj.newballon;
-        delete obj.newballon;
-      }
       if (obj.quarter !== undefined && obj.Qtr === undefined) {
         obj.Qtr = obj.quarter;
         delete obj.quarter;
@@ -404,10 +394,9 @@ function pushGameState({ gameId, quarter, time, down, distance, ballOn, homeScor
   });
 }
 
-function logPlayResult({ player, playType, yards, down, distance, ballOn }) {
+function logPlayResult({ player, playType, yards, down, distance, ballOn, time }) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("PlayHistory");
-  const ts = new Date();
-  sheet.appendRow([ts, down, distance, playType, player, yards]);
+  sheet.appendRow([time, down, distance, playType, player, yards]);
 
   const gameSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("GameState");
   const keys = ["Down", "Distance", "BallOn", "Previous"];
