@@ -251,6 +251,7 @@ function logPlayHistory(play) {
     gameid,
     timestamp,  // ✅ use this
     qtr,
+    time,
     possession,
     down,
     distance,
@@ -278,6 +279,7 @@ function logPlayHistory(play) {
     String(gameid || ""),
     ts,
     Number(qtr) || 0,
+    Number(time) || 0,
     String(possession || ""),
     Number(down) || 0,
     Number(distance) || 0,
@@ -367,7 +369,7 @@ function switchPossession(fromTurnover = false) {
   });
 }
 
-function pushGameState({ gameId, quarter, down, distance, ballOn, homeScore, awayScore, driveStart, previous, possession }) {
+function pushGameState({ gameId, quarter, time, down, distance, ballOn, homeScore, awayScore, driveStart, previous, possession }) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Games');
   if (!sheet) {
     throw new Error("Sheet 'Games' not found.");
@@ -383,6 +385,7 @@ function pushGameState({ gameId, quarter, down, distance, ballOn, homeScore, awa
   const rowNumber = rowIndex + 2;
   const updates = {
     Qtr: quarter,
+    Time: time,
     Down: down,
     Distance: distance,
     BallOn: ballOn,

@@ -145,7 +145,7 @@
             <span class="poss-indicator">${g.Possession === 'Home' ? '🏈' : ''}</span>
           </div>
           <span class="team-score">${g.HomeScore}</span>
-          <span class="team-time">${g.Time || ''}</span>
+          <span class="team-time">${formatClock(parseTimeToSeconds(g.Time))}</span>
           <span class="team-down${redZone ? ' red-zone' : ''}">${downDisplay}</span>
         </div>
         <div class="${awayRowClass}">
@@ -221,6 +221,7 @@
         return;
       }
       state = gameState;
+      state.Time = parseTimeToSeconds(state.Time);
       updateStateUI();
 
       loadPlayersTraits(function () {
@@ -317,6 +318,26 @@
     if (qtr === 'FINAL') return 'FINAL';
     const ord = ["1st", "2nd", "3rd", "4th", "OT"];
     return ord[qtr - 1] || qtr + "th";
+  }
+
+  function parseTimeToSeconds(t) {
+    if (typeof t === 'number') return t;
+    if (typeof t === 'string') {
+      if (t.includes(':')) {
+        const [m, s] = t.split(':').map(Number);
+        return m * 60 + s;
+      }
+      const num = Number(t);
+      if (!isNaN(num)) return num;
+    }
+    return 0;
+  }
+
+  function formatClock(seconds) {
+    const sec = Math.max(0, Math.floor(Number(seconds)));
+    const m = Math.floor(sec / 60);
+    const s = String(sec % 60).padStart(2, '0');
+    return `${m}:${s}`;
   }
 
   function computeDriveInfo() {
@@ -1088,6 +1109,12 @@
       ? (state.BallOn < 100 && newBall >= 100)
       : (state.BallOn > 0 && newBall <= 0);
 
+    let recordedYards = yardDelta;
+    if (touchdown) {
+      recordedYards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
+    }
+    const timeTaken = Math.round(4 + (Math.abs(recordedYards) / 6) * (60 / rbStats.speed));
+
     if (!touchdown) {
       tackler = determineTackler(yardDelta);
     }
@@ -1097,10 +1124,9 @@
 
     let result = "Normal";
 
-    let recordedYards = yardDelta;
     if (touchdown) {
       result = "Touchdown";
-      await handleTouchdown(newBall, playerName, carryResult, result, predicted);
+      await handleTouchdown(newBall, playerName, carryResult, result, predicted, timeTaken);
       recordedYards = carryResult.yards; // handleTouchdown adjusts yards
       await celebrateTouchdown(scoringTeam, oldScore, oldScore + 6);
     } else if (newDist <= 0) {
@@ -1108,16 +1134,16 @@
       newDown = 1;
       const yardsToGoal = state.Possession === "Home" ? 100 - newBall : newBall;
       newDist = yardsToGoal < 10 ? yardsToGoal : 10;
-      updateGameState(1, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
+      updateGameState(1, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted, timeTaken);
       await animatePlay();
       playSound("crowdRoar");
     } else {
       newDown++;
       if (newDown > 4) {
-      result = "TO on Downs";
-        await handleTOonDowns(result, newBall, playerName, carryResult, result, tackler, predicted);
+        result = "TO on Downs";
+        await handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted, timeTaken);
       } else {
-        updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted);
+        updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted, timeTaken);
         await animatePlay();
       }
     }
@@ -1135,7 +1161,7 @@
     afterPlayComplete();
   }
 
-  async function handleTouchdown(newBall, playerName, carryResult, result, predicted) {
+  async function handleTouchdown(newBall, playerName, carryResult, result, predicted, timeTaken) {
     // Distance covered to reach the goal line differs by team direction
     carryResult.yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
     if (state.Possession === "Home") {
@@ -1143,7 +1169,7 @@
     } else if (state.Possession === "Away") {
       state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 6;
     }
-    updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, null, result, predicted);
+    updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, null, result, predicted, timeTaken);
 
     await animatePlay();
     playSound("crowdRoar");
@@ -1154,8 +1180,8 @@
     loadPlayers();
   }
 
-  async function handleTOonDowns(result, newBall, playerName, carryResult, result, tackler, predicted) {
-    updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted);
+  async function handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted, timeTaken) {
+    updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted, timeTaken);
 
     await animatePlay();
     playSound("crowdRoar");
@@ -1165,20 +1191,21 @@
     loadPlayers();
   }
 
-  function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted) {
+  function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, qtr, time) {
     const timestamp = new Date().toISOString();
     const localPlay = {
       Timestamp: timestamp,
       Down: state.Down,
       Distance: state.Distance,
-      Qtr: state.Qtr,
+      Qtr: qtr,
+      Time: time,
       Player: playerName,
       Yards: yards,
       Result: result || "Normal",
       NewBallOn: ballOn,
       BallOn: previousBallOn,
       Tackler: tackler,
-      Possession: state.Possession,
+      Possession: poss,
       HomeScore: state.HomeScore,
       AwayScore: state.AwayScore,
       PlayType: "Run"
@@ -1188,8 +1215,9 @@
     google.script.run.logPlayHistory({
       gameid: gameId,
       timestamp: timestamp, // ✅ passed in from frontend
-      qtr: state.Qtr,
-      possession: state.Possession,
+      qtr: qtr,
+      time: time,
+      possession: poss,
       down: state.Down,
       distance: state.Distance,
       ballon: state.BallOn,
@@ -1210,21 +1238,33 @@
     });
   }
 
-  function updateGameState(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted) {
+  function updateGameState(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, timeTaken) {
+    let playQuarter = state.Qtr;
+    let timeAfter = state.Time;
+    if (typeof timeTaken === 'number') {
+      timeAfter = Math.max(state.Time - timeTaken, 0);
+    }
     if(result != null){
-      logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted);
+      logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, playQuarter, timeAfter);
     }
     state.Down = down;
     state.Distance = distance;
-    state.BallOn = ballOn
+    state.BallOn = ballOn;
     state.Possession = poss;
     state.Previous = previousBallOn;
     state.DriveStart = driveStart;
+    state.Time = timeAfter;
+    state.Qtr = playQuarter;
+    if (typeof timeTaken === 'number' && timeAfter === 0 && playQuarter < 4) {
+      state.Qtr = playQuarter + 1;
+      state.Time = 900;
+    }
     renderPlayTimeline();
 
     google.script.run.pushGameState({
       gameId: gameId,
       quarter: state.Qtr,
+      time: state.Time,
       down: state.Down,
       distance: state.Distance,
       ballOn: state.BallOn,
@@ -1254,7 +1294,7 @@
     document.getElementById("scoreHome").innerText = state.HomeScore;
     document.getElementById("scoreAway").innerText = state.AwayScore;
     document.getElementById("Quarter").innerText = `${formatQuarter(state.Qtr)}`;
-    document.getElementById("Time").innerText = `${state.Time}`;
+    document.getElementById("Time").innerText = formatClock(state.Time);
     updateTimeoutDots("homeTimeouts", state.HomeTimeouts || 0);
     updateTimeoutDots("awayTimeouts", state.AwayTimeouts || 0);
     document.getElementById("homeFootball").style.visibility = state.Possession === "Home" ? "visible" : "hidden";
