@@ -985,6 +985,7 @@
     if (totalChance <= 0) return "NA";
 
     let roll = Math.random() * totalChance;
+    console.log(roll);
     let group = groups[groups.length - 1].name;
     for (const g of groups) {
       if (roll < g.chance) {
@@ -993,6 +994,7 @@
       }
       roll -= g.chance;
     }
+    console.log(group);
 
     const inGroup = defensiveFormation.filter(f => {
       if (!f.player) return false;
@@ -1006,7 +1008,10 @@
     if (total <= 0) return inGroup[Math.floor(Math.random() * inGroup.length)].player;
 
     let r = Math.random() * total;
+    console.log(r);
     for (const f of inGroup) {
+      console.log(f.player + " - " + playerTraits[f.player]?.tackleChance);
+
       r -= Number(playerTraits[f.player]?.tackleChance || 0);
       if (r <= 0) return f.player;
     }
