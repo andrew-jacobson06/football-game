@@ -94,8 +94,8 @@ function getPlayerTraits() {
     throw new Error("Sheet 'Players' not found.");
   }
 
-  // Pull columns A through AG (0 - 32) to include DefPos
-  const numCols = 33;
+  // Pull columns A through AH (0 - 33) to include BallSecurity and DefPos
+  const numCols = 34;
   const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
   Logger.log(data);
   const result = data
@@ -120,20 +120,21 @@ function getPlayerTraits() {
       routeRunning: row[16],
       jump: row[17],
       hands: row[18],
-      qbFavorite: row[19],
-      runBlocking: row[20],
-      passProtect: row[21],
-      runStop: row[22],
-      tackling: row[23],
-      runDef: row[24],
-      tackleChance: row[25],
-      strip: row[26],
-      passRush: row[27],
-      sackChance: row[28],
-      ballHawk: row[29],
-      readQB: row[30],
-      coverage: row[31],
-      defPos: row[32],
+      ballsecurity: row[19],
+      qbFavorite: row[20],
+      runBlocking: row[21],
+      passProtect: row[22],
+      runStop: row[23],
+      tackling: row[24],
+      runDef: row[25],
+      tackleChance: row[26],
+      strip: row[27],
+      passRush: row[28],
+      sackChance: row[29],
+      ballHawk: row[30],
+      readQB: row[31],
+      coverage: row[32],
+      defPos: row[33],
       // Local tracking only
       carries: 0,
       fatigue: row[8]
