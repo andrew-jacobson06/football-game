@@ -17,6 +17,7 @@
   let autoRelease = false;
   let offStarPower = false;
   let defStarPower = false;
+  let defStarPowerTackler = '';
   const RUN_POSITIONS = ['WR1','RB1','RB2','QB'];
   let selectedPlayer = null;
   let runningClock = false;
@@ -1080,6 +1081,7 @@
     for (const c of candidates) {
       if (roll < c.weight) {
         chosen = c;
+        defStarPowerTackler = chosen.name;
         break;
       }
       roll -= c.weight;
@@ -1138,7 +1140,11 @@
     const timeTaken = Math.round(4 + (Math.abs(recordedYards) / 6) * (60 / rbStats.speed));
 
     if (!touchdown) {
-      tackler = determineTackler(yardDelta);
+      if(defStarPower){
+        tackler = defStarPowerTackler;
+      } else{
+        tackler = determineTackler(yardDelta);
+      }
     }
 
     let newDown = state.Down;
