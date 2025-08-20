@@ -1480,13 +1480,6 @@
     let roll = getModifiedRoll(stats, modLog);
     roll = maybeBoostRollForAcceleration(roll, stats, modLog);
     let yards = getYardageOutcome(roll, stats, modLog);
-    yards = maybeAvoidLoss(yards, stats, modLog);
-    yards = adjustChunkRunForSpeed(yards, stats, modLog);
-
-    if (yards <= 2) yards += applyTraitEffect("Vision", stats.vision + Math.min(0, stats.fatigue), true, modLog);
-    if (yards <= 4) yards += applyTraitEffect("Power", average(stats.size, stats.strength + Math.min(0, stats.fatigue)), true, modLog);
-    if (yards >= 3 && yards <= 4) yards += applyTraitEffect("Acceleration", stats.acceleration + Math.min(0, stats.fatigue), true, modLog);
-    if (yards > 0 && yards < 10) yards += applyTraitEffect("Juke", stats.juke + Math.min(0, stats.fatigue), true, modLog);
     if (offStarPower) {
       yards += 5;
       modLog.push(`Yard +5 : offStarPower`);
@@ -1495,6 +1488,13 @@
       yards += -5;
       modLog.push(`Yard -5 : defStarPower`);
     }
+    yards = maybeAvoidLoss(yards, stats, modLog);
+    yards = adjustChunkRunForSpeed(yards, stats, modLog);
+
+    if (yards <= 2) yards += applyTraitEffect("Vision", stats.vision + Math.min(0, stats.fatigue), true, modLog);
+    if (yards <= 4) yards += applyTraitEffect("Power", average(stats.size, stats.strength + Math.min(0, stats.fatigue)), true, modLog);
+    if (yards >= 3 && yards <= 4) yards += applyTraitEffect("Acceleration", stats.acceleration + Math.min(0, stats.fatigue), true, modLog);
+    if (yards > 0 && yards < 10) yards += applyTraitEffect("Juke", stats.juke + Math.min(0, stats.fatigue), true, modLog);
 
     return { name: stats.name, roll, yards, modLog };
   }
