@@ -247,6 +247,7 @@
                 const yards = parseFloat(play.Yards) || 0;
                 const td = play.Result === "Touchdown";
                 const fumble = play.Result === "Fumble";
+                const recoveredBy = play.RecoveredBy || play.recoveredby;
 
                 let p = frontendStats.find(s => s.playername === player && s.team === team);
                 if (!p) {
@@ -264,11 +265,15 @@
                   const defTeam = team === 'Home' ? 'Away' : 'Home';
                   let d = defensiveStats.find(s => s.playername === play.Tackler && s.team === defTeam);
                   if (!d) {
-                    d = { playername: play.Tackler, team: defTeam, tackles: 0, tfl: 0 };
+                    d = { playername: play.Tackler, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0 };
                     defensiveStats.push(d);
                   }
                   d.tackles++;
                   if (yards < 0) d.tfl++;
+                  if (fumble) {
+                    d.ff++;
+                    if (recoveredBy === play.Tackler) d.fr++;
+                  }
                 }
               });
 
@@ -383,7 +388,7 @@
   function buildPlayText(play) {
     let text = `<strong>${play.Player}</strong> runs for ${play.Yards} Yards.`;
 
-    if (play.Result && play.Result !== "Normal") {
+    if (play.Result && play.Result !== "Normal" && play.Result !== "Fumble") {
       if (play.Result === "Touchdown") {
         text += ` <span style="color:green; font-weight:bold;">${play.Result}!</span>`;
       } else if (play.Result === "TO on Downs") {
@@ -395,6 +400,11 @@
 
     if (play.Result !== "Touchdown" && play.Tackler && play.Tackler !== "NA") {
       text += ` Tackle made at the ${formatBallOnForPoss(play.NewBallOn, play.Possession)} by ${play.Tackler}.`;
+    }
+
+    if (play.Result === "Fumble" && play.RecoveredBy) {
+      const recoveryPoss = play.RecoveredBy === play.Player ? play.Possession : (play.Possession === "Home" ? "Away" : "Home");
+      text += ` FUMBLE! Recovered by ${play.RecoveredBy} at the ${formatBallOnForPoss(play.NewBallOn, recoveryPoss)}.`;
     }
 
     return text;
@@ -1033,6 +1043,26 @@
     return inGroup[inGroup.length - 1].player;
   }
 
+  function checkForFumble(runner, tackler) {
+    if (!runner || !tackler || tackler === "NA") return { fumble: false };
+    const rb = playerTraits[runner];
+    const def = playerTraits[tackler];
+    if (!rb || !def) return { fumble: false };
+    const strip = Number(def.strip || 0);
+    const ballSec = Number(rb.ballsecurity ?? rb.hands ?? 50);
+    const fumbleChance = (strip / 10) * ((100 - ballSec) / 100);
+    const roll = Math.random() * 100;
+    if (roll <= fumbleChance) {
+      const defStars = Number(def.defStars || 0);
+      const offStars = Number(rb.offStars || 0);
+      const starsSum = defStars + offStars;
+      const recoveryRoll = Math.random() * starsSum;
+      const recoveredBy = recoveryRoll <= defStars ? tackler : runner;
+      return { fumble: true, recoveredBy };
+    }
+    return { fumble: false };
+  }
+
   function tryAutoStuff() {
     let starPower = 0;
     defensiveFormation.forEach(f => {
@@ -1151,6 +1181,30 @@
     let newDist = state.Distance - yardDelta;
 
     let result = "Normal";
+    let recoveredBy = null;
+
+    if (!touchdown && tackler && tackler !== "NA") {
+      const fum = checkForFumble(playerName, tackler);
+      if (fum.fumble) {
+        result = "Fumble";
+        recoveredBy = fum.recoveredBy;
+        if (recoveredBy === tackler) {
+          updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted, timeTaken, recoveredBy);
+          await animatePlay();
+          const newPossession = state.Possession === "Home" ? "Away" : "Home";
+          updateGameState(1, 10, newPossession, newBall, newBall, newBall, playerName, yardDelta, tackler, null, predicted, undefined, recoveredBy);
+          loadPlayers();
+          applyFatigue(playerName, "Run");
+          updateFrontendStats(playerName, recordedYards, result, scoringTeam, tackler, recoveredBy);
+          console.log(carryResult);
+          document.getElementById("result").innerHTML = `<strong>${rbStats.name}</strong> ran for <strong>${carryResult.yards} yards</strong><br/><br/>` +
+            `Modifiers: <ul>${carryResult.modLog.map(m => `<li>${m}</li>`).join('')}</ul>`;
+          updateStateUI();
+          afterPlayComplete();
+          return;
+        }
+      }
+    }
 
     if (touchdown) {
       result = "Touchdown";
@@ -1162,7 +1216,7 @@
       newDown = 1;
       const yardsToGoal = state.Possession === "Home" ? 100 - newBall : newBall;
       newDist = yardsToGoal < 10 ? yardsToGoal : 10;
-      updateGameState(1, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted, timeTaken);
+      updateGameState(1, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted, timeTaken, recoveredBy);
       await animatePlay();
       playSound("crowdRoar");
     } else {
@@ -1171,14 +1225,14 @@
         result = "TO on Downs";
         await handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted, timeTaken);
       } else {
-        updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted, timeTaken);
+        updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted, timeTaken, recoveredBy);
         await animatePlay();
       }
     }
 
     applyFatigue(playerName, "Run");
 
-    updateFrontendStats(playerName, recordedYards, result, state.Possession, tackler);
+    updateFrontendStats(playerName, recordedYards, result, scoringTeam, tackler, recoveredBy);
     console.log(carryResult);
 
     document.getElementById("result").innerHTML = `<strong>${rbStats.name}</strong> ran for <strong>${carryResult.yards} yards</strong><br/><br/>` +
@@ -1219,7 +1273,7 @@
     loadPlayers();
   }
 
-    function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, qtr, time) {
+  function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, qtr, time, recoveredBy) {
       const localPlay = {
         Time: time,
         Down: state.Down,
@@ -1233,6 +1287,7 @@
         NewBallOn: ballOn,
         BallOn: previousBallOn,
         Tackler: tackler,
+        RecoveredBy: recoveredBy,
         Possession: poss,
         HomeScore: state.HomeScore,
         AwayScore: state.AwayScore,
@@ -1256,6 +1311,7 @@
         tackler: tackler,
         result: result,
         desc: "",
+        recoveredby: recoveredBy,
         newdown: down,
         newdist: distance,
         newballon: ballOn,
@@ -1266,13 +1322,13 @@
     }
 
   function updateRunningClock(result) {
-    const stopResults = ['Touchdown','Timeout','Field Goal','Kickoff','Punt','Safety','End of Quarter','TO on Downs'];
+    const stopResults = ['Touchdown','Timeout','Field Goal','Kickoff','Punt','Safety','End of Quarter','TO on Downs','Fumble'];
     if (result) {
       runningClock = !stopResults.includes(result);
     }
   }
 
-  function updateGameState(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, timeTaken) {
+  function updateGameState(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, timeTaken, recoveredBy) {
     let playQuarter = state.Qtr;
     let newTime = state.Time;
     if (typeof timeTaken === 'number') {
@@ -1283,7 +1339,7 @@
     }
     const logTime = Math.max(newTime, 0);
     if (result != null) {
-      logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, playQuarter, logTime);
+      logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, playQuarter, logTime, recoveredBy);
     }
     state.Down = down;
     state.Distance = distance;
@@ -1423,16 +1479,8 @@
     });
   }
 
-  function updateFrontendStats(player, yards, result, team, tackler) {
+  function updateFrontendStats(player, yards, result, team, tackler, recoveredBy) {
     const defTeam = team === "Home" ? "Away" : "Home";
-
-    if(result == "Touchdown" || result == "TO on Downs"){
-      if(team == "Home"){
-        team = "Away";
-      } else{
-        team = "Home";
-      }
-    }
     let p = frontendStats.find(s => s.playername === player && s.team === team);
     if (!p) {
       p = { playername: player, team, carries: 0, yards: 0, tds: 0, fumbles: 0, long: 0 };
@@ -1441,16 +1489,21 @@
     p.carries++;
     p.yards += yards;
     if (result == "Touchdown") p.tds++;
+    if (result == "Fumble") p.fumbles++;
     if (yards > p.long) p.long = yards;
 
     if (tackler && tackler !== "NA") {
       let d = defensiveStats.find(s => s.playername === tackler && s.team === defTeam);
       if (!d) {
-        d = { playername: tackler, team: defTeam, tackles: 0, tfl: 0 };
+        d = { playername: tackler, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0 };
         defensiveStats.push(d);
       }
       d.tackles++;
       if (yards < 0) d.tfl++;
+      if (result == "Fumble") {
+        d.ff++;
+        if (recoveredBy === tackler) d.fr++;
+      }
     }
 
     renderBoxScore();
@@ -1495,7 +1548,7 @@
     const players = defensiveStats.filter(p => p.team === team).sort((a, b) => b.tackles - a.tackles);
     players.forEach(p => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${p.playername}</td><td>${p.tackles}</td><td>${p.tfl}</td><td>0</td><td>0</td><td>0</td><td>0</td>`;
+      tr.innerHTML = `<td>${p.playername}</td><td>${p.tackles}</td><td>${p.tfl}</td><td>0</td><td>${p.ff}</td><td>${p.fr}</td><td>0</td>`;
       body.appendChild(tr);
     });
   }
