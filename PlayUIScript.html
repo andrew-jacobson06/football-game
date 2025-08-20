@@ -7,6 +7,7 @@
   let drainSettings = {};  // Populated from backend on load
   let tackleSettings = [];
   let frontendStats = [];
+  let defensiveStats = [];
   let gameId = 1;
   let playHistory = [];
   let savedFormations = [];
@@ -211,6 +212,7 @@
     breakawaySettings = [];
     drainSettings = {};  // Populated from backend on load
     frontendStats = [];
+    defensiveStats = [];
     playHistory = [];
     if (typeof selectedGameId !== 'undefined') {
       gameId = selectedGameId;
@@ -234,6 +236,7 @@
               playHistory = data;
               normalizeBallOn(playHistory);
               frontendStats = [];
+              defensiveStats = [];
 
               playHistory.forEach(play => {
                 if (!play.Player || !play.PlayType || play.PlayType !== 'Run') return;
@@ -255,6 +258,17 @@
                 if (td) p.tds++;
                 if (fumble) p.fumbles++;
                 if (yards > p.long) p.long = yards;
+
+                if (play.Tackler && play.Tackler !== 'NA') {
+                  const defTeam = team === 'Home' ? 'Away' : 'Home';
+                  let d = defensiveStats.find(s => s.playername === play.Tackler && s.team === defTeam);
+                  if (!d) {
+                    d = { playername: play.Tackler, team: defTeam, tackles: 0, tfl: 0 };
+                    defensiveStats.push(d);
+                  }
+                  d.tackles++;
+                  if (yards < 0) d.tfl++;
+                }
               });
 
               renderPlayTimeline();
@@ -1158,7 +1172,7 @@
 
     applyFatigue(playerName, "Run");
 
-    updateFrontendStats(playerName, recordedYards, result, state.Possession);
+    updateFrontendStats(playerName, recordedYards, result, state.Possession, tackler);
     console.log(carryResult);
 
     document.getElementById("result").innerHTML = `<strong>${rbStats.name}</strong> ran for <strong>${carryResult.yards} yards</strong><br/><br/>` +
@@ -1331,9 +1345,11 @@
       ["homePassingTitle", `${state.Home} Passing`],
       ["homeRushingTitle", `${state.Home} Rushing`],
       ["homeReceivingTitle", `${state.Home} Receiving`],
+      ["homeDefensiveTitle", `${state.Home} Defensive`],
       ["awayPassingTitle", `${state.Away} Passing`],
       ["awayRushingTitle", `${state.Away} Rushing`],
       ["awayReceivingTitle", `${state.Away} Receiving`],
+      ["awayDefensiveTitle", `${state.Away} Defensive`],
       ["overviewHomePassingTitle", `${state.Home} Passing`],
       ["overviewHomeRushingTitle", `${state.Home} Rushing`],
       ["overviewHomeReceivingTitle", `${state.Home} Receiving`],
@@ -1401,7 +1417,8 @@
     });
   }
 
-  function updateFrontendStats(player, yards, result, team) {
+  function updateFrontendStats(player, yards, result, team, tackler) {
+    const defTeam = team === "Home" ? "Away" : "Home";
 
     if(result == "Touchdown" || result == "TO on Downs"){
       if(team == "Home"){
@@ -1420,12 +1437,24 @@
     if (result == "Touchdown") p.tds++;
     if (yards > p.long) p.long = yards;
 
+    if (tackler && tackler !== "NA") {
+      let d = defensiveStats.find(s => s.playername === tackler && s.team === defTeam);
+      if (!d) {
+        d = { playername: tackler, team: defTeam, tackles: 0, tfl: 0 };
+        defensiveStats.push(d);
+      }
+      d.tackles++;
+      if (yards < 0) d.tfl++;
+    }
+
     renderBoxScore();
   }
 
   function renderBoxScore() {
     renderRushingTable("Home");
     renderRushingTable("Away");
+    renderDefensiveTable("Home");
+    renderDefensiveTable("Away");
     sortBoxScoreTables();
   }
 
@@ -1453,15 +1482,29 @@
     }
   }
 
+  function renderDefensiveTable(team) {
+    const body = document.getElementById(team === "Home" ? "homeDefensiveBody" : "awayDefensiveBody");
+    if (!body) return;
+    body.innerHTML = "";
+    const players = defensiveStats.filter(p => p.team === team).sort((a, b) => b.tackles - a.tackles);
+    players.forEach(p => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${p.playername}</td><td>${p.tackles}</td><td>${p.tfl}</td><td>0</td><td>0</td><td>0</td><td>0</td>`;
+      body.appendChild(tr);
+    });
+  }
+
   function sortBoxScoreTables() {
     document.querySelectorAll('#boxscore .stats-table tbody').forEach(tbody => {
+      const table = tbody.closest('table');
+      const sortIndex = table.classList.contains('defensive-table') ? 1 : 2;
       const rows = Array.from(tbody.querySelectorAll('tr'));
       const teamRow = rows.find(r => r.firstElementChild && r.firstElementChild.textContent.trim().toUpperCase() === 'TEAM');
       const playerRows = teamRow ? rows.filter(r => r !== teamRow) : rows;
       playerRows.sort((a, b) => {
-        const aYards = parseFloat(a.children[2].textContent) || 0;
-        const bYards = parseFloat(b.children[2].textContent) || 0;
-        return bYards - aYards;
+        const aVal = parseFloat(a.children[sortIndex].textContent) || 0;
+        const bVal = parseFloat(b.children[sortIndex].textContent) || 0;
+        return bVal - aVal;
       });
       tbody.innerHTML = '';
       playerRows.forEach(r => tbody.appendChild(r));
