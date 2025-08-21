@@ -235,6 +235,10 @@
             .withSuccessHandler(async function (data) {
               console.log("✅ Loaded play history", data);
               playHistory = data;
+              if (!state.StartingPossession) {
+                const first = playHistory[0];
+                state.StartingPossession = first ? first.Possession : state.Possession;
+              }
               normalizeBallOn(playHistory);
               frontendStats = [];
               defensiveStats = [];
@@ -1341,22 +1345,61 @@
     if (result != null) {
       logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, playQuarter, logTime, recoveredBy);
     }
-    state.Down = down;
-    state.Distance = distance;
-    state.BallOn = ballOn;
-    state.Possession = poss;
-    state.Previous = previousBallOn;
-    state.DriveStart = driveStart;
+
+    let nextDown = down;
+    let nextDistance = distance;
+    let nextPoss = poss;
+    let nextBallOn = ballOn;
+    let nextDriveStart = driveStart;
+    let nextPrev = previousBallOn;
 
     if (typeof timeTaken === 'number' && newTime <= 0) {
-      playQuarter += 1;
-      newTime = 900;
+      const curQuarter = playQuarter;
       updateRunningClock('End of Quarter');
+      if (curQuarter === 2) {
+        playQuarter = 3;
+        newTime = 900;
+        const startTeam = state.StartingPossession || state.Possession;
+        nextPoss = startTeam === 'Home' ? 'Away' : 'Home';
+        nextBallOn = nextPoss === 'Home' ? 25 : 75;
+        nextDown = 1;
+        nextDistance = 10;
+        nextDriveStart = nextBallOn;
+        nextPrev = nextBallOn;
+        loadPlayers();
+      } else if (curQuarter === 4) {
+        if (state.HomeScore !== state.AwayScore) {
+          playQuarter = 'FINAL';
+          newTime = 0;
+        } else {
+          playQuarter = 5;
+          newTime = 900;
+          nextPoss = 'Home';
+          nextBallOn = 25;
+          nextDown = 1;
+          nextDistance = 10;
+          nextDriveStart = 25;
+          nextPrev = 25;
+          loadPlayers();
+        }
+      } else if (curQuarter === 5) {
+        playQuarter = 'FINAL';
+        newTime = 0;
+      } else {
+        playQuarter = curQuarter + 1;
+        newTime = 900;
+      }
     } else {
       newTime = logTime;
       updateRunningClock(result);
     }
 
+    state.Down = nextDown;
+    state.Distance = nextDistance;
+    state.BallOn = nextBallOn;
+    state.Possession = nextPoss;
+    state.Previous = nextPrev;
+    state.DriveStart = nextDriveStart;
     state.Time = newTime;
     state.Qtr = playQuarter;
     renderPlayTimeline();
