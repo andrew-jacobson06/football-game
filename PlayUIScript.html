@@ -235,6 +235,7 @@
             .withSuccessHandler(async function (data) {
               console.log("✅ Loaded play history", data);
               playHistory = data;
+              sortPlayHistory(playHistory);
               if (!state.StartingPossession) {
                 const first = playHistory[0];
                 state.StartingPossession = first ? first.Possession : state.Possession;
@@ -357,6 +358,23 @@
       if (!isNaN(num)) return num;
     }
     return 0;
+  }
+
+  function parseQuarter(q) {
+    if (typeof q === 'number') return q;
+    const str = String(q).toUpperCase();
+    if (str === 'OT') return 5;
+    const num = parseInt(str, 10);
+    return isNaN(num) ? 0 : num;
+  }
+
+  function sortPlayHistory(arr) {
+    arr.sort((a, b) => {
+      const qA = parseQuarter(a.Qtr || a.qtr);
+      const qB = parseQuarter(b.Qtr || b.qtr);
+      if (qA !== qB) return qA - qB;
+      return parseTimeToSeconds(b.Time || b.time) - parseTimeToSeconds(a.Time || a.time);
+    });
   }
 
   function formatClock(seconds) {
@@ -1298,6 +1316,7 @@
         PlayType: "Run"
       };
       playHistory.push(localPlay);
+      sortPlayHistory(playHistory);
 
       google.script.run.logPlayHistory({
         gameid: gameId,
