@@ -297,27 +297,6 @@ function logPlayHistory(play) {
   ]);
 }
 
-function parseTimeToSeconds(t) {
-  if (typeof t === 'number') return t;
-  if (typeof t === 'string') {
-    if (t.includes(':')) {
-      const parts = t.split(':').map(Number);
-      if (parts.length === 2) return parts[0] * 60 + parts[1];
-    }
-    const num = Number(t);
-    if (!isNaN(num)) return num;
-  }
-  return 0;
-}
-
-function parseQuarter(q) {
-  if (typeof q === 'number') return q;
-  const str = String(q).toUpperCase();
-  if (str === 'OT') return 5;
-  const num = parseInt(str, 10);
-  return isNaN(num) ? 0 : num;
-}
-
 function getPlayHistory(gameId) {
   Logger.log(gameId);
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("PlayHistory");
@@ -357,11 +336,25 @@ function getPlayHistory(gameId) {
       return obj;
     });
 
+  const quarterOrder = { '1': 1, '2': 2, '3': 3, '4': 4, 'OT': 5 };
+  const parseTime = t => {
+    if (typeof t === 'number') return t;
+    if (typeof t === 'string') {
+      const parts = t.split(':').map(Number);
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        return parts[0] * 60 + parts[1];
+      }
+      const num = Number(t);
+      return isNaN(num) ? 0 : num;
+    }
+    return 0;
+  };
+
   result.sort((a, b) => {
-    const qA = parseQuarter(a.Qtr);
-    const qB = parseQuarter(b.Qtr);
+    const qA = quarterOrder[String(a.Qtr).toUpperCase()] || 99;
+    const qB = quarterOrder[String(b.Qtr).toUpperCase()] || 99;
     if (qA !== qB) return qA - qB;
-    return parseTimeToSeconds(b.Time) - parseTimeToSeconds(a.Time);
+    return parseTime(b.Time) - parseTime(a.Time);
   });
 
   Logger.log(result[0]);
