@@ -19,6 +19,11 @@
   let defStarPower = false;
   let defStarPowerTackler = '';
   const RUN_POSITIONS = ['WR1','RB1','RB2','QB'];
+  const ROUTE_OPTIONS = ['Screen','Short','Medium','Med-Long','Long','Deep'];
+  const QB_READ_OPTIONS = ['Primary','2nd','3rd','4th','Checkdown'];
+  let receiverRoutes = {};
+  let playerReadSelection = {};
+  let qbReadAssignments = {};
   let selectedPlayer = null;
   let runningClock = false;
 
@@ -105,6 +110,21 @@
       const closeLOS = document.getElementById('closeLOS');
       if (closeLOS) closeLOS.addEventListener('click', () => {
         document.getElementById('losModal').classList.remove('open');
+      });
+      const routeBtn = document.getElementById('openRoutes');
+      if (routeBtn) routeBtn.addEventListener('click', () => {
+        renderRoutesModal();
+        document.getElementById('routesModal').classList.add('open');
+      });
+      const closeRoutes = document.getElementById('closeRoutes');
+      if (closeRoutes) closeRoutes.addEventListener('click', () => {
+        document.getElementById('routesModal').classList.remove('open');
+      });
+      const clearRoutesBtn = document.getElementById('clearRoutes');
+      if (clearRoutesBtn) clearRoutesBtn.addEventListener('click', clearRoutes);
+      const saveRoutesBtn = document.getElementById('saveRoutes');
+      if (saveRoutesBtn) saveRoutesBtn.addEventListener('click', () => {
+        document.getElementById('routesModal').classList.remove('open');
       });
     });
 
@@ -611,6 +631,9 @@
     function loadPlayers() {
       populateBench();
       updateRunnerDropdown();
+      receiverRoutes = {};
+      playerReadSelection = {};
+      qbReadAssignments = {};
     }
 
     function populateBench() {
@@ -779,6 +802,78 @@
       console.log('Saved formation', formation);
       setDefensiveFormation();
       document.getElementById('formationModal').classList.remove('open');
+    }
+
+    function getEligibleReceivers() {
+      const wrs = currentFormation.filter(f => f.position.startsWith('WR') && f.player);
+      const rbs = currentFormation.filter(f => f.position.startsWith('RB') && f.player);
+      const teols = currentFormation
+        .filter(f => f.position.startsWith('TEOL') && f.player)
+        .sort((a,b) => parseInt(a.position.replace('TEOL','')) - parseInt(b.position.replace('TEOL','')));
+      const eligibleTeols = [];
+      if (teols.length > 0) {
+        eligibleTeols.push(teols[0]);
+        if (teols.length > 1) eligibleTeols.push(teols[teols.length - 1]);
+      }
+      return [...wrs, ...rbs, ...eligibleTeols];
+    }
+
+    function renderRoutesModal() {
+      const list = document.getElementById('routesList');
+      if (!list) return;
+      list.innerHTML = '';
+      const players = getEligibleReceivers();
+      players.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'route-row';
+        row.innerHTML = `
+          <span class="route-player">${p.player}</span>
+          <select class="route-select" data-player="${p.player}">
+            ${ROUTE_OPTIONS.map(r => `<option value="${r}">${r}</option>`).join('')}
+          </select>
+          <select class="qb-read-select" data-player="${p.player}">
+            <option value=""></option>
+            ${QB_READ_OPTIONS.map(r => `<option value="${r}">${r}</option>`).join('')}
+          </select>
+        `;
+        list.appendChild(row);
+        const routeSel = row.querySelector('.route-select');
+        routeSel.value = receiverRoutes[p.player] || 'Short';
+        routeSel.addEventListener('change', e => {
+          receiverRoutes[p.player] = e.target.value;
+        });
+        const readSel = row.querySelector('.qb-read-select');
+        readSel.value = playerReadSelection[p.player] || '';
+        readSel.addEventListener('change', e => handleReadChange(p.player, e.target));
+      });
+    }
+
+    function handleReadChange(player, select) {
+      const val = select.value;
+      const prev = playerReadSelection[player];
+      if (prev) {
+        delete qbReadAssignments[prev];
+      }
+      if (val && qbReadAssignments[val]) {
+        const otherPlayer = qbReadAssignments[val];
+        playerReadSelection[otherPlayer] = '';
+        const otherSelect = document.querySelector(`.qb-read-select[data-player="${otherPlayer}"]`);
+        if (otherSelect) otherSelect.value = '';
+      }
+      if (val) {
+        qbReadAssignments[val] = player;
+        playerReadSelection[player] = val;
+      } else {
+        playerReadSelection[player] = '';
+      }
+    }
+
+    function clearRoutes() {
+      receiverRoutes = {};
+      playerReadSelection = {};
+      qbReadAssignments = {};
+      document.querySelectorAll('.route-select').forEach(sel => sel.value = 'Short');
+      document.querySelectorAll('.qb-read-select').forEach(sel => sel.value = '');
     }
 
   function setDefensiveFormation() {
