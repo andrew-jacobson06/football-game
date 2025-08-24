@@ -1323,7 +1323,7 @@
     for (const name of Object.keys(routes)) {
       const w = routes[name].weight || 0;
       if (roll < w) {
-        chosen = routes[name];
+        chosen = {target: name, routeInfo: routes[name]};
         break;
       }
       roll -= w;
@@ -1358,6 +1358,7 @@
 
       route.separation = separation;
     });
+    return routes;
   }
 
   function determinePassOutcome(qbName, target, routes, timeToThrow) {
