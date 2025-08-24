@@ -1410,9 +1410,38 @@
     return completionPct;
   }
 
-  function determinePassOutcome(qbName, target, routes, timeToThrow) {
-    // Determine the outcome of the pass attempt
-    return { completed: false, yards: 0 };
+  function determinePassOutcome(qbName, target, routes, completionPct) {
+    if (!target) {
+      return { completed: false, intercepted: false, yards: 0 };
+    }
+
+    const qb = playerTraits[qbName] || {};
+    const routeInfo = target.routeInfo || {};
+    const defenderName = routeInfo.defender;
+    const defender = playerTraits[defenderName] || {};
+    const airYards = Number(routeInfo.airYards) || 0;
+
+    const completionRoll = Math.random() * 100;
+    if (completionRoll <= completionPct) {
+      const yac = calcYAC(target);
+      const totalYards = airYards + (Number(yac) || 0);
+      return { completed: true, intercepted: false, yards: totalYards };
+    }
+
+    const qbAccCalc = Math.pow(((Number(qb.accuracy) || 0) - 60) / 10, 2) / 2;
+    const qbReadCalc = Math.pow(((Number(qb.readDefense) || 0) - 60) / 10, 2) / 2;
+    const defBallHawkCalc = Math.pow(((Number(defender.ballHawk) || 0) - 60) / 10, 2) / 2;
+    const defReadQBCalc = Math.pow(((Number(defender.readQB) || 0) - 60) / 10, 2) / 2;
+    const pickChance = 1 + Math.max(0, 5 - qbAccCalc - qbReadCalc + defBallHawkCalc + defReadQBCalc);
+
+    const pickRoll = Math.random() * 100;
+    if (pickRoll <= pickChance) {
+      const yac = calcYAC(defenderName);
+      const totalYards = airYards + (Number(yac) || 0);
+      return { completed: false, intercepted: true, yards: totalYards };
+    }
+
+    return { completed: false, intercepted: false, yards: 0 };
   }
 
   // === MAIN PLAY ===
