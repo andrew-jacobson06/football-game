@@ -242,6 +242,21 @@ function getRouteTypeAirYards() {
     }));
 }
 
+function getTimeNeededToThrow() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
+  const data = sheet.getDataRange().getValues();
+
+  return data
+    .filter(row => typeof row[0] === "string" && row[0].startsWith("TNTT_"))
+    .map(row => ({
+      label: row[0],
+      qbRead: String(row[1]),
+      lt10: Number(row[2]),
+      tenTo20: Number(row[3]),
+      twentyOnePlus: Number(row[4])
+    }));
+}
+
 function getFrontendSettings() {
   return {
     thresholds: getRunThresholdsFromSettings(),
@@ -249,7 +264,8 @@ function getFrontendSettings() {
     staminaDrains: getStaminaDrains(),
     tackleTable: getTackleDistributions(),
     completionTable: getAirYardsCompletionTable(),
-    routeTypeAirYards: getRouteTypeAirYards()
+    routeTypeAirYards: getRouteTypeAirYards(),
+    timeNeededToThrow: getTimeNeededToThrow()
   };
 }
 function predictPlayType(down, distance) {
