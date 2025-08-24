@@ -114,6 +114,7 @@
         <div class="control-panel">
           <button id="openFormation">Edit Formation</button>
           <button id="viewLOS">View LOS</button>
+          <button id="openRoutes">Set Receiver Routes</button>
           <label for="playerDropdown">Select Player:</label>
           <select id="playerDropdown"></select>
           <div class="button-row">
@@ -450,6 +451,18 @@
         <span id="closeLOS" class="close-button">&times;</span>
         <h3>Line of Scrimmage</h3>
         <div id="losField" class="los-field"></div>
+      </div>
+    </div>
+
+    <div id="routesModal" class="modal">
+      <div class="formation-panel routes-panel">
+        <span id="closeRoutes" class="close-button">&times;</span>
+        <h3>Receiver Routes</h3>
+        <div id="routesList"></div>
+        <div class="formation-actions">
+          <button id="clearRoutes">Clear</button>
+          <button id="saveRoutes">Save</button>
+        </div>
       </div>
     </div>
 
