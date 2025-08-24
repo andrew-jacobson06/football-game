@@ -28,6 +28,7 @@
   let runningClock = false;
   let completionTable = [];
   let routeTypeAirYards = [];
+  let timeNeededToThrow = [];
 
 
   function updateStickyOffsets() {
@@ -1063,6 +1064,7 @@
       tackleSettings = data.tackleTable || [];
       completionTable = data.completionTable || [];
       routeTypeAirYards = data.routeTypeAirYards || [];
+      timeNeededToThrow = data.timeNeededToThrow || [];
       if (callback) callback();
     }).getFrontendSettings();
   }
@@ -1243,20 +1245,39 @@
   async function passPlay(qbName) {
     if (!qbName) return;
     const routes = assignRoutes();
-    const timeToThrow = determineTimeToThrow(qbName);
+    const timeToThrow = CalcTimeNeededToThrow(routes);
     const target = choosePassTarget(qbName, routes);
     const result = determinePassOutcome(qbName, target, routes, timeToThrow);
     console.log('Pass play result', result);
   }
 
   function assignRoutes() {
-    // Determine each receiver's route depth
-    return {};
+    const routes = {};
+    currentFormation.forEach(f => {
+      if (!f.player) return;
+      const routeType = receiverRoutes[f.player] || 'Short';
+      const info = routeTypeAirYards.find(r => r.routeType === routeType);
+      const depth = info ? randomInt(info.minAirYards, info.maxAirYards) : 0;
+      routes[f.player] = { routeType, airYards: depth };
+    });
+    return routes;
   }
 
-  function determineTimeToThrow(qbName) {
-    // Calculate how long the quarterback has to throw
-    return 0;
+  function CalcTimeNeededToThrow(routes) {
+    const times = {};
+    Object.entries(routes).forEach(([player, info]) => {
+      const read = playerReadSelection[player];
+      if (!read) return;
+      const table = timeNeededToThrow.find(t => t.qbRead === read);
+      if (!table) return;
+      const depth = info.airYards;
+      let key;
+      if (depth < 10) key = 'lt10';
+      else if (depth <= 20) key = 'tenTo20';
+      else key = 'twentyOnePlus';
+      times[player] = table[key];
+    });
+    return times;
   }
 
   function choosePassTarget(qbName, routes) {
