@@ -1253,13 +1253,25 @@
 
   function assignRoutes() {
     const routes = {};
+    const eligible = getEligibleReceivers().map(r => r.player);
+    const lbs = defensiveFormation.filter(d => d.position.startsWith('LB'));
     currentFormation.forEach(f => {
       if (!f.player) return;
+      if (!eligible.includes(f.player)) return;
       const routeType = receiverRoutes[f.player] || 'Short';
       const info = routeTypeAirYards.find(r => r.routeType === routeType);
       const depth = info ? randomInt(info.minAirYards, info.maxAirYards) : 0;
       const time = CalcTimeNeededToOpen(depth, f.player);
-      routes[f.player] = { routeType, airYards: depth, TTO: time };
+      let defender = null;
+      if (f.position.startsWith('RB')) {
+        const rbIndex = f.position === 'RB1' ? 0 : 1;
+        const aligned = defensiveFormation.find(d => d.align === f.position && d.position.startsWith('LB'));
+        defender = aligned ? aligned.player : (lbs[rbIndex] ? lbs[rbIndex].player : (lbs[0] ? lbs[0].player : null));
+      } else {
+        const aligned = defensiveFormation.find(d => d.align === f.position);
+        defender = aligned ? aligned.player : null;
+      }
+      routes[f.player] = { routeType, airYards: depth, TTO: time, defender, position: f.position };
     });
     return routes;
   }
@@ -1278,7 +1290,32 @@
   }
 
   function choosePassTarget(qbName, routes) {
-    // Decide which receiver the quarterback targets
+    Object.keys(routes).forEach(name => {
+      const route = routes[name];
+      const wr = playerTraits[name] || {};
+      const db = playerTraits[route.defender] || {};
+      let separation = 0;
+
+      if (route.airYards > 10) {
+        const wrTotal = (Number(wr.speed) || 0) + (Number(wr.acceleration) || 0);
+        const dbTotal = (Number(db.speed) || 0) + (Number(db.acceleration) || 0);
+        const roll = randomInt(0, wrTotal + dbTotal);
+        if (roll <= wrTotal) separation += 1;
+      }
+
+      for (let i = 0; i < 3; i++) {
+        const roll = randomInt(0, 100);
+        if (roll <= (Number(wr.routeRunning) || 0)) separation += 1;
+      }
+
+      for (let i = 0; i < 2; i++) {
+        const roll = randomInt(0, 100);
+        if (roll <= (Number(db.coverage) || 0)) separation -= 1;
+      }
+
+      route.separation = separation;
+    });
+
     return null;
   }
 
