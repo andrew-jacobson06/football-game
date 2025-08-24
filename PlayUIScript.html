@@ -28,7 +28,7 @@
   let runningClock = false;
   let completionTable = [];
   let routeTypeAirYards = [];
-  let timeNeededToThrow = [];
+  let timeNeededToOpen = [];
 
 
   function updateStickyOffsets() {
@@ -1064,7 +1064,7 @@
       tackleSettings = data.tackleTable || [];
       completionTable = data.completionTable || [];
       routeTypeAirYards = data.routeTypeAirYards || [];
-      timeNeededToThrow = data.timeNeededToThrow || [];
+      timeNeededToOpen = data.timeNeededToThrow || [];
       if (callback) callback();
     }).getFrontendSettings();
   }
@@ -1245,9 +1245,9 @@
   async function passPlay(qbName) {
     if (!qbName) return;
     const routes = assignRoutes();
-    const timeToThrow = CalcTimeNeededToThrow(routes);
+    //routes = CalcTimeNeededToOpen(routes);
     const target = choosePassTarget(qbName, routes);
-    const result = determinePassOutcome(qbName, target, routes, timeToThrow);
+    const result = determinePassOutcome(qbName, target, routes);
     console.log('Pass play result', result);
   }
 
@@ -1258,26 +1258,23 @@
       const routeType = receiverRoutes[f.player] || 'Short';
       const info = routeTypeAirYards.find(r => r.routeType === routeType);
       const depth = info ? randomInt(info.minAirYards, info.maxAirYards) : 0;
-      routes[f.player] = { routeType, airYards: depth };
+      const time = CalcTimeNeededToOpen(depth, f.player);
+      routes[f.player] = { routeType, airYards: depth, TTO: time };
     });
     return routes;
   }
 
-  function CalcTimeNeededToThrow(routes) {
-    const times = {};
-    Object.entries(routes).forEach(([player, info]) => {
-      const read = playerReadSelection[player];
-      if (!read) return;
-      const table = timeNeededToThrow.find(t => t.qbRead === read);
-      if (!table) return;
-      const depth = info.airYards;
-      let key;
-      if (depth < 10) key = 'lt10';
-      else if (depth <= 20) key = 'tenTo20';
-      else key = 'twentyOnePlus';
-      times[player] = table[key];
-    });
-    return times;
+  function CalcTimeNeededToOpen(depth, player) {
+    const time = 5;
+    const read = playerReadSelection[player];
+    if (!read) return;
+    const table = timeNeededToOpen.find(t => t.qbRead === read);
+    if (!table) return;
+    let key;
+    if (depth < 10) key = 'lt10';
+    else if (depth <= 20) key = 'tenTo20';
+    else key = 'twentyOnePlus';
+    return table[key];
   }
 
   function choosePassTarget(qbName, routes) {
