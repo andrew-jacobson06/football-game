@@ -1423,9 +1423,9 @@
 
     const completionRoll = Math.random() * 100;
     if (completionRoll <= completionPct) {
-      const yac = calcYAC(target);
+      const yac = calcYAC(target.target);
       const totalYards = airYards + (Number(yac) || 0);
-      return { completed: true, intercepted: false, yards: totalYards };
+      return { completed: true, intercepted: false, yards: totalYards, caughtBy: target.target};
     }
 
     const qbAccCalc = Math.pow(((Number(qb.accuracy) || 0) - 60) / 10, 2) / 2;
@@ -1438,10 +1438,15 @@
     if (pickRoll <= pickChance) {
       const yac = calcYAC(defenderName);
       const totalYards = airYards + (Number(yac) || 0);
-      return { completed: false, intercepted: true, yards: totalYards };
+      return { completed: false, intercepted: true, yards: totalYards, caughtBy: defenderName};
     }
 
     return { completed: false, intercepted: false, yards: 0 };
+  }
+
+  function calcYAC(playerName){
+    console.log(playerName);
+    return 2;
   }
 
   // === MAIN PLAY ===
