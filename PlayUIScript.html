@@ -1290,32 +1290,7 @@
   }
 
   function choosePassTarget(qbName, routes) {
-    Object.keys(routes).forEach(name => {
-      const route = routes[name];
-      const wr = playerTraits[name] || {};
-      const db = playerTraits[route.defender] || {};
-      let separation = 0;
-
-      if (route.airYards > 10) {
-        const wrTotal = (Number(wr.speed) || 0) + (Number(wr.acceleration) || 0);
-        const dbTotal = (Number(db.speed) || 0) + (Number(db.acceleration) || 0);
-        const roll = randomInt(0, wrTotal + dbTotal);
-        if (roll <= wrTotal) separation += 1;
-      }
-
-      for (let i = 0; i < 3; i++) {
-        const roll = randomInt(0, 100);
-        if (roll <= (Number(wr.routeRunning) || 0)) separation += 1;
-      }
-
-      for (let i = 0; i < 2; i++) {
-        const roll = randomInt(0, 100);
-        if (roll <= (Number(db.coverage) || 0)) separation -= 1;
-      }
-
-      route.separation = separation;
-    });
-
+    routes = determineSeparation(routes);
     const qb = playerTraits[qbName] || {};
     const readRoll = randomInt(0, 100);
     const qbReadsDefense = readRoll <= (Number(qb.readDefense) || 0);
@@ -1348,13 +1323,41 @@
     for (const name of Object.keys(routes)) {
       const w = routes[name].weight || 0;
       if (roll < w) {
-        chosen = name;
+        chosen = routes[name];
         break;
       }
       roll -= w;
     }
 
     return chosen;
+  }
+
+  function determineSeparation(routes){
+     Object.keys(routes).forEach(name => {
+      const route = routes[name];
+      const wr = playerTraits[name] || {};
+      const db = playerTraits[route.defender] || {};
+      let separation = 0;
+
+      if (route.airYards > 10) {
+        const wrTotal = (Number(wr.speed) || 0) + (Number(wr.acceleration) || 0);
+        const dbTotal = (Number(db.speed) || 0) + (Number(db.acceleration) || 0);
+        const roll = randomInt(0, wrTotal + dbTotal);
+        if (roll <= wrTotal) separation += 1;
+      }
+
+      for (let i = 0; i < 3; i++) {
+        const roll = randomInt(0, 100);
+        if (roll <= (Number(wr.routeRunning) || 0)) separation += 1;
+      }
+
+      for (let i = 0; i < 2; i++) {
+        const roll = randomInt(0, 100);
+        if (roll <= (Number(db.coverage) || 0)) separation -= 1;
+      }
+
+      route.separation = separation;
+    });
   }
 
   function determinePassOutcome(qbName, target, routes, timeToThrow) {
