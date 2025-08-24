@@ -1247,7 +1247,8 @@
     const routes = assignRoutes();
     //routes = CalcTimeNeededToOpen(routes);
     const target = choosePassTarget(qbName, routes);
-    const result = determinePassOutcome(qbName, target, routes);
+    const completionPct = determineCompletionPct(qbName, target);
+    const result = determinePassOutcome(qbName, target, routes, completionPct);
     console.log('Pass play result', result);
   }
 
@@ -1359,6 +1360,42 @@
       route.separation = separation;
     });
     return routes;
+  }
+
+  function qbAccuracyAdjust(qb) {
+    const acc = Number(qb.accuracy) || 0;
+    const diff = (acc - 50) / 10;
+    const adjust = (diff ** 2) / 2;
+    return acc >= 50 ? adjust : -adjust;
+  }
+
+  function determineCompletionPct(qbName, target) {
+    if (!target) return 0;
+    const qb = playerTraits[qbName] || {};
+    const routeInfo = target.routeInfo || {};
+    const separation = Number(routeInfo.separation) || 0;
+    const depth = Number(routeInfo.airYards) || 0;
+    let jumpBall = false;
+
+    if (
+      separation < 1 ||
+      (separation < 3 && (state.BallOn + depth > 100 || state.BallOn + depth < 0))
+    ) {
+      jumpBall = true;
+    }
+
+    let baseCompletion = 0;
+    if (completionTable && completionTable.length > 0) {
+      for (const row of completionTable) {
+        if (depth <= row.pastLos) {
+          baseCompletion = Number(row.baseCompletion) || 0;
+          break;
+        }
+      }
+    }
+
+    const completionPct = baseCompletion + qbAccuracyAdjust(qb);
+    return completionPct;
   }
 
   function determinePassOutcome(qbName, target, routes, timeToThrow) {
