@@ -257,6 +257,19 @@ function getTimeNeededToThrow() {
     }));
 }
 
+function getCompletionSeparationAdjustment() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
+  const data = sheet.getDataRange().getValues();
+
+  return data
+    .filter(row => typeof row[0] === "string" && row[0].startsWith("separation_"))
+    .map(row => ({
+      label: row[0],
+      separation: Number(row[1]),
+      catchPctChange: Number(row[2])
+    }));
+}
+
 function getFrontendSettings() {
   return {
     thresholds: getRunThresholdsFromSettings(),
@@ -265,7 +278,8 @@ function getFrontendSettings() {
     tackleTable: getTackleDistributions(),
     completionTable: getAirYardsCompletionTable(),
     routeTypeAirYards: getRouteTypeAirYards(),
-    timeNeededToThrow: getTimeNeededToThrow()
+    timeNeededToThrow: getTimeNeededToThrow(),
+    completionSeparationAdjustment: getCompletionSeparationAdjustment()
   };
 }
 function predictPlayType(down, distance) {

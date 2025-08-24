@@ -29,6 +29,7 @@
   let completionTable = [];
   let routeTypeAirYards = [];
   let timeNeededToOpen = [];
+  let completionSeparationAdjustment = [];
 
 
   function updateStickyOffsets() {
@@ -1065,6 +1066,7 @@
       completionTable = data.completionTable || [];
       routeTypeAirYards = data.routeTypeAirYards || [];
       timeNeededToOpen = data.timeNeededToThrow || [];
+      completionSeparationAdjustment = data.completionSeparationAdjustment || [];
       if (callback) callback();
     }).getFrontendSettings();
   }
@@ -1394,7 +1396,11 @@
       }
     }
 
-    const completionPct = baseCompletion + qbAccuracyAdjust(qb);
+    let completionPct = baseCompletion + qbAccuracyAdjust(qb);
+    const sepAdjust = completionSeparationAdjustment.find(r => Number(r.separation) === separation);
+    if (sepAdjust) {
+      completionPct += Number(sepAdjust.catchPctChange) || 0;
+    }
     return completionPct;
   }
 
