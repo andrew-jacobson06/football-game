@@ -1325,9 +1325,36 @@
       const wr = playerTraits[name] || {};
       route.percievedSeparation = qbReadsDefense ? route.separation : 0;
       route.throwLikelyhood = ((Number(wr.qbFavorite) || 0) / 10) + (route.percievedSeparation * 3);
+
+      // Determine weight based on depth of route using completionTable
+      let airyardsweight = 0;
+      if (completionTable && completionTable.length > 0) {
+        for (const row of completionTable) {
+          if (route.airYards <= row.pastLos) {
+            airyardsweight = Number(row.percentage) || 0;
+            break;
+          }
+        }
+      }
+      route.airyardsweight = airyardsweight;
+      route.weight = airyardsweight * route.throwLikelyhood;
     });
 
-    return null;
+    const totalWeight = Object.keys(routes).reduce((sum, name) => sum + (routes[name].weight || 0), 0);
+    if (totalWeight <= 0) return null;
+
+    let roll = Math.random() * totalWeight;
+    let chosen = Object.keys(routes)[0];
+    for (const name of Object.keys(routes)) {
+      const w = routes[name].weight || 0;
+      if (roll < w) {
+        chosen = name;
+        break;
+      }
+      roll -= w;
+    }
+
+    return chosen;
   }
 
   function determinePassOutcome(qbName, target, routes, timeToThrow) {
