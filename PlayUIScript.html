@@ -26,6 +26,8 @@
   let qbReadAssignments = {};
   let selectedPlayer = null;
   let runningClock = false;
+  let completionTable = [];
+  let routeTypeAirYards = [];
 
 
   function updateStickyOffsets() {
@@ -1059,6 +1061,8 @@
       breakawaySettings = data.breakaways;
       drainSettings = data.staminaDrains;
       tackleSettings = data.tackleTable || [];
+      completionTable = data.completionTable || [];
+      routeTypeAirYards = data.routeTypeAirYards || [];
       if (callback) callback();
     }).getFrontendSettings();
   }
@@ -1233,6 +1237,36 @@
     autoRelease = false;
     offStarPower = false;
     defStarPower = false;
+  }
+
+  // === PASS PLAY ===
+  async function passPlay(qbName) {
+    if (!qbName) return;
+    const routes = assignRoutes();
+    const timeToThrow = determineTimeToThrow(qbName);
+    const target = choosePassTarget(qbName, routes);
+    const result = determinePassOutcome(qbName, target, routes, timeToThrow);
+    console.log('Pass play result', result);
+  }
+
+  function assignRoutes() {
+    // Determine each receiver's route depth
+    return {};
+  }
+
+  function determineTimeToThrow(qbName) {
+    // Calculate how long the quarterback has to throw
+    return 0;
+  }
+
+  function choosePassTarget(qbName, routes) {
+    // Decide which receiver the quarterback targets
+    return null;
+  }
+
+  function determinePassOutcome(qbName, target, routes, timeToThrow) {
+    // Determine the outcome of the pass attempt
+    return { completed: false, yards: 0 };
   }
 
   // === MAIN PLAY ===

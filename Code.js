@@ -214,12 +214,42 @@ function getTackleDistributions() {
     .sort((a, b) => a.yardageCap - b.yardageCap);
 }
 
+function getAirYardsCompletionTable() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
+  const data = sheet.getDataRange().getValues();
+
+  return data
+    .filter(row => typeof row[0] === "string" && row[0].startsWith("airYards_Completion_"))
+    .map(row => ({
+      label: row[0],
+      pastLos: Number(row[1]),
+      baseCompletion: Number(row[2]),
+      percentage: Number(row[3])
+    }));
+}
+
+function getRouteTypeAirYards() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
+  const data = sheet.getDataRange().getValues();
+
+  return data
+    .filter(row => typeof row[0] === "string" && row[0].startsWith("routeType_AirYardsReqd_"))
+    .map(row => ({
+      label: row[0],
+      routeType: String(row[1]),
+      minAirYards: Number(row[2]),
+      maxAirYards: Number(row[3])
+    }));
+}
+
 function getFrontendSettings() {
   return {
     thresholds: getRunThresholdsFromSettings(),
     breakaways: getBreakawayYards(),
     staminaDrains: getStaminaDrains(),
-    tackleTable: getTackleDistributions()
+    tackleTable: getTackleDistributions(),
+    completionTable: getAirYardsCompletionTable(),
+    routeTypeAirYards: getRouteTypeAirYards()
   };
 }
 function predictPlayType(down, distance) {
