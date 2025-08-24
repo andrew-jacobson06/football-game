@@ -1316,6 +1316,17 @@
       route.separation = separation;
     });
 
+    const qb = playerTraits[qbName] || {};
+    const readRoll = randomInt(0, 100);
+    const qbReadsDefense = readRoll <= (Number(qb.readDefense) || 0);
+
+    Object.keys(routes).forEach(name => {
+      const route = routes[name];
+      const wr = playerTraits[name] || {};
+      route.percievedSeparation = qbReadsDefense ? route.separation : 0;
+      route.throwLikelyhood = ((Number(wr.qbFavorite) || 0) / 10) + (route.percievedSeparation * 3);
+    });
+
     return null;
   }
 
