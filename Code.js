@@ -264,6 +264,7 @@ function logPlayHistory(play) {
       tackler,
       result,
       desc,
+      recoveredby,
       newdown,
       newdist,
       newballon,
@@ -281,21 +282,22 @@ function logPlayHistory(play) {
       Number(distance) || 0,
       Number(ballon) || 0,
       String(playtype || ""),
-    String(player || ""),
-    Number(yards) || 0,
-    String(defensepredicted || ""),
-    predictioncorrect === true || predictioncorrect === "true" ? true : false,
-    String(tackler || ""),
-    String(result || ""),
-    String(desc || ""),
-    Number(newdown) || 0,
-    Number(newdist) || 0,
-    Number(newballon) || 0,
-    Number(drivestart) || 0,
-    Number(homescore) || 0,
-    Number(awayscore) || 0
-  ]);
-}
+      String(player || ""),
+      Number(yards) || 0,
+      String(defensepredicted || ""),
+      predictioncorrect === true || predictioncorrect === "true" ? true : false,
+      String(tackler || ""),
+      String(result || ""),
+      String(desc || ""),
+      String(recoveredby || ""),
+      Number(newdown) || 0,
+      Number(newdist) || 0,
+      Number(newballon) || 0,
+      Number(drivestart) || 0,
+      Number(homescore) || 0,
+      Number(awayscore) || 0
+    ]);
+  }
 
 function getPlayHistory(gameId) {
   Logger.log(gameId);
@@ -351,8 +353,8 @@ function getPlayHistory(gameId) {
   };
 
   result.sort((a, b) => {
-    const qA = quarterOrder[String(a.Qtr).toUpperCase()] || 99;
-    const qB = quarterOrder[String(b.Qtr).toUpperCase()] || 99;
+    const qA = a.QTR;
+    const qB = b.QTR;
     if (qA !== qB) return qA - qB;
     return parseTime(b.Time) - parseTime(a.Time);
   });

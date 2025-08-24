@@ -988,8 +988,10 @@
     });
 
     const total = dlTotal + olTotal;
+    console.log(dlTotal + " -- " + olTotal);
     if (total <= 0) return { defenseWins: false };
     const roll = Math.floor(Math.random() * total) + 1;
+    console.log(" -- " + roll);
     return { defenseWins: roll <= dlTotal };
   }
 
@@ -1068,12 +1070,17 @@
   }
 
   function tryAutoStuff() {
+    console.log("autoStuffing");
     let starPower = 0;
     defensiveFormation.forEach(f => {
       if (f.player && (f.position.startsWith('DL') || f.position.startsWith('LB'))) {
-        starPower += ((Number(playerTraits[f.player]?.defStars || 0))^2)/2;
+        console.log(Number(playerTraits[f.player]?.defStars || 0));
+        console.log((Number(playerTraits[f.player]?.defStars || 0))**2);
+
+        starPower += ((Number(playerTraits[f.player]?.defStars || 0))**2)/2.5;
       }
     });
+    console.log("Star Power" + starPower);
     const roll = Math.floor(Math.random() * 100) + 1;
     return roll <= starPower;
   }
@@ -1085,7 +1092,7 @@
       const pos = f.position;
       const isOffensive = ['QB','RB1','RB2','TEOL1','TEOL2','TEOL3','TEOL4','TEOL5'].includes(pos);
       if (isOffensive && f.player !== ballCarrier) {
-        starPower += ((Number(playerTraits[f.player]?.offStars || 0))^2)/2;
+        starPower += ((Number(playerTraits[f.player]?.offStars || 0))**2)/2.5;
       }
     });
     const roll = Math.floor(Math.random() * 100) + 1;
@@ -1622,39 +1629,45 @@
   // === FRONTEND LOGIC ENGINE ===
   function simulateSingleCarry(stats) {
     const modLog = [];
-    let roll = getModifiedRoll(stats, modLog);
-    roll = maybeBoostRollForAcceleration(roll, stats, modLog);
-    let yards = getYardageOutcome(roll, stats, modLog);
-    if (offStarPower) {
-      yards += 5;
-      modLog.push(`Yard +5 : offStarPower`);
-    }
-    if (defStarPower) {
-      yards += -5;
-      modLog.push(`Yard -5 : defStarPower`);
-    }
-    yards = maybeAvoidLoss(yards, stats, modLog);
-    yards = adjustChunkRunForSpeed(yards, stats, modLog);
+    let roll = 0;
+    let yards = 0;
+    if (autoStuff) {
+      // integer in [-2, 2]
+      yards = Math.floor(Math.random() * 5) - 2;
+      modLog.push('Auto Stuff!');
+      if (yards <= 2) yards += applyTraitEffect("Vision", stats.vision + Math.min(0, stats.fatigue), true, modLog);
+      if (yards <= 4) yards += applyTraitEffect("Power", average(stats.size, stats.strength + Math.min(0, stats.fatigue)), true, modLog);
+    } else{
+      roll = getModifiedRoll(stats, modLog);
+      roll = maybeBoostRollForAcceleration(roll, stats, modLog);
+      yards = getYardageOutcome(roll, stats, modLog);
+      if (offStarPower) {
+        yards += Math.floor(playerTraits[stats.name].offStars);
+        modLog.push(`Yard +`+Math.floor(playerTraits[stats.name].offStars)+` : offStarPower`);
+      }
+      if (defStarPower) {
+        yards += - Math.floor(playerTraits[defStarPowerTackler].defStars);
+        modLog.push(`Yard -`+Math.floor(playerTraits[defStarPowerTackler].defStars)+` : defStarPower`);
+      }
+      yards = maybeAvoidLoss(yards, stats, modLog);
+      yards = adjustChunkRunForSpeed(yards, stats, modLog);
 
-    if (yards <= 2) yards += applyTraitEffect("Vision", stats.vision + Math.min(0, stats.fatigue), true, modLog);
-    if (yards <= 4) yards += applyTraitEffect("Power", average(stats.size, stats.strength + Math.min(0, stats.fatigue)), true, modLog);
-    if (yards >= 3 && yards <= 4) yards += applyTraitEffect("Acceleration", stats.acceleration + Math.min(0, stats.fatigue), true, modLog);
-    if (yards > 0 && yards < 10) yards += applyTraitEffect("Juke", stats.juke + Math.min(0, stats.fatigue), true, modLog);
+      if (yards <= 2) yards += applyTraitEffect("Vision", stats.vision + Math.min(0, stats.fatigue), true, modLog);
+      if (yards <= 4) yards += applyTraitEffect("Power", average(stats.size, stats.strength + Math.min(0, stats.fatigue)), true, modLog);
+      if (yards >= 3 && yards <= 4) yards += applyTraitEffect("Acceleration", stats.acceleration + Math.min(0, stats.fatigue), true, modLog);
+      if (yards > 0 && yards < 10) yards += applyTraitEffect("Juke", stats.juke + Math.min(0, stats.fatigue), true, modLog);
+    }
 
     return { name: stats.name, roll, yards, modLog };
   }
 
   function getModifiedRoll(stats, modLog) {
-    // Float base roll from 1.000 to ~100.000
-    let baseRoll = Math.random() * 100; // 1–100 float
+    // Float base roll from 0 to ~100.000
+    let baseRoll = Math.random() * 100; // 0–100 float
 
     if (autoRelease) {
-      baseRoll += 7;
+      baseRoll += 8;
       modLog.push('Pre +7 Auto Release');
-    }
-    if (autoStuff) {
-      baseRoll -= 10;
-      modLog.push('Pre -10 Auto Stuff');
     }
 
     // Calculate vision mod
@@ -1664,7 +1677,7 @@
     const modified = baseRoll + visionMod;
 
     // Clamp final result to valid roll range
-    return Math.max(1, Math.min(100, modified));
+    return Math.max(0, Math.min(100, modified));
   }
 
   function maybeBoostRollForAcceleration(roll, stats, modLog) {
