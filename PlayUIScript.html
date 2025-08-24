@@ -1401,6 +1401,12 @@
     if (sepAdjust) {
       completionPct += Number(sepAdjust.catchPctChange) || 0;
     }
+    const receiver = playerTraits[target.target] || {};
+    const hands = Number(receiver.hands);
+    if (!isNaN(hands)) {
+      const diff = (hands - 60) / 10;
+      completionPct += (diff ** 2) / 2;
+    }
     return completionPct;
   }
 
