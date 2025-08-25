@@ -8,6 +8,8 @@
   let tackleSettings = [];
   let frontendStats = [];
   let defensiveStats = [];
+  let passingStats = [];
+  let receivingStats = [];
   let gameId = 1;
   let playHistory = [];
   let savedFormations = [];
@@ -238,6 +240,8 @@
     drainSettings = {};  // Populated from backend on load
     frontendStats = [];
     defensiveStats = [];
+    passingStats = [];
+    receivingStats = [];
     playHistory = [];
     if (typeof selectedGameId !== 'undefined') {
       gameId = selectedGameId;
@@ -266,41 +270,101 @@
               normalizeBallOn(playHistory);
               frontendStats = [];
               defensiveStats = [];
+              passingStats = [];
+              receivingStats = [];
 
               playHistory.forEach(play => {
-                if (!play.Player || !play.PlayType || play.PlayType !== 'Run') return;
+              playHistory.forEach(play => {
+                if (!play.PlayType) return;
 
-                const player = play.Player;
-                const team = play.Possession || '';
-                const yards = parseFloat(play.Yards) || 0;
-                const td = play.Result === "Touchdown";
-                const fumble = play.Result === "Fumble";
-                const recoveredBy = play.RecoveredBy || play.recoveredby;
+                if (play.PlayType === 'Run') {
+                  if (!play.Player) return;
+                  const player = play.Player;
+                  const team = play.Possession || '';
+                  const yards = parseFloat(play.Yards) || 0;
+                  const td = play.Result === "Touchdown";
+                  const fumble = play.Result === "Fumble";
+                  const recoveredBy = play.RecoveredBy || play.recoveredby;
 
-                let p = frontendStats.find(s => s.playername === player && s.team === team);
-                if (!p) {
-                  p = { playername: player, team, carries: 0, yards: 0, tds: 0, fumbles: 0, long: 0 };
-                  frontendStats.push(p);
-                }
-
-                p.carries++;
-                p.yards += yards;
-                if (td) p.tds++;
-                if (fumble) p.fumbles++;
-                if (yards > p.long) p.long = yards;
-
-                if (play.Tackler && play.Tackler !== 'NA') {
-                  const defTeam = team === 'Home' ? 'Away' : 'Home';
-                  let d = defensiveStats.find(s => s.playername === play.Tackler && s.team === defTeam);
-                  if (!d) {
-                    d = { playername: play.Tackler, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0 };
-                    defensiveStats.push(d);
+                  let p = frontendStats.find(s => s.playername === player && s.team === team);
+                  if (!p) {
+                    p = { playername: player, team, carries: 0, yards: 0, tds: 0, fumbles: 0, long: 0 };
+                    frontendStats.push(p);
                   }
-                  d.tackles++;
-                  if (yards < 0) d.tfl++;
-                  if (fumble) {
-                    d.ff++;
-                    if (recoveredBy === play.Tackler) d.fr++;
+                  p.carries++;
+                  p.yards += yards;
+                  if (td) p.tds++;
+                  if (fumble) p.fumbles++;
+                  if (yards > p.long) p.long = yards;
+
+                  if (play.Tackler && play.Tackler !== 'NA') {
+                    const defTeam = team === 'Home' ? 'Away' : 'Home';
+                    let d = defensiveStats.find(s => s.playername === play.Tackler && s.team === defTeam);
+                    if (!d) {
+                      d = { playername: play.Tackler, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0 };
+                      defensiveStats.push(d);
+                    }
+                    d.tackles++;
+                    if (yards < 0) d.tfl++;
+                    if (fumble) {
+                      d.ff++;
+                      if (recoveredBy === play.Tackler) d.fr++;
+                    }
+                  }
+                } else if (play.PlayType === 'Pass') {
+                  const qb = play.Passer || play.Player;
+                  const receiver = play.Target || play.Receiver || play.Player;
+                  const team = play.Possession || '';
+                  const yards = parseFloat(play.Yards) || 0;
+                  const result = play.Result || '';
+                  const completed = result === 'Complete' || result === 'Touchdown';
+                  const intercepted = result === 'Intercepted';
+                  const td = result === 'Touchdown';
+                  const fumble = result === 'Fumble';
+                  if (qb) {
+                    let ps = passingStats.find(s => s.playername === qb && s.team === team);
+                    if (!ps) {
+                      ps = { playername: qb, team, attempts: 0, completions: 0, yards: 0, tds: 0, ints: 0 };
+                      passingStats.push(ps);
+                    }
+                    ps.attempts++;
+                    if (completed) { ps.completions++; ps.yards += yards; if (td) ps.tds++; }
+                    if (intercepted) ps.ints++;
+                  }
+                  if (receiver) {
+                    let rs = receivingStats.find(s => s.playername === receiver && s.team === team);
+                    if (!rs) {
+                      rs = { playername: receiver, team, targets: 0, receptions: 0, yards: 0, tds: 0, fumbles: 0, long: 0 };
+                      receivingStats.push(rs);
+                    }
+                    rs.targets++;
+                    if (completed) {
+                      rs.receptions++;
+                      rs.yards += yards;
+                      if (td) rs.tds++;
+                      if (yards > rs.long) rs.long = yards;
+                    }
+                    if (fumble) rs.fumbles++;
+                  }
+                  if (intercepted) {
+                    const defTeam = team === 'Home' ? 'Away' : 'Home';
+                    const defender = play.Interceptor || play.Tackler;
+                    if (defender) {
+                      let d = defensiveStats.find(s => s.playername === defender && s.team === defTeam);
+                      if (!d) {
+                        d = { playername: defender, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0 };
+                        defensiveStats.push(d);
+                      }
+                      d.ints++;
+                    }
+                  } else if (play.Defender) {
+                    const defTeam = team === 'Home' ? 'Away' : 'Home';
+                    let d = defensiveStats.find(s => s.playername === play.Defender && s.team === defTeam);
+                    if (!d) {
+                      d = { playername: play.Defender, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0 };
+                      defensiveStats.push(d);
+                    }
+                    d.deflections = (d.deflections || 0) + 1;
                   }
                 }
               });
@@ -1251,6 +1315,43 @@
     const target = choosePassTarget(qbName, routes);
     const completionPct = determineCompletionPct(qbName, target);
     const result = determinePassOutcome(qbName, target, routes, completionPct);
+
+    let yards = result.yards || 0;
+    let touchdown = false;
+    let tackler = null;
+    let fumble = false;
+    let recoveredBy = null;
+
+    if (result.completed) {
+      const newBall = state.Possession === 'Home' ? state.BallOn + yards : state.BallOn - yards;
+      touchdown = state.Possession === 'Home' ? newBall >= 100 : newBall <= 0;
+      if (!touchdown) {
+        tackler = determineTackler(yards);
+        const fum = checkForFumble(target.target, tackler);
+        if (fum.fumble) {
+          fumble = true;
+          recoveredBy = fum.recoveredBy;
+        }
+      }
+    }
+
+    updatePassingStats(qbName, yards, result.completed, result.intercepted, touchdown);
+    if (target) {
+      updateReceivingStats(target.target, yards, result.completed, touchdown, fumble);
+    }
+    if (result.intercepted) {
+      updateDefensiveStatsPass(result.caughtBy, { interception: true });
+    } else {
+      const defenderName = target && target.routeInfo ? target.routeInfo.defender : null;
+      if (defenderName && !result.completed) {
+        updateDefensiveStatsPass(defenderName, { deflection: true });
+      }
+      if (tackler) {
+        updateDefensiveStatsPass(tackler, { tackle: true, yards, fumble, recoveredBy });
+      }
+    }
+
+    renderBoxScore();
     console.log('Pass play result', result);
   }
 
@@ -1459,7 +1560,7 @@
       const defTeam = state.Possession === 'Home' ? 'Away' : 'Home';
       let d = defensiveStats.find(s => s.playername === defenderName && s.team === defTeam);
       if (!d) {
-        d = { playername: defenderName, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0 };
+        d = { playername: defenderName, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0 };
         defensiveStats.push(d);
       }
       if (typeof d.deflections !== 'number') d.deflections = 0;
@@ -1864,6 +1965,65 @@
     });
   }
 
+  function updatePassingStats(qb, yards, completed, intercepted, td) {
+    const team = state.Possession;
+    let p = passingStats.find(s => s.playername === qb && s.team === team);
+    if (!p) {
+      p = { playername: qb, team, attempts: 0, completions: 0, yards: 0, tds: 0, ints: 0 };
+      passingStats.push(p);
+    }
+    p.attempts++;
+    if (completed) {
+      p.completions++;
+      p.yards += yards;
+      if (td) p.tds++;
+    }
+    if (intercepted) {
+      p.ints++;
+    }
+  }
+
+  function updateReceivingStats(rec, yards, completed, td, fumble) {
+    const team = state.Possession;
+    let r = receivingStats.find(s => s.playername === rec && s.team === team);
+    if (!r) {
+      r = { playername: rec, team, targets: 0, receptions: 0, yards: 0, tds: 0, fumbles: 0, long: 0 };
+      receivingStats.push(r);
+    }
+    r.targets++;
+    if (completed) {
+      r.receptions++;
+      r.yards += yards;
+      if (td) r.tds++;
+      if (yards > r.long) r.long = yards;
+    }
+    if (fumble) r.fumbles++;
+  }
+
+  function updateDefensiveStatsPass(player, opts = {}) {
+    if (!player) return;
+    const team = state.Possession === 'Home' ? 'Away' : 'Home';
+    let d = defensiveStats.find(s => s.playername === player && s.team === team);
+    if (!d) {
+      d = { playername: player, team, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0 };
+      defensiveStats.push(d);
+    }
+    if (opts.tackle) {
+      d.tackles++;
+      if ((opts.yards || 0) < 0) d.tfl++;
+      if (opts.fumble) {
+        d.ff++;
+        if (opts.recoveredBy === player) d.fr++;
+      }
+    }
+    if (opts.deflection) {
+      d.deflections = (d.deflections || 0) + 1;
+    }
+    if (opts.interception) {
+      d.ints = (d.ints || 0) + 1;
+    }
+  }
+
   function updateFrontendStats(player, yards, result, team, tackler, recoveredBy) {
     const defTeam = team === "Home" ? "Away" : "Home";
     let p = frontendStats.find(s => s.playername === player && s.team === team);
@@ -1880,7 +2040,7 @@
     if (tackler && tackler !== "NA") {
       let d = defensiveStats.find(s => s.playername === tackler && s.team === defTeam);
       if (!d) {
-        d = { playername: tackler, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0 };
+        d = { playername: tackler, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0 };
         defensiveStats.push(d);
       }
       d.tackles++;
@@ -1895,11 +2055,28 @@
   }
 
   function renderBoxScore() {
+    renderPassingTable("Home");
+    renderPassingTable("Away");
     renderRushingTable("Home");
     renderRushingTable("Away");
+    renderReceivingTable("Home");
+    renderReceivingTable("Away");
     renderDefensiveTable("Home");
     renderDefensiveTable("Away");
     sortBoxScoreTables();
+  }
+
+  function renderPassingTable(team) {
+    const body = document.getElementById(team === "Home" ? "homePassingBody" : "awayPassingBody");
+    if (!body) return;
+    body.innerHTML = "";
+    const players = passingStats.filter(p => p.team === team);
+    players.forEach(p => {
+      const avg = p.completions ? (p.yards / p.completions).toFixed(1) : "0.0";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${p.playername}</td><td>${p.completions}/${p.attempts}</td><td>${p.yards}</td><td>${avg}</td><td>${p.tds}</td><td>${p.ints}</td><td>0</td><td>0.0</td>`;
+      body.appendChild(tr);
+    });
   }
 
   function renderRushingTable(team) {
@@ -1926,6 +2103,31 @@
     }
   }
 
+  function renderReceivingTable(team) {
+    const body = document.getElementById(team === "Home" ? "homeReceivingBody" : "awayReceivingBody");
+    if (!body) return;
+    body.innerHTML = "";
+    const players = receivingStats.filter(p => p.team === team).sort((a, b) => b.yards - a.yards);
+    let total = { receptions: 0, yards: 0, tds: 0, long: 0, targets: 0 };
+    players.forEach(p => {
+      const avg = p.receptions ? (p.yards / p.receptions).toFixed(1) : "0.0";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${p.playername}</td><td>${p.receptions}</td><td>${p.yards}</td><td>${avg}</td><td>${p.tds}</td><td>${p.long}</td><td>${p.targets}</td>`;
+      body.appendChild(tr);
+      total.receptions += p.receptions;
+      total.yards += p.yards;
+      total.tds += p.tds;
+      total.targets += p.targets;
+      if (p.long > total.long) total.long = p.long;
+    });
+    if (players.length) {
+      const avgTeam = total.receptions ? (total.yards / total.receptions).toFixed(1) : "0.0";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>TEAM</td><td>${total.receptions}</td><td>${total.yards}</td><td>${avgTeam}</td><td>${total.tds}</td><td>${total.long}</td><td>${total.targets}</td>`;
+      body.appendChild(tr);
+    }
+  }
+
   function renderDefensiveTable(team) {
     const body = document.getElementById(team === "Home" ? "homeDefensiveBody" : "awayDefensiveBody");
     if (!body) return;
@@ -1933,7 +2135,7 @@
     const players = defensiveStats.filter(p => p.team === team).sort((a, b) => b.tackles - a.tackles);
     players.forEach(p => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${p.playername}</td><td>${p.tackles}</td><td>${p.tfl}</td><td>0</td><td>${p.ff}</td><td>${p.fr}</td><td>0</td><td>${p.deflections || 0}</td>`;
+      tr.innerHTML = `<td>${p.playername}</td><td>${p.tackles}</td><td>${p.tfl}</td><td>0</td><td>${p.ff}</td><td>${p.fr}</td><td>${p.ints || 0}</td><td>${p.deflections || 0}</td>`;
       body.appendChild(tr);
     });
   }
