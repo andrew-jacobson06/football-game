@@ -270,6 +270,41 @@ function getCompletionSeparationAdjustment() {
     }));
 }
 
+function getYacBySeparation() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
+  const data = sheet.getDataRange().getValues();
+  if (!data.length) return {};
+
+  // First row contains the yard breakpoints for the distribution columns
+  const yardBreaks = data[0].slice(1).map(Number); // e.g. [-2,2,5,10,20,30,50,100]
+  const table = {};
+
+  data.slice(1).forEach(row => {
+    const label = row[0];
+    if (typeof label === "string" && label.startsWith("yacCalc_bySep_")) {
+      const sep = Number(label.split("_").pop());
+      let cumulative = 0;
+      table[sep] = [];
+
+      for (let i = 0; i < yardBreaks.length; i++) {
+        const pct = Number(row[i + 1]);
+        if (!pct) continue;
+        const min = i === 0 ? yardBreaks[0] : yardBreaks[i - 1] + 1;
+        const max = yardBreaks[i];
+        table[sep].push({
+          rollMin: cumulative,
+          rollMax: cumulative + pct,
+          minYards: min,
+          maxYards: max
+        });
+        cumulative += pct;
+      }
+    }
+  });
+
+  return table;
+}
+
 function getFrontendSettings() {
   return {
     thresholds: getRunThresholdsFromSettings(),
@@ -279,7 +314,8 @@ function getFrontendSettings() {
     completionTable: getAirYardsCompletionTable(),
     routeTypeAirYards: getRouteTypeAirYards(),
     timeNeededToThrow: getTimeNeededToThrow(),
-    completionSeparationAdjustment: getCompletionSeparationAdjustment()
+    completionSeparationAdjustment: getCompletionSeparationAdjustment(),
+    yacBySeparation: getYacBySeparation()
   };
 }
 function predictPlayType(down, distance) {
