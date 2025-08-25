@@ -1679,15 +1679,15 @@
     }
 
     yards = maybeAvoidLoss(yards, stats, modLog);
-    yards = adjustChunkRunForSpeed(yards, stats, modLog);
+    yards = adjustChunkRunForSpeed(yards, stats, modLog, true);
 
-    if (yards <= 4) {
+    if (yards <= 2) {
       yards += applyTraitEffect("Power", average(stats.size, stats.strength + Math.min(0, stats.fatigue)), true, modLog);
     }
-    if (yards >= 3 && yards <= 4) {
+    if (yards >= 1 && yards <= 4) {
       yards += applyTraitEffect("Acceleration", stats.acceleration + Math.min(0, stats.fatigue), true, modLog);
     }
-    if (yards > 0 && yards < 10) {
+    if (yards > 0 && yards < 5) {
       yards += applyTraitEffect("Juke", stats.juke + Math.min(0, stats.fatigue), true, modLog);
     }
 
@@ -2312,7 +2312,7 @@
         modLog.push(`Yard -`+Math.floor(playerTraits[defStarPowerTackler].defStars)+` : defStarPower`);
       }
       yards = maybeAvoidLoss(yards, stats, modLog);
-      yards = adjustChunkRunForSpeed(yards, stats, modLog);
+      yards = adjustChunkRunForSpeed(yards, stats, modLog, false);
 
       if (yards <= 2) yards += applyTraitEffect("Vision", stats.vision + Math.min(0, stats.fatigue), true, modLog);
       if (yards <= 4) yards += applyTraitEffect("Power", average(stats.size, stats.strength + Math.min(0, stats.fatigue)), true, modLog);
@@ -2402,8 +2402,13 @@
     return yards;
   }
 
-  function adjustChunkRunForSpeed(yards, stats, modLog) {
-    if (yards >= 10 && yards <= 15) { //CHANGE no hard code
+  function adjustChunkRunForSpeed(yards, stats, modLog, yac) {
+    if (yac && yards >= 5){
+      const bonus = Math.floor((stats.speed + Math.min(0, stats.fatigue) - 60) / 5); //CHANGE no hard code
+      if (bonus !== 0) modLog.push(`Yard ${bonus > 0 ? "+" : ""}${bonus} Speed`);
+      return yards + bonus;
+    }
+    else if (yards >= 10 && yards <= 15) { //CHANGE no hard code
       const bonus = Math.floor((stats.speed + Math.min(0, stats.fatigue) - 60) / 10); //CHANGE no hard code
       if (bonus !== 0) modLog.push(`Yard ${bonus > 0 ? "+" : ""}${bonus} Speed`);
       return yards + bonus;
