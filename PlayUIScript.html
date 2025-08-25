@@ -1306,9 +1306,69 @@
     defStarPower = false;
   }
 
+  function determineTimeToThrow() {
+    const passRushSum = defensiveFormation
+      .filter(f => f.position.startsWith('DL') || f.position.startsWith('LB'))
+      .reduce((sum, f) => sum + Number(playerTraits[f.player]?.passRush || 0), 0);
+
+    const passProtectSum = currentFormation
+      .filter(f => f.position.startsWith('RB') || f.position.startsWith('TEOL'))
+      .reduce((sum, f) => sum + Number(playerTraits[f.player]?.passProtect || 0), 0);
+
+    let passProtection = true;
+    const maxRoll = Math.round(passRushSum + passProtectSum);
+    const roll = randomInt(0, maxRoll);
+    if (roll <= passRushSum) passProtection = false;
+
+    return handleRush(passProtection);
+  }
+
+  function handleRush(passProtection) {
+    if (passProtection) {
+      let protectionStrength = currentFormation
+        .filter(f => f.position.startsWith('RB') || f.position.startsWith('TEOL'))
+        .reduce((sum, f) => {
+          const offStars = Number(playerTraits[f.player]?.offStars || 0);
+          return sum + (Math.pow(offStars, 2) / 2);
+        }, 0);
+
+      protectionStrength *= 1.25;
+
+      let roll = Math.random() * 100;
+      if (roll <= protectionStrength + 25) {
+        roll = Math.random() * 100;
+        if (roll <= protectionStrength + 15) {
+          roll = Math.random() * 100;
+          return roll <= protectionStrength ? 5 : 4;
+        }
+        return 3;
+      }
+      return 2;
+    }
+
+    let rushStrength = defensiveFormation
+      .filter(f => f.position.startsWith('DL') || f.position.startsWith('LB'))
+      .reduce((sum, f) => {
+        const defStars = Number(playerTraits[f.player]?.defStars || 0);
+        return sum + (Math.pow(defStars, 2) / 2);
+      }, 0);
+
+    let sackChance = defensiveFormation
+      .filter(f => f.position.startsWith('DL') || f.position.startsWith('LB'))
+      .reduce((sum, f) => sum + Number(playerTraits[f.player]?.defStars || 0), 0);
+
+    let roll = Math.random() * 100;
+    if (roll <= rushStrength) {
+      roll = Math.random() * 100;
+      return roll <= sackChance ? -1 : 0;
+    }
+    return 1;
+  }
+
   // === PASS PLAY ===
   async function passPlay(qbName) {
     if (!qbName) return;
+    const timeToThrow = determineTimeToThrow();
     const routes = assignRoutes();
     //routes = CalcTimeNeededToOpen(routes);
     const target = choosePassTarget(qbName, routes);
