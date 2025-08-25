@@ -32,6 +32,7 @@
   let routeTypeAirYards = [];
   let timeNeededToOpen = [];
   let completionSeparationAdjustment = [];
+  let yacBySeparation = {};
 
 
   function updateStickyOffsets() {
@@ -1130,6 +1131,7 @@
       routeTypeAirYards = data.routeTypeAirYards || [];
       timeNeededToOpen = data.timeNeededToThrow || [];
       completionSeparationAdjustment = data.completionSeparationAdjustment || [];
+      yacBySeparation = data.yacBySeparation || {};
       if (callback) callback();
     }).getFrontendSettings();
   }
@@ -1626,7 +1628,7 @@
 
     const completionRoll = Math.random() * 100;
     if (completionRoll <= completionPct) {
-      const yac = calcYAC(target.target);
+      const yac = calcYAC(target.target, routeInfo.separation);
       const totalYards = airYards + (Number(yac) || 0);
       return { completed: true, intercepted: false, yards: totalYards, caughtBy: target.target};
     }
@@ -1639,7 +1641,7 @@
 
     const pickRoll = Math.random() * 100;
     if (pickRoll <= pickChance) {
-      const yac = calcYAC(defenderName);
+      const yac = calcYAC(defenderName, routeInfo.separation);
       const totalYards = airYards + (Number(yac) || 0);
       return { completed: false, intercepted: true, yards: totalYards, caughtBy: defenderName};
     }
@@ -1658,9 +1660,38 @@
     return { completed: false, intercepted: false, yards: 0 };
   }
 
-  function calcYAC(playerName){
-    console.log(playerName);
-    return 2;
+  function calcYAC(playerName, separation = 0){
+    const stats = playerTraits[playerName] || {};
+    const sepKey = String(separation);
+    const table = yacBySeparation[sepKey] || yacBySeparation[0] || [];
+    if (table.length === 0) return 0;
+
+    let modLog = [];
+    let roll = Math.random() * 100;
+    roll = maybeBoostRollForAcceleration(roll, stats, modLog);
+
+    let yards = 0;
+    for (const r of table) {
+      if (roll >= r.rollMin && roll < r.rollMax) {
+        yards = randomInt(r.minYards, r.maxYards);
+        break;
+      }
+    }
+
+    yards = maybeAvoidLoss(yards, stats, modLog);
+    yards = adjustChunkRunForSpeed(yards, stats, modLog);
+
+    if (yards <= 4) {
+      yards += applyTraitEffect("Power", average(stats.size, stats.strength + Math.min(0, stats.fatigue)), true, modLog);
+    }
+    if (yards >= 3 && yards <= 4) {
+      yards += applyTraitEffect("Acceleration", stats.acceleration + Math.min(0, stats.fatigue), true, modLog);
+    }
+    if (yards > 0 && yards < 10) {
+      yards += applyTraitEffect("Juke", stats.juke + Math.min(0, stats.fatigue), true, modLog);
+    }
+
+    return yards;
   }
 
   // === MAIN PLAY ===
