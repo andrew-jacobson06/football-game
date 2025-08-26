@@ -373,7 +373,7 @@
 
               updateFatigueBasedOnStatsOnInitialLoad();
               renderBoxScore();
-              await animatePlay();
+              await animatePlay('Run');
             })
             .withFailureHandler(function (error) {
               console.error("❌ Failed to load play history:", error.message);
@@ -399,9 +399,9 @@
       }
     }
   }
-  async function animatePlay() { 
+  async function animatePlay(playType, passResult = {}) { 
     // use current game state to drive the animation in the proper direction
-    await show3DDrive(state.DriveStart, state.Previous, state.BallOn, playType = 'run', passComplete = true); //CHANGE - dont hardcode run and pass
+    await show3DDrive(state.DriveStart, state.Previous, state.BallOn, playType = playType, passResult); //CHANGE - dont hardcode run and pass
   }
 
   function formatBallOn(yard) {
@@ -1394,64 +1394,140 @@
   // === PASS PLAY ===
   async function passPlay(qbName) {
     if (!qbName) return;
-    let result;
+    let resultArray;
     let completionPct;
     let routes;
     let target;
     const timeToThrow = determineTimeToThrow();
     if(timeToThrow < 0){
-      result = handleSack();
+      resultArray = handleSack();
     } else{
       routes = assignRoutes();
       target = choosePassTarget(qbName, routes);
       completionPct = determineCompletionPct(qbName, target);
-      result = determinePassOutcome(qbName, target, routes, completionPct);
+      resultArray = determinePassOutcome(qbName, target, routes, completionPct);
     }
 
-    let yards = result.yards || 0;
+    //postPlayStuff
+    const scoringTeam = state.Possession;
+    const oldScore = scoringTeam === "Home"
+      ? parseInt(state.HomeScore, 10) || 0
+      : parseInt(state.AwayScore, 10) || 0;
+    let yards = resultArray.yards || 0;
     let touchdown = false;
     let tackler = null;
     let fumble = false;
     let recoveredBy = null;
+    let newBall = state.BallOn;
+    let newDown = state.Down;
+    let newDist = state.Distance;
 
-    if (result.sack){
-      const fum = checkForFumble(qbName, result.sackBy, result.sack);
-      updateDefensiveStatsPass(result.sackBy, { tackle: true, yards: result.yards, sack: true, fumble: fum.fumble, recoveredBy: fum.recoveredBy});
-      updatePassingStats(qbName, result.yards, false, false, 0, result.sack);
+    //HandleSack
+    if (resultArray.sack){
+      newBall = state.Possession === 'Home' ? newBall + yards : newBall - yards;
+      const fum = checkForFumble(qbName, resultArray.sackBy, resultArray.sack);
+      if (fum.fumble) {
+        fumble = true;
+        recoveredBy = fum.recoveredBy;
+      }
+      tackler = resultArray.sackBy;
+      updateDefensiveStatsPass(tackler, { tackle: true, yards: yards, sack: true, fumble: fumble, recoveredBy: recoveredBy});
     }
-    else {
-      if (result.completed){
-        const newBall = state.Possession === 'Home' ? state.BallOn + yards : state.BallOn - yards;
-        touchdown = state.Possession === 'Home' ? newBall >= 100 : newBall <= 0;
-        if (!touchdown) {
-          tackler = determineTackler(yards);
-          const fum = checkForFumble(target.target, tackler);
-          if (fum.fumble) {
-            fumble = true;
-            recoveredBy = fum.recoveredBy;
-          }
+    //Handle Completed Pass
+    if (resultArray.completed){
+      newBall = state.Possession === 'Home' ? newBall + yards : newBall - yards;
+      touchdown = state.Possession === 'Home' ? newBall >= 100 : newBall <= 0;
+      if(touchdown){
+        yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
+      }
+      if (!touchdown) {
+        tackler = determineTackler(yards); //NEEDS UPDATING
+        const fum = checkForFumble(target.target, tackler);
+        if (fum.fumble) {
+          fumble = true;
+          recoveredBy = fum.recoveredBy;
         }
       }
-
-      updatePassingStats(qbName, yards, result.completed, result.intercepted, touchdown, false);
-      if (target) {
-        updateReceivingStats(target.target, yards, result.completed, touchdown, fumble);
-      }
-      if (result.intercepted) {
-        updateDefensiveStatsPass(result.caughtBy, { interception: true });
-      } else {
-        const defenderName = target && target.routeInfo ? target.routeInfo.defender : null;
-        if (defenderName && !result.completed) {
+    }
+    updatePassingStats(qbName, yards, resultArray.completed, resultArray.intercepted, touchdown, resultArray.sack);
+    if (target) {
+      updateReceivingStats(target.target, yards, resultArray.completed, touchdown, fumble);
+    }
+    if (resultArray.intercepted) {
+      updateDefensiveStatsPass(resultArray.caughtBy, { interception: true });
+    } else {
+      const defenderName = target && target.routeInfo ? target.routeInfo.defender : null;
+      if (defenderName && !resultArray.completed) {
+        if (target.routeInfo.defStarsPctBoost) {
           updateDefensiveStatsPass(defenderName, { deflection: true });
         }
-        if (tackler) {
-          updateDefensiveStatsPass(tackler, { tackle: true, yards, fumble, recoveredBy });
+      }
+      if (tackler) {
+        updateDefensiveStatsPass(tackler, { tackle: true, yards, fumble, recoveredBy });
+      }
+    }
+    //Handle Interception
+    if(resultArray.intercepted){
+
+    }
+
+    let timeTaken = 5;  //NEEDS UPDATING
+    let predicted = "PASS";  //NEEDS UPDATING
+    let result = "Normal";
+
+    //Handle offense retaining possession
+    if(!resultArray.intercepted && recoveredBy != (state.Possession === "Home" ? "Away" : "Home")){
+      newDist = newDist - yards;
+      //handle Touchdown
+      if(touchdown){
+        result = "Touchdown";
+        await handleTouchdown(newBall, qbName, target.target, resultArray, result, predicted, timeTaken, resultArray);
+        await celebrateTouchdown(scoringTeam, oldScore, oldScore + 6);
+      }
+      //Handle First Down
+      else if(newDist <= 0){
+        result = "First Down";
+        newDown = 1;
+        const yardsToGoal = state.Possession === "Home" ? 100 - newBall : newBall;
+        newDist = yardsToGoal < 10 ? yardsToGoal : 10;
+        updateGameState(1, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, qbName, target.target, yards, tackler, result, predicted, timeTaken, recoveredBy);
+        await animatePlay('Pass', resultArray);
+      } else{
+        let playType = 'Pass';
+        if(resultArray.sack){
+          let playType = 'Run';
+          target = {target: ''};
+        }
+        else if(!resultArray.completed){
+          result = "Incomplete";
+        }
+        newDown++;
+        if (newDown > 4) {
+          result = "TO on Downs";
+          await handleTOonDowns(result, newBall, qbName, target.target, resultArray, tackler, predicted, timeTaken, resultArray);
+        } else {
+          updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, qbName, target.target, yards, tackler, result, predicted, timeTaken, recoveredBy);
+          await animatePlay(playType, resultArray);
         }
       }
     }
+    //Handle Fumble or INT
+    else{
+      if(recoveredBy = (state.Possession === "Home" ? "Away" : "Home") ){
+        result = "Fumble";
+      } else if(resultArray.intercepted){
+        result = "Intercepted";
+      }
+    }
+    //updateFrontendStats(qbName, recordedYards, result, scoringTeam, tackler, recoveredBy);
 
     renderBoxScore();
-    console.log('Pass play result', result);
+    //document.getElementById("result").innerHTML = `<strong>${rbStats.name}</strong> ran for <strong>${result.yards} yards</strong><br/><br/>` +
+    //  `Modifiers: <ul>${carryResult.modLog.map(m => `<li>${m}</li>`).join('')}</ul>`;
+
+    updateStateUI();
+    //refreshUI();
+    afterPlayComplete();
   }
 
   function handleSack(){
@@ -1659,17 +1735,6 @@
       const totalYards = airYards + (Number(yac) || 0);
       return { completed: false, intercepted: true, yards: totalYards, caughtBy: defenderName};
     }
-    if (routeInfo.defStarsPctBoost) {
-      const defTeam = state.Possession === 'Home' ? 'Away' : 'Home';
-      let d = defensiveStats.find(s => s.playername === defenderName && s.team === defTeam);
-      if (!d) {
-        d = { playername: defenderName, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0 };
-        defensiveStats.push(d);
-      }
-      if (typeof d.deflections !== 'number') d.deflections = 0;
-      d.deflections++;
-      renderBoxScore();
-    }
 
     return { completed: false, intercepted: false, yards: 0 };
   }
@@ -1768,10 +1833,10 @@
         result = "Fumble";
         recoveredBy = fum.recoveredBy;
         if (recoveredBy === tackler) {
-          updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted, timeTaken, recoveredBy);
-          await animatePlay();
+          updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, "", yardDelta, tackler, result, predicted, timeTaken, recoveredBy);
+          await animatePlay('Run');
           const newPossession = state.Possession === "Home" ? "Away" : "Home";
-          updateGameState(1, 10, newPossession, newBall, newBall, newBall, playerName, yardDelta, tackler, null, predicted, undefined, recoveredBy);
+          updateGameState(1, 10, newPossession, newBall, newBall, newBall, playerName, "", yardDelta, tackler, null, predicted, undefined, recoveredBy);
           loadPlayers();
           applyFatigue(playerName, "Run");
           updateFrontendStats(playerName, recordedYards, result, scoringTeam, tackler, recoveredBy);
@@ -1787,7 +1852,7 @@
 
     if (touchdown) {
       result = "Touchdown";
-      await handleTouchdown(newBall, playerName, carryResult, result, predicted, timeTaken);
+      await handleTouchdown(newBall, playerName, "", carryResult, result, predicted, timeTaken);
       recordedYards = carryResult.yards; // handleTouchdown adjusts yards
       await celebrateTouchdown(scoringTeam, oldScore, oldScore + 6);
     } else if (newDist <= 0) {
@@ -1795,17 +1860,17 @@
       newDown = 1;
       const yardsToGoal = state.Possession === "Home" ? 100 - newBall : newBall;
       newDist = yardsToGoal < 10 ? yardsToGoal : 10;
-      updateGameState(1, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted, timeTaken, recoveredBy);
-      await animatePlay();
+      updateGameState(1, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, "", yardDelta, tackler, result, predicted, timeTaken, recoveredBy);
+      await animatePlay('Run');
       playSound("crowdRoar");
     } else {
       newDown++;
       if (newDown > 4) {
         result = "TO on Downs";
-        await handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted, timeTaken);
+        await handleTOonDowns(result, newBall, playerName, "", carryResult, tackler, predicted, timeTaken);
       } else {
-        updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, yardDelta, tackler, result, predicted, timeTaken, recoveredBy);
-        await animatePlay();
+        updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, "", yardDelta, tackler, result, predicted, timeTaken, recoveredBy);
+        await animatePlay('Run');
       }
     }
 
@@ -1822,37 +1887,48 @@
     afterPlayComplete();
   }
 
-  async function handleTouchdown(newBall, playerName, carryResult, result, predicted, timeTaken) {
+  async function handleTouchdown(newBall, playerName, recName, carryResult, result, predicted, timeTaken, resultArray = {}) {//COMPLETED PASS UPDATES
     // Distance covered to reach the goal line differs by team direction
     carryResult.yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
+
     if (state.Possession === "Home") {
       state.HomeScore = (parseInt(state.HomeScore, 10) || 0) + 6;
     } else if (state.Possession === "Away") {
       state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 6;
     }
-    updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, null, result, predicted, timeTaken);
-
-    await animatePlay();
+    updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, recName, carryResult.yards, null, result, predicted, timeTaken);
+    let playType = recName === ''? 'Run' : 'Pass';
+    await animatePlay(playType, resultArray);
     playSound("crowdRoar");
 
     const newPossession = state.Possession === "Home" ? "Away" : "Home";
     const newBallOn = newPossession === "Home" ? 25 : 75;
-    updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, playerName, carryResult.yards, null, null, predicted);
+    updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, playerName, recName, carryResult.yards, null, null, predicted);
     loadPlayers();
   }
 
-  async function handleTOonDowns(result, newBall, playerName, carryResult, tackler, predicted, timeTaken) {
-    updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, carryResult.yards, tackler, result, predicted, timeTaken);
+  async function handleTOonDowns(result, newBall, playerName, recName, carryResult, tackler, predicted, timeTaken, resultArray = {}) {//COMPLETED PASS UPDATES
+    updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, recName, carryResult.yards, tackler, result, predicted, timeTaken);
 
-    await animatePlay();
+    let playType = recName === ''? 'Run' : 'Pass';
+    if(resultArray.sack){
+      playType = 'Run';
+    }
+    await animatePlay(playType, resultArray);
+    playSound("crowdRoar");
+    await animatePlay(playType, resultArray);
     playSound("crowdRoar");
 
     const newPossession = state.Possession === "Home" ? "Away" : "Home";
-    updateGameState(1, 10, newPossession, newBall, newBall, newBall, playerName, carryResult.yards, tackler, null, predicted);
+    updateGameState(1, 10, newPossession, newBall, newBall, newBall, playerName, recName, carryResult.yards, tackler, null, predicted);
     loadPlayers();
   }
 
-  function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, qtr, time, recoveredBy) {
+  function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, recName, yards, tackler, result, predicted, qtr, time, recoveredBy) {//MAKE PASS UPDATES
+      let playType = 'Run';
+      if(recName != ''){
+        playType = 'Pass';
+      }
       const localPlay = {
         Time: time,
         Down: state.Down,
@@ -1861,6 +1937,7 @@
         Qtr: qtr,
         DriveStart: Number(driveStart),
         Player: playerName,
+        Receiver: recName,
         Yards: yards,
         Result: result || "Normal",
         NewBallOn: ballOn,
@@ -1870,7 +1947,7 @@
         Possession: poss,
         HomeScore: state.HomeScore,
         AwayScore: state.AwayScore,
-        PlayType: "Run"
+        PlayType: playType
       };
       playHistory.push(localPlay);
 
@@ -1882,8 +1959,9 @@
         down: state.Down,
         distance: state.Distance,
         ballon: state.BallOn,
-        playtype: "Run",
+        playtype: playType,
         player: playerName,
+        receiver: recName,
         yards: yards,
         defensepredicted: predicted,
         predictioncorrect: "",
@@ -1900,15 +1978,15 @@
       });
     }
 
-  function updateRunningClock(result) {
-    const stopResults = ['Touchdown','Timeout','Field Goal','Kickoff','Punt','Safety','End of Quarter','TO on Downs','Fumble'];
+  function updateRunningClock(result) {//MAKE PASS UPDATES
+    const stopResults = ['Touchdown','Timeout','Field Goal','Kickoff','Punt','Safety','End of Quarter','TO on Downs','Fumble', 'Intercepted', 'Incomplete'];
     if (result) {
       runningClock = !stopResults.includes(result);
     }
   }
 
-  function updateGameState(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, timeTaken, recoveredBy) {
-    let playQuarter = state.Qtr;
+  function updateGameState(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, recName, yards, tackler, result, predicted, timeTaken, recoveredBy) {
+    let playQuarter = state.Qtr;//COMPLETED PASS UPDATES
     let newTime = state.Time;
     if (typeof timeTaken === 'number') {
       if (runningClock) {
@@ -1918,7 +1996,7 @@
     }
     const logTime = Math.max(newTime, 0);
     if (result != null) {
-      logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, yards, tackler, result, predicted, playQuarter, logTime, recoveredBy);
+      logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, recName, yards, tackler, result, predicted, playQuarter, logTime, recoveredBy);
     }
 
     let nextDown = down;
@@ -1994,7 +2072,7 @@
     });
   }
 
-  function updateStateUI() {
+  function updateStateUI() {//MAKE PASS UPDATES
     console.log(state);
     const downEl = document.getElementById("downDistance");
     downEl.innerText = formatDownDistance(state.Down, state.Distance, state.BallOn, state.Possession);
@@ -2101,11 +2179,12 @@
     const team = state.Possession;
     let p = passingStats.find(s => s.playername === qb && s.team === team);
     if (!p) {
-      p = { playername: qb, team, attempts: 0, completions: 0, yards: 0, tds: 0, ints: 0, sacks: 0 };
+      p = { playername: qb, team, attempts: 0, completions: 0, yards: 0, tds: 0, ints: 0, sacks: 0, sackYds: 0};
       passingStats.push(p);
     }
     if (sack){
       p.sacks ++;
+      p.sackYds += yards;
     } else{
       p.attempts++;
       if (completed) {
@@ -2473,7 +2552,9 @@
 
 
   //UI Functions ONLY - ANIMATIONS BELOW!
-  function show3DDrive(startYard, prevYard, currentYard, playType = 'run', passComplete = true) {
+  function show3DDrive(startYard, prevYard, currentYard, playType = 'Run', passResult) {
+    passComplete = passResult.completed;
+    passIntercepted = passResult.intercepted;
     return new Promise(resolve => {
       const field = document.getElementById("field3D");
       const fieldWidth = field.offsetWidth;
@@ -2514,7 +2595,7 @@
       lastPlay.style.opacity = lastDot.style.opacity = arrow.style.opacity = 0;
       setTimeout(() => {
         lastPlay.style.transition = "none";
-        lastPlay.style.backgroundColor = playType === 'pass' ? 'transparent' : 'black';
+        lastPlay.style.backgroundColor = playType === 'Pass' ? 'transparent' : 'black';
         lastPlay.style.width = `0px`;
         lastPlay.style.opacity = 1;
         lastDot.style.opacity = 1;
@@ -2533,7 +2614,7 @@
           arrow.style.right = `0px`;
         }
 
-        if (playType === 'run') {
+        if (playType === 'Run') {
           lastPlay.style.top = `50%`;
           lastPlay.style.height = `6px`;
           arrow.style.top = `-10px`;
