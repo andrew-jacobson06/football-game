@@ -312,12 +312,12 @@
                     }
                   }
                 } else if (play.PlayType === 'Pass') {
-                  const qb = play.Passer || play.Player;
-                  const receiver = play.Target || play.Receiver || play.Player;
+                  const qb = play.Passer || play.Player || '';
+                  const receiver = play.Target || play.Receiver || '';
                   const team = play.Possession || '';
                   const yards = parseFloat(play.Yards) || 0;
                   const result = play.Result || '';
-                  const completed = result === 'Complete' || result === 'Touchdown';
+                  const completed = result !== 'Incomplete' && result !== 'Intercepted';
                   const intercepted = result === 'Intercepted';
                   const td = result === 'Touchdown';
                   const fumble = result === 'Fumble';
@@ -328,7 +328,11 @@
                       passingStats.push(ps);
                     }
                     ps.attempts++;
-                    if (completed) { ps.completions++; ps.yards += yards; if (td) ps.tds++; }
+                    if (completed) {
+                      ps.completions++;
+                      ps.yards += yards;
+                      if (td) ps.tds++;
+                    }
                     if (intercepted) ps.ints++;
                   }
                   if (receiver) {
@@ -478,28 +482,64 @@
   }
 
   function buildPlayText(play) {
-    let text = `<strong>${play.Player}</strong> runs for ${play.Yards} Yards.`;
-
-    if (play.Result && play.Result !== "Normal" && play.Result !== "Fumble") {
-      if (play.Result === "Touchdown") {
-        text += ` <span style="color:green; font-weight:bold;">${play.Result}!</span>`;
-      } else if (play.Result === "TO on Downs") {
-        text += ` <span style="color:red; font-weight:bold;">${play.Result}!</span>`;
+    if (play.PlayType === 'Pass') {
+      const qb = play.Player || '';
+      const receiver = play.Receiver || '';
+      const yards = play.Yards;
+      const tackler = play.Tackler;
+      let text = '';
+      if (play.Result === 'Intercepted') {
+        const poss = play.Possession === 'Home' ? 'Away' : 'Home';
+        const spot = formatBallOnForPoss(play.NewBallOn, poss);
+        text = `${qb} pass intended for ${receiver}. Intercepted at the ${spot} by ${tackler}.`;
+      } else if (play.Result === 'Incomplete') {
+        text = `${qb} pass intended for ${receiver}. Incomplete.`;
       } else {
-        text += ` <strong>${play.Result}!</strong>`;
+        const spot = formatBallOnForPoss(play.NewBallOn, play.Possession);
+        text = `${qb} pass to ${receiver} to ${spot} for ${yards} yards`;
+        if (tackler && tackler !== 'NA') {
+          text += ` (${tackler})`;
+        }
+        text += '.';
       }
-    }
+      if (play.Result && !['Normal','Fumble','Intercepted','Incomplete'].includes(play.Result)) {
+        if (play.Result === 'Touchdown') {
+          text += ` <span style="color:green; font-weight:bold;">${play.Result}!</span>`;
+        } else if (play.Result === 'TO on Downs') {
+          text += ` <span style="color:red; font-weight:bold;">${play.Result}!</span>`;
+        } else {
+          text += ` <strong>${play.Result}!</strong>`;
+        }
+      }
+      if (play.Result === 'Fumble' && play.RecoveredBy) {
+        const recoveryPoss = play.RecoveredBy === receiver ? play.Possession : (play.Possession === 'Home' ? 'Away' : 'Home');
+        text += ` FUMBLE! Recovered by ${play.RecoveredBy} at the ${formatBallOnForPoss(play.NewBallOn, recoveryPoss)}.`;
+      }
+      return text;
+    } else {
+      let text = `<strong>${play.Player}</strong> runs for ${play.Yards} Yards.`;
 
-    if (play.Result !== "Touchdown" && play.Tackler && play.Tackler !== "NA") {
-      text += ` Tackle made at the ${formatBallOnForPoss(play.NewBallOn, play.Possession)} by ${play.Tackler}.`;
-    }
+      if (play.Result && play.Result !== "Normal" && play.Result !== "Fumble") {
+        if (play.Result === "Touchdown") {
+          text += ` <span style="color:green; font-weight:bold;">${play.Result}!</span>`;
+        } else if (play.Result === "TO on Downs") {
+          text += ` <span style="color:red; font-weight:bold;">${play.Result}!</span>`;
+        } else {
+          text += ` <strong>${play.Result}!</strong>`;
+        }
+      }
 
-    if (play.Result === "Fumble" && play.RecoveredBy) {
-      const recoveryPoss = play.RecoveredBy === play.Player ? play.Possession : (play.Possession === "Home" ? "Away" : "Home");
-      text += ` FUMBLE! Recovered by ${play.RecoveredBy} at the ${formatBallOnForPoss(play.NewBallOn, recoveryPoss)}.`;
-    }
+      if (play.Result !== "Touchdown" && play.Tackler && play.Tackler !== "NA") {
+        text += ` Tackle made at the ${formatBallOnForPoss(play.NewBallOn, play.Possession)} by ${play.Tackler}.`;
+      }
 
-    return text;
+      if (play.Result === "Fumble" && play.RecoveredBy) {
+        const recoveryPoss = play.RecoveredBy === play.Player ? play.Possession : (play.Possession === "Home" ? "Away" : "Home");
+        text += ` FUMBLE! Recovered by ${play.RecoveredBy} at the ${formatBallOnForPoss(play.NewBallOn, recoveryPoss)}.`;
+      }
+
+      return text;
+    }
   }
 
   function normalizeBallOn(history) {
