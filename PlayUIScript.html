@@ -1443,7 +1443,7 @@
       resultArray = handleSack();
     } else{
       routes = assignRoutes();
-      target = choosePassTarget(qbName, routes);
+      target = choosePassTarget(qbName, routes, timeToThrow);
       completionPct = determineCompletionPct(qbName, target);
       resultArray = determinePassOutcome(qbName, target, routes, completionPct);
     }
@@ -1612,8 +1612,8 @@
     return table[key];
   }
 
-  function choosePassTarget(qbName, routes) {
-    routes = determineSeparation(routes);
+  function choosePassTarget(qbName, routes, timeToThrow) {
+    routes = determineSeparation(routes, timeToThrow);
     const qb = playerTraits[qbName] || {};
     const readRoll = randomInt(0, 100);
     const qbReadsDefense = readRoll <= (Number(qb.readDefense) || 0);
@@ -1655,7 +1655,7 @@
     return chosen;
   }
 
-  function determineSeparation(routes){
+  function determineSeparation(routes, timeToThrow){
      Object.keys(routes).forEach(name => {
       const route = routes[name];
       const wr = playerTraits[name] || {};
@@ -1678,6 +1678,8 @@
         const roll = randomInt(0, 100);
         if (roll <= (Number(db.coverage) || 0)) separation -= 1;
       }
+
+      separation += Math.max(-2,Math.min(0, timeToThrow - routes[name].TTO));
 
       route.separation = separation;
     });
@@ -2595,6 +2597,123 @@
   function show3DDrive(startYard, prevYard, currentYard, playType = 'Run', passResult) {
     passComplete = passResult.completed;
     passIntercepted = passResult.intercepted;
+    if(passResult.sack){
+      playType = 'Run';
+    }
+    return new Promise(resolve => {
+      const field = document.getElementById("field3D");
+      const fieldWidth = field.offsetWidth;
+      const yardPx = fieldWidth / 120;
+      const fieldHeight = field.offsetHeight;
+      //const canvas = document.getElementById("arcCanvas");
+      //canvas.width = fieldWidth;
+      //canvas.height = fieldHeight;
+      let drivePX = (startYard + 10) * yardPx;
+      let prevPX = (prevYard + 10) * yardPx;
+      let currPX = (currentYard + 10) * yardPx;
+      let drive = document.getElementById("drive");
+      // Handle drive line based on direction
+      if (state.Possession == "Home") {
+        drive.style.left = `${drivePX}px`;
+        drive.style.right = `auto`;
+        drive.style.width = `${prevPX - drivePX}px`;
+        //driveDot.style.right = 'auto';
+        //driveDot.style.left = '0';
+      } else {
+        drivePX = fieldWidth - drivePX;
+        prevPX = fieldWidth - prevPX;
+        currPX = fieldWidth - currPX;
+        drive.style.left = `auto`;
+        drive.style.right = `${drivePX}px`;
+        drive.style.width = `${prevPX - drivePX}px`;
+        //driveDot.style.right = '0';
+        //driveDot.style.left = 'auto';
+      }
+
+      const lastPlay = document.getElementById("play");
+      //const lastDot = lastPlay.querySelector(".last-dot");
+      //const arrow = lastPlay.querySelector(".drive-arrow");
+      //const catchPoint = document.getElementById("catchPoint");
+      //catchPoint.style.opacity = 0; // Hide previous catch point immediately
+      // Fade out old marker
+      lastPlay.style.opacity = 0;// lastDot.style.opacity = arrow.style.opacity = 0;
+      setTimeout(() => {
+        lastPlay.style.transition = "none";
+        lastPlay.style.backgroundColor = playType === 'Pass' ? 'transparent' : 'black';
+        lastPlay.style.width = `0px`;
+        lastPlay.style.opacity = 1;
+        //lastDot.style.opacity = 1;
+        //arrow.style.opacity = 1;
+        if(state.Possession == "Home"){
+          //lastDot.style.left = `0`;
+          //lastDot.style.right = `auto`;
+          lastPlay.style.left = `${prevPX}px`;
+          //arrow.style.left = `0px`;
+          //arrow.style.right = `auto`;
+        } else{
+          //lastDot.style.right = `0`;
+          //lastDot.style.left = `auto`;
+          lastPlay.style.right = `${prevPX}px`;
+          //arrow.style.left = `auto`;
+          //arrow.style.right = `0px`;
+        }
+
+        if (playType === 'Run') {
+          lastPlay.style.top = `50%`;
+          lastPlay.style.height = `6px`;
+          //arrow.style.top = `-10px`;
+          setTimeout(() => {
+            // Animate based on direction of play
+            if (state.Possession == "Home") {
+              lastPlay.style.transition = "width 1.4s ease, left 1.4s ease";
+              //arrow.style.transition = "left 1.4s ease";
+              lastPlay.style.left = `${prevPX}px`;
+              lastPlay.style.right = `auto`;
+              lastPlay.style.width = `${currPX - prevPX}px`;
+              //arrow.style.left = `${(currPX - prevPX) - 10}px`;
+              //arrow.style.right = `auto`;
+              //arrow.style.transform = "rotate(0deg)";
+            } else {
+              lastPlay.style.transition = "width 1.4s ease, right 1.4s ease";
+              //arrow.style.transition = "right 1.4s ease";
+              lastPlay.style.left = `auto`;
+              lastPlay.style.right = `${prevPX}px`;
+              lastPlay.style.width = `${(currPX - prevPX)}px`;
+              //arrow.style.left = `auto`;
+              //arrow.style.right = `${(currPX - prevPX) - 10}px`;
+              //arrow.style.transform = "rotate(180deg)";
+            }
+            const playWidth = currPX - prevPX;
+            if (playWidth <= 0) {
+              // No animation to wait for; resolve manually after short delay
+              setTimeout(() => {
+                resolve();
+              }, 300);
+            } else {
+              const onEnd = (e) => {
+                if (e.propertyName === 'width') {
+                  lastPlay.removeEventListener('transitionend', onEnd);
+                  resolve();
+                }
+              };
+              lastPlay.addEventListener('transitionend', onEnd);
+            }
+          }, 50);
+        } else {
+          //lastDot.style.opacity = arrow.style.opacity = 0;
+          buildArcWithArrow(document.getElementById("arc-container"), {
+            prevPx: prevPX,
+            currPx: currPX,
+            rise: 150,
+            direction: "up"
+          });//.then(resolve);
+        }
+      }, 400);
+    });
+  }
+  function show3DDriveOLD(startYard, prevYard, currentYard, playType = 'Run', passResult) {
+    passComplete = passResult.completed;
+    passIntercepted = passResult.intercepted;
     return new Promise(resolve => {
       const field = document.getElementById("field3D");
       const fieldWidth = field.offsetWidth;
@@ -2752,6 +2871,82 @@
       }, 100);
     });
   }
+  //New UI functionality
+  function makeArcPath(x, y, width, rise, direction = "up") {
+    const x0 = x, y0 = y;
+    const x1 = x + width, y1 = y;           // baseline anchors
+    const cx = x + width / 2;
+    const cy = direction === "up" ? y - rise : y + rise;
+    return {
+      d: `M ${x0} ${y0} Q ${cx} ${cy} ${x1} ${y1}`,
+      start: { x: x0, y: y0 },
+      end:   { x: x1, y: y1 }
+    };
+  }
+  function buildArcWithArrow(mountEl, { prevPx, currPx, rise, direction = "up" }) {
+    let width = Math.abs(currPx - prevPx);
+
+    const cs = getComputedStyle(document.documentElement);
+    const stroke  = parseFloat(cs.getPropertyValue('--arc-width')) || 5;
+    const arrowL  = parseFloat(cs.getPropertyValue('--arrow-l'))   || 12;
+    // Duration/easing: read from CSS so both animations match
+    const durStr  = cs.getPropertyValue('--arc-duration').trim() || '1.2s';
+    const durMs   = durStr.endsWith('ms') ? parseFloat(durStr) : parseFloat(durStr) * 1000;
+    const easing  = 'ease-out';
+    // Pad so the arrow never clips
+    const pad = 1;//Math.ceil(Math.max(stroke, arrowL) + 6);
+    const baselineY = rise + pad;
+    const vbWidth = width + pad * 2;
+    const vbHeight = baselineY + rise + pad;
+    // Build SVG
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("viewBox", `0 0 ${vbWidth} ${vbHeight}`);
+    svg.setAttribute("width", vbWidth);
+    svg.setAttribute("height", vbHeight);
+    const { d, start, end } = makeArcPath(pad, baselineY, width, rise, direction);
+    const path = document.createElementNS(svgNS, "path");
+    path.setAttribute("class", "arc-path");
+    path.setAttribute("pathLength", "1");
+    path.setAttribute("d", d);
+    svg.appendChild(path);
+    mountEl.style.left = prevPx;
+    // Mount SVG
+    mountEl.innerHTML = "";
+    mountEl.appendChild(svg);
+    // Arrow element: tip aligned, oriented along the straight chord
+    const angleRad = Math.atan2(end.y - start.y, end.x - start.x);
+    const angleDeg = angleRad * (180 / Math.PI);
+    const arrow = document.createElement("span");
+    arrow.className = "arc-arrow";
+    arrow.style.setProperty("--angle", `${angleDeg}deg`);
+    const arrowLeft = end.x + 12;
+    // Start at the base (start anchor), end at the right anchor
+    arrow.style.left = `${arrowLeft}px`;
+    arrow.style.top  = `${start.y}px`;
+    mountEl.appendChild(arrow);
+    // ✅ Circle at the starting point
+    const circle = document.createElement("span");
+    circle.className = "arc-start";
+    circle.style.left = `${start.x}px`;
+    circle.style.top  = `${start.y}px`;
+    mountEl.appendChild(circle);
+    // Animate the arrow's position in sync with the path draw
+    arrow.animate(
+      [
+        { left: `${start.x}px`, top: `${start.y}px` },
+        { left: `${arrowLeft}px`, top: `${end.y}px` }
+      ],
+      { duration: durMs, easing, fill: 'forwards' }
+    );
+  }
+  // Example: arc 280px wide, 60px rise, arrow travels left -> right while the arc draws
+  /**buildArcWithArrow(document.getElementById("arc-container"), startYd, {
+    width: 300,
+    rise: 150,
+    direction: "up"
+  });**/
+  
 
   function playSound(id) {
     const sound = document.getElementById(id);

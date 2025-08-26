@@ -93,20 +93,23 @@
         <div class="yardline" style="left: 100%;"></div>
         <!-- First down line -->
         <div id="firstDownLine" class="yardline first-down-line"></div>
+      </div>
         <!-- Drive Line (white line showing entire drive so far) -->
-      <div class="driveWrapper">
-          <div id="drive3D" class="driveSegment">
+        <div class="driveWrapper">
+          <!-- <div id="drive3D" class="driveSegment">
             <div class="drive-dot"></div>
-          </div>
+          </div> -->
           <!-- Last play marker (black line, dot, and arrow) -->
-          <div id="lastPlayMarker" class="driveSegment">
+          <!-- <div id="lastPlayMarker" class="driveSegment">
             <div class="drive-arrow">➤</div>
             <div class="last-dot"></div>
           </div>
           <canvas id="arcCanvas" style="position: absolute; top: 0; left: 0; z-index: 1; width: 100%; height: 100%;"></canvas>
-        <div id="catchPoint" style="position: absolute;  font-size: 5.5vw;  color: black;  opacity: 0;  z-index: 4;  pointer-events: none;  transition: opacity 0.5s ease;"></div>
-        </div>
-      </div>
+          <div id="catchPoint" style="position: absolute;  font-size: 5.5vw;  color: black;  opacity: 0;  z-index: 4;  pointer-events: none;  transition: opacity 0.5s ease;"></div>
+          </div> -->
+          <div class="drive-line" id="drive"></div>
+          <div class="play-line" id="play"></div>
+          <div id="arc-container" class="arc-container"></div>
         </div>
 
         <div id="lastPlayDesc" class="last-play-desc"></div>
