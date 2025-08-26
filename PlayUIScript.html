@@ -1121,19 +1121,33 @@
   }
 
   function loadSettings(callback) {
-    console.log("✅ Loaded drain settings");
-    google.script.run.withSuccessHandler(function (data) {
-      rollThresholds = data.thresholds;
-      breakawaySettings = data.breakaways;
-      drainSettings = data.staminaDrains;
-      tackleSettings = data.tackleTable || [];
-      completionTable = data.completionTable || [];
-      routeTypeAirYards = data.routeTypeAirYards || [];
-      timeNeededToOpen = data.timeNeededToThrow || [];
-      completionSeparationAdjustment = data.completionSeparationAdjustment || [];
-      yacBySeparation = data.yacBySeparation || {};
-      if (callback) callback();
-    }).getFrontendSettings();
+    console.log("🔄 Loading game settings...");
+    google.script.run
+      .withSuccessHandler(function (data) {
+        if (!data || !data.thresholds) {
+          console.error("⚠️ Invalid settings object received:", data);
+          alert("Settings could not be loaded. Please check the sheet and try again.");
+          return;
+        }
+
+        rollThresholds = data.thresholds;
+        breakawaySettings = data.breakaways;
+        drainSettings = data.staminaDrains;
+        tackleSettings = data.tackleTable || [];
+        completionTable = data.completionTable || [];
+        routeTypeAirYards = data.routeTypeAirYards || [];
+        timeNeededToOpen = data.timeNeededToThrow || [];
+        completionSeparationAdjustment = data.completionSeparationAdjustment || [];
+        yacBySeparation = data.yacBySeparation || {};
+
+        console.log("✅ Game settings fully initialized.");
+        if (callback) callback();
+      })
+      .withFailureHandler(err => {
+        console.error("❌ Server error:", err.message);
+        alert("There was a problem loading game settings.");
+      })
+      .getFrontendSettings();
   }
 
   function runBlockVsRunDef(ballCarrier) {
@@ -1315,12 +1329,12 @@
     //else: 
     //predictionEffect = -10;
 
-    const passRushSum = defensiveFormation
+    let passRushSum = defensiveFormation
       .filter(f => f.position.startsWith('DL') || f.position.startsWith('LB'))
       .reduce((sum, f) => sum + Number(playerTraits[f.player]?.passRush || 0), 0);
     passRushSum += predictionEffect*2;
 
-    const passProtectSum = currentFormation
+    let passProtectSum = currentFormation
       .filter(f => f.position.startsWith('RB') || f.position.startsWith('TEOL'))
       .reduce((sum, f) => sum + Number(playerTraits[f.player]?.passProtect || 0), 0);
     passProtectSum -= predictionEffect*2;
@@ -1330,10 +1344,10 @@
     const roll = randomInt(0, maxRoll);
     if (roll <= passRushSum) passProtection = false;
 
-    return handleRush(passProtection);
+    return handleRush(passProtection, predictionEffect);
   }
 
-  function handleRush(passProtection) {
+  function handleRush(passProtection, predictionEffect) {
     if (passProtection) {
       let protectionStrength = currentFormation
         .filter(f => f.position.startsWith('RB') || f.position.startsWith('TEOL'))

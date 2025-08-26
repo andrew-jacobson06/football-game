@@ -162,6 +162,7 @@ function getRunThresholdsFromSettings() {
     });
     cumulative += pct;
   }
+  Logger.log(thresholds[0].label);
   return thresholds;
 }
 
@@ -276,7 +277,7 @@ function getYacBySeparation() {
   if (!data.length) return {};
 
   // First row contains the yard breakpoints for the distribution columns
-  const yardBreaks = data[0].slice(1).map(Number); // e.g. [-2,2,5,10,20,30,50,100]
+  const yardBreaks = data[74].slice(1).map(Number); // e.g. [-2,2,5,10,20,30,50,100]
   const table = {};
 
   data.slice(1).forEach(row => {
@@ -306,7 +307,10 @@ function getYacBySeparation() {
 }
 
 function getFrontendSettings() {
-  return {
+  Logger.log("Fetching frontend settings...");
+  const thresholds = getRunThresholdsFromSettings();
+  Logger.log(thresholds);
+  data= {
     thresholds: getRunThresholdsFromSettings(),
     breakaways: getBreakawayYards(),
     staminaDrains: getStaminaDrains(),
@@ -317,6 +321,8 @@ function getFrontendSettings() {
     completionSeparationAdjustment: getCompletionSeparationAdjustment(),
     yacBySeparation: getYacBySeparation()
   };
+  Logger.log(data);
+  return data;
 }
 function predictPlayType(down, distance) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("PlayHistory");
