@@ -48,7 +48,8 @@
         document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         btn.classList.add('active');
-        const target = document.getElementById(btn.dataset.tab);
+        const tabId = (btn.getAttribute('data-tab') || '').trim();
+        const target = document.getElementById(tabId);
         if (target) target.classList.add('active');
       });
     });
@@ -57,7 +58,8 @@
         document.querySelectorAll('.boxscore-pill').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.boxscore-subtab').forEach(c => c.classList.remove('active'));
         btn.classList.add('active');
-        const target = document.getElementById(btn.dataset.subtab);
+        const subId = (btn.getAttribute('data-subtab') || '').trim();
+        const target = document.getElementById(subId);
         if (target) target.classList.add('active');
       });
     });
@@ -65,7 +67,8 @@
       btn.addEventListener('click', () => {
         document.querySelectorAll('.playbyplay-pill').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        const showSummary = btn.dataset.subtab === 'summary';
+        const subTab = btn.getAttribute('data-subtab');
+        const showSummary = subTab === 'summary';
         document.getElementById('playTimeline').style.display = showSummary ? 'none' : '';
         const summaryDiv = document.getElementById('scoringSummary');
         if (showSummary) renderScoringSummary();
@@ -2626,6 +2629,7 @@
     if(passResult.sack){
       playType = 'Run';
     }
+    
     return new Promise(resolve => {
       const field = document.getElementById("field3D");
       const fieldWidth = field.offsetWidth;
@@ -2966,7 +2970,7 @@
       circle.style.top  = `${start.y}px`;
       mountEl.appendChild(circle);
       // Animate the arrow's position in sync with the path draw
-      arrow.animate(
+      const animation = arrow.animate(
         [
           { left: `${start.x}px`, top: `${start.y}px` },
           { left: `${arrowLeft}px`, top: `${end.y}px` }

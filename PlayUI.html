@@ -61,39 +61,39 @@
       </div>
 
       <div id="gamecast" class="tab-content active">
-      <div class="game-info">
-        <div class="info-block">
-          <div class="info-label">DOWN:</div>
-          <div id="downDistance" class="info-value">...</div>
+        <div class="game-info">
+          <div class="info-block">
+            <div class="info-label">DOWN:</div>
+            <div id="downDistance" class="info-value">...</div>
+          </div>
+          <div class="info-block">
+            <div class="info-label">BALL ON:</div>
+            <div id="ballOn" class="info-value">...</div>
+          </div>
+          <div class="info-block">
+            <div class="info-label">DRIVE:</div>
+            <div id="driveInfo" class="info-value">0 plays, 0 yards</div>
+          </div>
         </div>
-        <div class="info-block">
-          <div class="info-label">BALL ON:</div>
-          <div id="ballOn" class="info-value">...</div>
-        </div>
-        <div class="info-block">
-          <div class="info-label">DRIVE:</div>
-          <div id="driveInfo" class="info-value">0 plays, 0 yards</div>
-        </div>
-      </div>
 
       <div class="field-wrapper">
         <div id="field3D">
-        <!-- Yard lines -->
-        <div class="yardline" style="left: 8.3333%;"></div>
-        <div class="yardline" style="left: 16.6667%;">10</div>
-        <div class="yardline" style="left: 25%;">20</div>
-        <div class="yardline" style="left: 33.3333%;">30</div>
-        <div class="yardline" style="left: 41.6667%;">40</div>
-        <div class="yardline" style="left: 50%;">50</div>
-        <div class="yardline" style="left: 58.3333%;">40</div>
-        <div class="yardline" style="left: 66.6667%;">30</div>
-        <div class="yardline" style="left: 75%;">20</div>
-        <div class="yardline" style="left: 83.3333%;">10</div>
-        <div class="yardline" style="left: 91.6667%;"></div>
-        <div class="yardline" style="left: 100%;"></div>
-        <!-- First down line -->
-        <div id="firstDownLine" class="yardline first-down-line"></div>
-      </div>
+          <!-- Yard lines -->
+          <div class="yardline" style="left: 8.3333%;"></div>
+          <div class="yardline" style="left: 16.6667%;">10</div>
+          <div class="yardline" style="left: 25%;">20</div>
+          <div class="yardline" style="left: 33.3333%;">30</div>
+          <div class="yardline" style="left: 41.6667%;">40</div>
+          <div class="yardline" style="left: 50%;">50</div>
+          <div class="yardline" style="left: 58.3333%;">40</div>
+          <div class="yardline" style="left: 66.6667%;">30</div>
+          <div class="yardline" style="left: 75%;">20</div>
+          <div class="yardline" style="left: 83.3333%;">10</div>
+          <div class="yardline" style="left: 91.6667%;"></div>
+          <div class="yardline" style="left: 100%;"></div>
+          <!-- First down line -->
+          <div id="firstDownLine" class="yardline first-down-line"></div>
+        </div>
         <!-- Drive Line (white line showing entire drive so far) -->
         <div class="driveWrapper">
           <!-- <div id="drive3D" class="driveSegment">
@@ -111,16 +111,17 @@
           <div class="play-line" id="play"></div>
           <div id="arc-container" class="arc-container"></div>
         </div>
-
-        <div id="lastPlayDesc" class="last-play-desc"></div>
-
-        <div class="control-panel">
-          <button id="openFormation">Edit Formation</button>
-          <button id="viewLOS">View LOS</button>
-          <button id="openRoutes">Set Receiver Routes</button>
-          <label for="playerDropdown">Select Player:</label>
-          <select id="playerDropdown"></select>
-          <div class="button-row">
+      </div>
+      
+      <div id="lastPlayDesc" class="last-play-desc"></div>
+      
+      <div class="control-panel">
+        <button id="openFormation">Edit Formation</button>
+        <button id="viewLOS">View LOS</button>
+        <button id="openRoutes">Set Receiver Routes</button>
+        <label for="playerDropdown">Select Player:</label>
+        <select id="playerDropdown"></select>
+        <div class="button-row">
           <button onclick="runPlay()">▶️ Run Play</button>
           <button onclick="passPlay(document.getElementById('playerDropdown').value)">🏈 Pass Play</button>
           <button onclick="nextDrive()">🔁 Next Drive</button>
