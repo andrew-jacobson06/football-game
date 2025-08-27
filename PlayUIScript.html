@@ -563,7 +563,8 @@
     const drives = [];
     let current = null;
     plays.forEach(play => {
-      if (!play.Player || (play.PlayType && play.PlayType !== "Run")) return;
+      // Only include offensive plays (runs or passes) in the drive breakdown
+      if (!play.Player || (play.PlayType && !['Run', 'Pass'].includes(play.PlayType))) return;
       const key = play.Possession + '-' + play.DriveStart;
       if (!current || current.key !== key) {
         current = { key, possession: play.Possession, driveStart: Number(play.DriveStart), plays: [] };
@@ -1570,8 +1571,33 @@
     afterPlayComplete();
   }
 
-  function handleSack(){
-    return { sack: true, sackBy: "Player", yards: -5};
+  function handleSack(){ 
+    const rushers = defensiveFormation.filter(f =>
+      f.player && (f.position.startsWith('DL') || f.position.startsWith('LB'))
+    );
+    if (rushers.length === 0) {
+      return { sack: true, sackBy: "NA", yards: -5 };
+    }
+
+    const total = rushers.reduce((sum, f) =>
+      sum + Number(playerTraits[f.player]?.sackChance || 0), 0);
+
+    let roll = Math.random() * total;
+    let sacker = rushers[0].player;
+
+    if (total <= 0) {
+      sacker = rushers[Math.floor(Math.random() * rushers.length)].player;
+    } else {
+      for (const f of rushers) {
+        roll -= Number(playerTraits[f.player]?.sackChance || 0);
+        if (roll <= 0) {
+          sacker = f.player;
+          break;
+        }
+      }
+    }
+
+    return { sack: true, sackBy: sacker, yards: -5 };
   }
 
   function assignRoutes() {
@@ -2706,7 +2732,7 @@
             currPx: currPX,
             rise: 150,
             direction: "up"
-          });//.then(resolve);
+          }).then(resolve);
         }
       }, 400);
     });
@@ -2884,61 +2910,71 @@
     };
   }
   function buildArcWithArrow(mountEl, { prevPx, currPx, rise, direction = "up" }) {
-    let width = Math.abs(currPx - prevPx);
+    return new Promise(resolve => {
+      let width = Math.abs(currPx - prevPx);
 
-    const cs = getComputedStyle(document.documentElement);
-    const stroke  = parseFloat(cs.getPropertyValue('--arc-width')) || 5;
-    const arrowL  = parseFloat(cs.getPropertyValue('--arrow-l'))   || 12;
-    // Duration/easing: read from CSS so both animations match
-    const durStr  = cs.getPropertyValue('--arc-duration').trim() || '1.2s';
-    const durMs   = durStr.endsWith('ms') ? parseFloat(durStr) : parseFloat(durStr) * 1000;
-    const easing  = 'ease-out';
-    // Pad so the arrow never clips
-    const pad = 1;//Math.ceil(Math.max(stroke, arrowL) + 6);
-    const baselineY = rise + pad;
-    const vbWidth = width + pad * 2;
-    const vbHeight = baselineY + rise + pad;
-    // Build SVG
-    const svgNS = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(svgNS, "svg");
-    svg.setAttribute("viewBox", `0 0 ${vbWidth} ${vbHeight}`);
-    svg.setAttribute("width", vbWidth);
-    svg.setAttribute("height", vbHeight);
-    const { d, start, end } = makeArcPath(pad, baselineY, width, rise, direction);
-    const path = document.createElementNS(svgNS, "path");
-    path.setAttribute("class", "arc-path");
-    path.setAttribute("pathLength", "1");
-    path.setAttribute("d", d);
-    svg.appendChild(path);
-    mountEl.style.left = prevPx;
-    // Mount SVG
-    mountEl.innerHTML = "";
-    mountEl.appendChild(svg);
-    // Arrow element: tip aligned, oriented along the straight chord
-    const angleRad = Math.atan2(end.y - start.y, end.x - start.x);
-    const angleDeg = angleRad * (180 / Math.PI);
-    const arrow = document.createElement("span");
-    arrow.className = "arc-arrow";
-    arrow.style.setProperty("--angle", `${angleDeg}deg`);
-    const arrowLeft = end.x + 12;
-    // Start at the base (start anchor), end at the right anchor
-    arrow.style.left = `${arrowLeft}px`;
-    arrow.style.top  = `${start.y}px`;
-    mountEl.appendChild(arrow);
-    // ✅ Circle at the starting point
-    const circle = document.createElement("span");
-    circle.className = "arc-start";
-    circle.style.left = `${start.x}px`;
-    circle.style.top  = `${start.y}px`;
-    mountEl.appendChild(circle);
-    // Animate the arrow's position in sync with the path draw
-    arrow.animate(
-      [
-        { left: `${start.x}px`, top: `${start.y}px` },
-        { left: `${arrowLeft}px`, top: `${end.y}px` }
-      ],
-      { duration: durMs, easing, fill: 'forwards' }
-    );
+      const cs = getComputedStyle(document.documentElement);
+      const stroke  = parseFloat(cs.getPropertyValue('--arc-width')) || 5;
+      const arrowL  = parseFloat(cs.getPropertyValue('--arrow-l'))   || 12;
+      // Duration/easing: read from CSS so both animations match
+      const durStr  = cs.getPropertyValue('--arc-duration').trim() || '1.2s';
+      const durMs   = durStr.endsWith('ms') ? parseFloat(durStr) : parseFloat(durStr) * 1000;
+      const easing  = 'ease-out';
+      // Pad so the arrow never clips
+      const pad = 1;//Math.ceil(Math.max(stroke, arrowL) + 6);
+      const baselineY = rise + pad;
+      const vbWidth = width + pad * 2;
+      const vbHeight = baselineY + rise + pad;
+      // Build SVG
+      const svgNS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("viewBox", `0 0 ${vbWidth} ${vbHeight}`);
+      svg.setAttribute("width", vbWidth);
+      svg.setAttribute("height", vbHeight);
+      const { d, start, end } = makeArcPath(pad, baselineY, width, rise, direction);
+      const path = document.createElementNS(svgNS, "path");
+      path.setAttribute("class", "arc-path");
+      path.setAttribute("pathLength", "1");
+      path.setAttribute("d", d);
+      svg.appendChild(path);
+      // Position the arc container at the previous pixel location so the
+      // animation originates from the correct spot on the field.
+      mountEl.style.position = "absolute";
+      mountEl.style.left = `${prevPx}px`;
+      // Ensure the container dimensions match the SVG so width animates
+      // from the starting point instead of the page origin.
+      mountEl.style.width = `${vbWidth}px`;
+      mountEl.style.height = `${vbHeight}px`;
+      // Mount SVG
+      mountEl.innerHTML = "";
+      mountEl.appendChild(svg);
+      // Arrow element: tip aligned, oriented along the straight chord
+      const angleRad = Math.atan2(end.y - start.y, end.x - start.x);
+      const angleDeg = angleRad * (180 / Math.PI);
+      const arrow = document.createElement("span");
+      arrow.className = "arc-arrow";
+      arrow.style.setProperty("--angle", `${angleDeg}deg`);
+      const arrowLeft = end.x + 12;
+      // Start at the base (start anchor), end at the right anchor
+      arrow.style.left = `${arrowLeft}px`;
+      arrow.style.top  = `${start.y}px`;
+      mountEl.appendChild(arrow);
+      // ✅ Circle at the starting point
+      const circle = document.createElement("span");
+      circle.className = "arc-start";
+      circle.style.left = `${start.x}px`;
+      circle.style.top  = `${start.y}px`;
+      mountEl.appendChild(circle);
+      // Animate the arrow's position in sync with the path draw
+      arrow.animate(
+        [
+          { left: `${start.x}px`, top: `${start.y}px` },
+          { left: `${arrowLeft}px`, top: `${end.y}px` }
+        ],
+        { duration: durMs, easing, fill: 'forwards' }
+      );
+      animation.finished.then(() => resolve());
+    });
   }
   // Example: arc 280px wide, 60px rise, arrow travels left -> right while the arc draws
   /**buildArcWithArrow(document.getElementById("arc-container"), startYd, {

@@ -1274,7 +1274,9 @@
       --arc-width: 5px;
       --arc-duration: 1.2s;
     }
-    .arc-container { position: relative; display: inline-block; bottom: 22%;}
+    /* Container for pass arcs; absolutely positioned so its left coordinate
+       can be set dynamically via JavaScript when drawing the arc. */
+    .arc-container { position: absolute; bottom: 22%; }
     /* SVG line styling */
     .arc-path {
       fill: none;
