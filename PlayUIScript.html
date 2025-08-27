@@ -2629,7 +2629,13 @@
     if(passResult.sack){
       playType = 'Run';
     }
-    
+
+    // Hide previous play visuals until we know which animation to show
+    const runDiv = document.getElementById("play");
+    const passDiv = document.getElementById("arc-container");
+    runDiv.style.display = "none";
+    passDiv.style.display = "none";
+
     return new Promise(resolve => {
       const field = document.getElementById("field3D");
       const fieldWidth = field.offsetWidth;
@@ -2660,7 +2666,7 @@
         //driveDot.style.left = 'auto';
       }
 
-      const lastPlay = document.getElementById("play");
+      const lastPlay = runDiv;
       //const lastDot = lastPlay.querySelector(".last-dot");
       //const arrow = lastPlay.querySelector(".drive-arrow");
       //const catchPoint = document.getElementById("catchPoint");
@@ -2668,6 +2674,12 @@
       // Fade out old marker
       lastPlay.style.opacity = 0;// lastDot.style.opacity = arrow.style.opacity = 0;
       setTimeout(() => {
+        // Prepare the element for the upcoming animation
+        if (playType === 'Run') {
+          runDiv.style.display = "block";
+        } else {
+          passDiv.style.display = "block";
+        }
         lastPlay.style.transition = "none";
         lastPlay.style.backgroundColor = playType === 'Pass' ? 'transparent' : 'black';
         lastPlay.style.width = `0px`;
@@ -2731,7 +2743,7 @@
           }, 50);
         } else {
           //lastDot.style.opacity = arrow.style.opacity = 0;
-          buildArcWithArrow(document.getElementById("arc-container"), {
+          buildArcWithArrow(passDiv, {
             prevPx: prevPX,
             currPx: currPX,
             rise: 150,
