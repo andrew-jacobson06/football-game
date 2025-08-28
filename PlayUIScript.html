@@ -2666,8 +2666,7 @@
         drive.style.left = `${drivePX}px`;
         drive.style.right = `auto`;
         drive.style.width = `${prevPX - drivePX}px`;
-        //driveDot.style.right = 'auto';
-        //driveDot.style.left = '0';
+        drive.style.setProperty('--left-pos', `-5px`);
       } else {
         drivePX = fieldWidth - drivePX;
         prevPX = fieldWidth - prevPX;
@@ -2675,15 +2674,10 @@
         drive.style.left = `auto`;
         drive.style.right = `${drivePX}px`;
         drive.style.width = `${prevPX - drivePX}px`;
-        //driveDot.style.right = '0';
-        //driveDot.style.left = 'auto';
+        drive.style.setProperty('--left-pos', `${prevPX - drivePX - 5}px`);
       }
 
       const lastPlay = runDiv;
-      //const lastDot = lastPlay.querySelector(".last-dot");
-      //const arrow = lastPlay.querySelector(".drive-arrow");
-      //const catchPoint = document.getElementById("catchPoint");
-      //catchPoint.style.opacity = 0; // Hide previous catch point immediately
       // Fade out old marker
       lastPlay.style.opacity = 0;// lastDot.style.opacity = arrow.style.opacity = 0;
       setTimeout(() => {
@@ -2697,46 +2691,33 @@
         lastPlay.style.backgroundColor = playType === 'Pass' ? 'transparent' : 'black';
         lastPlay.style.width = `0px`;
         lastPlay.style.opacity = 1;
-        //lastDot.style.opacity = 1;
-        //arrow.style.opacity = 1;
         if(state.Possession == "Home"){
-          //lastDot.style.left = `0`;
-          //lastDot.style.right = `auto`;
           lastPlay.style.left = `${prevPX}px`;
-          //arrow.style.left = `0px`;
-          //arrow.style.right = `auto`;
         } else{
-          //lastDot.style.right = `0`;
-          //lastDot.style.left = `auto`;
           lastPlay.style.right = `${prevPX}px`;
-          //arrow.style.left = `auto`;
-          //arrow.style.right = `0px`;
         }
 
         if (playType === 'Run') {
           lastPlay.style.top = `50%`;
           lastPlay.style.height = `6px`;
-          //arrow.style.top = `-10px`;
           setTimeout(() => {
             // Animate based on direction of play
             if (state.Possession == "Home") {
               lastPlay.style.transition = "width 1.4s ease, left 1.4s ease";
-              //arrow.style.transition = "left 1.4s ease";
               lastPlay.style.left = `${prevPX}px`;
               lastPlay.style.right = `auto`;
               lastPlay.style.width = `${currPX - prevPX}px`;
-              //arrow.style.left = `${(currPX - prevPX) - 10}px`;
-              //arrow.style.right = `auto`;
-              //arrow.style.transform = "rotate(0deg)";
+              if(lastPlay.classList.contains("swapped")){                
+                lastPlay.classList.remove("swapped");
+              }
             } else {
               lastPlay.style.transition = "width 1.4s ease, right 1.4s ease";
-              //arrow.style.transition = "right 1.4s ease";
               lastPlay.style.left = `auto`;
               lastPlay.style.right = `${prevPX}px`;
               lastPlay.style.width = `${(currPX - prevPX)}px`;
-              //arrow.style.left = `auto`;
-              //arrow.style.right = `${(currPX - prevPX) - 10}px`;
-              //arrow.style.transform = "rotate(180deg)";
+              if(!lastPlay.classList.contains("swapped")){                
+                lastPlay.classList.add("swapped");
+              }
             }
             const playWidth = currPX - prevPX;
             if (playWidth <= 0) {
