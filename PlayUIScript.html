@@ -1448,7 +1448,7 @@
     } else{
       routes = assignRoutes();
       target = choosePassTarget(qbName, routes, timeToThrow);
-      completionPct = determineCompletionPct(qbName, target);
+      completionPct = determineCompletionPct(qbName, target, routes);
       resultArray = determinePassOutcome(qbName, target, routes, completionPct);
     }
 
@@ -1722,7 +1722,7 @@
     return acc >= 50 ? adjust : -adjust;
   }
 
-  function determineCompletionPct(qbName, target) {
+  function determineCompletionPct(qbName, target, routes) {
     if (!target) return 0;
     const qb = playerTraits[qbName] || {};
     const routeInfo = target.routeInfo || {};
@@ -1762,17 +1762,18 @@
     const offStars = Number(receiver.offStars) || 0;
     const offRoll = Math.random() * 100;
     if (offRoll <= Math.pow(offStars, 2)) {
-      offStarsPctBoost = Math.pow(offStars, 2);
+      offStarsPctBoost = Math.pow(offStars, 2)/3;
     }
     let defStarsPctBoost = 0;
     const defender = playerTraits[routeInfo.defender] || {};
     const defStars = Number(defender.defStars) || 0;
     const defRoll = Math.random() * 100;
     if (defRoll <= Math.pow(defStars, 2)) {
-      defStarsPctBoost = -Math.pow(defStars, 2);
+      defStarsPctBoost = -Math.pow(defStars, 2)/3;
     }
     routeInfo.defStarsPctBoost = defStarsPctBoost;
     completionPct += offStarsPctBoost + defStarsPctBoost;
+
     return completionPct;
   }
 
