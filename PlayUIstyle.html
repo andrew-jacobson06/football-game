@@ -1243,28 +1243,76 @@
   left: 0px;                  /* sits immediately after drive-line */
   width: 0;                     /* animate from 0 to target */
   background-color: #333;
-  animation: grow-line 2s forwards;
 }
-.play-line::before {
+
+.play-line::before,
+.play-line::after {
   content: "";
   position: absolute;
   top: 50%;
-  left: -10px;
   transform: translateY(-50%);
+}
+
+/* Home team gains (left to right) */
+.play-line.home.forward::before,
+.play-line.away.backward::before {
+  left: -10px;
   width: 12px;
   height: 12px;
   background-color: #333;
   border-radius: 50%;
 }
-.play-line::after {
-  content: "";
-  position: absolute;
-  top: 50%;
+.play-line.home.forward::after,
+.play-line.away.backward::after {
   right: -10px;
-  transform: translateY(-50%);
-  border-top: clamp(6px, 3vw, 9px) solid transparent;
-  border-bottom: clamp(6px, 3vw, 9px) solid transparent;
-  border-left: clamp(12px, 3vw, 18px) solid #333;
+  border-top: var(--arrow-h) solid transparent;
+  border-bottom: var(--arrow-h) solid transparent;
+  border-left: var(--arrow-l) solid #333;
+}
+
+/* Home team losses (right to left) */
+.play-line.home.backward::before {
+  left: -10px;
+  border-top: var(--arrow-h) solid transparent;
+  border-bottom: var(--arrow-h) solid transparent;
+  border-right: var(--arrow-l) solid #333;
+}
+.play-line.home.backward::after {
+  right: -10px;
+  width: 12px;
+  height: 12px;
+  background-color: #333;
+  border-radius: 50%;
+}
+
+/* Away team gains (right to left) */
+.play-line.away.forward::before {
+  right: -10px;
+  border-top: var(--arrow-h) solid transparent;
+  border-bottom: var(--arrow-h) solid transparent;
+  border-right: var(--arrow-l) solid #333;
+}
+.play-line.away.forward::after {
+  left: -10px;
+  width: 12px;
+  height: 12px;
+  background-color: #333;
+  border-radius: 50%;
+}
+
+/* Away team losses (left to right) */
+.play-line.away.backward::before {
+  right: -10px;
+  width: 12px;
+  height: 12px;
+  background-color: #333;
+  border-radius: 50%;
+}
+.play-line.away.backward::after {
+  left: -10px;
+  border-top: var(--arrow-h) solid transparent;
+  border-bottom: var(--arrow-h) solid transparent;
+  border-left: var(--arrow-l) solid #333;
 }
     :root {
       /* Match your arrow sizes exactly */
