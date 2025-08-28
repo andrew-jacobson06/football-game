@@ -2700,50 +2700,49 @@
         //lastDot.style.opacity = 1;
         //arrow.style.opacity = 1;
         if(state.Possession == "Home"){
-          //lastDot.style.left = `0`;
-          //lastDot.style.right = `auto`;
           lastPlay.style.left = `${prevPX}px`;
-          //arrow.style.left = `0px`;
-          //arrow.style.right = `auto`;
-        } else{
-          //lastDot.style.right = `0`;
-          //lastDot.style.left = `auto`;
+          lastPlay.style.right = `auto`;
+        } else {
           lastPlay.style.right = `${prevPX}px`;
-          //arrow.style.left = `auto`;
-          //arrow.style.right = `0px`;
+          lastPlay.style.left = `auto`;
         }
 
         if (playType === 'Run') {
           lastPlay.style.top = `50%`;
           lastPlay.style.height = `6px`;
-          //arrow.style.top = `-10px`;
+
+          const delta = currPX - prevPX;
+          const isHome = state.Possession == "Home";
+          const isForward = delta >= 0;
+          const dist = Math.abs(delta);
+
+          runDiv.classList.remove('home','away','forward','backward');
+          runDiv.classList.add(isHome ? 'home' : 'away');
+          runDiv.classList.add(isForward ? 'forward' : 'backward');
+
           setTimeout(() => {
-            // Animate based on direction of play
-            if (state.Possession == "Home") {
-              lastPlay.style.transition = "width 1.4s ease, left 1.4s ease";
-              //arrow.style.transition = "left 1.4s ease";
-              lastPlay.style.left = `${prevPX}px`;
-              lastPlay.style.right = `auto`;
-              lastPlay.style.width = `${currPX - prevPX}px`;
-              //arrow.style.left = `${(currPX - prevPX) - 10}px`;
-              //arrow.style.right = `auto`;
-              //arrow.style.transform = "rotate(0deg)";
+            if (isHome) {
+              if (isForward) {
+                lastPlay.style.transition = "width 1.4s ease";
+                lastPlay.style.width = `${dist}px`;
+              } else {
+                lastPlay.style.transition = "width 1.4s ease, left 1.4s ease";
+                lastPlay.style.left = `${currPX}px`;
+                lastPlay.style.width = `${dist}px`;
+              }
             } else {
-              lastPlay.style.transition = "width 1.4s ease, right 1.4s ease";
-              //arrow.style.transition = "right 1.4s ease";
-              lastPlay.style.left = `auto`;
-              lastPlay.style.right = `${prevPX}px`;
-              lastPlay.style.width = `${(currPX - prevPX)}px`;
-              //arrow.style.left = `auto`;
-              //arrow.style.right = `${(currPX - prevPX) - 10}px`;
-              //arrow.style.transform = "rotate(180deg)";
+              if (isForward) {
+                lastPlay.style.transition = "width 1.4s ease";
+                lastPlay.style.width = `${dist}px`;
+              } else {
+                lastPlay.style.transition = "width 1.4s ease, right 1.4s ease";
+                lastPlay.style.right = `${currPX}px`;
+                lastPlay.style.width = `${dist}px`;
+              }
             }
-            const playWidth = currPX - prevPX;
-            if (playWidth <= 0) {
-              // No animation to wait for; resolve manually after short delay
-              setTimeout(() => {
-                resolve();
-              }, 300);
+
+            if (dist === 0) {
+              setTimeout(() => resolve(), 300);
             } else {
               const onEnd = (e) => {
                 if (e.propertyName === 'width') {
