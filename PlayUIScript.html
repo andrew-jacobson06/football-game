@@ -1774,6 +1774,18 @@
     routeInfo.defStarsPctBoost = defStarsPctBoost;
     completionPct += offStarsPctBoost + defStarsPctBoost;
 
+    // Adjust completion percentage based on route variation
+    if (routes) {
+      const typeSet = new Set();
+      Object.values(routes).forEach(r => {
+        let type = r.routeType;
+        if (type === 'Long' || type === 'Med-Long') type = 'Long';
+        typeSet.add(type);
+      });
+      const routeVariation = typeSet.size * 4;
+      completionPct += routeVariation - 18;
+    }
+
     return completionPct;
   }
 
