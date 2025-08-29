@@ -1442,13 +1442,17 @@
     let completionPct;
     let routes;
     let target;
+    let targetData;
+    let completionData;
     const timeToThrow = determineTimeToThrow();
     if(timeToThrow < 0){
       resultArray = handleSack();
     } else{
       routes = assignRoutes();
-      target = choosePassTarget(qbName, routes, timeToThrow);
-      completionPct = determineCompletionPct(qbName, target, routes);
+      targetData = choosePassTarget(qbName, routes, timeToThrow);
+      target = {target: targetData.target, routeInfo: targetData.routeInfo};
+      completionData = determineCompletionPct(qbName, target, routes);
+      completionPct = completionData.pct;
       console.log(routes, target, completionPct);
       resultArray = determinePassOutcome(qbName, target, routes, completionPct);
     }
@@ -1567,8 +1571,33 @@
     //updateFrontendStats(qbName, recordedYards, result, scoringTeam, tackler, recoveredBy);
 
     renderBoxScore();
-    //document.getElementById("result").innerHTML = `<strong>${rbStats.name}</strong> ran for <strong>${result.yards} yards</strong><br/><br/>` +
-    //  `Modifiers: <ul>${carryResult.modLog.map(m => `<li>${m}</li>`).join('')}</ul>`;
+
+    const passLog = [];
+    if(targetData && targetData.logs){
+      passLog.push(`Throw roll: ${targetData.logs.selectionRoll.toFixed(1)}`);
+      targetData.logs.routeLikelihoods.forEach(l => passLog.push(`${l.name} throwLikelihood: ${l.throwLikelyhood.toFixed(1)}`));
+    }
+    if(completionData){
+      if(resultArray && resultArray.completionRoll !== undefined){
+        passLog.push(`Completion roll: ${resultArray.completionRoll.toFixed(1)}`);
+      }
+      passLog.push(`Completion pct: ${completionPct.toFixed(1)}`);
+      completionData.log.forEach(m => passLog.push(m));
+    }
+
+    let text = "";
+    if(resultArray.sack){
+      text = `${qbName} sacked by ${resultArray.sackBy} for ${yards} yards`;
+    } else if(resultArray.intercepted){
+      text = `${qbName} pass intended for ${target ? target.target : ''}. Intercepted by ${resultArray.caughtBy}.`;
+    } else if(resultArray.completed){
+      text = `${qbName} pass to ${target.target} for ${yards} yards`;
+    } else {
+      text = `${qbName} pass intended for ${target ? target.target : ''}. Incomplete.`;
+    }
+
+    document.getElementById("result").innerHTML = `<strong>${text}</strong><br/><br/>` +
+      `Modifiers: <ul>${passLog.map(m => `<li>${m}</li>`).join('')}</ul>`;
 
     updateStateUI();
     //refreshUI();
@@ -1648,6 +1677,8 @@
     const readRoll = randomInt(0, 100);
     const qbReadsDefense = readRoll <= (Number(qb.readDefense) || 0);
 
+    const routeLikelihoods = [];
+
     Object.keys(routes).forEach(name => {
       const route = routes[name];
       const wr = playerTraits[name] || {};
@@ -1666,23 +1697,27 @@
       }
       route.airyardsweight = airyardsweight;
       route.weight = Math.max(0.1, airyardsweight * route.throwLikelyhood);
+      routeLikelihoods.push({name, throwLikelyhood: route.throwLikelyhood});
     });
 
     const totalWeight = Object.keys(routes).reduce((sum, name) => sum + (routes[name].weight || 0), 0);
-    if (totalWeight <= 0) return null;
+    if (totalWeight <= 0) {
+      return { target: null, routeInfo: null, logs: { routeLikelihoods, selectionRoll: 0 } };
+    }
 
     let roll = Math.random() * totalWeight;
-    let chosen = Object.keys(routes)[0];
+    const selectionRoll = roll;
+    let chosenName = Object.keys(routes)[0];
     for (const name of Object.keys(routes)) {
       const w = routes[name].weight || 0;
       if (roll < w) {
-        chosen = {target: name, routeInfo: routes[name]};
+        chosenName = name;
         break;
       }
       roll -= w;
     }
 
-    return chosen;
+    return { target: chosenName, routeInfo: routes[chosenName], logs: { routeLikelihoods, selectionRoll } };
   }
 
   function determineSeparation(routes, timeToThrow){
@@ -1724,7 +1759,8 @@
   }
 
   function determineCompletionPct(qbName, target, routes) {
-    if (!target) return 0;
+    const log = [];
+    if (!target) return { pct: 0, log };
     const qb = playerTraits[qbName] || {};
     const routeInfo = target.routeInfo || {};
     const separation = Number(routeInfo.separation) || 0;
@@ -1747,17 +1783,26 @@
         }
       }
     }
+    log.push(`Base ${baseCompletion}`);
 
-    let completionPct = baseCompletion + qbAccuracyAdjust(qb);
+    const qbAdj = qbAccuracyAdjust(qb);
+    let completionPct = baseCompletion + qbAdj;
+    log.push(`QB Accuracy ${qbAdj >= 0 ? "+" : ""}${qbAdj.toFixed(1)}`);
+
     const sepAdjust = completionSeparationAdjustment.find(r => Number(r.separation) === separation);
     if (sepAdjust) {
-      completionPct += Number(sepAdjust.catchPctChange) || 0;
+      const sepVal = Number(sepAdjust.catchPctChange) || 0;
+      completionPct += sepVal;
+      log.push(`Separation ${sepVal >= 0 ? "+" : ""}${sepVal}`);
     }
+
     const receiver = playerTraits[target.target] || {};
     const hands = Number(receiver.hands);
     if (!isNaN(hands)) {
       const diff = (hands - 60) / 10;
-      completionPct += (diff ** 2) / 2;
+      const handsBoost = (diff ** 2) / 2;
+      completionPct += handsBoost;
+      log.push(`Hands ${handsBoost >= 0 ? "+" : ""}${handsBoost.toFixed(1)}`);
     }
     let offStarsPctBoost = 0;
     const offStars = Number(receiver.offStars) || 0;
@@ -1765,6 +1810,7 @@
     if (offRoll <= Math.pow(offStars, 2)) {
       offStarsPctBoost = Math.pow(offStars, 2)/3;
     }
+    if (offStarsPctBoost !== 0) log.push(`OffStarPower ${offStarsPctBoost >= 0 ? "+" : ""}${offStarsPctBoost.toFixed(1)}`);
     let defStarsPctBoost = 0;
     const defender = playerTraits[routeInfo.defender] || {};
     const defStars = Number(defender.defStars) || 0;
@@ -1772,6 +1818,7 @@
     if (defRoll <= Math.pow(defStars, 2)) {
       defStarsPctBoost = -Math.pow(defStars, 2)/3;
     }
+    if (defStarsPctBoost !== 0) log.push(`DefStarPower ${defStarsPctBoost >= 0 ? "+" : ""}${defStarsPctBoost.toFixed(1)}`);
     routeInfo.defStarsPctBoost = defStarsPctBoost;
     completionPct += offStarsPctBoost + defStarsPctBoost;
 
@@ -1784,15 +1831,17 @@
         typeSet.add(type);
       });
       const routeVariation = typeSet.size * 2.5;
-      completionPct += routeVariation - 12;
+      const routeAdj = routeVariation - 12;
+      completionPct += routeAdj;
+      log.push(`RouteVariation ${routeAdj >= 0 ? "+" : ""}${routeAdj.toFixed(1)}`);
     }
 
-    return completionPct;
+    return { pct: completionPct, log };
   }
 
   function determinePassOutcome(qbName, target, routes, completionPct) {
     if (!target) {
-      return { completed: false, intercepted: false, yards: 0 };
+      return { completed: false, intercepted: false, yards: 0, completionRoll: 0 };
     }
 
     const qb = playerTraits[qbName] || {};
@@ -1805,7 +1854,7 @@
     if (completionRoll <= completionPct) {
       const yac = calcYAC(target.target, routeInfo.separation);
       const totalYards = airYards + (Number(yac) || 0);
-      return { completed: true, intercepted: false, yards: totalYards, caughtBy: target.target};
+      return { completed: true, intercepted: false, yards: totalYards, caughtBy: target.target, completionRoll };
     }
 
     const qbAccCalc = Math.pow(((Number(qb.accuracy) || 0) - 60) / 10, 2) / 2;
@@ -1818,10 +1867,10 @@
     if (pickRoll <= pickChance) {
       const yac = calcYAC(defenderName, routeInfo.separation);
       const totalYards = airYards + (Number(yac) || 0);
-      return { completed: false, intercepted: true, yards: totalYards, caughtBy: defenderName};
+      return { completed: false, intercepted: true, yards: totalYards, caughtBy: defenderName, completionRoll };
     }
 
-    return { completed: false, intercepted: false, yards: 0 };
+    return { completed: false, intercepted: false, yards: 0, completionRoll };
   }
 
   function calcYAC(playerName, separation = 0){
