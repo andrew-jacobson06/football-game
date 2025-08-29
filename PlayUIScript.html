@@ -1449,6 +1449,7 @@
       routes = assignRoutes();
       target = choosePassTarget(qbName, routes, timeToThrow);
       completionPct = determineCompletionPct(qbName, target, routes);
+      console.log(routes, target, completionPct);
       resultArray = determinePassOutcome(qbName, target, routes, completionPct);
     }
 
@@ -1664,7 +1665,7 @@
         }
       }
       route.airyardsweight = airyardsweight;
-      route.weight = airyardsweight * route.throwLikelyhood;
+      route.weight = Math.max(0.1, airyardsweight * route.throwLikelyhood);
     });
 
     const totalWeight = Object.keys(routes).reduce((sum, name) => sum + (routes[name].weight || 0), 0);
@@ -1782,8 +1783,8 @@
         if (type === 'Long' || type === 'Med-Long') type = 'Long';
         typeSet.add(type);
       });
-      const routeVariation = typeSet.size * 4;
-      completionPct += routeVariation - 18;
+      const routeVariation = typeSet.size * 2.5;
+      completionPct += routeVariation - 12;
     }
 
     return completionPct;
@@ -2909,10 +2910,15 @@
   }
   //New UI functionality
   function makeArcPath(x, y, width, rise, direction = "up") {
-    const x0 = x, y0 = y;
-    const x1 = x + width, y1 = y;           // baseline anchors
-    const cx = x + width / 2;
+    let x0 = x, y0 = y;
+    let x1 = x + width, y1 = y;           // baseline anchors  
+    let cx = x + width / 2;  
     const cy = direction === "up" ? y - rise : y + rise;
+    if(state.Possession == "Away"){
+      x0 = width-1;
+      x1 = 0;
+      cx = x + width / 2;
+    }
     return {
       d: `M ${x0} ${y0} Q ${cx} ${cy} ${x1} ${y1}`,
       start: { x: x0, y: y0 },
@@ -2931,7 +2937,10 @@
       const durMs   = durStr.endsWith('ms') ? parseFloat(durStr) : parseFloat(durStr) * 1000;
       const easing  = 'ease-out';
       // Pad so the arrow never clips
-      const pad = 1;//Math.ceil(Math.max(stroke, arrowL) + 6);
+      let pad = 1;//Math.ceil(Math.max(stroke, arrowL) + 6);
+      if(state.Possession == "Away"){
+        pad = -1;
+      }
       const baselineY = rise + pad;
       const vbWidth = width + pad * 2;
       const vbHeight = baselineY + rise + pad;
@@ -2942,6 +2951,15 @@
       svg.setAttribute("width", vbWidth);
       svg.setAttribute("height", vbHeight);
       const { d, start, end } = makeArcPath(pad, baselineY, width, rise, direction);
+
+      // Compute control point (same as makeArcPath) for reversed path’s angle math
+      const cx = pad + width / 2;
+      const cy = direction === "up" ? baselineY - rise : baselineY + rise;
+
+      // Use drawStart/drawEnd so the rest of your code remains unchanged
+      const drawStart = start;
+      const drawEnd   = end;
+
       const path = document.createElementNS(svgNS, "path");
       path.setAttribute("class", "arc-path");
       path.setAttribute("pathLength", "1");
@@ -2950,7 +2968,11 @@
       // Position the arc container at the previous pixel location so the
       // animation originates from the correct spot on the field.
       mountEl.style.position = "absolute";
-      mountEl.style.left = `${prevPx}px`;
+      if(state.Possession == "Home"){
+        mountEl.style.left = `${prevPx}px`;
+      } else{
+        mountEl.style.right = `${prevPx}px`;
+      }
       // Ensure the container dimensions match the SVG so width animates
       // from the starting point instead of the page origin.
       mountEl.style.width = `${vbWidth}px`;
@@ -2964,7 +2986,10 @@
       const arrow = document.createElement("span");
       arrow.className = "arc-arrow";
       arrow.style.setProperty("--angle", `${angleDeg}deg`);
-      const arrowLeft = end.x + 12;
+      let arrowLeft = end.x + 12;
+      if(state.Possession == "Away"){
+        arrowLeft = end.x - 12;
+      }
       // Start at the base (start anchor), end at the right anchor
       arrow.style.left = `${arrowLeft}px`;
       arrow.style.top  = `${start.y}px`;
