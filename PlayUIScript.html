@@ -280,6 +280,32 @@
               receivingStats = [];
 
               playHistory.forEach(play => {
+                const team = play.Possession || '';
+                const yards = parseFloat(play.Yards) || 0;
+                if (play.Result === 'Sack') {
+                  const qb = play.Passer || play.Player || '';
+                  if (qb) {
+                    let ps = passingStats.find(s => s.playername === qb && s.team === team);
+                    if (!ps) {
+                      ps = { playername: qb, team, attempts: 0, completions: 0, yards: 0, tds: 0, ints: 0, sacks: 0, sackYds: 0 };
+                      passingStats.push(ps);
+                    }
+                    ps.sacks = (ps.sacks || 0) + 1;
+                    ps.sackYds = (ps.sackYds || 0) + yards;
+                  }
+                  if (play.Tackler && play.Tackler !== 'NA') {
+                    const defTeam = team === 'Home' ? 'Away' : 'Home';
+                    let d = defensiveStats.find(s => s.playername === play.Tackler && s.team === defTeam);
+                    if (!d) {
+                      d = { playername: play.Tackler, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0, sacks: 0 };
+                      defensiveStats.push(d);
+                    }
+                    d.tackles++;
+                    d.tfl++;
+                    d.sacks = (d.sacks || 0) + 1;
+                  }
+                  return;
+                }
                 if (!play.PlayType) return;
 
                 if (play.PlayType === 'Run') {
@@ -306,7 +332,7 @@
                     const defTeam = team === 'Home' ? 'Away' : 'Home';
                     let d = defensiveStats.find(s => s.playername === play.Tackler && s.team === defTeam);
                     if (!d) {
-                      d = { playername: play.Tackler, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0 };
+                      d = { playername: play.Tackler, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0, sacks: 0 };
                       defensiveStats.push(d);
                     }
                     d.tackles++;
@@ -329,7 +355,7 @@
                   if (qb) {
                     let ps = passingStats.find(s => s.playername === qb && s.team === team);
                     if (!ps) {
-                      ps = { playername: qb, team, attempts: 0, completions: 0, yards: 0, tds: 0, ints: 0 };
+                      ps = { playername: qb, team, attempts: 0, completions: 0, yards: 0, tds: 0, ints: 0, sacks: 0, sackYds: 0 };
                       passingStats.push(ps);
                     }
                     ps.attempts++;
@@ -361,7 +387,7 @@
                     if (defender) {
                       let d = defensiveStats.find(s => s.playername === defender && s.team === defTeam);
                       if (!d) {
-                        d = { playername: defender, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0 };
+                        d = { playername: defender, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0, sacks: 0 };
                         defensiveStats.push(d);
                       }
                       d.ints++;
@@ -370,7 +396,7 @@
                     const defTeam = team === 'Home' ? 'Away' : 'Home';
                     let d = defensiveStats.find(s => s.playername === play.Defender && s.team === defTeam);
                     if (!d) {
-                      d = { playername: play.Defender, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0 };
+                      d = { playername: play.Defender, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0, sacks: 0 };
                       defensiveStats.push(d);
                     }
                     d.deflections = (d.deflections || 0) + 1;
@@ -1553,12 +1579,12 @@
         await animatePlay('Pass', resultArray);
       } else{
         let playType = 'Pass';
-        if(resultArray.sack){
-          let playType = 'Run';
-          target = {target: ''};
-        }
-        else if(!resultArray.completed){
-          result = "Incomplete";
+        if (resultArray.sack) {
+          playType = 'Run';
+          result = 'Sack';
+          target = { target: '' };
+        } else if (!resultArray.completed) {
+          result = 'Incomplete';
         }
         newDown++;
         if (newDown > 4) {
@@ -2120,7 +2146,7 @@
 
   function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, recName, yards, tackler, result, predicted, qtr, time, recoveredBy) {//MAKE PASS UPDATES
       let playType = 'Run';
-      if(recName != ''){
+      if (recName !== '' || result === 'Sack') {
         playType = 'Pass';
       }
       const localPlay = {
@@ -2577,7 +2603,7 @@
     if (tackler && tackler !== "NA") {
       let d = defensiveStats.find(s => s.playername === tackler && s.team === defTeam);
       if (!d) {
-        d = { playername: tackler, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0 };
+        d = { playername: tackler, team: defTeam, tackles: 0, tfl: 0, ff: 0, fr: 0, deflections: 0, ints: 0, sacks: 0 };
         defensiveStats.push(d);
       }
       d.tackles++;
@@ -2610,8 +2636,9 @@
     const players = passingStats.filter(p => p.team === team);
     players.forEach(p => {
       const avg = p.completions ? (p.yards / p.completions).toFixed(1) : "0.0";
+      const sacks = p.sacks ? `${p.sacks}-${Math.abs(p.sackYds)}` : '0-0';
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${p.playername}</td><td>${p.completions}/${p.attempts}</td><td>${p.yards}</td><td>${avg}</td><td>${p.tds}</td><td>${p.ints}</td><td>0</td><td>0.0</td>`;
+      tr.innerHTML = `<td>${p.playername}</td><td>${p.completions}/${p.attempts}</td><td>${p.yards}</td><td>${avg}</td><td>${p.tds}</td><td>${p.ints}</td><td>${sacks}</td><td>0.0</td>`;
       body.appendChild(tr);
     });
   }
@@ -2672,7 +2699,7 @@
     const players = defensiveStats.filter(p => p.team === team).sort((a, b) => b.tackles - a.tackles);
     players.forEach(p => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${p.playername}</td><td>${p.tackles}</td><td>${p.tfl}</td><td>0</td><td>${p.ff}</td><td>${p.fr}</td><td>${p.ints || 0}</td><td>${p.deflections || 0}</td>`;
+      tr.innerHTML = `<td>${p.playername}</td><td>${p.tackles}</td><td>${p.tfl}</td><td>${p.sacks || 0}</td><td>${p.ff}</td><td>${p.fr}</td><td>${p.ints || 0}</td><td>${p.deflections || 0}</td>`;
       body.appendChild(tr);
     });
   }
