@@ -199,6 +199,20 @@ function getStaminaDrains() {
   return staminaDrainMap;
 }
 
+function getSackLossTable() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
+  const data = sheet.getDataRange().getValues();
+
+  return data
+    .filter(row => typeof row[0] === "string" && row[0].startsWith("SackLoss_"))
+    .map(row => ({
+      label: row[0],
+      pct: Number(row[1]),
+      max: Number(row[2]),
+      min: Number(row[3])
+    }));
+}
+
 function getTackleDistributions() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
   const data = sheet.getDataRange().getValues();
@@ -319,7 +333,8 @@ function getFrontendSettings() {
     routeTypeAirYards: getRouteTypeAirYards(),
     timeNeededToThrow: getTimeNeededToThrow(),
     completionSeparationAdjustment: getCompletionSeparationAdjustment(),
-    yacBySeparation: getYacBySeparation()
+    yacBySeparation: getYacBySeparation(),
+    sackLossTable: getSackLossTable()
   };
   Logger.log(data);
   return data;

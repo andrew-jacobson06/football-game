@@ -6,6 +6,7 @@
   let breakawaySettings = [];
   let drainSettings = {};  // Populated from backend on load
   let tackleSettings = [];
+  let sackLossTable = [];
   let frontendStats = [];
   let defensiveStats = [];
   let passingStats = [];
@@ -1180,6 +1181,7 @@
         breakawaySettings = data.breakaways;
         drainSettings = data.staminaDrains;
         tackleSettings = data.tackleTable || [];
+        sackLossTable = data.sackLossTable || [];
         completionTable = data.completionTable || [];
         routeTypeAirYards = data.routeTypeAirYards || [];
         timeNeededToOpen = data.timeNeededToThrow || [];
@@ -1454,7 +1456,7 @@
     let timeToThrow = determineTimeToThrow();
     timeToThrow = -1;
     if(timeToThrow < 0){
-      resultArray = handleSack();
+      resultArray = handleSack(qbName);
     } else{
       routes = assignRoutes();
       targetData = choosePassTarget(qbName, routes, timeToThrow);
@@ -1617,7 +1619,7 @@
     afterPlayComplete();
   }
 
-  function handleSack(){ 
+  function handleSack(qbName){
     const rushers = defensiveFormation.filter(f =>
       f.player && (f.position.startsWith('DL') || f.position.startsWith('LB'))
     );
@@ -1643,7 +1645,27 @@
       }
     }
 
-    return { sack: true, sackBy: sacker, yards: -5 };
+    let loss = 5;
+    if (sackLossTable.length) {
+      const pctRoll = Math.random() * 100;
+      let cumulative = 0;
+      let selected = sackLossTable[0];
+      for (const entry of sackLossTable) {
+        cumulative += Number(entry.pct || 0);
+        if (pctRoll <= cumulative) {
+          selected = entry;
+          break;
+        }
+      }
+      loss = randomInt(Number(selected.min), Number(selected.max));
+    }
+
+    const agility = Number(playerTraits[qbName]?.juke || 0);
+    if (Math.random() * 100 <= agility) {
+      loss = Math.max(1, loss - 2);
+    }
+
+    return { sack: true, sackBy: sacker, yards: -loss };
   }
 
   function assignRoutes() {
