@@ -714,6 +714,7 @@
     computeDriveInfo();
     updateLastPlayDesc();
     renderScoringSummary();
+    renderQuarterScoreChart();
   }
 
   function renderScoringSummary() {
@@ -769,7 +770,52 @@
     });
   }
 
-    function loadPlayers() {
+  function getQuarterScores() {
+    const home = [0, 0, 0, 0];
+    const away = [0, 0, 0, 0];
+    let prevHome = 0;
+    let prevAway = 0;
+    playHistory.forEach(play => {
+      const q = parseInt(play.QTR ?? play.Qtr, 10);
+      let h = play.HomeScore !== undefined ? parseInt(play.HomeScore, 10) : prevHome;
+      let a = play.AwayScore !== undefined ? parseInt(play.AwayScore, 10) : prevAway;
+      if (isNaN(h)) h = prevHome;
+      if (isNaN(a)) a = prevAway;
+      if (q >= 1 && q <= 4) {
+        home[q - 1] += h - prevHome;
+        away[q - 1] += a - prevAway;
+      }
+      prevHome = h;
+      prevAway = a;
+    });
+    return { home, away };
+  }
+
+  function renderQuarterScoreChart() {
+    const container = document.getElementById('scoreChart');
+    if (!container) return;
+    const { home, away } = getQuarterScores();
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th><th>T</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="team-cell"><img src="${state.HomeLogo || ''}" alt="Home Logo" class="team-logo-small"><span>${state.Home}</span></td>
+            <td>${home[0]}</td><td>${home[1]}</td><td>${home[2]}</td><td>${home[3]}</td>
+            <td class="total-cell">${state.HomeScore}</td>
+          </tr>
+          <tr>
+            <td class="team-cell"><img src="${state.AwayLogo || ''}" alt="Away Logo" class="team-logo-small"><span>${state.Away}</span></td>
+            <td>${away[0]}</td><td>${away[1]}</td><td>${away[2]}</td><td>${away[3]}</td>
+            <td class="total-cell">${state.AwayScore}</td>
+          </tr>
+        </tbody>
+      </table>`;
+  }
+
+  function loadPlayers() {
       populateBench();
       updateRunnerDropdown();
       receiverRoutes = {};
