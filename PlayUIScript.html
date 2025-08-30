@@ -963,6 +963,8 @@
       const list = document.getElementById('routesList');
       if (!list) return;
       list.innerHTML = '';
+      const summary = document.getElementById('readSummary');
+      if (summary) summary.innerHTML = '';
 
       const field = list;
       const fieldHeight = field.clientHeight;
@@ -972,28 +974,25 @@
         const line = document.createElement('div');
         line.className = 'route-line';
         line.style.bottom = `${(i * 100) / ROUTE_OPTIONS.length}%`;
-        line.textContent = r;
         field.appendChild(line);
+
+        const label = document.createElement('div');
+        label.className = 'zone-label';
+        label.style.bottom = `${(i * 100) / ROUTE_OPTIONS.length}%`;
+        label.style.height = `${100 / ROUTE_OPTIONS.length}%`;
+        label.textContent = r;
+        field.appendChild(label);
       });
 
       const players = getEligibleReceivers();
       players.forEach((p, idx) => {
         const card = document.createElement('div');
-        card.className = 'player-card';
+        card.className = 'player-circle';
         card.setAttribute('data-player', p.player);
-        const t = playerTraits[p.player] || {};
+        card.dataset.dragged = 'false';
         card.innerHTML = `
           <div class="read-badge"></div>
           <div class="player-name">${p.player}</div>
-          <div class="stars">⭐${t.offStars || 0}</div>
-          <div class="traits">
-            <span>SZ:${t.size || 0}</span>
-            <span>SPD:${t.speed || 0}</span>
-            <span>RR:${t.routeRunning || 0}</span>
-            <span>JMP:${t.jump || 0}</span>
-            <span>HND:${t.hands || 0}</span>
-          </div>
-          <div class="stam">Stam:${t.fatigue || 0}</div>
         `;
         field.appendChild(card);
 
@@ -1006,6 +1005,14 @@
         const top = fieldHeight - (rIdx + 0.5) * zoneHeight - card.offsetHeight / 2;
         card.style.top = `${top}px`;
 
+        card.addEventListener('click', () => {
+          if (card.dataset.dragged === 'true') {
+            card.dataset.dragged = 'false';
+            return;
+          }
+          showPlayerDetails(p.player);
+        });
+
         initCardDrag(card, field);
       });
 
@@ -1013,33 +1020,37 @@
     }
 
     function initCardDrag(card, field) {
-      card.addEventListener('mousedown', startDrag);
+      card.addEventListener('mousedown', e => startDrag(e, false));
+      card.addEventListener('touchstart', e => startDrag(e, true), { passive: false });
 
-      function startDrag(e) {
+      function startDrag(e, isTouch) {
         e.preventDefault();
         const rect = field.getBoundingClientRect();
         const cardRect = card.getBoundingClientRect();
-        const offsetX = e.clientX - cardRect.left;
-        const offsetY = e.clientY - cardRect.top;
+        const startX = (isTouch ? e.touches[0].clientX : e.clientX) - cardRect.left;
+        const startY = (isTouch ? e.touches[0].clientY : e.clientY) - cardRect.top;
 
         function move(ev) {
-          let x = ev.clientX - rect.left - offsetX;
-          let y = ev.clientY - rect.top - offsetY;
+          const clientX = isTouch ? ev.touches[0].clientX : ev.clientX;
+          const clientY = isTouch ? ev.touches[0].clientY : ev.clientY;
+          let x = clientX - rect.left - startX;
+          let y = clientY - rect.top - startY;
           x = Math.max(0, Math.min(x, rect.width - card.offsetWidth));
           y = Math.max(0, Math.min(y, rect.height - card.offsetHeight));
           card.style.left = `${x}px`;
           card.style.top = `${y}px`;
+          card.dataset.dragged = 'true';
         }
 
         function up() {
-          document.removeEventListener('mousemove', move);
-          document.removeEventListener('mouseup', up);
+          document.removeEventListener(isTouch ? 'touchmove' : 'mousemove', move);
+          document.removeEventListener(isTouch ? 'touchend' : 'mouseup', up);
           updateRoute(card, field);
           updateReads(field);
         }
 
-        document.addEventListener('mousemove', move);
-        document.addEventListener('mouseup', up);
+        document.addEventListener(isTouch ? 'touchmove' : 'mousemove', move, { passive: false });
+        document.addEventListener(isTouch ? 'touchend' : 'mouseup', up);
       }
     }
 
@@ -1060,14 +1071,19 @@
     }
 
     function updateReads(field) {
-      const cards = Array.from(field.querySelectorAll('.player-card'));
+      const cards = Array.from(field.querySelectorAll('.player-circle'));
       cards.sort((a, b) => parseFloat(a.style.left) - parseFloat(b.style.left));
+      const cardWidth = cards[0]?.offsetWidth || 0;
+      const gap = 10;
+      const step = cardWidth + gap;
       cards.forEach((card, i) => {
         const read = QB_READ_OPTIONS[i] || '';
         const badge = card.querySelector('.read-badge');
         if (badge) badge.textContent = read;
+        card.style.left = `${i * step}px`;
         handleReadChange(card.dataset.player, { value: read });
       });
+      updateReadSummary();
     }
 
     function handleReadChange(player, select) {
@@ -1095,6 +1111,36 @@
       playerReadSelection = {};
       qbReadAssignments = {};
       renderRoutesModal();
+    }
+
+    function updateReadSummary() {
+      const summary = document.getElementById('readSummary');
+      if (!summary) return;
+      let html = '<div class="summary-title">Read Summary:</div>';
+      QB_READ_OPTIONS.forEach(r => {
+        const player = qbReadAssignments[r] || '';
+        const route = player ? (receiverRoutes[player] || '') : '';
+        html += `<div class="summary-row"><span class="summary-label">${r}:</span><span>${player ? player + ' - ' + route : ''}</span></div>`;
+      });
+      summary.innerHTML = html;
+    }
+
+    function showPlayerDetails(name) {
+      const t = playerTraits[name] || {};
+      const detail = document.createElement('div');
+      detail.className = 'player-detail';
+      detail.innerHTML = `
+        <h4>${name}</h4>
+        <div>Size: ${t.size || 0}</div>
+        <div>Speed: ${t.speed || 0}</div>
+        <div>RR: ${t.routeRunning || 0}</div>
+        <div>JMP: ${t.jump || 0}</div>
+        <div>HND: ${t.hands || 0}</div>
+        <div>Stam: ${t.fatigue || 0}</div>
+      `;
+      const modal = document.getElementById('routesModal');
+      if (modal) modal.appendChild(detail);
+      detail.addEventListener('click', () => detail.remove());
     }
 
   function setDefensiveFormation() {
