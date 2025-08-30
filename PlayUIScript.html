@@ -1680,10 +1680,34 @@
     const routeLikelihoods = [];
 
     Object.keys(routes).forEach(name => {
+      const read = playerReadSelection[name];
+      let readVal = 3;
+      //setup readVal
+      switch (read) {
+        case "Primary":
+          readVal = 5;
+          break;
+        case "2nd":
+          readVal = 4;
+          break;
+        case "3rd":
+          readVal = 3;
+          break;
+        case "4th":
+          readVal = 2;
+          break;
+        case "Checkdown":
+          readVal = 1;
+          break;
+        default:
+          readVal = 0; // fallback if none match
+      }
+
       const route = routes[name];
       const wr = playerTraits[name] || {};
       route.percievedSeparation = qbReadsDefense ? route.separation : 0;
-      route.throwLikelyhood = ((Number(wr.qbFavorite) || 0) / 10) + (route.percievedSeparation * 3);
+      //route.throwLikelyhood = ((Number(wr.qbFavorite) || 0) / 10) + (route.percievedSeparation * 3);
+      route.throwLikelyhood = readVal + (route.percievedSeparation * 3);
 
       // Determine weight based on depth of route using completionTable
       let airyardsweight = 0;
@@ -1696,8 +1720,9 @@
         }
       }
       route.airyardsweight = airyardsweight;
-      route.weight = Math.max(0.1, airyardsweight * route.throwLikelyhood);
-      routeLikelihoods.push({name, throwLikelyhood: route.throwLikelyhood});
+      //route.weight = Math.max(0.1, airyardsweight * route.throwLikelyhood);
+      route.weight = readVal == 0 ? 0 : airyardsweight + route.throwLikelyhood;
+      routeLikelihoods.push({name, throwLikelyhood: route.throwLikelyhood, weight: route.weight});
     });
 
     const totalWeight = Object.keys(routes).reduce((sum, name) => sum + (routes[name].weight || 0), 0);
