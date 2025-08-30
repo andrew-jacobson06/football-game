@@ -320,8 +320,8 @@
                   const team = play.Possession || '';
                   const yards = parseFloat(play.Yards) || 0;
                   const result = play.Result || '';
-                  const completed = result !== 'Incomplete' && result !== 'Intercepted';
-                  const intercepted = result === 'Intercepted';
+                  const completed = result !== 'Incomplete' && result !== 'Interception';
+                  const intercepted = result === 'Interception';
                   const td = result === 'Touchdown';
                   const fumble = result === 'Fumble';
                   if (qb) {
@@ -355,7 +355,7 @@
                   }
                   if (intercepted) {
                     const defTeam = team === 'Home' ? 'Away' : 'Home';
-                    const defender = play.Interceptor || play.Tackler;
+                    const defender = play.RecoveredBy || play.recoveredby || play.Interceptor || play.Tackler;
                     if (defender) {
                       let d = defensiveStats.find(s => s.playername === defender && s.team === defTeam);
                       if (!d) {
@@ -491,10 +491,11 @@
       const yards = play.Yards;
       const tackler = play.Tackler;
       let text = '';
-      if (play.Result === 'Intercepted') {
+      if (play.Result === 'Interception') {
         const poss = play.Possession === 'Home' ? 'Away' : 'Home';
         const spot = formatBallOnForPoss(play.NewBallOn, poss);
-        text = `${qb} pass intended for ${receiver}. Intercepted at the ${spot} by ${tackler}.`;
+        const interceptor = play.RecoveredBy || play.recoveredby || tackler || '';
+        text = `${qb} pass intended for ${receiver}. Intercepted at the ${spot} by ${interceptor}.`;
       } else if (play.Result === 'Incomplete') {
         text = `${qb} pass intended for ${receiver}. Incomplete.`;
       } else {
@@ -505,7 +506,7 @@
         }
         text += '.';
       }
-      if (play.Result && !['Normal','Fumble','Intercepted','Incomplete'].includes(play.Result)) {
+      if (play.Result && !['Normal','Fumble','Interception','Incomplete'].includes(play.Result)) {
         if (play.Result === 'Touchdown') {
           text += ` <span style="color:green; font-weight:bold;">${play.Result}!</span>`;
         } else if (play.Result === 'TO on Downs') {
@@ -1563,7 +1564,7 @@
     //Handle Fumble or INT
     else {
       if (resultArray.intercepted) {
-        result = "Intercepted";
+        result = "Interception";
         recoveredBy = resultArray.caughtBy;
       } else {
         result = "Fumble";
@@ -2140,7 +2141,7 @@
     }
 
   function updateRunningClock(result) {//MAKE PASS UPDATES
-    const stopResults = ['Touchdown','Timeout','Field Goal','Kickoff','Punt','Safety','End of Quarter','TO on Downs','Fumble', 'Intercepted', 'Incomplete'];
+    const stopResults = ['Touchdown','Timeout','Field Goal','Kickoff','Punt','Safety','End of Quarter','TO on Downs','Fumble', 'Interception', 'Incomplete'];
     if (result) {
       runningClock = !stopResults.includes(result);
     }
