@@ -883,8 +883,8 @@
     container.innerHTML = `
       <div class="leaders-header">GAME LEADERS</div>
       <div class="leaders-team-row">
-        <div class="team home"><img src="${state.HomeLogo || ''}" class="team-logo-small"><span class="team-name">${homeTeam}</span></div>
-        <div class="team away"><span class="team-name">${awayTeam}</span><img src="${state.AwayLogo || ''}" class="team-logo-small"></div>
+        <div class="team home"><img src="${state.HomeLogo || ''}" class="team-logo-small" style="height:10vw;"><span class="team-name">${homeTeam}</span></div>
+        <div class="team away"><span class="team-name" style="order:1;">${awayTeam}</span><img src="${state.AwayLogo || ''}" class="team-logo-small" style="height:10vw; order:2;"></div>
       </div>
       <div class="leader-divider"></div>
       ${buildSection('Passing Yards', passHome, passAway, 'yards', statLinePassing)}
