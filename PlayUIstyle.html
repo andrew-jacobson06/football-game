@@ -887,6 +887,8 @@
   .routes-panel {
     max-height: 90vh;
     overflow-y: auto;
+    max-width: 95vw;
+    width: 95vw;
   }
 
   #routesList {
@@ -909,38 +911,36 @@
     pointer-events: none;
   }
 
-  .player-card {
+  .player-circle {
     position: absolute;
-    width: clamp(80px, 20vw, 120px);
+    width: clamp(60px, 16vw, 90px);
+    height: clamp(60px, 16vw, 90px);
     background: #fff;
     color: #000;
-    border-radius: 6px;
-    padding: 1vw;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: grab;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     font-size: 2.5vw;
+    text-align: center;
+    touch-action: none;
+    z-index: 2;
   }
 
-  .player-card:active {
+  .player-circle:active {
     cursor: grabbing;
   }
 
-  .player-card .traits {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1vw;
-    font-size: 2vw;
-    margin-top: 0.5vw;
-  }
-
-  .player-card .read-badge {
+  .player-circle .read-badge {
     position: absolute;
     top: 0.5vw;
     right: 0.5vw;
     background: var(--accent-red);
     color: #fff;
     border-radius: 4px;
-    padding: 0.5vw 1vw;
+    padding: 0.3vw 0.6vw;
     font-size: 2vw;
   }
 
@@ -948,6 +948,66 @@
     display: flex;
     align-items: center;
     gap: 2vw;
+    margin-bottom: 2vw;
+  }
+
+  .zone-label {
+    position: absolute;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10vw;
+    color: rgba(255,255,255,0.2);
+    text-transform: uppercase;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .route-line {
+    z-index: 1;
+  }
+
+  .read-summary {
+    background: #fff;
+    color: #000;
+    border-radius: 6px;
+    padding: 2vw;
+    margin: 2vw 0;
+    font-size: 2.5vw;
+  }
+
+  .read-summary .summary-row {
+    display: flex;
+    gap: 1vw;
+  }
+
+  .read-summary .summary-label {
+    width: 30%;
+    font-weight: 600;
+  }
+
+  .player-detail {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    color: #000;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    padding: 2vw;
+    z-index: 20;
+    font-size: 2.5vw;
+  }
+
+  .player-card {
+    background: #fff;
+    color: #000;
+    border-radius: 6px;
+    padding: 1vw;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    font-size: 2.5vw;
     margin-bottom: 2vw;
   }
 
