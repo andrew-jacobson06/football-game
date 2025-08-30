@@ -788,6 +788,53 @@
     font-weight: 700;
   }
 
+  /* Team stats */
+  .team-stats-card {
+    margin-top: 5vw;
+    padding: 5vw;
+    background: var(--gray-medium);
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.4);
+  }
+  .team-stats-title {
+    font-weight: 700;
+    margin-bottom: 3.75vw;
+    text-align: center;
+    font-size: clamp(16px, 4.5vw, 28px);
+  }
+  .team-stats-table th {
+    background: var(--gray-light);
+    border-bottom: 2px solid var(--accent-red);
+    color: var(--text-light);
+    font-weight: 700;
+  }
+  .team-stats-table td:first-child {
+    text-align: left;
+  }
+  .team-stats-table .header-row td {
+    font-weight: 700;
+    color: var(--text-light);
+    font-size: clamp(14px, 4.5vw, 24px);
+  }
+  .team-stats-table .header2-row td {
+    font-weight: 700;
+    color: var(--text-light);
+  }
+  .team-stats-table .stat-row td {
+    color: var(--text-muted);
+  }
+  .team-stats-table .indent-1 td:first-child {
+    padding-left: 5vw;
+  }
+  .team-stats-table .indent-2 td:first-child {
+    padding-left: 10vw;
+  }
+  .team-stats-logo {
+    width: 10vw;
+    height: 10vw;
+    object-fit: contain;
+  }
+
   /* Play log */
   .play-log-card {
     margin-top: 5vw;
