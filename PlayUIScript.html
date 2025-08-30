@@ -822,7 +822,15 @@
 
     const homeTeam = state.Home || '';
     const awayTeam = state.Away || '';
-    const placeholder = '<div class="player-placeholder"><span>👤</span></div>';
+    const emptyPfp = '<div class="player-placeholder"><span>👤</span></div>';
+
+    function playerImage(player){
+      const name = player ? player.playername : '';
+      const trait = name && playerTraits[name];
+      const img = trait && trait.image;
+      if (!img) return emptyPfp;
+      return `<div class="player-placeholder"><img src="${img}" class="player-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><span style="display:none;">👤</span></div>`;
+    }
 
     function leader(arr, team, stat, hasStatsFn) {
       const players = arr.filter(p => p.team === team && (hasStatsFn ? hasStatsFn(p) : (p[stat] || 0) > 0));
@@ -858,11 +866,13 @@
       const awayPos = awayPlayer && playerTraits[awayName] ? playerTraits[awayName].position : '';
       const homeVal = homePlayer ? homePlayer[statField] : '--';
       const awayVal = awayPlayer ? awayPlayer[statField] : '--';
+      const homeImg = playerImage(homePlayer);
+      const awayImg = playerImage(awayPlayer);
       let html = `
         <div class="leader-row values">
-          <div class="leader-left">${placeholder}<span class="leader-value">${homeVal}</span></div>
+          <div class="leader-left">${homeImg}<span class="leader-value">${homeVal}</span></div>
           <div class="leader-center"></div>
-          <div class="leader-right"><span class="leader-value">${awayVal}</span>${placeholder}</div>
+          <div class="leader-right"><span class="leader-value">${awayVal}</span>${awayImg}</div>
         </div>
         <div class="leader-row names">
           <div class="leader-left">${homePlayer ? `<span class="leader-name">${homeName}</span><span class="leader-pos">${homePos}</span>` : ''}</div>
