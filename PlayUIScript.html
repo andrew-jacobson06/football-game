@@ -816,6 +816,92 @@
       </table>`;
   }
 
+  function renderGameLeaders() {
+    const container = document.getElementById('leadersCard');
+    if (!container) return;
+
+    const homeTeam = state.Home || '';
+    const awayTeam = state.Away || '';
+    const placeholder = '<div class="player-placeholder"><span>👤</span></div>';
+
+    function leader(arr, team, stat, hasStatsFn) {
+      const players = arr.filter(p => p.team === team && (hasStatsFn ? hasStatsFn(p) : (p[stat] || 0) > 0));
+      if (!players.length) return null;
+      return players.reduce((max, p) => (p[stat] > (max[stat] || 0) ? p : max));
+    }
+
+    const passHome = leader(passingStats, 'Home', 'yards', p => (p.attempts || p.completions || p.yards));
+    const passAway = leader(passingStats, 'Away', 'yards', p => (p.attempts || p.completions || p.yards));
+    const rushHome = leader(frontendStats, 'Home', 'yards', p => (p.carries || p.yards));
+    const rushAway = leader(frontendStats, 'Away', 'yards', p => (p.carries || p.yards));
+    const recHome = leader(receivingStats, 'Home', 'yards', p => (p.receptions || p.yards));
+    const recAway = leader(receivingStats, 'Away', 'yards', p => (p.receptions || p.yards));
+    const sackHome = leader(defensiveStats, 'Home', 'sacks', p => (p.sacks));
+    const sackAway = leader(defensiveStats, 'Away', 'sacks', p => (p.sacks));
+    const tklHome = leader(defensiveStats, 'Home', 'tackles', p => (p.tackles));
+    const tklAway = leader(defensiveStats, 'Away', 'tackles', p => (p.tackles));
+
+    function statLinePassing(p){
+      return `${p.completions}/${p.attempts}, ${p.yards} YDS, ${p.tds} TD, ${p.ints} INT`;
+    }
+    function statLineRushing(p){
+      return `${p.carries} CAR, ${p.yards} YDS, ${p.tds} TD`;
+    }
+    function statLineReceiving(p){
+      return `${p.receptions} REC, ${p.yards} YDS, ${p.tds} TD`;
+    }
+
+    function buildSection(label, homePlayer, awayPlayer, statField, lineFn){
+      const homeName = homePlayer ? homePlayer.playername : '';
+      const awayName = awayPlayer ? awayPlayer.playername : '';
+      const homePos = homePlayer && playerTraits[homeName] ? playerTraits[homeName].position : '';
+      const awayPos = awayPlayer && playerTraits[awayName] ? playerTraits[awayName].position : '';
+      const homeVal = homePlayer ? homePlayer[statField] : '--';
+      const awayVal = awayPlayer ? awayPlayer[statField] : '--';
+      let html = `
+        <div class="leader-row values">
+          <div class="leader-left">${placeholder}<span class="leader-value">${homeVal}</span></div>
+          <div class="leader-center"></div>
+          <div class="leader-right"><span class="leader-value">${awayVal}</span>${placeholder}</div>
+        </div>
+        <div class="leader-row names">
+          <div class="leader-left">${homePlayer ? `<span class="leader-name">${homeName}</span><span class="leader-pos">${homePos}</span>` : ''}</div>
+          <div class="leader-center leader-label">${label}</div>
+          <div class="leader-right">${awayPlayer ? `<span class="leader-name">${awayName}</span><span class="leader-pos">${awayPos}</span>` : ''}</div>
+        </div>`;
+      if (lineFn && (homePlayer || awayPlayer)) {
+        html += `<div class="leader-row statlines">
+          <div class="leader-left">${homePlayer ? `<span class="leader-statline">${lineFn(homePlayer)}</span>` : ''}</div>
+          <div class="leader-center"></div>
+          <div class="leader-right">${awayPlayer ? `<span class="leader-statline">${lineFn(awayPlayer)}</span>` : ''}</div>
+        </div>`;
+      }
+      html += '<div class="leader-divider"></div>';
+      return html;
+    }
+
+    container.innerHTML = `
+      <div class="leaders-header">GAME LEADERS</div>
+      <div class="leaders-team-row">
+        <div class="team home"><img src="${state.HomeLogo || ''}" class="team-logo-small"><span class="team-name">${homeTeam}</span></div>
+        <div class="team away"><span class="team-name">${awayTeam}</span><img src="${state.AwayLogo || ''}" class="team-logo-small"></div>
+      </div>
+      <div class="leader-divider"></div>
+      ${buildSection('Passing Yards', passHome, passAway, 'yards', statLinePassing)}
+      ${buildSection('Rushing Yards', rushHome, rushAway, 'yards', statLineRushing)}
+      ${buildSection('Receiving Yards', recHome, recAway, 'yards', statLineReceiving)}
+      ${buildSection('Sacks', sackHome, sackAway, 'sacks')}
+      ${buildSection('Tackles', tklHome, tklAway, 'tackles')}
+      <div id="boxscoreLink" class="boxscore-link">Full Box Score</div>
+    `;
+
+    const link = document.getElementById('boxscoreLink');
+    if (link) link.addEventListener('click', () => {
+      const tab = document.querySelector('.tab-button[data-tab="boxscore"]');
+      if (tab) tab.click();
+    });
+  }
+
   function loadPlayers() {
       populateBench();
       updateRunnerDropdown();
@@ -2817,6 +2903,7 @@
     renderDefensiveTable("Home");
     renderDefensiveTable("Away");
     sortBoxScoreTables();
+    renderGameLeaders();
   }
 
   function renderPassingTable(team) {
