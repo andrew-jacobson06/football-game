@@ -1277,14 +1277,18 @@
     return inGroup[inGroup.length - 1].player;
   }
 
-  function checkForFumble(runner, tackler) {
+  function checkForFumble(runner, tackler, sack = false) {
     if (!runner || !tackler || tackler === "NA") return { fumble: false };
     const rb = playerTraits[runner];
     const def = playerTraits[tackler];
     if (!rb || !def) return { fumble: false };
     const strip = Number(def.strip || 0);
     const ballSec = Number(rb.ballsecurity ?? rb.hands ?? 50);
-    const fumbleChance = (strip / 10) * ((100 - ballSec) / 100);
+    let fumbleChance = (strip / 10) * ((100 - ballSec) / 100);
+    if(sack){
+      const defStars =  Number(def.defStars || 0);
+      fumbleChance = (25 + (strip / 10)  + defStars)* ((100 - ballSec) / 100);
+    }
     const roll = Math.random() * 100;
     if (roll <= fumbleChance) {
       const defStars = Number(def.defStars || 0);
@@ -1447,7 +1451,8 @@
     let target;
     let targetData;
     let completionData;
-    const timeToThrow = determineTimeToThrow();
+    let timeToThrow = determineTimeToThrow();
+    timeToThrow = -1;
     if(timeToThrow < 0){
       resultArray = handleSack();
     } else{
@@ -1895,6 +1900,7 @@
     const defBallHawkCalc = Math.pow(((Number(defender.ballHawk) || 0) - 60) / 10, 2) / 2;
     const defReadQBCalc = Math.pow(((Number(defender.readQB) || 0) - 60) / 10, 2) / 2;
     const pickChance = 1 + Math.max(0, 5 - qbAccCalc - qbReadCalc + defBallHawkCalc + defReadQBCalc);
+    console.log(pickChance + 'pickchance');
 
     const pickRoll = Math.random() * 100;
     if (pickRoll <= pickChance) {
