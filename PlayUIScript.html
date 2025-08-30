@@ -1561,12 +1561,17 @@
       }
     }
     //Handle Fumble or INT
-    else{
-      if(recoveredBy = (state.Possession === "Home" ? "Away" : "Home") ){
-        result = "Fumble";
-      } else if(resultArray.intercepted){
+    else {
+      if (resultArray.intercepted) {
         result = "Intercepted";
+        recoveredBy = resultArray.caughtBy;
+      } else {
+        result = "Fumble";
       }
+      updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, qbName, target ? target.target : '', yards, tackler, result, predicted, timeTaken, recoveredBy);
+      await animatePlay('Pass', resultArray);
+      const newPossession = state.Possession === 'Home' ? 'Away' : 'Home';
+      updateGameState(1, 10, newPossession, newBall, newBall, newBall, qbName, target ? target.target : '', yards, tackler, null, predicted, undefined, recoveredBy);
     }
     //updateFrontendStats(qbName, recordedYards, result, scoringTeam, tackler, recoveredBy);
 
@@ -1996,7 +2001,6 @@
           await animatePlay('Run');
           const newPossession = state.Possession === "Home" ? "Away" : "Home";
           updateGameState(1, 10, newPossession, newBall, newBall, newBall, playerName, "", yardDelta, tackler, null, predicted, undefined, recoveredBy);
-          loadPlayers();
           applyFatigue(playerName, "Run");
           updateFrontendStats(playerName, recordedYards, result, scoringTeam, tackler, recoveredBy);
           console.log(carryResult);
@@ -2063,7 +2067,6 @@
     const newPossession = state.Possession === "Home" ? "Away" : "Home";
     const newBallOn = newPossession === "Home" ? 25 : 75;
     updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, playerName, recName, carryResult.yards, null, null, predicted);
-    loadPlayers();
   }
 
   async function handleTOonDowns(result, newBall, playerName, recName, carryResult, tackler, predicted, timeTaken, resultArray = {}) {//COMPLETED PASS UPDATES
@@ -2080,7 +2083,6 @@
 
     const newPossession = state.Possession === "Home" ? "Away" : "Home";
     updateGameState(1, 10, newPossession, newBall, newBall, newBall, playerName, recName, carryResult.yards, tackler, null, predicted);
-    loadPlayers();
   }
 
   function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, recName, yards, tackler, result, predicted, qtr, time, recoveredBy) {//MAKE PASS UPDATES
@@ -2178,7 +2180,6 @@
         nextDistance = 10;
         nextDriveStart = nextBallOn;
         nextPrev = nextBallOn;
-        loadPlayers();
       } else if (curQuarter === 4) {
         if (state.HomeScore !== state.AwayScore) {
           playQuarter = 'FINAL';
@@ -2192,7 +2193,6 @@
           nextDistance = 10;
           nextDriveStart = 25;
           nextPrev = 25;
-          loadPlayers();
         }
       } else if (curQuarter === 5) {
         playQuarter = 'FINAL';
@@ -2206,6 +2206,7 @@
       updateRunningClock(result);
     }
 
+    const possessionChanged = state.Possession !== nextPoss;
     state.Down = nextDown;
     state.Distance = nextDistance;
     state.BallOn = nextBallOn;
@@ -2214,6 +2215,9 @@
     state.DriveStart = nextDriveStart;
     state.Time = newTime;
     state.Qtr = playQuarter;
+    if (possessionChanged) {
+      loadPlayers();
+    }
     renderPlayTimeline();
 
     google.script.run.pushGameState({
@@ -2229,6 +2233,12 @@
       previous: state.Previous,
       possession: state.Possession
     });
+  }
+
+  function nextDrive() {
+    const newPossession = state.Possession === 'Home' ? 'Away' : 'Home';
+    const newBallOn = newPossession === 'Home' ? 25 : 75;
+    updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, '', '', 0, null, null);
   }
 
   function updateStateUI() {//MAKE PASS UPDATES
