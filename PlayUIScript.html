@@ -902,6 +902,118 @@
     });
   }
 
+  function computeTeamStats() {
+    const init = () => ({ firstDowns: 0, thirdAtt: 0, thirdConv: 0, fourthAtt: 0, fourthConv: 0,
+      passYds: 0, rushYds: 0, passAtt: 0, passComp: 0, ints: 0, sacks: 0, sackYds: 0,
+      rushAtt: 0, fumLost: 0, possTime: 0 });
+    const teams = { Home: init(), Away: init() };
+    const quarterLen = 15 * 60;
+    let prev = { Possession: state.StartingPossession || 'Home', Time: quarterLen, Qtr: 1 };
+    playHistory.forEach(play => {
+      const team = play.Possession;
+      if (!team) return;
+      const yards = Number(play.Yards) || 0;
+      const down = Number(play.Down);
+      const distance = Number(play.Distance);
+      const result = play.Result || '';
+      const playType = play.PlayType;
+      const currTime = parseTimeToSeconds(play.Time);
+      const currQtr = Number(play.Qtr || play.QTR || prev.Qtr);
+      let diff = 0;
+      if (currQtr === prev.Qtr) diff = prev.Time - currTime;
+      else diff = prev.Time + (quarterLen * (currQtr - prev.Qtr - 1)) + (quarterLen - currTime);
+      if (teams[prev.Possession]) teams[prev.Possession].possTime += diff;
+      prev = { Possession: team, Time: currTime, Qtr: currQtr };
+
+      if (playType === 'Pass') {
+        if (result === 'Sack') {
+          teams[team].sacks++;
+          teams[team].sackYds += yards;
+          teams[team].passYds += yards;
+        } else {
+          teams[team].passAtt++;
+          if (result !== 'Incomplete' && result !== 'Interception') {
+            teams[team].passComp++;
+            teams[team].passYds += yards;
+          }
+          if (result === 'Interception') teams[team].ints++;
+          if (result === 'Fumble' && play.RecoveredBy && play.RecoveredBy !== (play.Receiver || play.Player)) {
+            teams[team].fumLost++;
+          }
+        }
+      } else if (playType === 'Run') {
+        teams[team].rushAtt++;
+        teams[team].rushYds += yards;
+        if (result === 'Fumble' && play.RecoveredBy && play.RecoveredBy !== play.Player) {
+          teams[team].fumLost++;
+        }
+      }
+
+      if (playType === 'Run' || playType === 'Pass') {
+        const converted = yards >= distance || result === 'Touchdown';
+        if (down === 3) {
+          teams[team].thirdAtt++;
+          if (converted) teams[team].thirdConv++;
+        } else if (down === 4) {
+          teams[team].fourthAtt++;
+          if (converted) teams[team].fourthConv++;
+        }
+        if (converted) teams[team].firstDowns++;
+      }
+    });
+    ['Home','Away'].forEach(t => {
+      teams[t].totalYds = teams[t].passYds + teams[t].rushYds;
+      teams[t].passYPP = teams[t].passAtt ? teams[t].passYds / teams[t].passAtt : 0;
+      teams[t].rushYPR = teams[t].rushAtt ? teams[t].rushYds / teams[t].rushAtt : 0;
+      teams[t].turnovers = teams[t].fumLost + teams[t].ints;
+    });
+    return teams;
+  }
+
+  function renderTeamStats() {
+    const body = document.getElementById('teamStatsBody');
+    if (!body) return;
+    const stats = computeTeamStats();
+    const rows = [
+      { label: '1st Downs', key: 'firstDowns', cls: 'header-row' },
+      { label: '3rd down efficiency', fmt: t => `${t.thirdConv}-${t.thirdAtt}`, cls: 'stat-row', indent: 'indent-1' },
+      { label: '4th down efficiency', fmt: t => `${t.fourthConv}-${t.fourthAtt}`, cls: 'stat-row', indent: 'indent-1' },
+      { label: 'Total Yards', key: 'totalYds', cls: 'header-row' },
+      { label: 'Passing', key: 'passYds', cls: 'header2-row', indent: 'indent-1' },
+      { label: 'Comp/Att', fmt: t => `${t.passComp}/${t.passAtt}`, cls: 'stat-row', indent: 'indent-2' },
+      { label: 'Yards per pass', fmt: t => t.passAtt ? (t.passYds / t.passAtt).toFixed(1) : '0.0', cls: 'stat-row', indent: 'indent-2' },
+      { label: 'Interceptions thrown', key: 'ints', cls: 'stat-row', indent: 'indent-2' },
+      { label: 'Rushing', key: 'rushYds', cls: 'header2-row', indent: 'indent-1' },
+      { label: 'Rushing Attempts', key: 'rushAtt', cls: 'stat-row', indent: 'indent-2' },
+      { label: 'Yards per rush', fmt: t => t.rushAtt ? (t.rushYds / t.rushAtt).toFixed(1) : '0.0', cls: 'stat-row', indent: 'indent-2' },
+      { label: 'Sacks', fmt: t => `${t.sacks}-${Math.abs(t.sackYds)}`, cls: 'header2-row', indent: 'indent-1' },
+      { label: 'Turnovers', key: 'turnovers', cls: 'header-row' },
+      { label: 'Fumbles lost', key: 'fumLost', cls: 'stat-row', indent: 'indent-1' },
+      { label: 'Interceptions thrown', key: 'ints', cls: 'stat-row', indent: 'indent-1' },
+      { label: 'Possession', fmt: t => formatClock(t.possTime), cls: 'header-row' }
+    ];
+    body.innerHTML = '';
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.className = r.cls + (r.indent ? ' ' + r.indent : '');
+      const labelTd = document.createElement('td');
+      labelTd.textContent = r.label;
+      const homeTd = document.createElement('td');
+      const awayTd = document.createElement('td');
+      const getVal = team => r.key !== undefined ? stats[team][r.key] : r.fmt(stats[team]);
+      homeTd.textContent = getVal('Home');
+      awayTd.textContent = getVal('Away');
+      tr.appendChild(labelTd);
+      tr.appendChild(homeTd);
+      tr.appendChild(awayTd);
+      body.appendChild(tr);
+    });
+    const hLogo = document.getElementById('teamStatsHomeLogo');
+    const aLogo = document.getElementById('teamStatsAwayLogo');
+    if (hLogo) hLogo.src = state.HomeLogo || '';
+    if (aLogo) aLogo.src = state.AwayLogo || '';
+  }
+
   function loadPlayers() {
       populateBench();
       updateRunnerDropdown();
@@ -2904,6 +3016,7 @@
     renderDefensiveTable("Away");
     sortBoxScoreTables();
     renderGameLeaders();
+    renderTeamStats();
   }
 
   function renderPassingTable(team) {
