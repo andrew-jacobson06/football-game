@@ -891,6 +891,57 @@
 
   #routesList {
     margin-bottom: 4vw;
+    position: relative;
+    height: 60vh;
+    background: #2e7d32;
+    border: 2px solid #fff;
+    overflow: hidden;
+  }
+
+  .route-line {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    border-top: 2px solid #fff;
+    color: #fff;
+    font-size: 2.5vw;
+    padding-left: 2vw;
+    pointer-events: none;
+  }
+
+  .player-card {
+    position: absolute;
+    width: clamp(80px, 20vw, 120px);
+    background: #fff;
+    color: #000;
+    border-radius: 6px;
+    padding: 1vw;
+    cursor: grab;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    font-size: 2.5vw;
+  }
+
+  .player-card:active {
+    cursor: grabbing;
+  }
+
+  .player-card .traits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1vw;
+    font-size: 2vw;
+    margin-top: 0.5vw;
+  }
+
+  .player-card .read-badge {
+    position: absolute;
+    top: 0.5vw;
+    right: 0.5vw;
+    background: var(--accent-red);
+    color: #fff;
+    border-radius: 4px;
+    padding: 0.5vw 1vw;
+    font-size: 2vw;
   }
 
   .route-row {
