@@ -525,6 +525,42 @@
     text-align: center;
   }
 
+  .score-chart {
+    max-width: 900px;
+    margin: 2vw auto;
+    font-size: 3vw;
+  }
+  .score-chart table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-muted);
+  }
+  .score-chart thead tr {
+    border-bottom: 1px solid var(--gray-light);
+  }
+  .score-chart th,
+  .score-chart td {
+    text-align: center;
+    padding: 1vw;
+  }
+  .score-chart .team-cell {
+    display: flex;
+    align-items: center;
+    gap: 1vw;
+    justify-content: flex-start;
+    font-weight: 700;
+    color: var(--text-light);
+  }
+  .score-chart .team-logo-small {
+    width: 5vw;
+    height: 5vw;
+    object-fit: contain;
+  }
+  .score-chart .total-cell {
+    font-weight: 700;
+    color: var(--text-light);
+  }
+
   .red-zone {
     color: var(--accent-red);
   }
