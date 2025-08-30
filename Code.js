@@ -94,8 +94,8 @@ function getPlayerTraits() {
     throw new Error("Sheet 'Players' not found.");
   }
 
-  // Pull columns A through AH (0 - 33) to include BallSecurity and DefPos
-  const numCols = 34;
+  // Pull columns A through AI (0 - 34) to include BallSecurity, DefPos, and Image
+  const numCols = 35;
   const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
   Logger.log(data);
   const result = data
@@ -135,6 +135,7 @@ function getPlayerTraits() {
       readQB: row[31],
       coverage: row[32],
       defPos: row[33],
+      image: row[34],
       // Local tracking only
       carries: 0,
       fatigue: row[8]
