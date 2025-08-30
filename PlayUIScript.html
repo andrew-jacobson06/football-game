@@ -20,6 +20,7 @@
   let offStarPower = false;
   let defStarPower = false;
   let defStarPowerTackler = '';
+  let pendingFGTeam = null;
   const RUN_POSITIONS = ['WR1','RB1','RB2','QB'];
   const ROUTE_OPTIONS = ['Screen','Short','Medium','Med-Long','Long','Deep'];
   const QB_READ_OPTIONS = ['Primary','2nd','3rd','4th','Checkdown'];
@@ -1439,6 +1440,7 @@
   // === PASS PLAY ===
   async function passPlay(qbName) {
     if (!qbName) return;
+    pendingFGTeam = null;
     let resultArray;
     let completionPct;
     let routes;
@@ -1942,6 +1944,7 @@
   async function runPlay() {
     const playerName = document.getElementById("playerDropdown").value;
     if (!playerName) return;
+    pendingFGTeam = null;
 
     let tackler = null;
 
@@ -2052,6 +2055,7 @@
   }
 
   async function handleTouchdown(newBall, playerName, recName, carryResult, result, predicted, timeTaken, resultArray = {}) {//COMPLETED PASS UPDATES
+    pendingFGTeam = state.Possession;
     // Distance covered to reach the goal line differs by team direction
     carryResult.yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
 
@@ -2237,9 +2241,125 @@
   }
 
   function nextDrive() {
+    pendingFGTeam = null;
     const newPossession = state.Possession === 'Home' ? 'Away' : 'Home';
     const newBallOn = newPossession === 'Home' ? 25 : 75;
     updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, '', '', 0, null, null);
+  }
+
+  function kickFG() {
+    const button = document.getElementById('kickFGButton');
+    if (button) button.disabled = true;
+    if (pendingFGTeam) {
+      const team = pendingFGTeam;
+      if (team === 'Home') {
+        state.HomeScore = (parseInt(state.HomeScore, 10) || 0) + 1;
+      } else {
+        state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 1;
+      }
+      logFieldGoalPlay(team);
+      pendingFGTeam = null;
+      google.script.run.pushGameState({
+        gameId: gameId,
+        quarter: state.Qtr,
+        time: state.Time,
+        down: state.Down,
+        distance: state.Distance,
+        ballOn: state.BallOn,
+        homeScore: state.HomeScore,
+        awayScore: state.AwayScore,
+        driveStart: state.DriveStart,
+        previous: state.Previous,
+        possession: state.Possession
+      });
+      document.getElementById('result').innerHTML = '<strong>Extra point is good.</strong>';
+      updateStateUI();
+      afterPlayComplete();
+      return;
+    }
+
+    const inRange = state.Down === 4 && ((state.Possession === 'Home' && state.BallOn >= 64) || (state.Possession === 'Away' && state.BallOn <= 36));
+    if (!inRange) {
+      updateKickFGButton();
+      return;
+    }
+
+    const scoringTeam = state.Possession;
+    if (scoringTeam === 'Home') {
+      state.HomeScore = (parseInt(state.HomeScore, 10) || 0) + 3;
+    } else {
+      state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 3;
+    }
+    logFieldGoalPlay(scoringTeam);
+    const newPossession = scoringTeam === 'Home' ? 'Away' : 'Home';
+    const newBallOn = newPossession === 'Home' ? 25 : 75;
+    pendingFGTeam = null;
+    updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, '', '', 0, null, null);
+    updateStateUI();
+    document.getElementById('result').innerHTML = '<strong>Field goal is good.</strong>';
+    afterPlayComplete();
+  }
+
+  function logFieldGoalPlay(poss) {
+    const localPlay = {
+      Time: state.Time,
+      Down: state.Down,
+      Distance: state.Distance,
+      Qtr: state.Qtr,
+      DriveStart: state.DriveStart,
+      Player: '',
+      Receiver: '',
+      Yards: 0,
+      Result: 'Field Goal',
+      NewBallOn: state.BallOn,
+      BallOn: state.Previous,
+      Tackler: '',
+      RecoveredBy: '',
+      Possession: poss,
+      HomeScore: state.HomeScore,
+      AwayScore: state.AwayScore,
+      PlayType: 'Kick FG'
+    };
+    playHistory.push(localPlay);
+    renderPlayTimeline();
+    google.script.run.logPlayHistory({
+      gameid: gameId,
+      time: state.Time,
+      qtr: state.Qtr,
+      possession: poss,
+      down: state.Down,
+      distance: state.Distance,
+      ballon: state.BallOn,
+      playtype: 'Kick FG',
+      player: '',
+      receiver: '',
+      yards: 0,
+      defensepredicted: '',
+      predictioncorrect: '',
+      tackler: '',
+      result: 'Field Goal',
+      desc: '',
+      recoveredby: '',
+      newdown: state.Down,
+      newdist: state.Distance,
+      newballon: state.BallOn,
+      drivestart: state.DriveStart,
+      homescore: state.HomeScore,
+      awayscore: state.AwayScore
+    });
+  }
+
+  function updateKickFGButton() {
+    const btn = document.getElementById('kickFGButton');
+    if (!btn) return;
+    const canPAT = pendingFGTeam !== null;
+    const canFG = state.Down === 4 && ((state.Possession === 'Home' && state.BallOn >= 64) || (state.Possession === 'Away' && state.BallOn <= 36));
+    if (canPAT || canFG) {
+      btn.style.display = '';
+      btn.disabled = false;
+    } else {
+      btn.style.display = 'none';
+    }
   }
 
   function updateStateUI() {//MAKE PASS UPDATES
@@ -2289,6 +2409,7 @@
       const el = document.getElementById(id);
       if (el) el.innerText = text;
     });
+    updateKickFGButton();
     highlightTeamRows();
     updateFirstDownLine();
   }
