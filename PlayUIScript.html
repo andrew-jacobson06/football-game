@@ -23,7 +23,7 @@
   let defStarPowerTackler = '';
   let pendingFGTeam = null;
   const RUN_POSITIONS = ['WR1','RB1','RB2','QB'];
-  const ROUTE_OPTIONS = ['Screen','Short','Medium','Med-Long','Long','Deep'];
+  const ROUTE_OPTIONS = ['No Route','Screen','Short','Medium','Med-Long','Long','Deep'];
   const QB_READ_OPTIONS = ['Primary','2nd','3rd','4th','Checkdown'];
   let receiverRoutes = {};
   let playerReadSelection = {};
@@ -125,8 +125,9 @@
       });
       const routeBtn = document.getElementById('openRoutes');
       if (routeBtn) routeBtn.addEventListener('click', () => {
+        const modal = document.getElementById('routesModal');
+        if (modal) modal.classList.add('open');
         renderRoutesModal();
-        document.getElementById('routesModal').classList.add('open');
       });
       const closeRoutes = document.getElementById('closeRoutes');
       if (closeRoutes) closeRoutes.addEventListener('click', () => {
@@ -1043,13 +1044,18 @@
         field.appendChild(card);
 
         const cardWidth = card.offsetWidth;
-        const readIdx = playerReadSelection[p.player] ? QB_READ_OPTIONS.indexOf(playerReadSelection[p.player]) : idx;
+        const savedIdx = QB_READ_OPTIONS.indexOf(playerReadSelection[p.player]);
+        const readIdx = savedIdx >= 0 ? savedIdx : idx;
         card.style.left = `${readIdx * (cardWidth + 10)}px`;
 
         const route = receiverRoutes[p.player] || 'Short';
         const rIdx = ROUTE_OPTIONS.indexOf(route);
         const top = fieldHeight - (rIdx + 0.5) * zoneHeight - card.offsetHeight / 2;
         card.style.top = `${top}px`;
+
+        if (route === 'No Route') {
+          handleReadChange(p.player, { value: '' });
+        }
 
         card.addEventListener('click', () => {
           if (card.dataset.dragged === 'true') {
@@ -1111,13 +1117,24 @@
       const route = ROUTE_OPTIONS[idx];
       const player = card.dataset.player;
       receiverRoutes[player] = route;
+      if (route === 'No Route') {
+        handleReadChange(player, { value: '' });
+      }
       const zoneHeight = fieldHeight / ROUTE_OPTIONS.length;
       const newTop = fieldHeight - (idx + 0.5) * zoneHeight - cardHeight / 2;
       card.style.top = `${newTop}px`;
     }
 
     function updateReads(field) {
-      const cards = Array.from(field.querySelectorAll('.player-circle'));
+      const allCards = Array.from(field.querySelectorAll('.player-circle'));
+      allCards.forEach(card => {
+        if (receiverRoutes[card.dataset.player] === 'No Route') {
+          const badge = card.querySelector('.read-badge');
+          if (badge) badge.textContent = '';
+          handleReadChange(card.dataset.player, { value: '' });
+        }
+      });
+      const cards = allCards.filter(card => receiverRoutes[card.dataset.player] !== 'No Route');
       cards.sort((a, b) => parseFloat(a.style.left) - parseFloat(b.style.left));
       const cardWidth = cards[0]?.offsetWidth || 0;
       const gap = 10;
@@ -1874,6 +1891,7 @@
       if (!f.player) return;
       if (!eligible.includes(f.player)) return;
       const routeType = receiverRoutes[f.player] || 'Short';
+      if (routeType === 'No Route') return;
       const info = routeTypeAirYards.find(r => r.routeType === routeType);
       const depth = info ? randomInt(info.minAirYards, info.maxAirYards) : 0;
       const time = CalcTimeNeededToOpen(depth, f.player);
