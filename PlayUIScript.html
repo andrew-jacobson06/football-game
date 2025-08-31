@@ -139,6 +139,12 @@
         if (saveRoutesBtn) saveRoutesBtn.addEventListener('click', () => {
           document.getElementById('routesModal').classList.remove('open');
         });
+      const runBtn = document.getElementById('openRun');
+      if (runBtn) runBtn.addEventListener('click', openRunModal);
+      const closeRun = document.getElementById('closeRun');
+      if (closeRun) closeRun.addEventListener('click', closeRunModal);
+      const executeRun = document.getElementById('executeRun');
+      if (executeRun) executeRun.addEventListener('click', runPlay);
         const togglePanelBtn = document.getElementById('toggleControlPanel');
         if (togglePanelBtn) togglePanelBtn.addEventListener('click', () => {
           const panel = document.getElementById('controlPanel');
@@ -1077,7 +1083,7 @@
     }
 
     function updateRunnerDropdown() {
-      const dropdown = document.getElementById('playerDropdown');
+      const dropdown = document.getElementById('runPlayerDropdown');
       if (!dropdown) return;
       dropdown.innerHTML = '';
       const teamName = state[state.Possession];
@@ -1094,6 +1100,17 @@
         option.text = name;
         dropdown.appendChild(option);
       });
+    }
+
+    function openRunModal() {
+      updateRunnerDropdown();
+      const modal = document.getElementById('runModal');
+      if (modal) modal.classList.add('open');
+    }
+
+    function closeRunModal() {
+      const modal = document.getElementById('runModal');
+      if (modal) modal.classList.remove('open');
     }
 
     function dragStart(e) {
@@ -1873,7 +1890,9 @@
   }
 
   // === PASS PLAY ===
-  async function passPlay(qbName) {
+  async function passPlay() {
+    const qbSlot = currentFormation.find(f => f.position === 'QB');
+    const qbName = qbSlot ? qbSlot.player : null;
     if (!qbName) return;
     pendingFGTeam = null;
     let resultArray;
@@ -2402,8 +2421,9 @@
 
   // === MAIN PLAY ===
   async function runPlay() {
-    const playerName = document.getElementById("playerDropdown").value;
+    const playerName = document.getElementById("runPlayerDropdown").value;
     if (!playerName) return;
+    closeRunModal();
     pendingFGTeam = null;
 
     let tackler = null;
@@ -2708,7 +2728,7 @@
   }
 
   function kickFG() {
-    const button = document.getElementById('kickFGButton');
+    const button = document.getElementById('kickButton');
     if (button) button.disabled = true;
     if (pendingFGTeam) {
       const team = pendingFGTeam;
@@ -2738,9 +2758,9 @@
       return;
     }
 
-    const inRange = state.Down === 4 && ((state.Possession === 'Home' && state.BallOn >= 64) || (state.Possession === 'Away' && state.BallOn <= 36));
+    const inRange = state.Down === 4 && ((state.Possession === 'Home' && state.BallOn >= 65) || (state.Possession === 'Away' && state.BallOn <= 35));
     if (!inRange) {
-      updateKickFGButton();
+      updateKickButton();
       return;
     }
 
@@ -2758,6 +2778,10 @@
     updateStateUI();
     document.getElementById('result').innerHTML = '<strong>Field goal is good.</strong>';
     afterPlayComplete();
+  }
+
+  function punt() {
+    // Stub for future implementation
   }
 
   function logFieldGoalPlay(poss) {
@@ -2809,17 +2833,13 @@
     });
   }
 
-  function updateKickFGButton() {
-    const btn = document.getElementById('kickFGButton');
+  function updateKickButton() {
+    const btn = document.getElementById('kickButton');
     if (!btn) return;
     const canPAT = pendingFGTeam !== null;
-    const canFG = state.Down === 4 && ((state.Possession === 'Home' && state.BallOn >= 64) || (state.Possession === 'Away' && state.BallOn <= 36));
-    if (canPAT || canFG) {
-      btn.style.display = '';
-      btn.disabled = false;
-    } else {
-      btn.style.display = 'none';
-    }
+    const canFG = state.Down === 4 && ((state.Possession === 'Home' && state.BallOn >= 65) || (state.Possession === 'Away' && state.BallOn <= 35));
+    btn.style.display = '';
+    btn.disabled = !(canPAT || canFG);
   }
 
   function updateStateUI() {//MAKE PASS UPDATES
@@ -2869,7 +2889,7 @@
       const el = document.getElementById(id);
       if (el) el.innerText = text;
     });
-    updateKickFGButton();
+    updateKickButton();
     highlightTeamRows();
     updateFirstDownLine();
   }
