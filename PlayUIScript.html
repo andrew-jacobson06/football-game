@@ -1991,7 +1991,9 @@
         }
         newDown++;
         if (newDown > 4) {
-          result = "TO on Downs";
+          if(result != 'Incomplete' && result != 'Sack'){
+            result = "TO on Downs";
+          }
           await handleTOonDowns(result, newBall, qbName, target.target, resultArray, tackler, predicted, timeTaken, resultArray);
         } else {
           updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, qbName, target.target, yards, tackler, result, predicted, timeTaken, recoveredBy);
