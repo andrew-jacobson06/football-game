@@ -28,6 +28,7 @@
   let receiverRoutes = {};
   let playerReadSelection = {};
   let qbReadAssignments = {};
+  let currentDetailEl = null;
   let selectedPlayer = null;
   let runningClock = false;
   let completionTable = [];
@@ -1268,10 +1269,19 @@
         card.className = 'player-circle';
         card.setAttribute('data-player', p.player);
         card.dataset.dragged = 'false';
-        card.innerHTML = `
-          <div class="read-badge"></div>
-          <div class="player-name">${p.player}</div>
-        `;
+        card.innerHTML = `<div class="read-badge"></div>`;
+        const imgSrc = playerTraits[p.player]?.image || '';
+        if (imgSrc) {
+          const img = document.createElement('img');
+          img.src = imgSrc;
+          img.alt = p.player;
+          card.appendChild(img);
+        } else {
+          const span = document.createElement('span');
+          span.textContent = '👤';
+          card.appendChild(span);
+        }
+        card.title = p.player;
         field.appendChild(card);
 
         const cardWidth = card.offsetWidth;
@@ -1420,9 +1430,19 @@
     }
 
     function showPlayerDetails(name) {
+      if (currentDetailEl && currentDetailEl.dataset.player === name) {
+        currentDetailEl.remove();
+        currentDetailEl = null;
+        return;
+      }
+      if (currentDetailEl) {
+        currentDetailEl.remove();
+        currentDetailEl = null;
+      }
       const t = playerTraits[name] || {};
       const detail = document.createElement('div');
       detail.className = 'player-detail';
+      detail.dataset.player = name;
       detail.innerHTML = `
         <h4>${name}</h4>
         <div>Size: ${t.size || 0}</div>
@@ -1432,9 +1452,12 @@
         <div>HND: ${t.hands || 0}</div>
         <div>Stam: ${t.fatigue || 0}</div>
       `;
-      const modal = document.getElementById('routesModal');
-      if (modal) modal.appendChild(detail);
-      detail.addEventListener('click', () => detail.remove());
+      document.body.appendChild(detail);
+      detail.addEventListener('click', () => {
+        detail.remove();
+        if (currentDetailEl === detail) currentDetailEl = null;
+      });
+      currentDetailEl = detail;
     }
 
   function setDefensiveFormation() {
@@ -1595,7 +1618,17 @@
     const div = document.createElement('div');
     div.className = name ? 'los-player' : 'los-player empty';
     if (name) {
-      div.textContent = name;
+      const imgSrc = playerTraits[name]?.image || '';
+      if (imgSrc) {
+        const img = document.createElement('img');
+        img.src = imgSrc;
+        img.alt = name;
+        div.appendChild(img);
+      } else {
+        const span = document.createElement('span');
+        span.textContent = '👤';
+        div.appendChild(span);
+      }
     }
     return div;
   }
@@ -3067,6 +3100,7 @@
       const sacks = p.sacks ? `${p.sacks}-${Math.abs(p.sackYds)}` : '0-0';
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${p.playername}</td><td>${p.completions}/${p.attempts}</td><td>${p.yards}</td><td>${avg}</td><td>${p.tds}</td><td>${p.ints}</td><td>${sacks}</td><td>0.0</td>`;
+      tr.addEventListener('click', () => showPlayerDetails(p.playername));
       body.appendChild(tr);
     });
   }
@@ -3081,6 +3115,7 @@
       const avg = p.carries ? (p.yards / p.carries).toFixed(1) : "0.0";
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${p.playername}</td><td>${p.carries}</td><td>${p.yards}</td><td>${avg}</td><td>${p.tds}</td><td>${p.long}</td>`;
+      tr.addEventListener('click', () => showPlayerDetails(p.playername));
       body.appendChild(tr);
       total.carries += p.carries;
       total.yards += p.yards;
@@ -3105,6 +3140,7 @@
       const avg = p.receptions ? (p.yards / p.receptions).toFixed(1) : "0.0";
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${p.playername}</td><td>${p.receptions}</td><td>${p.yards}</td><td>${avg}</td><td>${p.tds}</td><td>${p.long}</td><td>${p.targets}</td>`;
+      tr.addEventListener('click', () => showPlayerDetails(p.playername));
       body.appendChild(tr);
       total.receptions += p.receptions;
       total.yards += p.yards;
@@ -3128,6 +3164,7 @@
     players.forEach(p => {
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${p.playername}</td><td>${p.tackles}</td><td>${p.tfl}</td><td>${p.sacks || 0}</td><td>${p.ff}</td><td>${p.fr}</td><td>${p.ints || 0}</td><td>${p.deflections || 0}</td>`;
+      tr.addEventListener('click', () => showPlayerDetails(p.playername));
       body.appendChild(tr);
     });
   }
