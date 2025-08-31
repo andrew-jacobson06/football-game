@@ -113,28 +113,29 @@
         </div>
       </div>
       
-      <div id="lastPlayDesc" class="last-play-desc"></div>
+        <div id="lastPlayDesc" class="last-play-desc"></div>
 
-      <div id="scoreChart" class="score-chart"></div>
-
-      <div id="leadersCard" class="leaders-card"></div>
-
-      <div class="control-panel">
-        <button id="openFormation">Edit Formation</button>
-        <button id="viewLOS">View LOS</button>
-        <button id="openRoutes">Set Receiver Routes</button>
-        <label for="playerDropdown">Select Player:</label>
-        <select id="playerDropdown"></select>
-        <div class="button-row">
-          <button onclick="runPlay()">▶️ Run Play</button>
-          <button onclick="passPlay(document.getElementById('playerDropdown').value)">🏈 Pass Play</button>
-          <button id="kickFGButton" onclick="kickFG()" style="display:none;">🎯 Kick FG</button>
-          <button onclick="nextDrive()">🔁 Next Drive</button>
+        <button id="toggleControlPanel" class="control-toggle">Show Control Panel</button>
+        <div id="controlPanel" class="control-panel collapsed">
+          <button id="openFormation">Edit Formation</button>
+          <button id="viewLOS">View LOS</button>
+          <button id="openRoutes">Set Receiver Routes</button>
+          <label for="playerDropdown">Select Player:</label>
+          <select id="playerDropdown"></select>
+          <div class="button-row">
+            <button onclick="runPlay()">▶️ Run Play</button>
+            <button onclick="passPlay(document.getElementById('playerDropdown').value)">🏈 Pass Play</button>
+            <button id="kickFGButton" onclick="kickFG()" style="display:none;">🎯 Kick FG</button>
+            <button onclick="nextDrive()">🔁 Next Drive</button>
+          </div>
+          <div id="result" class="result-box"></div>
         </div>
-        <div id="result" class="result-box"></div>
-      </div>
 
-    </div>
+        <div id="scoreChart" class="score-chart"></div>
+
+        <div id="leadersCard" class="leaders-card"></div>
+
+      </div>
 
     <div id="playbyplay" class="tab-content">
       <div class="playbyplay-pill-container">

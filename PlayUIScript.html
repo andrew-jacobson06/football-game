@@ -135,11 +135,17 @@
       });
       const clearRoutesBtn = document.getElementById('clearRoutes');
       if (clearRoutesBtn) clearRoutesBtn.addEventListener('click', clearRoutes);
-      const saveRoutesBtn = document.getElementById('saveRoutes');
-      if (saveRoutesBtn) saveRoutesBtn.addEventListener('click', () => {
-        document.getElementById('routesModal').classList.remove('open');
+        const saveRoutesBtn = document.getElementById('saveRoutes');
+        if (saveRoutesBtn) saveRoutesBtn.addEventListener('click', () => {
+          document.getElementById('routesModal').classList.remove('open');
+        });
+        const togglePanelBtn = document.getElementById('toggleControlPanel');
+        if (togglePanelBtn) togglePanelBtn.addEventListener('click', () => {
+          const panel = document.getElementById('controlPanel');
+          const collapsed = panel.classList.toggle('collapsed');
+          togglePanelBtn.textContent = collapsed ? 'Show Control Panel' : 'Hide Control Panel';
+        });
       });
-    });
 
   function loadGamesList() {
     google.script.run.withSuccessHandler(renderGameCards).getGamesList();
