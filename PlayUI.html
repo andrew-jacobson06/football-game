@@ -120,13 +120,11 @@
           <button id="openFormation">Edit Formation</button>
           <button id="viewLOS">View LOS</button>
           <button id="openRoutes">Set Receiver Routes</button>
-          <label for="playerDropdown">Select Player:</label>
-          <select id="playerDropdown"></select>
           <div class="button-row">
-            <button onclick="runPlay()">▶️ Run Play</button>
-            <button onclick="passPlay(document.getElementById('playerDropdown').value)">🏈 Pass Play</button>
-            <button id="kickFGButton" onclick="kickFG()" style="display:none;">🎯 Kick FG</button>
-            <button onclick="nextDrive()">🔁 Next Drive</button>
+            <button id="openRun">▶️ Run Play</button>
+            <button onclick="passPlay()">🏈 Pass Play</button>
+            <button id="kickButton" onclick="kickFG()" disabled>🎯 Kick</button>
+            <button id="puntButton" onclick="punt()" disabled>🦵 Punt</button>
           </div>
           <div id="result" class="result-box"></div>
         </div>
@@ -485,6 +483,18 @@
         <div class="formation-actions">
           <button id="clearRoutes">Clear</button>
           <button id="saveRoutes">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="runModal" class="modal">
+      <div class="formation-panel">
+        <span id="closeRun" class="close-button">&times;</span>
+        <h3>Run Play</h3>
+        <label for="runPlayerDropdown">Select Runner:</label>
+        <select id="runPlayerDropdown"></select>
+        <div class="formation-actions">
+          <button id="executeRun">Run</button>
         </div>
       </div>
     </div>
