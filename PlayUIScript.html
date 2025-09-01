@@ -2147,7 +2147,7 @@
       loss = randomInt(Number(selected.min), Number(selected.max));
     }
 
-    const agility = Number(playerTraits[qbName]?.juke || 0);
+    const agility = (Number(playerTraits[qbName]?.juke || 0)/10)**2;
     if (Math.random() * 100 <= agility) {
       loss = Math.max(1, loss - 2);
     }
