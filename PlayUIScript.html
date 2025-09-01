@@ -2347,6 +2347,20 @@
     return acc >= 50 ? adjust : -adjust;
   }
 
+  function qbArmStrengthAdjust(qb, routeInfo, completionPct, log) {
+    const depth = Number(routeInfo.airYards) || 0;
+    const arm = Number(qb.armStrength) || 0;
+    if (depth >= 20 && arm - 50 > 0) {
+      const roll = Math.random() * 100;
+      if (roll <= arm - 50) {
+        const armBoost = Math.pow(arm / 25, 2);
+        completionPct += armBoost;
+        log.push(`ArmStrength +${armBoost.toFixed(1)}`);
+      }
+    }
+    return completionPct;
+  }
+
   function determineCompletionPct(qbName, target, routes) {
     const log = [];
     if (!target) return { pct: 0, log };
@@ -2424,6 +2438,7 @@
       completionPct += routeAdj;
       log.push(`RouteVariation ${routeAdj >= 0 ? "+" : ""}${routeAdj.toFixed(1)}`);
     }
+    completionPct = qbArmStrengthAdjust(qb, routeInfo, completionPct, log);
 
     return { pct: completionPct, log };
   }
