@@ -2874,7 +2874,22 @@
   }
 
   function punt() {
-    // Stub for future implementation
+    const button = document.getElementById('puntButton');
+    if (button) button.disabled = true;
+    if (state.Down !== 4) {
+      updatePuntButton();
+      return;
+    }
+    const kickingTeam = state.Possession;
+    const newPossession = kickingTeam === 'Home' ? 'Away' : 'Home';
+    let newBallOn = kickingTeam === 'Home' ? state.BallOn + 40 : state.BallOn - 40;
+    newBallOn = Math.max(1, Math.min(99, newBallOn));
+    logPuntPlay(kickingTeam, newBallOn);
+    updateRunningClock('Punt');
+    updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, '', '', 0, null, null, '', 6);
+    updateStateUI();
+    document.getElementById('result').innerHTML = '<strong>Punt.</strong>';
+    afterPlayComplete();
   }
 
   function logFieldGoalPlay(poss) {
@@ -2926,6 +2941,55 @@
     });
   }
 
+  function logPuntPlay(poss, newBallOn) {
+    const localPlay = {
+      Time: state.Time,
+      Down: state.Down,
+      Distance: state.Distance,
+      Qtr: state.Qtr,
+      DriveStart: state.DriveStart,
+      Player: '',
+      Receiver: '',
+      Yards: 40,
+      Result: 'Punt',
+      NewBallOn: newBallOn,
+      BallOn: state.BallOn,
+      Tackler: '',
+      RecoveredBy: '',
+      Possession: poss,
+      HomeScore: state.HomeScore,
+      AwayScore: state.AwayScore,
+      PlayType: 'Punt'
+    };
+    playHistory.push(localPlay);
+    renderPlayTimeline();
+    google.script.run.logPlayHistory({
+      gameid: gameId,
+      time: state.Time,
+      qtr: state.Qtr,
+      possession: poss,
+      down: state.Down,
+      distance: state.Distance,
+      ballon: state.BallOn,
+      playtype: 'Punt',
+      player: '',
+      receiver: '',
+      yards: 40,
+      defensepredicted: '',
+      predictioncorrect: '',
+      tackler: '',
+      result: 'Punt',
+      desc: '',
+      recoveredby: '',
+      newdown: 1,
+      newdist: 10,
+      newballon: newBallOn,
+      drivestart: state.DriveStart,
+      homescore: state.HomeScore,
+      awayscore: state.AwayScore
+    });
+  }
+
   function updateKickButton() {
     const btn = document.getElementById('kickButton');
     if (!btn) return;
@@ -2933,6 +2997,13 @@
     const canFG = /**state.Down === 4 &&**/ ((state.Possession === 'Home' && state.BallOn >= 65) || (state.Possession === 'Away' && state.BallOn <= 35));
     btn.style.display = '';
     btn.disabled = !(canPAT || canFG);
+  }
+
+  function updatePuntButton() {
+    const btn = document.getElementById('puntButton');
+    if (!btn) return;
+    btn.style.display = '';
+    btn.disabled = state.Down !== 4;
   }
 
   function updateStateUI() {//MAKE PASS UPDATES
@@ -2983,6 +3054,7 @@
       if (el) el.innerText = text;
     });
     updateKickButton();
+    updatePuntButton();
     highlightTeamRows();
     updateFirstDownLine();
   }
