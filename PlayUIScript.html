@@ -1912,7 +1912,7 @@
     let sackChance = defensiveFormation
       .filter(f => f.position.startsWith('DL') || f.position.startsWith('LB'))
       .reduce((sum, f) => sum + Number(playerTraits[f.player]?.defStars || 0), 0);
-    sackChance += Math.max(0, predictionEffect);  
+    sackChance = sackChance/2 + Math.max(0, predictionEffect);  
 
     let roll = Math.random() * 100;
     if (roll <= rushStrength) {
