@@ -1858,7 +1858,11 @@
     //if predicted, pass:  
     predictionEffect = 20;
     //else: 
-    //predictionEffect = -10;
+    let rollTest = randomInt(0, 100);
+    if(rollTest <= 50){
+        predictionEffect = -10;
+    }
+    //
 
     let passRushSum = defensiveFormation
       .filter(f => f.position.startsWith('DL') || f.position.startsWith('LB'))
