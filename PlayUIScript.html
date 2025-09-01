@@ -557,6 +557,22 @@
   }
 
   function buildPlayText(play) {
+    if (play.PlayType === 'Kick FG') {
+      return 'Field Goal is Good!';
+    }
+    if (play.PlayType === 'Kick XP') {
+      return 'Extra Point is Good!';
+    }
+    if (play.Result === 'Sack' && play.RecoveredBy) {
+      let text = `<strong>${play.Player}</strong> sacked`;
+      if (play.Tackler && play.Tackler !== 'NA') {
+        text += ` by ${play.Tackler}`;
+      }
+      text += ` for ${play.Yards} Yards.`;
+      const recoveryPoss = play.RecoveredBy === play.Player ? play.Possession : (play.Possession === 'Home' ? 'Away' : 'Home');
+      text += ` FUMBLE! Recovered by ${play.RecoveredBy} at the ${formatBallOnForPoss(play.NewBallOn, recoveryPoss)}.`;
+      return text;
+    }
     if (play.PlayType === 'Pass') {
       const qb = play.Player || '';
       const receiver = play.Receiver || '';
@@ -606,7 +622,7 @@
       }
 
       if (play.Result !== "Touchdown" && play.Tackler && play.Tackler !== "NA") {
-        text += ` Tackle made at the ${formatBallOnForPoss(play.NewBallOn, play.Possession)} by ${play.Tackler}.`;
+          text += ` Tackle made at the ${formatBallOnForPoss(play.NewBallOn, play.Possession)} by ${play.Tackler}.`;
       }
 
       if (play.Result === "Fumble" && play.RecoveredBy) {
@@ -650,7 +666,7 @@
     });
     drives.forEach(drive => {
       const last = drive.plays[drive.plays.length - 1];
-      drive.result = last.Result || '';
+      drive.result = (last.Result === 'Sack' && last.RecoveredBy) ? 'Fumble' : (last.Result || '');
       drive.homeScore = last.HomeScore !== undefined ? last.HomeScore : state.HomeScore;
       drive.awayScore = last.AwayScore !== undefined ? last.AwayScore : state.AwayScore;
       const end = Number(last.NewBallOn);
@@ -2112,7 +2128,7 @@
         let playType = 'Pass';
         if (resultArray.sack) {
           playType = 'Run';
-          result = 'Sack';
+          result = fumble ? 'Fumble' : 'Sack';
           target = { target: '' };
         } else if (!resultArray.completed) {
           result = 'Incomplete';
@@ -2135,7 +2151,7 @@
         result = "Interception";
         recoveredBy = resultArray.caughtBy;
       } else if (resultArray.sack) {
-        result = "Sack";
+        result = fumble ? "Fumble" : "Sack";
       } else {
         result = "Fumble";
       }
@@ -2866,7 +2882,7 @@
       } else {
         state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 1;
       }
-      logFieldGoalPlay(team);
+      logFieldGoalPlay(team, true);
       pendingFGTeam = null;
       google.script.run.pushGameState({
         gameId: gameId,
@@ -2881,7 +2897,7 @@
         previous: state.Previous,
         possession: state.Possession
       });
-      document.getElementById('result').innerHTML = '<strong>Extra point is good.</strong>';
+      document.getElementById('result').innerHTML = '<strong>Extra Point is Good!</strong>';
       updateStateUI();
       afterPlayComplete();
       return;
@@ -2905,7 +2921,7 @@
     pendingFGTeam = null;
     updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, '', '', 0, null, null);
     updateStateUI();
-    document.getElementById('result').innerHTML = '<strong>Field goal is good.</strong>';
+    document.getElementById('result').innerHTML = '<strong>Field Goal is Good!</strong>';
     afterPlayComplete();
   }
 
@@ -2928,7 +2944,9 @@
     afterPlayComplete();
   }
 
-  function logFieldGoalPlay(poss) {
+  function logFieldGoalPlay(poss, isExtraPoint = false) {
+    const resultText = isExtraPoint ? 'Extra Point' : 'Field Goal';
+    const playType = isExtraPoint ? 'Kick XP' : 'Kick FG';
     const localPlay = {
       Time: state.Time,
       Down: state.Down,
@@ -2938,7 +2956,7 @@
       Player: '',
       Receiver: '',
       Yards: 0,
-      Result: 'Field Goal',
+      Result: resultText,
       NewBallOn: state.BallOn,
       BallOn: state.Previous,
       Tackler: '',
@@ -2946,7 +2964,7 @@
       Possession: poss,
       HomeScore: state.HomeScore,
       AwayScore: state.AwayScore,
-      PlayType: 'Kick FG'
+      PlayType: playType
     };
     playHistory.push(localPlay);
     renderPlayTimeline();
@@ -2958,14 +2976,14 @@
       down: state.Down,
       distance: state.Distance,
       ballon: state.BallOn,
-      playtype: 'Kick FG',
+      playtype: playType,
       player: '',
       receiver: '',
       yards: 0,
       defensepredicted: '',
       predictioncorrect: '',
       tackler: '',
-      result: 'Field Goal',
+      result: resultText,
       desc: '',
       recoveredby: '',
       newdown: state.Down,
