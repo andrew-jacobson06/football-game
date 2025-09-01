@@ -2375,7 +2375,7 @@
         typeSet.add(type);
       });
       const routeVariation = typeSet.size * 2.5;
-      const routeAdj = routeVariation - 12;
+      const routeAdj = Math.min(0,routeVariation - 8);
       completionPct += routeAdj;
       log.push(`RouteVariation ${routeAdj >= 0 ? "+" : ""}${routeAdj.toFixed(1)}`);
     }
