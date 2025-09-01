@@ -30,6 +30,7 @@
   let qbReadAssignments = {};
   let currentDetailEl = null;
   let selectedPlayer = null;
+  let runSelectedPlayer = null;
   let runningClock = false;
   let completionTable = [];
   let routeTypeAirYards = [];
@@ -152,6 +153,7 @@
           const collapsed = panel.classList.toggle('collapsed');
           togglePanelBtn.textContent = collapsed ? 'Show Control Panel' : 'Hide Control Panel';
         });
+      updatePassButtonState();
       });
 
   function loadGamesList() {
@@ -1043,6 +1045,7 @@
       receiverRoutes = {};
       playerReadSelection = {};
       qbReadAssignments = {};
+      updatePassButtonState();
     }
 
     function populateBench() {
@@ -1083,10 +1086,16 @@
       });
     }
 
+    function selectRunner(name, el) {
+      runSelectedPlayer = name;
+      document.querySelectorAll('.rusher-option').forEach(opt => opt.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
     function updateRunnerDropdown() {
-      const dropdown = document.getElementById('runPlayerDropdown');
-      if (!dropdown) return;
-      dropdown.innerHTML = '';
+      const container = document.getElementById('runPlayerOptions');
+      if (!container) return;
+      container.innerHTML = '';
       const teamName = state[state.Possession];
       let runners = [];
       if (currentFormation.length > 0) {
@@ -1095,12 +1104,42 @@
           .map(f => f.player)
           .filter(name => playerTraits[name] && playerTraits[name].team === teamName);
       }
+      if (!runSelectedPlayer || !runners.includes(runSelectedPlayer)) {
+        runSelectedPlayer = runners[0] || null;
+      }
       runners.forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.text = name;
-        dropdown.appendChild(option);
+        const option = document.createElement('div');
+        option.className = 'rusher-option' + (name === runSelectedPlayer ? ' selected' : '');
+        option.dataset.player = name;
+        const trait = playerTraits[name];
+        const img = trait && trait.image;
+        const placeholder = document.createElement('div');
+        placeholder.className = 'player-placeholder';
+        if (img) {
+          placeholder.innerHTML = `<img src="${img}" class="player-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><span style="display:none;">👤</span>`;
+        } else {
+          placeholder.innerHTML = '<span>👤</span>';
+        }
+        option.appendChild(placeholder);
+        const label = document.createElement('div');
+        label.textContent = name;
+        option.appendChild(label);
+        option.addEventListener('click', () => selectRunner(name, option));
+        option.addEventListener('touchstart', e => { e.preventDefault(); selectRunner(name, option); });
+        container.appendChild(option);
       });
+      updatePassButtonState();
+    }
+
+    function updatePassButtonState() {
+      const btn = document.getElementById('passPlayButton');
+      if (!btn) return;
+      const teamName = state[state.Possession];
+      const hasRoutes = Object.keys(receiverRoutes).some(p => {
+        const trait = playerTraits[p];
+        return trait && trait.team === teamName && receiverRoutes[p] && receiverRoutes[p] !== 'No Route';
+      });
+      btn.disabled = !hasRoutes;
     }
 
     function openRunModal() {
@@ -1361,6 +1400,7 @@
       if (route === 'No Route') {
         handleReadChange(player, { value: '' });
       }
+      updatePassButtonState();
       const zoneHeight = fieldHeight / ROUTE_OPTIONS.length;
       const newTop = fieldHeight - (idx + 0.5) * zoneHeight - cardHeight / 2;
       card.style.top = `${newTop}px`;
@@ -1415,6 +1455,7 @@
       playerReadSelection = {};
       qbReadAssignments = {};
       renderRoutesModal();
+      updatePassButtonState();
     }
 
     function updateReadSummary() {
@@ -2458,7 +2499,7 @@
 
   // === MAIN PLAY ===
   async function runPlay() {
-    const playerName = document.getElementById("runPlayerDropdown").value;
+    const playerName = runSelectedPlayer;
     if (!playerName) return;
     closeRunModal();
     pendingFGTeam = null;

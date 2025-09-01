@@ -1038,6 +1038,34 @@
     max-width: 90vw;
   }
 
+  #runModal .formation-panel {
+    width: 95%;
+    max-width: 95%;
+  }
+
+  .rusher-options {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4vw;
+    margin: 4vw 0;
+  }
+
+  .rusher-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .rusher-option .player-placeholder {
+    border: 0.75vw solid transparent;
+  }
+
+  .rusher-option.selected .player-placeholder {
+    border-color: var(--accent-red);
+  }
+
   /* Full screen formation modal */
   #formationModal {
     padding: 0;
