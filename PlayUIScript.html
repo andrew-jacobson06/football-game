@@ -2061,7 +2061,7 @@
     let result = "Normal";
 
     //Handle offense retaining possession
-    if(!resultArray.intercepted && recoveredBy != (state.Possession === "Home" ? "Away" : "Home")){
+    if(!resultArray.intercepted && (!fumble || recoveredBy !== tackler)){
       newDist = newDist - yards;
       //handle Touchdown
       if(touchdown){
@@ -2103,6 +2103,8 @@
       if (resultArray.intercepted) {
         result = "Interception";
         recoveredBy = resultArray.caughtBy;
+      } else if (resultArray.sack) {
+        result = "Sack";
       } else {
         result = "Fumble";
       }
@@ -2128,12 +2130,15 @@
       completionData.log.forEach(m => passLog.push(m));
     }
 
-    let text = "";
-    if(resultArray.sack){
-      text = `${qbName} sacked by ${resultArray.sackBy} for ${yards} yards`;
-    } else if(resultArray.intercepted){
-      text = `${qbName} pass intended for ${target ? target.target : ''}. Intercepted by ${resultArray.caughtBy}.`;
-    } else if(resultArray.completed){
+      let text = "";
+      if(resultArray.sack){
+        text = `${qbName} sacked by ${resultArray.sackBy} for ${yards} yards`;
+        if (fumble) {
+          text += `. Fumble, recovered by ${recoveredBy}.`;
+        }
+      } else if(resultArray.intercepted){
+        text = `${qbName} pass intended for ${target ? target.target : ''}. Intercepted by ${resultArray.caughtBy}.`;
+      } else if(resultArray.completed){
       text = `${qbName} pass to ${target.target} for ${yards} yards`;
     } else {
       text = `${qbName} pass intended for ${target ? target.target : ''}. Incomplete.`;
