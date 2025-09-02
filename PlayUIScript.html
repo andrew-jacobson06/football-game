@@ -37,6 +37,7 @@
   let timeNeededToOpen = [];
   let completionSeparationAdjustment = [];
   let yacBySeparation = {};
+  let playerListData = [];
 
   function showLoadingScreen(homeLogo, awayLogo) {
     const screen = document.getElementById('loadingScreen');
@@ -319,19 +320,31 @@
       .getPlayerTraits();
   }
 
-  
-
   function renderPlayerList(players) {
+    playerListData = players;
+    const teamSelect = document.getElementById('teamSelect');
+    if (!teamSelect) return;
+    const teams = [...new Set(playerListData.map(p => p.team))].sort();
+    teamSelect.innerHTML = teams.map(t => `<option value="${t}">${t}</option>`).join('');
+    teamSelect.addEventListener('change', () => populatePlayerTable(teamSelect.value));
+    if (teams.length) {
+      teamSelect.value = teams[0];
+      populatePlayerTable(teams[0]);
+    }
+  }
+
+  function populatePlayerTable(team) {
     const tbody = document.querySelector('#playerTable tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
-    players.forEach(p => {
+    const teamPlayers = playerListData.filter(p => p.team === team);
+    teamPlayers.forEach(p => {
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${p.name}</td><td>${p.position}</td><td>${p.defPos}</td>`;
       tr.addEventListener('click', () => updatePlayerDisplay(p));
       tbody.appendChild(tr);
     });
-    if (players.length) updatePlayerDisplay(players[0]);
+    if (teamPlayers.length) updatePlayerDisplay(teamPlayers[0]);
   }
 
   function updatePlayerDisplay(p) {
@@ -339,10 +352,37 @@
       CLT: "https://andrew-jacobson06.github.io/public-audio/kingsmen-jeresey-cropped.png",
       POR: "https://andrew-jacobson06.github.io/public-audio/wildfire-jersey-cropped.png"
     };
-    const playerImg = document.getElementById('player');
+    const playerImg = document.getElementById('player-list');
     const jerseyImg = document.getElementById('jersey');
-    if (playerImg) playerImg.src = p.image || playerImg.src;
+    if (playerImg) {
+      playerImg.src = p.image || playerImg.src;
+      playerImg.style.transform = `translate(${p.translateX || 0}px, ${p.translateY || 0}px) scale(${p.scale || 1})`;
+    }
     if (jerseyImg) jerseyImg.src = jerseyImages[p.team] || '';
+
+    const summary = document.getElementById('playerSummary');
+    if (summary) {
+      summary.innerHTML = `
+        <div><strong>Name:</strong> ${p.name}</div>
+        <div><strong>Team:</strong> ${p.team}</div>
+        <div><strong>Position:</strong> ${p.position}</div>
+        <div><strong>Defensive Pos:</strong> ${p.defPos}</div>
+        <div><strong>Off Stars:</strong> ${p.offStars}</div>
+        <div><strong>Def Stars:</strong> ${p.defStars}</div>
+      `;
+    }
+
+    const traitsDiv = document.getElementById('playerTraits');
+    if (traitsDiv) {
+      const traitKeys = [
+        'size','strength','speed','stamina','poise','accuracy','armStrength','readDefense','juke','vision','acceleration','routeRunning','jump','hands','ballsecurity','qbFavorite','runBlocking','passProtect','runStop','tackling','runDef','tackleChance','strip','passRush','sackChance','ballHawk','readQB','coverage'
+      ];
+      traitsDiv.innerHTML = traitKeys.map(k => `<div class="trait"><span class="trait-name">${toTitleCase(k)}</span><span class="trait-value">${p[k]}</span></div>`).join('');
+    }
+  }
+
+  function toTitleCase(str) {
+    return str.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
   }
 
   function toggleMenu() {

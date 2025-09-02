@@ -1900,7 +1900,45 @@
     height: 100%;
     object-fit: contain;
     z-index: 3;
-    transform: translateY(22px) translateX(-1px) scale(0.9);
+  }
+
+  .player-list-layout {
+    display: flex;
+    gap: 2vw;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .player-info {
+    flex: 1;
+    color: #fff;
+  }
+
+  .player-summary > div {
+    margin-bottom: 0.5vw;
+    font-size: clamp(12px, 3vw, 18px);
+  }
+
+  .player-traits {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.5vw;
+    margin-top: 1vw;
+  }
+
+  .trait {
+    background: #1e1e1e;
+    padding: 0.5vw;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    font-size: clamp(10px, 2.5vw, 16px);
+  }
+
+  .team-select {
+    margin-top: 2vw;
+    padding: 1vw;
+    font-size: clamp(14px, 3vw, 20px);
   }
 
   #jersey-wrapper {

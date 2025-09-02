@@ -25,14 +25,21 @@
     <button id="playerListButton" class="player-list-btn">Player List</button>
     <div id="playerListView" style="display:none;">
       <button id="playerListBack" class="back-button">← Back</button>
-      <div class="player-list-card">
-        <div class="player-list-container">
-          <img id="player-list" src="https://andrew-jacobson06.github.io/public-audio/baby.png" alt="Player"/>
-          <div id="jersey-wrapper">
-            <img id="jersey" src="" alt="Jersey Overlay"/>
+      <div class="player-list-layout">
+        <div class="player-list-card">
+          <div class="player-list-container">
+            <img id="player-list" src="https://andrew-jacobson06.github.io/public-audio/baby.png" alt="Player"/>
+            <div id="jersey-wrapper">
+              <img id="jersey" src="" alt="Jersey Overlay"/>
+            </div>
           </div>
         </div>
+        <div id="playerInfo" class="player-info">
+          <div id="playerSummary" class="player-summary"></div>
+          <div id="playerTraits" class="player-traits"></div>
+        </div>
       </div>
+      <select id="teamSelect" class="team-select"></select>
       <table id="playerTable" class="player-table">
         <thead>
           <tr><th>Name</th><th>Offensive Pos</th><th>Defensive Pos</th></tr>
