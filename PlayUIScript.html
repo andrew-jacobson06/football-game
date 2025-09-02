@@ -45,22 +45,46 @@
     const away = document.getElementById('loadingAwayLogo');
     if (home) {
       home.src = homeLogo || '';
-      home.classList.remove('animate-left');
+      home.classList.remove('animate-left', 'unclash-left');
       void home.offsetWidth;
       home.classList.add('animate-left');
     }
     if (away) {
       away.src = awayLogo || '';
-      away.classList.remove('animate-right');
+      away.classList.remove('animate-right', 'unclash-right');
       void away.offsetWidth;
       away.classList.add('animate-right');
     }
-    screen.classList.remove('hidden');
+    screen.classList.remove('hidden', 'exit-zoom');
   }
 
   function hideLoadingScreen() {
     const screen = document.getElementById('loadingScreen');
-    if (screen) screen.classList.add('hidden');
+    if (!screen) return;
+    const home = document.getElementById('loadingHomeLogo');
+    const away = document.getElementById('loadingAwayLogo');
+
+    if (home) {
+      home.classList.remove('animate-left');
+      void home.offsetWidth;
+      home.classList.add('unclash-left');
+    }
+    if (away) {
+      away.classList.remove('animate-right');
+      void away.offsetWidth;
+      away.classList.add('unclash-right');
+    }
+
+    screen.classList.add('exit-zoom');
+    screen.addEventListener('animationend', function handler(e) {
+      if (e.target === screen && e.animationName === 'zoom-in') {
+        screen.classList.add('hidden');
+        screen.classList.remove('exit-zoom');
+        if (home) home.classList.remove('unclash-left');
+        if (away) away.classList.remove('unclash-right');
+        screen.removeEventListener('animationend', handler);
+      }
+    });
   }
 
   function updateStickyOffsets() {
