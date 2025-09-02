@@ -348,17 +348,17 @@
   }
 
   function updatePlayerDisplay(p) {
-    const jerseyImages = {
+    /**const jerseyImages = {
       CLT: "https://andrew-jacobson06.github.io/public-audio/kingsmen-jeresey-cropped.png",
       POR: "https://andrew-jacobson06.github.io/public-audio/wildfire-jersey-cropped.png"
-    };
+    };**/
     const playerImg = document.getElementById('player-list');
     const jerseyImg = document.getElementById('jersey');
     if (playerImg) {
       playerImg.src = p.image || playerImg.src;
       playerImg.style.transform = `translate(${p.translateX || 0}px, ${p.translateY || 0}px) scale(${p.scale || 1})`;
     }
-    if (jerseyImg) jerseyImg.src = jerseyImages[p.team] || '';
+    jerseyImg.src = p.jersey;
 
     const summary = document.getElementById('playerSummary');
     if (summary) {
