@@ -38,6 +38,30 @@
   let completionSeparationAdjustment = [];
   let yacBySeparation = {};
 
+  function showLoadingScreen(homeLogo, awayLogo) {
+    const screen = document.getElementById('loadingScreen');
+    if (!screen) return;
+    const home = document.getElementById('loadingHomeLogo');
+    const away = document.getElementById('loadingAwayLogo');
+    if (home) {
+      home.src = homeLogo || '';
+      home.classList.remove('animate-left');
+      void home.offsetWidth;
+      home.classList.add('animate-left');
+    }
+    if (away) {
+      away.src = awayLogo || '';
+      away.classList.remove('animate-right');
+      void away.offsetWidth;
+      away.classList.add('animate-right');
+    }
+    screen.classList.remove('hidden');
+  }
+
+  function hideLoadingScreen() {
+    const screen = document.getElementById('loadingScreen');
+    if (screen) screen.classList.add('hidden');
+  }
 
   function updateStickyOffsets() {
     const scoreboard = document.getElementById('scoreboard');
@@ -213,12 +237,18 @@
       }
       card.addEventListener('click', () => {
         gameId = id;
-        refreshUI(id);
         document.getElementById('gameList').style.display = 'none';
-        document.getElementById('gameUI').style.display = 'block';
-        const backBtn = document.getElementById('backButton');
-        if (backBtn) backBtn.style.display = 'block';
-        updateStickyOffsets();
+        showLoadingScreen(g.HomeLogo, g.AwayLogo);
+        refreshUI(id).then(() => {
+          hideLoadingScreen();
+          document.getElementById('gameUI').style.display = 'block';
+          const backBtn = document.getElementById('backButton');
+          if (backBtn) backBtn.style.display = 'block';
+          updateStickyOffsets();
+        }).catch(err => {
+          console.error(err);
+          hideLoadingScreen();
+        });
       });
       container.appendChild(card);
     });
@@ -254,6 +284,7 @@
 
   // === GAME SETUP ===
   function refreshUI(selectedGameId) {
+    return new Promise((resolve, reject) => {
     state = {};
     players = [];
     playerTraits = {};
@@ -272,6 +303,7 @@
       console.log("✅ Loaded game state");
       if (!gameState) {
         console.error(`❌ No game state returned for game ${gameId}`);
+        reject(new Error('No game state'));
         return;
       }
       state = gameState;
@@ -453,16 +485,20 @@
               updateFatigueBasedOnStatsOnInitialLoad();
               renderBoxScore();
               await animatePlay('Run');
+              resolve();
             })
             .withFailureHandler(function (error) {
               console.error("❌ Failed to load play history:", error.message);
+              reject(error);
             })
             .getPlayHistory(gameId);
         });
       });
     }).withFailureHandler(function (error) {
       console.error("❌ Failed to load game state:", error.message);
+      reject(error);
     }).getGameState(gameId);
+  });
 
   }
 
@@ -3940,5 +3976,5 @@
   }
 
   // On load
-  refreshUI();
+  refreshUI().catch(console.error);
 </script>
