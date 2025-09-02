@@ -22,6 +22,24 @@
         class="loading-football"
       />
     </div>
+    <button id="playerListButton" class="player-list-btn">Player List</button>
+    <div id="playerListView" style="display:none;">
+      <button id="playerListBack" class="back-button">← Back</button>
+      <div class="player-card">
+        <div class="player-container">
+          <img id="player" src="https://andrew-jacobson06.github.io/public-audio/baby.png" alt="Player"/>
+          <div id="jersey-wrapper">
+            <img id="jersey" src="" alt="Jersey Overlay"/>
+          </div>
+        </div>
+      </div>
+      <table id="playerTable" class="player-table">
+        <thead>
+          <tr><th>Name</th><th>Offensive Pos</th><th>Defensive Pos</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
     <div id="gameList" class="game-list"></div>
     <div id="gameUI" style="display:none;">
       <button id="backButton" class="back-button">← Back</button>
