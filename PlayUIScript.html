@@ -87,6 +87,16 @@
     });
   }
 
+  function showAppLoading() {
+    const screen = document.getElementById('appLoading');
+    if (screen) screen.classList.remove('hidden');
+  }
+
+  function hideAppLoading() {
+    const screen = document.getElementById('appLoading');
+    if (screen) screen.classList.add('hidden');
+  }
+
   function updateStickyOffsets() {
     const scoreboard = document.getElementById('scoreboard');
     if (!scoreboard) return;
@@ -205,7 +215,17 @@
       });
 
   function loadGamesList() {
-    google.script.run.withSuccessHandler(renderGameCards).getGamesList();
+    showAppLoading();
+    google.script.run
+      .withSuccessHandler(games => {
+        renderGameCards(games);
+        hideAppLoading();
+      })
+      .withFailureHandler(err => {
+        console.error(err);
+        hideAppLoading();
+      })
+      .getGamesList();
   }
 
   function renderGameCards(games) {
