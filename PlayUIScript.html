@@ -319,10 +319,7 @@
       .getPlayerTraits();
   }
 
-  const jerseyImages = {
-    Kingsmen: "https://andrew-jacobson06.github.io/public-audio/kingsmen-jeresey-cropped.png",
-    Wildfire: "https://andrew-jacobson06.github.io/public-audio/wildfire-jersey-cropped.png"
-  };
+  
 
   function renderPlayerList(players) {
     const tbody = document.querySelector('#playerTable tbody');
@@ -338,6 +335,10 @@
   }
 
   function updatePlayerDisplay(p) {
+    const jerseyImages = {
+      CLT: "https://andrew-jacobson06.github.io/public-audio/kingsmen-jeresey-cropped.png",
+      POR: "https://andrew-jacobson06.github.io/public-audio/wildfire-jersey-cropped.png"
+    };
     const playerImg = document.getElementById('player');
     const jerseyImg = document.getElementById('jersey');
     if (playerImg) playerImg.src = p.image || playerImg.src;
