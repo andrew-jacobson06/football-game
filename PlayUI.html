@@ -7,6 +7,17 @@
   </head>
   <body>
     <audio id="crowdRoar" src="https://andrew-jacobson06.github.io/public-audio/crowd-cheering-379666.mp3" preload="auto"></audio>
+    <div id="loadingScreen" class="loading-screen hidden">
+      <div class="logo-container">
+        <img id="loadingHomeLogo" class="loading-logo" alt="Home Logo" />
+        <img id="loadingAwayLogo" class="loading-logo" alt="Away Logo" />
+      </div>
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/American_football_icon_%28flat%29.svg/128px-American_football_icon_%28flat%29.svg.png"
+        alt="Loading"
+        class="loading-football"
+      />
+    </div>
     <div id="gameList" class="game-list"></div>
     <div id="gameUI" style="display:none;">
       <button id="backButton" class="back-button">← Back</button>
