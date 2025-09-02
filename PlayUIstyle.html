@@ -1852,4 +1852,72 @@
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
+
+  .player-list-btn {
+    margin: 2vw;
+    padding: 2vw 4vw;
+    font-size: clamp(14px, 4vw, 24px);
+  }
+
+  #playerListView {
+    padding: 2vw;
+  }
+
+  .player-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 2vw;
+  }
+  .player-table th,
+  .player-table td {
+    padding: 1vw;
+    border-bottom: 1px solid var(--gray-light);
+    text-align: left;
+  }
+
+  .player-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    max-width: 600px;
+    width: 90%;
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 0 30px rgba(255,255,255,0.1);
+    margin: 0 auto;
+  }
+
+  .player-container {
+    position: relative;
+    width: 300px;
+    height: 500px;
+  }
+
+  #player {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    z-index: 3;
+    transform: translateY(22px) translateX(-1px) scale(0.9);
+  }
+
+  #jersey-wrapper {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    transform-origin: top center;
+    transform: scale(1) translateY(0px);
+  }
+
+  #jersey {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.4s ease, opacity 0.4s ease;
+    opacity: 1;
+  }
 </style>

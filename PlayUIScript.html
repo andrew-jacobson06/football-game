@@ -149,6 +149,10 @@
           loadGamesList();
         });
       }
+      const playerListBtn = document.getElementById('playerListButton');
+      if (playerListBtn) playerListBtn.addEventListener('click', showPlayerList);
+      const playerListBack = document.getElementById('playerListBack');
+      if (playerListBack) playerListBack.addEventListener('click', hidePlayerList);
       document.querySelectorAll('.formation-slot').forEach(slot => {
         slot.addEventListener('dragover', allowDrop);
         slot.addEventListener('drop', handleDrop);
@@ -294,8 +298,50 @@
           hideLoadingScreen();
         });
       });
-      container.appendChild(card);
+    container.appendChild(card);
+  });
+  }
+
+  function showPlayerList() {
+    document.getElementById('gameList').style.display = 'none';
+    document.getElementById('playerListView').style.display = 'block';
+    loadPlayerList();
+  }
+
+  function hidePlayerList() {
+    document.getElementById('playerListView').style.display = 'none';
+    document.getElementById('gameList').style.display = 'block';
+  }
+
+  function loadPlayerList() {
+    google.script.run
+      .withSuccessHandler(renderPlayerList)
+      .getPlayerTraits();
+  }
+
+  const jerseyImages = {
+    Kingsmen: "https://andrew-jacobson06.github.io/public-audio/kingsmen-jeresey-cropped.png",
+    Wildfire: "https://andrew-jacobson06.github.io/public-audio/wildfire-jersey-cropped.png"
+  };
+
+  function renderPlayerList(players) {
+    const tbody = document.querySelector('#playerTable tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    players.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${p.name}</td><td>${p.position}</td><td>${p.defPos}</td>`;
+      tr.addEventListener('click', () => updatePlayerDisplay(p));
+      tbody.appendChild(tr);
     });
+    if (players.length) updatePlayerDisplay(players[0]);
+  }
+
+  function updatePlayerDisplay(p) {
+    const playerImg = document.getElementById('player');
+    const jerseyImg = document.getElementById('jersey');
+    if (playerImg) playerImg.src = p.image || playerImg.src;
+    if (jerseyImg) jerseyImg.src = jerseyImages[p.team] || '';
   }
 
   function toggleMenu() {
