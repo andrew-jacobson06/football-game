@@ -266,7 +266,7 @@
           <img class="team-logo" src="${g.HomeLogo || ''}" alt="Home Logo" />
           <div class="team-name-wrap">
             <span class="team-name">${g.Home}</span>
-            <span class="poss-indicator">${g.Possession === 'Home' ? '🏈' : ''}</span>
+              <span class="poss-indicator">${g.Possession === 'Home' ? '\uD83C\uDFC8' : ''}</span>
           </div>
           <span class="team-score">${g.HomeScore}</span>
           <span class="team-time">${formatClock(parseTimeToSeconds(g.Time))}</span>
@@ -276,7 +276,7 @@
           <img class="team-logo" src="${g.AwayLogo || ''}" alt="Away Logo" />
           <div class="team-name-wrap">
             <span class="team-name">${g.Away}</span>
-            <span class="poss-indicator">${g.Possession === 'Away' ? '🏈' : ''}</span>
+              <span class="poss-indicator">${g.Possession === 'Away' ? '\uD83C\uDFC8' : ''}</span>
           </div>
           <span class="team-score">${g.AwayScore}</span>
           <span class="team-qtr">${formatQuarter(g.Qtr)}</span>
