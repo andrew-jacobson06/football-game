@@ -141,6 +141,10 @@
       updateStickyOffsets();
       window.addEventListener('resize', updateStickyOffsets);
       loadGamesList();
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('view') === 'players') {
+        showPlayerList();
+      }
       const backBtn = document.getElementById('backButton');
       if (backBtn) {
         backBtn.addEventListener('click', () => {
