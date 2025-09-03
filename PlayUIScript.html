@@ -369,22 +369,69 @@
 
     const traitsDiv = document.getElementById('playerTraitBars');
     if (traitsDiv) {
-      const traitKeys = [
-        'size','strength','speed','stamina','poise','accuracy','armStrength','readDefense','juke','vision','acceleration','routeRunning','jump','hands','ballsecurity','qbFavorite','runBlocking','passProtect','runStop','tackling','runDef','tackleChance','strip','passRush','sackChance','ballHawk','readQB','coverage'
-      ];
       traitsDiv.innerHTML = '';
-      traitKeys.forEach(k => {
-        const val = p[k] || 0;
-        const card = document.createElement('div');
-        card.className = 'trait-bar-card';
-        card.innerHTML = `
-          <div class="trait-bar-header"><span class="trait-name">${toTitleCase(k)}</span><span class="trait-value">${val}</span></div>
-          <div class="progress"><div class="progress-bar ${getBarColor(val)}" style="width:0%"></div></div>`;
-        traitsDiv.appendChild(card);
-        requestAnimationFrame(() => {
-          const bar = card.querySelector('.progress-bar');
-          if (bar) bar.style.width = val + '%';
+      const traitGroups = {
+        'General Traits': [
+          { key: 'size', label: 'Size' },
+          { key: 'strength', label: 'Strength' },
+          { key: 'stamina', label: 'Stamina' },
+          { key: 'ballsecurity', label: 'Ball Security' }
+        ],
+        'Passing Skills': [
+          { key: 'poise', label: 'Poise' },
+          { key: 'accuracy', label: 'Accuracy' },
+          { key: 'armStrength', label: 'Arm-Strength' },
+          { key: 'readDefense', label: 'Read Defense' }
+        ],
+        'Running Skill': [
+          { key: 'acceleration', label: 'Acceleration' },
+          { key: 'speed', label: 'Speed' },
+          { key: 'juke', label: 'Juke' },
+          { key: 'vision', label: 'Vision' }
+        ],
+        'Receiving Skill': [
+          { key: 'routeRunning', label: 'Route Running' },
+          { key: 'jump', label: 'Jump' },
+          { key: 'hands', label: 'Hands' }
+        ],
+        'Off Ball Skills': [
+          { key: 'runBlocking', label: 'Run Blocking' },
+          { key: 'passProtect', label: 'Pass Protect' }
+        ],
+        'Defensive Skills': [
+          { key: 'runStop', label: 'RunStop' },
+          { key: 'passRush', label: 'PassRush' },
+          { key: 'tackling', label: 'Tackling' },
+          { key: 'strip', label: 'Strip' },
+          { key: 'ballHawk', label: 'Ball Hawk' },
+          { key: 'readQB', label: 'Read QB' },
+          { key: 'coverage', label: 'Coverage' }
+        ]
+      };
+
+      Object.entries(traitGroups).forEach(([groupName, traits]) => {
+        const groupEl = document.createElement('details');
+        groupEl.className = 'trait-group';
+        groupEl.open = true;
+        const summary = document.createElement('summary');
+        summary.textContent = groupName;
+        groupEl.appendChild(summary);
+
+        traits.forEach(t => {
+          const val = p[t.key] || 0;
+          const card = document.createElement('div');
+          card.className = 'trait-bar-card';
+          card.innerHTML = `
+            <div class="trait-bar-header"><span class="trait-name">${t.label}</span><span class="trait-value">${val}</span></div>
+            <div class="progress"><div class="progress-bar ${getBarColor(val)}" style="width:0%"></div></div>`;
+          groupEl.appendChild(card);
+          requestAnimationFrame(() => {
+            const bar = card.querySelector('.progress-bar');
+            if (bar) bar.style.width = val + '%';
+          });
         });
+
+        traitsDiv.appendChild(groupEl);
       });
     }
   }
@@ -405,10 +452,6 @@
     if (val <= 70) return 'yellow';
     if (val <= 90) return 'light-green';
     return 'dark-green';
-  }
-
-  function toTitleCase(str) {
-    return str.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
   }
 
   function toggleMenu() {
@@ -432,8 +475,6 @@
               <div>Pass Protect: ${p.passProtect}</div>
               <div>Run Stop: ${p.runStop}</div>
               <div>Tackling: ${p.tackling}</div>
-              <div>Run Def: ${p.runDef}</div>
-              <div>Tackle Chance: ${p.tackleChance}</div>
             `;
         menu.appendChild(card);
       });

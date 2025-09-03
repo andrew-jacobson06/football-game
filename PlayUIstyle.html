@@ -1935,6 +1935,29 @@
     gap: 1vw;
   }
 
+  .trait-group {
+    background: var(--gray-medium);
+    border-radius: 6px;
+  }
+
+  .trait-group summary {
+    padding: 0.5vw;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: clamp(12px, 4vw, 26px);
+    background: var(--gray-light);
+    border-radius: 6px 6px 0 0;
+  }
+
+  .trait-group .trait-bar-card {
+    border-radius: 0;
+    border-top: 1px solid var(--gray-light);
+  }
+
+  .trait-group .trait-bar-card:first-of-type {
+    border-top: none;
+  }
+
   .trait-bar-card {
     background: #1e1e1e;
     padding: 0.5vw;
