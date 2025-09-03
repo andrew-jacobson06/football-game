@@ -1,5 +1,7 @@
-function doGet() {
-  return HtmlService.createTemplateFromFile('PlayUI')
+function doGet(e) {
+  const view = e && e.parameter && e.parameter.view;
+  const page = (view === 'players' || view === 'games') ? 'PlayUI' : 'MainMenu';
+  return HtmlService.createTemplateFromFile(page)
     .evaluate()
     .setTitle('Football Game UI')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL); // optional
