@@ -542,6 +542,22 @@ function pushGameState({ gameId, quarter, time, down, distance, ballOn, homeScor
   });
 }
 
+function savePlayAndGame(data) {
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    if (data.play) {
+      logPlayHistory(data.play);
+    }
+    if (data.game) {
+      pushGameState(data.game);
+    }
+    SpreadsheetApp.flush();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function logPlayResult({ player, playType, yards, down, distance, ballOn, time }) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("PlayHistory");
   sheet.appendRow([time, down, distance, playType, player, yards]);

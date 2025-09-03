@@ -2991,7 +2991,7 @@
       };
       playHistory.push(localPlay);
 
-      google.script.run.logPlayHistory({
+      return {
         gameid: gameId,
         time: time,
         qtr: qtr,
@@ -3015,7 +3015,7 @@
         drivestart: state.DriveStart,
         homescore: state.HomeScore,
         awayscore: state.AwayScore
-      });
+      };
     }
 
   function updateRunningClock(result) {//MAKE PASS UPDATES
@@ -3025,7 +3025,7 @@
     }
   }
 
-  function updateGameState(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, recName, yards, tackler, result, predicted, timeTaken, recoveredBy) {
+  function updateGameState(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, recName, yards, tackler, result, predicted, timeTaken, recoveredBy, playData) {
     let playQuarter = state.Qtr;//COMPLETED PASS UPDATES
     let newTime = state.Time;
     if (typeof timeTaken === 'number') {
@@ -3035,8 +3035,9 @@
       newTime = state.Time - timeTaken;
     }
     const logTime = Math.max(newTime, 0);
-    if (result != null) {
-      logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, recName, yards, tackler, result, predicted, playQuarter, logTime, recoveredBy);
+    let playLog = playData || null;
+    if (!playLog && result != null) {
+      playLog = logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, recName, yards, tackler, result, predicted, playQuarter, logTime, recoveredBy);
     }
 
     let nextDown = down;
@@ -3099,7 +3100,7 @@
     }
     renderPlayTimeline();
 
-    google.script.run.pushGameState({
+    const gameData = {
       gameId: gameId,
       quarter: state.Qtr,
       time: state.Time,
@@ -3111,7 +3112,14 @@
       driveStart: state.DriveStart,
       previous: state.Previous,
       possession: state.Possession
-    });
+    };
+
+    const buttons = Array.from(document.querySelectorAll('button'));
+    buttons.forEach(b => b.disabled = true);
+
+    google.script.run.withSuccessHandler(() => {
+      buttons.forEach(b => b.disabled = false);
+    }).savePlayAndGame({ play: playLog, game: gameData });
   }
 
   function nextDrive() {
@@ -3131,9 +3139,9 @@
       } else {
         state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 1;
       }
-      logFieldGoalPlay(team, true);
+      const playLog = logFieldGoalPlay(team, true);
       pendingFGTeam = null;
-      google.script.run.pushGameState({
+      const gameData = {
         gameId: gameId,
         quarter: state.Qtr,
         time: state.Time,
@@ -3145,7 +3153,12 @@
         driveStart: state.DriveStart,
         previous: state.Previous,
         possession: state.Possession
-      });
+      };
+      const buttons = Array.from(document.querySelectorAll('button'));
+      buttons.forEach(b => b.disabled = true);
+      google.script.run.withSuccessHandler(() => {
+        buttons.forEach(b => b.disabled = false);
+      }).savePlayAndGame({ play: playLog, game: gameData });
       document.getElementById('result').innerHTML = '<strong>Extra Point is Good!</strong>';
       updateStateUI();
       afterPlayComplete();
@@ -3164,11 +3177,11 @@
     } else {
       state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 3;
     }
-    logFieldGoalPlay(scoringTeam);
+    const playLog = logFieldGoalPlay(scoringTeam);
     const newPossession = scoringTeam === 'Home' ? 'Away' : 'Home';
     const newBallOn = newPossession === 'Home' ? 25 : 75;
     pendingFGTeam = null;
-    updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, '', '', 0, null, null);
+    updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, '', '', 0, null, null, '', undefined, undefined, playLog);
     updateStateUI();
     document.getElementById('result').innerHTML = '<strong>Field Goal is Good!</strong>';
     afterPlayComplete();
@@ -3185,9 +3198,9 @@
     const newPossession = kickingTeam === 'Home' ? 'Away' : 'Home';
     let newBallOn = kickingTeam === 'Home' ? state.BallOn + 40 : state.BallOn - 40;
     newBallOn = Math.max(1, Math.min(99, newBallOn));
-    logPuntPlay(kickingTeam, newBallOn);
+    const playLog = logPuntPlay(kickingTeam, newBallOn);
     updateRunningClock('Punt');
-    updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, '', '', 0, null, null, '', 6);
+    updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, '', '', 0, null, null, '', 6, undefined, playLog);
     updateStateUI();
     document.getElementById('result').innerHTML = '<strong>Punt.</strong>';
     afterPlayComplete();
@@ -3217,7 +3230,7 @@
     };
     playHistory.push(localPlay);
     renderPlayTimeline();
-    google.script.run.logPlayHistory({
+    return {
       gameid: gameId,
       time: state.Time,
       qtr: state.Qtr,
@@ -3241,7 +3254,7 @@
       drivestart: state.DriveStart,
       homescore: state.HomeScore,
       awayscore: state.AwayScore
-    });
+    };
   }
 
   function logPuntPlay(poss, newBallOn) {
@@ -3266,7 +3279,7 @@
     };
     playHistory.push(localPlay);
     renderPlayTimeline();
-    google.script.run.logPlayHistory({
+    return {
       gameid: gameId,
       time: state.Time,
       qtr: state.Qtr,
@@ -3290,7 +3303,7 @@
       drivestart: state.DriveStart,
       homescore: state.HomeScore,
       awayscore: state.AwayScore
-    });
+    };
   }
 
   function updateKickButton() {
