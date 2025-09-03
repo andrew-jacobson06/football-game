@@ -7,10 +7,22 @@
     <?!= include('MenuStyle'); ?>
   </head>
   <body>
-    <div class="menu-container">
-      <button class="menu-button" onclick="window.location.href='?view=players'">View Players</button>
-      <button class="menu-button" onclick="window.location.href='?view=games'">Existing League</button>
-      <button class="menu-button" onclick="alert('New League coming soon!')">New League</button>
-    </div>
+    <script>
+      function go(view) {
+        const baseUrl = '<?= ScriptApp.getService().getUrl() ?>';
+        window.location.href = baseUrl + '?view=' + view;
+      }
+    </script>
+    <? if (view === 'players') { ?>
+      <?!= include('Players'); ?>
+    <? } else if (view === 'games') { ?>
+      <?!= include('Games'); ?>
+    <? } else { ?>
+      <div class="menu-container">
+        <button class="menu-button" onclick="go('players')">View Players</button>
+        <button class="menu-button" onclick="go('games')">Existing League</button>
+        <button class="menu-button" onclick="alert('New League coming soon!')">New League</button>
+      </div>
+    <? } ?>
   </body>
 </html>
