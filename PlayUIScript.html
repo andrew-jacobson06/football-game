@@ -37,7 +37,6 @@
   let timeNeededToOpen = [];
   let completionSeparationAdjustment = [];
   let yacBySeparation = {};
-  let playerListData = [];
 
   function showLoadingScreen(homeLogo, awayLogo) {
     const screen = document.getElementById('loadingScreen');
@@ -141,10 +140,6 @@
       updateStickyOffsets();
       window.addEventListener('resize', updateStickyOffsets);
       loadGamesList();
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('view') === 'players') {
-        showPlayerList();
-      }
       const backBtn = document.getElementById('backButton');
       if (backBtn) {
         backBtn.addEventListener('click', () => {
@@ -154,12 +149,6 @@
           loadGamesList();
         });
       }
-      const playerListBtn = document.getElementById('playerListButton');
-      if (playerListBtn) playerListBtn.addEventListener('click', showPlayerList);
-      const playerListBack = document.getElementById('playerListBack');
-      if (playerListBack) playerListBack.addEventListener('click', hidePlayerList);
-      const playerCardBack = document.getElementById('playerCardBack');
-      if (playerCardBack) playerCardBack.addEventListener('click', backToList);
       document.querySelectorAll('.formation-slot').forEach(slot => {
         slot.addEventListener('dragover', allowDrop);
         slot.addEventListener('drop', handleDrop);
@@ -307,155 +296,6 @@
       });
     container.appendChild(card);
   });
-  }
-
-  function showPlayerList() {
-    document.getElementById('gameList').style.display = 'none';
-    document.getElementById('playerCardView').style.display = 'none';
-    document.getElementById('playerListView').style.display = 'block';
-    loadPlayerList();
-  }
-
-  function hidePlayerList() {
-    document.getElementById('playerCardView').style.display = 'none';
-    document.getElementById('playerListView').style.display = 'none';
-    document.getElementById('gameList').style.display = 'block';
-  }
-
-  function backToList() {
-    document.getElementById('playerCardView').style.display = 'none';
-    document.getElementById('playerListView').style.display = 'block';
-  }
-
-  function loadPlayerList() {
-    google.script.run
-      .withSuccessHandler(renderPlayerList)
-      .getPlayerTraits();
-  }
-
-  function renderPlayerList(players) {
-    playerListData = players;
-    const tbody = document.querySelector('#playerTable tbody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-    players.forEach(p => {
-      const tr = document.createElement('tr');
-      const pos = `${p.position}/${p.defPos}`;
-      const stars = `O:${renderStars(p.offStars)} D:${renderStars(p.defStars)}`;
-      tr.innerHTML = `<td>${p.name}</td><td>${pos}</td><td>${stars}</td><td>${p.team}</td>`;
-      tr.addEventListener('click', () => showPlayerCard(p));
-      tbody.appendChild(tr);
-    });
-  }
-
-  function showPlayerCard(p) {
-    document.getElementById('playerListView').style.display = 'none';
-    document.getElementById('playerCardView').style.display = 'block';
-
-    const playerImg = document.getElementById('player-card-image');
-    const jerseyImg = document.getElementById('jersey');
-    if (playerImg) {
-      playerImg.src = p.image || playerImg.src;
-      playerImg.style.transform = `translate(${p.translateX || 0}px, ${p.translateY || 0}px) scale(${p.scale || 1})`;
-    }
-    if (jerseyImg) jerseyImg.src = p.jersey || '';
-
-    const details = document.getElementById('playerDetails');
-    if (details) {
-      details.innerHTML = `
-        <div><strong>${p.name}</strong></div>
-        <div>${p.team}</div>
-        <div>${p.position} / ${p.defPos}</div>
-        <div>Off: ${renderStars(p.offStars)}</div>
-        <div>Def: ${renderStars(p.defStars)}</div>
-      `;
-    }
-
-    const traitsDiv = document.getElementById('playerTraitBars');
-    if (traitsDiv) {
-      traitsDiv.innerHTML = '';
-      const traitGroups = {
-        'General Traits': [
-          { key: 'size', label: 'Size' },
-          { key: 'strength', label: 'Strength' },
-          { key: 'stamina', label: 'Stamina' },
-          { key: 'ballsecurity', label: 'Ball Security' }
-        ],
-        'Passing Skills': [
-          { key: 'poise', label: 'Poise' },
-          { key: 'accuracy', label: 'Accuracy' },
-          { key: 'armStrength', label: 'Arm-Strength' },
-          { key: 'readDefense', label: 'Read Defense' }
-        ],
-        'Running Skill': [
-          { key: 'acceleration', label: 'Acceleration' },
-          { key: 'speed', label: 'Speed' },
-          { key: 'juke', label: 'Juke' },
-          { key: 'vision', label: 'Vision' }
-        ],
-        'Receiving Skill': [
-          { key: 'routeRunning', label: 'Route Running' },
-          { key: 'jump', label: 'Jump' },
-          { key: 'hands', label: 'Hands' }
-        ],
-        'Off Ball Skills': [
-          { key: 'runBlocking', label: 'Run Blocking' },
-          { key: 'passProtect', label: 'Pass Protect' }
-        ],
-        'Defensive Skills': [
-          { key: 'runStop', label: 'RunStop' },
-          { key: 'passRush', label: 'PassRush' },
-          { key: 'tackling', label: 'Tackling' },
-          { key: 'strip', label: 'Strip' },
-          { key: 'ballHawk', label: 'Ball Hawk' },
-          { key: 'readQB', label: 'Read QB' },
-          { key: 'coverage', label: 'Coverage' }
-        ]
-      };
-
-      Object.entries(traitGroups).forEach(([groupName, traits]) => {
-        const groupEl = document.createElement('details');
-        groupEl.className = 'trait-group';
-        groupEl.open = true;
-        const summary = document.createElement('summary');
-        summary.textContent = groupName;
-        groupEl.appendChild(summary);
-
-        traits.forEach(t => {
-          const val = p[t.key] || 0;
-          const card = document.createElement('div');
-          card.className = 'trait-bar-card';
-          card.innerHTML = `
-            <div class="trait-bar-header"><span class="trait-name">${t.label}</span><span class="trait-value">${val}</span></div>
-            <div class="progress"><div class="progress-bar ${getBarColor(val)}" style="width:0%"></div></div>`;
-          groupEl.appendChild(card);
-          requestAnimationFrame(() => {
-            const bar = card.querySelector('.progress-bar');
-            if (bar) bar.style.width = val + '%';
-          });
-        });
-
-        traitsDiv.appendChild(groupEl);
-      });
-    }
-  }
-
-  function renderStars(value) {
-    const full = Math.floor(value);
-    const half = value - full >= 0.5;
-    let html = '';
-    for (let i = 0; i < full; i++) html += '<span class="star full">★</span>';
-    if (half) html += '<span class="star half">★</span>';
-    for (let i = 0; i < 5 - full - (half ? 1 : 0); i++) html += '<span class="star empty">★</span>';
-    return `<span class="stars">${html}</span>`;
-  }
-
-  function getBarColor(val) {
-    if (val <= 30) return 'red';
-    if (val <= 50) return 'orange';
-    if (val <= 70) return 'yellow';
-    if (val <= 90) return 'light-green';
-    return 'dark-green';
   }
 
   function toggleMenu() {
