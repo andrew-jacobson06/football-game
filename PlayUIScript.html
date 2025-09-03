@@ -730,14 +730,19 @@
     if (play.PlayType === 'Kick XP') {
       return 'Extra Point is Good!';
     }
-    if (play.Result === 'Sack' && play.RecoveredBy) {
-      let text = `<strong>${play.Player}</strong> sacked`;
+    if (play.Result === 'Sack') {
+      const qb = play.Player || '';
+      const spot = formatBallOnForPoss(play.NewBallOn, play.Possession);
+      const loss = Math.abs(play.Yards);
+      let text = `${qb} sacked at the ${spot} for a loss of ${loss}`;
       if (play.Tackler && play.Tackler !== 'NA') {
-        text += ` by ${play.Tackler}`;
+        text += ` (${play.Tackler})`;
       }
-      text += ` for ${play.Yards} Yards.`;
-      const recoveryPoss = play.RecoveredBy === play.Player ? play.Possession : (play.Possession === 'Home' ? 'Away' : 'Home');
-      text += ` FUMBLE! Recovered by ${play.RecoveredBy} at the ${formatBallOnForPoss(play.NewBallOn, recoveryPoss)}.`;
+      text += '.';
+      if (play.RecoveredBy) {
+        const recoveryPoss = play.RecoveredBy === qb ? play.Possession : (play.Possession === 'Home' ? 'Away' : 'Home');
+        text += ` FUMBLE! Recovered by ${play.RecoveredBy} at the ${formatBallOnForPoss(play.NewBallOn, recoveryPoss)}.`;
+      }
       return text;
     }
     if (play.PlayType === 'Pass') {
@@ -2190,6 +2195,7 @@
     let target;
     let targetData;
     let completionData;
+    const origPossession = state.Possession;
     let timeToThrow = determineTimeToThrow();
     
     if(timeToThrow < 0){
@@ -2344,15 +2350,24 @@
       completionData.log.forEach(m => passLog.push(m));
     }
 
-      let text = "";
-      if(resultArray.sack){
-        text = `${qbName} sacked by ${resultArray.sackBy} for ${yards} yards`;
-        if (fumble) {
-          text += `. Fumble, recovered by ${recoveredBy}.`;
-        }
-      } else if(resultArray.intercepted){
-        text = `${qbName} pass intended for ${target ? target.target : ''}. Intercepted by ${resultArray.caughtBy}.`;
-      } else if(resultArray.completed){
+    let text = "";
+    if (resultArray.sack) {
+      const spot = formatBallOnForPoss(newBall, origPossession);
+      const loss = Math.abs(yards);
+      const tack = tackler || resultArray.sackBy;
+      text = `${qbName} sacked at the ${spot} for a loss of ${loss}`;
+      if (tack) {
+        text += ` (${tack})`;
+      }
+      text += ".";
+      if (fumble) {
+        const recoveryPoss = recoveredBy === qbName ? origPossession : (origPossession === 'Home' ? 'Away' : 'Home');
+        const recSpot = formatBallOnForPoss(newBall, recoveryPoss);
+        text += ` Fumble, recovered by ${recoveredBy} at the ${recSpot}.`;
+      }
+    } else if (resultArray.intercepted) {
+      text = `${qbName} pass intended for ${target ? target.target : ''}. Intercepted by ${resultArray.caughtBy}.`;
+    } else if (resultArray.completed) {
       text = `${qbName} pass to ${target.target} for ${yards} yards`;
     } else {
       text = `${qbName} pass intended for ${target ? target.target : ''}. Incomplete.`;
