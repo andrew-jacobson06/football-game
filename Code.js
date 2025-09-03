@@ -1,10 +1,11 @@
 function doGet(e) {
-  const view = e && e.parameter && e.parameter.view;
-  const page = (view === 'players' || view === 'games') ? 'PlayUI' : 'MainMenu';
-  return HtmlService.createTemplateFromFile(page)
+  const view = (e && e.parameter && e.parameter.view) || 'menu';
+  const template = HtmlService.createTemplateFromFile('MainMenu');
+  template.view = view;
+  return template
     .evaluate()
     .setTitle('Football Game UI')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL); // optional
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 function onOpen() {
   SpreadsheetApp.getUi()
