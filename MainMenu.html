@@ -4,7 +4,10 @@
     <base target="_top" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-    <?!= include('MenuStyle'); ?>
+      <?!= include('MenuStyle'); ?>
+      <? if (view === 'players') { ?>
+        <?!= include('PlayersStyle'); ?>
+      <? } ?>
   </head>
   <body>
     <script>
@@ -13,9 +16,10 @@
         window.location.href = baseUrl + '?view=' + view;
       }
     </script>
-    <? if (view === 'players') { ?>
-      <?!= include('Players'); ?>
-    <? } else if (view === 'games') { ?>
+      <? if (view === 'players') { ?>
+        <?!= include('Players'); ?>
+        <?!= include('PlayersScript'); ?>
+      <? } else if (view === 'games') { ?>
       <?!= include('Games'); ?>
     <? } else { ?>
       <div class="menu-container">
