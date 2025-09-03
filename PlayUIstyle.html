@@ -1879,7 +1879,7 @@
   }
   .star {
     color: #555;
-    font-size: clamp(10px, 2vw, 16px);
+    font-size: clamp(10px, 4vw, 32px);
     position: relative;
   }
   .star.full {
@@ -1897,10 +1897,11 @@
   .player-card-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
+    grid-template-rows: 30% auto;
     gap: 2vw;
     align-items: flex-start;
     color: #fff;
+    padding: 2vw;
   }
 
   .player-image-container {
@@ -1922,7 +1923,8 @@
   .player-details {
     grid-column: 1;
     grid-row: 2;
-    text-align: center;
+    text-align: left;
+    font-size: 5vw;
   }
 
   .player-trait-bars {
@@ -1943,7 +1945,11 @@
     display: flex;
     justify-content: space-between;
     margin-bottom: 0.5vw;
-    font-size: clamp(10px, 2.5vw, 16px);
+    font-size: clamp(10px, 3.5vw, 24px);
+  }
+
+  .trait-value{
+    font-weight: bold;
   }
 
   .progress {
