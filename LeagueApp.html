@@ -7,9 +7,9 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
     />
-    <?!= include('PlayUIstyle'); ?>
+    <?!= include('LeagueAppStyle'); ?>
   </head>
-  <body>
+    <body>
     <audio id="crowdRoar" src="https://andrew-jacobson06.github.io/public-audio/crowd-cheering-379666.mp3" preload="auto"></audio>
     <div id="appLoading" class="app-loading">
       <div class="app-spinner"><span class="app-football">🏈</span></div>
@@ -26,7 +26,33 @@
         class="loading-football"
       />
     </div>
-    <div id="gameList" class="game-list"></div>
+    <div id="leagueHeader" class="league-header">
+      <div class="league-name">AFL League</div>
+      <nav class="nav-tabs">
+        <button class="nav-tab" data-tab="news">NEWS</button>
+        <button class="nav-tab active" data-tab="scores">SCORES</button>
+        <button class="nav-tab" data-tab="standings">STANDINGS</button>
+        <button class="nav-tab" data-tab="stats">STATS</button>
+        <button class="nav-tab" data-tab="draft">DRAFT</button>
+      </nav>
+    </div>
+    <div id="tabContents">
+      <div id="news" class="league-tab-content">
+        <div class="coming-soon">News coming soon...</div>
+      </div>
+      <div id="scores" class="league-tab-content active">
+        <div id="gameList" class="game-list"></div>
+      </div>
+      <div id="standings" class="league-tab-content">
+        <div class="coming-soon">Standings coming soon...</div>
+      </div>
+      <div id="stats" class="league-tab-content">
+        <div class="coming-soon">Stats coming soon...</div>
+      </div>
+      <div id="draft" class="league-tab-content">
+        <div class="coming-soon">Draft coming soon...</div>
+      </div>
+    </div>
     <div id="gameUI" style="display:none;">
       <button id="backButton" class="back-button">← Back</button>
       <div id="scoreboard" class="scoreboard">
@@ -517,6 +543,6 @@
       </div>
     </div>
 
-    <?!= include('PlayUIScript'); ?>
+    <?!= include('LeagueAppScript'); ?>
   </body>
 </html>
