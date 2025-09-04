@@ -524,7 +524,7 @@
 
               renderPlayTimeline();
 
-              updateFatigueBasedOnStatsOnInitialLoad();
+              applyFatigueFromPlayHistory();
               renderBoxScore();
               await animatePlay('Run');
               resolve();
@@ -545,16 +545,37 @@
   }
 
 
-  function updateFatigueBasedOnStatsOnInitialLoad() {
-    if (playerTraits && drainSettings && drainSettings.Run) {
-      for (let i = 0; i < frontendStats.length; i++) {
-        const stat = frontendStats[i];
-        const pt = playerTraits[stat.playername];
-        if (pt) {
-          pt.fatigue = pt.stamina - (stat.carries * drainSettings.Run);
+  function applyFatigueFromPlayHistory() {
+    if (!playerTraits || !drainSettings) return;
+
+    Object.values(playerTraits).forEach(pt => {
+      pt.fatigue = pt.stamina;
+    });
+
+    playHistory.forEach(play => {
+      if (play.PlayType === 'Run') {
+        const runner = play.Player;
+        if (runner && playerTraits[runner]) {
+          applyFatigue(runner, 'Run');
+        }
+      } else if (play.PlayType === 'Pass') {
+        const qb = play.Passer || play.Player;
+        if (qb && playerTraits[qb]) {
+          if (play.Result === 'Sack') {
+            applyFatigue(qb, 'Sacked');
+          } else {
+            applyFatigue(qb, 'Throw');
+          }
+        }
+
+        const receiver = play.Receiver || play.Target;
+        const completed = receiver && play.Result && play.Result !== 'Incomplete' && play.Result !== 'Interception';
+        if (completed && playerTraits[receiver]) {
+          applyFatigue(receiver, 'Rec');
+          applyFatigue(receiver, 'Route');
         }
       }
-    }
+    });
   }
   async function animatePlay(playType, passResult = {}) { 
     // use current game state to drive the animation in the proper direction
@@ -2114,11 +2135,12 @@
     let completionData;
     const origPossession = state.Possession;
     let timeToThrow = determineTimeToThrow();
-    
+
+    routes = assignRoutes();
+
     if(timeToThrow < 0){
       resultArray = handleSack(qbName);
     } else{
-      routes = assignRoutes();
       targetData = choosePassTarget(qbName, routes, timeToThrow);
       target = {target: targetData.target, routeInfo: targetData.routeInfo};
       completionData = determineCompletionPct(qbName, target, routes);
@@ -2252,6 +2274,19 @@
       const newPossession = state.Possession === 'Home' ? 'Away' : 'Home';
       updateGameState(1, 10, newPossession, newBall, newBall, newBall, qbName, target ? target.target : '', yards, tackler, null, predicted, undefined, recoveredBy);
     }
+    // Apply stamina drains for pass play
+    if (resultArray.sack) {
+      applyFatigue(qbName, 'Sacked');
+    } else {
+      applyFatigue(qbName, 'Throw');
+    }
+    if (resultArray.completed && target && target.target) {
+      applyFatigue(target.target, 'Rec');
+    }
+    Object.keys(routes || {}).forEach(name => {
+      applyFatigue(name, 'Route');
+    });
+
     //updateFrontendStats(qbName, recordedYards, result, scoringTeam, tackler, recoveredBy);
 
     renderBoxScore();
