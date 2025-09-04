@@ -670,12 +670,16 @@
       } else if (play.Result === 'Incomplete') {
         text = `${qb} pass intended for ${receiver}. Incomplete.`;
       } else {
-        const spot = formatBallOnForPoss(play.NewBallOn, play.Possession);
-        text = `${qb} pass to ${receiver} to ${spot} for ${yards} yards`;
-        if (tackler && tackler !== 'NA') {
-          text += ` (${tackler})`;
+        if (play.Result === 'Touchdown') {
+          text = `${qb} pass to ${receiver} for ${yards} yards.`;
+        } else {
+          const spot = formatBallOnForPoss(play.NewBallOn, play.Possession);
+          text = `${qb} pass to ${receiver} to ${spot} for ${yards} yards`;
+          if (tackler && tackler !== 'NA') {
+            text += ` (${tackler})`;
+          }
+          text += '.';
         }
-        text += '.';
       }
       if (play.Result && !['Normal','Fumble','Interception','Incomplete'].includes(play.Result)) {
         if (play.Result === 'Touchdown') {
@@ -2155,6 +2159,8 @@
       touchdown = state.Possession === 'Home' ? newBall >= 100 : newBall <= 0;
       if(touchdown){
         yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
+        newBall = state.Possession === "Home" ? 100 : 0;
+        resultArray.touchdown = true;
       }
       if (!touchdown) {
         tackler = determineTackler(yards); //NEEDS UPDATING
@@ -3662,6 +3668,8 @@
       playType = 'Run';
     }
 
+    const touchdown = passResult.touchdown || (playType === 'Run' && (currentYard <= 0 || currentYard >= 100));
+
     // Hide previous play visuals until we know which animation to show
     const runDiv = document.getElementById("play");
     const passDiv = document.getElementById("arc-container");
@@ -3676,9 +3684,10 @@
       //const canvas = document.getElementById("arcCanvas");
       //canvas.width = fieldWidth;
       //canvas.height = fieldHeight;
+      const endYard = touchdown ? (state.Possession === 'Home' ? 102 : -2) : currentYard;
       let drivePX = (startYard + 10) * yardPx;
       let prevPX = (prevYard + 10) * yardPx;
-      let currPX = (currentYard + 10) * yardPx;
+      let currPX = (endYard + 10) * yardPx;
       let drive = document.getElementById("drive");
       // Handle drive line based on direction
       if (state.Possession == "Home") {
