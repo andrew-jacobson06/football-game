@@ -661,6 +661,8 @@
       const receiver = play.Receiver || '';
       const yards = play.Yards;
       const tackler = play.Tackler;
+      const resultLower = (play.Result || '').toLowerCase();
+      const isTouchdown = resultLower.includes('touchdown');
       let text = '';
       if (play.Result === 'Interception') {
         const poss = play.Possession === 'Home' ? 'Away' : 'Home';
@@ -670,20 +672,20 @@
       } else if (play.Result === 'Incomplete') {
         text = `${qb} pass intended for ${receiver}. Incomplete.`;
       } else {
-        if (play.Result === 'Touchdown') {
-          text = `${qb} pass to ${receiver} for ${yards} yards.`;
-        } else {
+        text = `${qb} pass to ${receiver}`;
+        if (!isTouchdown) {
           const spot = formatBallOnForPoss(play.NewBallOn, play.Possession);
-          text = `${qb} pass to ${receiver} to ${spot} for ${yards} yards`;
-          if (tackler && tackler !== 'NA') {
-            text += ` (${tackler})`;
-          }
-          text += '.';
+          text += ` to ${spot}`;
         }
+        text += ` for ${yards} yards`;
+        if (!isTouchdown && tackler && tackler !== 'NA') {
+          text += ` (${tackler})`;
+        }
+        text += '.';
       }
       if (play.Result && !['Normal','Fumble','Interception','Incomplete'].includes(play.Result)) {
-        if (play.Result === 'Touchdown') {
-          text += ` <span style="color:green; font-weight:bold;">${play.Result}!</span>`;
+        if (isTouchdown) {
+          text += ` <span style="color:green; font-weight:bold;">Touchdown!</span>`;
         } else if (play.Result === 'TO on Downs') {
           text += ` <span style="color:red; font-weight:bold;">${play.Result}!</span>`;
         } else {
