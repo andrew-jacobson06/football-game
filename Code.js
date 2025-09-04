@@ -534,7 +534,7 @@ function switchPossession(fromTurnover = false) {
   });
 }
 
-function pushGameState({ gameId, quarter, time, down, distance, ballOn, homeScore, awayScore, driveStart, previous, possession }) {
+function pushGameState({ gameId, quarter, time, down, distance, ballOn, homeScore, awayScore, driveStart, previous, possession, homeTimeouts, awayTimeouts }) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Games');
   if (!sheet) {
     throw new Error("Sheet 'Games' not found.");
@@ -558,13 +558,17 @@ function pushGameState({ gameId, quarter, time, down, distance, ballOn, homeScor
     AwayScore: awayScore,
     DriveStart: driveStart,
     Previous: previous,
-    Possession: possession
+    Possession: possession,
+    HomeTimeouts: homeTimeouts,
+    AwayTimeouts: awayTimeouts
   };
 
   Object.keys(updates).forEach(key => {
+    const value = updates[key];
+    if (value === undefined) return;
     const col = headers.indexOf(key);
     if (col !== -1) {
-      sheet.getRange(rowNumber, col + 1).setValue(updates[key]);
+      sheet.getRange(rowNumber, col + 1).setValue(value);
     }
   });
 }

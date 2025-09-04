@@ -211,6 +211,10 @@
           const collapsed = panel.classList.toggle('collapsed');
           togglePanelBtn.textContent = collapsed ? 'Show Control Panel' : 'Hide Control Panel';
         });
+      const homeTO = document.getElementById('homeTimeouts');
+      if (homeTO) homeTO.addEventListener('click', () => handleTimeout('Home'));
+      const awayTO = document.getElementById('awayTimeouts');
+      if (awayTO) awayTO.addEventListener('click', () => handleTimeout('Away'));
       updatePassButtonState();
       });
 
@@ -359,6 +363,10 @@
             .withSuccessHandler(async function (data) {
               console.log("✅ Loaded play history", data);
               playHistory = data;
+              if (playHistory.length) {
+                const last = playHistory[playHistory.length - 1];
+                updateRunningClock(last.Result);
+              }
               if (!state.StartingPossession) {
                 const first = playHistory[0];
                 state.StartingPossession = first ? first.Possession : state.Possession;
@@ -655,7 +663,79 @@
     });
   }
 
+  function handleTimeout(team) {
+    const key = team === 'Home' ? 'HomeTimeouts' : 'AwayTimeouts';
+    if (!state[key] || state[key] <= 0) return;
+    state[key]--;
+    updateStateUI();
+    updateRunningClock('Timeout');
+
+    const play = {
+      gameid: gameId,
+      time: state.Time,
+      qtr: state.Qtr,
+      possession: state.Possession,
+      down: state.Down,
+      distance: state.Distance,
+      ballon: state.BallOn,
+      playtype: 'Timeout',
+      player: team,
+      yards: 0,
+      result: 'Timeout',
+      newdown: state.Down,
+      newdist: state.Distance,
+      newballon: state.BallOn,
+      drivestart: state.DriveStart,
+      homescore: state.HomeScore,
+      awayscore: state.AwayScore
+    };
+
+    const gameData = {
+      gameId: gameId,
+      quarter: state.Qtr,
+      time: state.Time,
+      down: state.Down,
+      distance: state.Distance,
+      ballOn: state.BallOn,
+      homeScore: state.HomeScore,
+      awayScore: state.AwayScore,
+      driveStart: state.DriveStart,
+      previous: state.Previous,
+      possession: state.Possession,
+      homeTimeouts: state.HomeTimeouts,
+      awayTimeouts: state.AwayTimeouts
+    };
+
+    playHistory.push({
+      GameId: gameId,
+      Time: state.Time,
+      QTR: state.Qtr,
+      Possession: state.Possession,
+      Down: state.Down,
+      Distance: state.Distance,
+      BallOn: state.BallOn,
+      PlayType: 'Timeout',
+      Player: team,
+      Yards: 0,
+      Result: 'Timeout',
+      NewDown: state.Down,
+      NewDist: state.Distance,
+      NewBallOn: state.BallOn,
+      DriveStart: state.DriveStart,
+      HomeScore: state.HomeScore,
+      AwayScore: state.AwayScore
+    });
+    renderPlayTimeline();
+
+    google.script.run
+      .withFailureHandler(err => console.error('Failed to save timeout', err))
+      .savePlayAndGame({ play, game: gameData });
+  }
+
   function buildPlayText(play) {
+    if (play.Result === 'Timeout') {
+      return `${play.Player} Timeout`;
+    }
     if (play.PlayType === 'Kick FG') {
       return 'Field Goal is Good!';
     }
@@ -2947,6 +3027,8 @@
         nextDistance = 10;
         nextDriveStart = nextBallOn;
         nextPrev = nextBallOn;
+        state.HomeTimeouts = 3;
+        state.AwayTimeouts = 3;
       } else if (curQuarter === 4) {
         if (state.HomeScore !== state.AwayScore) {
           playQuarter = 'FINAL';
@@ -2998,7 +3080,9 @@
       awayScore: state.AwayScore,
       driveStart: state.DriveStart,
       previous: state.Previous,
-      possession: state.Possession
+      possession: state.Possession,
+      homeTimeouts: state.HomeTimeouts,
+      awayTimeouts: state.AwayTimeouts
     };
 
     const buttons = Array.from(document.querySelectorAll('button'));
@@ -3039,7 +3123,9 @@
         awayScore: state.AwayScore,
         driveStart: state.DriveStart,
         previous: state.Previous,
-        possession: state.Possession
+        possession: state.Possession,
+        homeTimeouts: state.HomeTimeouts,
+        awayTimeouts: state.AwayTimeouts
       };
       const buttons = Array.from(document.querySelectorAll('button'));
       buttons.forEach(b => b.disabled = true);
