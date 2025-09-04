@@ -663,9 +663,82 @@
     });
   }
 
+  const PLAY_BUTTON_IDS = ['passPlayButton','openRun','executeRun','kickButton','puntButton'];
+  const TIMEOUT_IDS = ['homeTimeouts','awayTimeouts'];
+
+  function disablePlayControls() {
+    PLAY_BUTTON_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.disabled = true;
+        el.classList.add('disabled-play-control');
+      }
+    });
+    TIMEOUT_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.pointerEvents = 'none';
+        el.classList.add('disabled-play-control');
+      }
+    });
+  }
+
+  function enablePlayControls() {
+    PLAY_BUTTON_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.disabled = false;
+        el.classList.remove('disabled-play-control');
+      }
+    });
+    TIMEOUT_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.pointerEvents = '';
+        el.classList.remove('disabled-play-control');
+      }
+    });
+  }
+
+  function savePlayAndGameWithRetry(data) {
+    disablePlayControls();
+    return new Promise(resolve => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          setTimeout(() => {
+            savePlayAndGameWithRetry(data).then(resolve);
+          }, 1000);
+        }
+      }, 5000);
+
+      google.script.run
+        .withSuccessHandler(() => {
+          if (!settled) {
+            settled = true;
+            clearTimeout(timer);
+            enablePlayControls();
+            resolve();
+          }
+        })
+        .withFailureHandler(() => {
+          if (!settled) {
+            settled = true;
+            clearTimeout(timer);
+            setTimeout(() => {
+              savePlayAndGameWithRetry(data).then(resolve);
+            }, 1000);
+          }
+        })
+        .savePlayAndGame(data);
+    });
+  }
+
   function handleTimeout(team) {
     const key = team === 'Home' ? 'HomeTimeouts' : 'AwayTimeouts';
     if (!state[key] || state[key] <= 0) return;
+    disablePlayControls();
     state[key]--;
     updateStateUI();
     updateRunningClock('Timeout');
@@ -726,10 +799,7 @@
       AwayScore: state.AwayScore
     });
     renderPlayTimeline();
-
-    google.script.run
-      .withFailureHandler(err => console.error('Failed to save timeout', err))
-      .savePlayAndGame({ play, game: gameData });
+    savePlayAndGameWithRetry({ play, game: gameData });
   }
 
   function buildPlayText(play) {
@@ -2206,6 +2276,7 @@
     const qbSlot = currentFormation.find(f => f.position === 'QB');
     const qbName = qbSlot ? qbSlot.player : null;
     if (!qbName) return;
+    disablePlayControls();
     pendingFGTeam = null;
     let resultArray;
     let completionPct;
@@ -2784,6 +2855,7 @@
   async function runPlay() {
     const playerName = runSelectedPlayer;
     if (!playerName) return;
+    disablePlayControls();
     closeRunModal();
     pendingFGTeam = null;
 
@@ -3084,13 +3156,7 @@
       homeTimeouts: state.HomeTimeouts,
       awayTimeouts: state.AwayTimeouts
     };
-
-    const buttons = Array.from(document.querySelectorAll('button'));
-    buttons.forEach(b => b.disabled = true);
-
-    google.script.run.withSuccessHandler(() => {
-      buttons.forEach(b => b.disabled = false);
-    }).savePlayAndGame({ play: playLog, game: gameData });
+    savePlayAndGameWithRetry({ play: playLog, game: gameData });
   }
 
   function nextDrive() {
@@ -3101,9 +3167,14 @@
   }
 
   function kickFG() {
-    const button = document.getElementById('kickButton');
-    if (button) button.disabled = true;
-    if (pendingFGTeam) {
+    const canPAT = pendingFGTeam !== null;
+    const inRange = /**state.Down === 4 &&**/ ((state.Possession === 'Home' && state.BallOn >= 65) || (state.Possession === 'Away' && state.BallOn <= 35));
+    if (!canPAT && !inRange) {
+      updateKickButton();
+      return;
+    }
+    disablePlayControls();
+    if (canPAT) {
       const team = pendingFGTeam;
       if (team === 'Home') {
         state.HomeScore = (parseInt(state.HomeScore, 10) || 0) + 1;
@@ -3127,20 +3198,10 @@
         homeTimeouts: state.HomeTimeouts,
         awayTimeouts: state.AwayTimeouts
       };
-      const buttons = Array.from(document.querySelectorAll('button'));
-      buttons.forEach(b => b.disabled = true);
-      google.script.run.withSuccessHandler(() => {
-        buttons.forEach(b => b.disabled = false);
-      }).savePlayAndGame({ play: playLog, game: gameData });
+      savePlayAndGameWithRetry({ play: playLog, game: gameData });
       document.getElementById('result').innerHTML = '<strong>Extra Point is Good!</strong>';
       updateStateUI();
       afterPlayComplete();
-      return;
-    }
-
-    const inRange = /**state.Down === 4 &&**/ ((state.Possession === 'Home' && state.BallOn >= 65) || (state.Possession === 'Away' && state.BallOn <= 35));
-    if (!inRange) {
-      updateKickButton();
       return;
     }
 
@@ -3161,12 +3222,11 @@
   }
 
   function punt() {
-    const button = document.getElementById('puntButton');
-    if (button) button.disabled = true;
     if (state.Down !== 4) {
       updatePuntButton();
       return;
     }
+    disablePlayControls();
     const kickingTeam = state.Possession;
     const newPossession = kickingTeam === 'Home' ? 'Away' : 'Home';
     let newBallOn = kickingTeam === 'Home' ? state.BallOn + 40 : state.BallOn - 40;
