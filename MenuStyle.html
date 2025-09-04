@@ -7,37 +7,171 @@
     --gray-medium: #1e1e1e;
     --text-light: #F5F5F5;
   }
-  body {
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    font-family: 'Roboto', Arial, sans-serif;
-    background: linear-gradient(135deg, var(--gray-dark) 0%, var(--gray-medium) 100%);
-    color: var(--text-light);
+  /* Stadium background (no overlay) */
+  body{
+    margin:0; height:100vh;
+    background:url("https://andrew-jacobson06.github.io/public-audio/stadium-menu.png") center/cover no-repeat;
+    font-family:"Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    color:#fff; overflow:hidden;
   }
-  .menu-container {
-    width: 100%;
-    max-width: 400px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
+
+  /* Title (badge removed) */
+  .brand{
+    position:absolute; top:2.2vw; left:2.2vw; z-index:3;
+    text-transform:uppercase; letter-spacing:.32rem; font-weight:900;
+    font-size:clamp(28px, 8vw, 100px); line-height:1;
+    text-shadow: 0 2px 0 rgba(0,0,0,.5), 0 0 18px rgba(255,59,59,.6), 0 0 42px rgba(255,59,59,.25);
   }
-  .menu-button {
-    width: 100%;
-    margin: 10px 0;
-    padding: 15px;
-    font-size: clamp(18px, 5vw, 24px);
-    background: var(--accent-red);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
+
+  /* Broadcast-style corners */
+  .corner{ position:absolute; width:3.6vw; height:3.6vw; border:2px solid rgba(255,255,255,.18); z-index:2; pointer-events:none }
+  .corner.tl{ top:1.6vw; left:1.6vw; border-right:none; border-bottom:none }
+  .corner.tr{ top:1.6vw; right:1.6vw; border-left:none; border-bottom:none }
+  .corner.bl{ bottom:1.6vw; left:1.6vw; border-right:none; border-top:none }
+  .corner.br{ bottom:1.6vw; right:1.6vw; border-left:none; border-top:none }
+
+  /* Bottom-left cluster */
+  .menu-wrap{ position:absolute; left:2.2vw; bottom:6vh; z-index:4; display:grid; gap:1rem; }
+
+  /* ===================== HIGH-TECH PANEL ===================== */
+  .panel{
+    position:relative; padding:2.6rem 1.2rem 1.2rem 1.2rem; /* room for ticker */
+    border-radius:14px; background:rgba(0,0,0,.25);
+    border:1px solid rgba(255,255,255,.12); outline:1px solid rgba(255,59,59,.22);
+    box-shadow: 0 0 0 1px rgba(255,59,59,.12) inset, 0 12px 30px rgba(0,0,0,.35), 0 0 28px rgba(255,59,59,.12);
+    backdrop-filter: blur(3px);
+    display:grid; gap:.8rem; max-width:min(92vw, 520px);
+    overflow:hidden;
+    height:50
   }
-  .menu-button:active {
-    background: var(--accent-red-dark);
+
+  /* Scanning grid (noticeable, slow) */
+  .panel::before{
+    content:""; position:absolute; inset:0;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 2px, transparent 2px 12px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 2px, transparent 2px 16px);
+    transform:translateY(0);
+    animation:scanY 12s linear infinite;
+    pointer-events:none;
   }
-</style>
+  @keyframes scanY{ 0%{ transform:translateY(0) } 100%{ transform:translateY(-60px) } }
+
+  /* TICKER (panel top) */
+  .ticker{
+    position:absolute; left:0; right:0; top:0;
+    height:2.2rem; display:flex; align-items:center;
+    background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    border-bottom:1px solid rgba(255,255,255,.12);
+    box-shadow: inset 0 -1px 0 rgba(255,59,59,.22);
+    overflow:hidden;
+  }
+  .ticker::before{
+    /* thin left glow rail */
+    content:""; position:absolute; left:0; top:0; bottom:0; width:2px;
+    background:linear-gradient(180deg, transparent, var(--accent-red-dark), transparent);
+    filter:drop-shadow(0 0 8px var(--accent-red-dark));
+  }
+  .track{
+    white-space:nowrap; display:inline-block;
+    padding-left:100%;
+    animation:marquee 16s linear infinite;
+    font-size:.95rem; letter-spacing:.14rem; text-transform:uppercase; opacity:.92;
+  }
+  .sep{ margin:0 .9rem; opacity:.6 }
+  @keyframes marquee{ 0%{ transform:translateX(0) } 100%{ transform:translateX(-100%) } }
+
+  /* Perimeter rails with visible runners (guaranteed idle animation) */
+  .rail{ position:absolute; pointer-events:none; }
+  .rail.top, .rail.bottom{ left:10px; right:10px; height:2px; }
+  .rail.left, .rail.right{ top:10px; bottom:10px; width:2px; }
+
+  .runnerX, .runnerY{
+    position:absolute; background:linear-gradient(90deg, transparent, var(--accent-red-dark), transparent);
+    filter:drop-shadow(0 0 8px var(--accent-red-dark));
+  }
+  .rail.top .runnerX{ top:0; left:-30%; height:2px; width:30%; animation:runX 3s linear infinite; }
+  .rail.bottom .runnerX{ bottom:0; left:100%; height:2px; width:30%; animation:runXRev 3s linear infinite; opacity:.7 }
+  .rail.left .runnerY{ left:0; top:-30%; width:2px; height:30%; animation:runY 2.4s linear infinite; opacity:.75 }
+  .rail.right .runnerY{ right:0; top:100%; width:2px; height:30%; animation:runYRev 2.4s linear infinite; opacity:.6 }
+
+  @keyframes runX   { 0%{ transform:translateX(0) } 100%{ transform:translateX(450%) } }
+  @keyframes runXRev{ 0%{ transform:translateX(0) } 100%{ transform:translateX(-450%) } }
+  @keyframes runY   { 0%{ transform:translateY(0) } 100%{ transform:translateY(450%) } }
+  @keyframes runYRev{ 0%{ transform:translateY(0) } 100%{ transform:translateY(-450%) } }
+
+  /* Corner nodes (pulse) */
+  .node{
+    position:absolute; width:8px; height:8px; border-radius:50%;
+    background:var(--accent-red-dark); box-shadow:0 0 12px var(--accent-red-dark), 0 0 28px rgba(255,59,59,.35);
+    animation:pulse 2.2s ease-in-out infinite; pointer-events:none;
+  }
+  .node.n1{ top:10px; left:10px }
+  .node.n2{ top:10px; right:10px; animation-delay:.25s }
+  .node.n3{ bottom:10px; left:10px; animation-delay:.5s }
+  .node.n4{ bottom:10px; right:10px; animation-delay:.75s }
+  @keyframes pulse{ 0%,100%{ transform:scale(1); opacity:.85 } 50%{ transform:scale(1.25); opacity:.55 } }
+
+  /* Sliding edge ticks */
+  .tick{
+    position:absolute; width:34px; height:2px;
+    background:linear-gradient(90deg, rgba(255,255,255,.1), var(--accent-red), rgba(255,255,255,.1));
+    filter:drop-shadow(0 0 6px var(--accent-red-dark)); opacity:.9;
+    animation-duration: 2.8s; animation-iteration-count: infinite; animation-timing-function: linear;
+  }
+  .tick.t1{ top:10px; left:10px; animation-name: tMoveX }
+  .tick.t2{ bottom:10px; right:10px; animation-name: tMoveXRev }
+  .tick.t3{ left:10px; top:10px; width:2px; height:34px; background:linear-gradient(0deg, rgba(255,255,255,.1), var(--accent-red), rgba(255,255,255,.1)); animation-name: tMoveY }
+  .tick.t4{ right:10px; bottom:10px; width:2px; height:34px; background:linear-gradient(0deg, rgba(255,255,255,.1), var(--accent-red), rgba(255,255,255,.1)); animation-name: tMoveYRev }
+  @keyframes tMoveX { 0%{ transform:translateX(0) } 100%{ transform:translateX(calc(100% - 34px)) } }
+  @keyframes tMoveXRev { 0%{ transform:translateX(0) } 100%{ transform:translateX(calc(-100% + 34px)) } }
+  @keyframes tMoveY { 0%{ transform:translateY(0) } 100%{ transform:translateY(calc(100% - 34px)) } }
+  @keyframes tMoveYRev { 0%{ transform:translateY(0) } 100%{ transform:translateY(calc(-100% + 34px)) } }
+
+  /* Buttons */
+  .menu-button{
+    position:relative; isolation:isolate; border:none; color:#fff; cursor:pointer;
+    text-transform:uppercase; letter-spacing:.18rem; font-weight:800;
+    font-size:clamp(14px, 1.2vw, 18px);
+    padding:1rem 1.4rem 1rem 1.8rem;
+    background:linear-gradient(135deg, rgba(255,59,59,.22), rgba(255,59,59,.08) 40%, rgba(255,255,255,.05) 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 0 14px rgba(255,59,59,.55), 0 0 40px rgba(255,59,59,.25);
+    clip-path:polygon(0% 0%, 87% 0%, 100% 25%, 100% 100%, 13% 100%, 0% 75%);
+    border-radius:4px;
+    transition:transform .18s ease, box-shadow .22s ease, letter-spacing .22s ease, filter .22s ease;
+  }
+  .menu-button::before{
+    content:""; position:absolute; inset:0; pointer-events:none; clip-path:inherit;
+    background:linear-gradient(135deg, transparent 0 40%, rgba(255,255,255,.08) 60%, transparent 100%);
+    mix-blend-mode:screen; z-index:-1;
+  }
+  .menu-button::after{
+    content:""; position:absolute; top:0; bottom:0; left:-30%; width:30%;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.34), transparent);
+    transform:skewX(-22deg); filter:blur(4px); transition:left .45s ease;
+  }
+  .menu-button:hover{
+    transform:translateY(-3px) scale(1.02); letter-spacing:.22rem;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.1), 0 0 18px rgba(255,59,59,.75), 0 0 60px rgba(255,59,59,.35);
+    filter:saturate(1.1);
+  }
+  .menu-button:hover::after{ left:110% }
+
+  /* Idle underline loop (always running) */
+  .menu-button .underline{
+    position:absolute; left:10px; right:18%; bottom:-6px; height:2px; overflow:hidden;
+  }
+  .menu-button .underline::before{
+    content:""; position:absolute; inset:0;
+    background:linear-gradient(90deg, rgba(255,59,59,.2), rgba(255,59,59,.9), rgba(255,59,59,.2));
+    transform:translateX(-100%); animation:slide 2.2s cubic-bezier(.35,.05,.2,.95) infinite;
+  }
+  @keyframes slide{ 0%{ transform:translateX(-100%) } 100%{ transform:translateX(100%) } }
+
+  /* Responsive */
+  @media (max-width:780px){
+    .brand{ left:4vw; font-size:clamp(26px, 7vw, 54px) }
+    .menu-wrap{ left:4vw; bottom:6vh; height: 30%; width: 50%;}
+  }
+  .menu-wrap{ left:4vw; bottom:6vh; height: 22%; width: 50%;}
+  </style>

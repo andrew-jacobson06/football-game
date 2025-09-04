@@ -22,10 +22,51 @@
       <? } else if (view === 'games') { ?>
       <?!= include('Games'); ?>
     <? } else { ?>
-      <div class="menu-container">
-        <button class="menu-button" onclick="go('players')">View Players</button>
-        <button class="menu-button" onclick="go('games')">Existing League</button>
-        <button class="menu-button" onclick="alert('New League coming soon!')">New League</button>
+      <!-- Corners -->
+      <div class="corner tl"></div><div class="corner tr"></div>
+      <div class="corner bl"></div><div class="corner br"></div>
+
+      <!-- Title -->
+      <div class="brand">Animal Football</div>
+
+      <!-- Bottom-left menu -->
+      <div class="menu-wrap">
+        <div class="panel">
+          <!-- Ticker -->
+          <div class="ticker">
+            <div class="track" id="tickerTrack">
+              WEEK 1 • 8:00 PM ET • HOME vs AWAY <span class="sep">|</span>
+              POWER RANKINGS UPDATE • TOP 5: ATL, DAL, DEN, SEA, CLT <span class="sep">|</span>
+              WEATHER: CLEAR • 62°F • 5 MPH WNW <span class="sep">|</span>
+              INJURY REPORT: RB QUESTIONABLE (ANKLE) <span class="sep">|</span>
+            </div>
+          </div>
+
+          <!-- Animated perimeter rails -->
+          <div class="rail top"><span class="runnerX"></span></div>
+          <div class="rail bottom"><span class="runnerX"></span></div>
+          <div class="rail left"><span class="runnerY"></span></div>
+          <div class="rail right"><span class="runnerY"></span></div>
+
+          <!-- Corner nodes -->
+          <div class="node n1"></div><div class="node n2"></div>
+          <div class="node n3"></div><div class="node n4"></div>
+
+          <!-- Sliding edge markers -->
+          <div class="tick t1"></div><div class="tick t2"></div>
+          <div class="tick t3"></div><div class="tick t4"></div>
+
+          <!-- Buttons -->
+          <button class="menu-button" onclick="go('players')">
+            <span>View Players</span><span class="underline"></span>
+          </button>
+          <button class="menu-button" onclick="go('games')">
+            <span>Existing League</span><span class="underline"></span>
+          </button>
+          <button class="menu-button" onclick="alert('New League coming soon!')">
+            <span>New League</span><span class="underline"></span>
+          </button>
+        </div>
       </div>
     <? } ?>
   </body>

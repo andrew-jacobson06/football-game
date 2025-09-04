@@ -1,0 +1,12 @@
+<script>
+    // Optional: simple JS to duplicate ticker content for seamless loop if text is short
+  (function ensureWideTicker(){
+    const track = document.getElementById('tickerTrack');
+    if (!track) return;
+    const textWidth = track.scrollWidth;
+    const containerWidth = track.parentElement.offsetWidth;
+    if (textWidth < containerWidth * 2) {
+      track.innerHTML = track.innerHTML + track.innerHTML; // duplicate once to lengthen
+    }
+  })();
+</script>
