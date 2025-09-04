@@ -20,10 +20,10 @@
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }**/
 
-//doGet For Testing PlayUI.html
+//doGet For Testing LeagueApp.html
 function doGet(e) {
   const view = (e && e.parameter && e.parameter.view) || 'menu';
-  const template = HtmlService.createTemplateFromFile('PlayUI');
+  const template = HtmlService.createTemplateFromFile('LeagueApp');
   template.view = view;
   return template
     .evaluate()
@@ -33,7 +33,7 @@ function doGet(e) {
 
 function onOpen() {
   SpreadsheetApp.getUi()
-    .addItem("Open Play UI", "showPlayUI")
+    .addItem("Open League App", "showLeagueApp")
     .addToUi();
 }
 
@@ -42,8 +42,8 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-function showPlayUI() {
-  const html = HtmlService.createHtmlOutputFromFile("PlayUI")
+function showLeagueApp() {
+  const html = HtmlService.createHtmlOutputFromFile("LeagueApp")
     .setWidth(400)
     .setHeight(400);
 }
