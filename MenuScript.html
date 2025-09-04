@@ -9,4 +9,46 @@
       track.innerHTML = track.innerHTML + track.innerHTML; // duplicate once to lengthen
     }
   })();
+  // 🔊 Handle browser autoplay policies:
+  // 1) Start muted autoplay (allowed).
+  // 2) On first user interaction, unmute and set volume, then play.
+  // 3) Resume if the tab becomes visible again.
+  (function setupMenuAudio(){
+    console.log('hi');
+    const audio = document.getElementById('menuAmbience');
+    if (!audio) return;
+
+    // Conservative volume; tweak as desired
+    audio.volume = 0.88;
+
+    // Some browsers need explicit play even when autoplay is set
+    audio.play().catch(() => { /* ignore until user interacts */ });
+
+    const unlock = () => {
+      audio.muted = false;
+      audio.volume = 0.88;
+      audio.play().catch(() => {});
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('touchstart', unlock);
+    };
+
+    window.addEventListener('pointerdown', unlock, { once:true });
+    window.addEventListener('keydown',     unlock, { once:true });
+    window.addEventListener('touchstart',  unlock, { once:true });
+
+    // Keep ambience running when tab refocuses
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        audio.play().catch(() => {});
+      }
+    });
+
+    // Optional: quick mute toggle with "M"
+    window.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'm') {
+        audio.muted = !audio.muted;
+      }
+    });
+  })();
 </script>

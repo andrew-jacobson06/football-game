@@ -1,22 +1,38 @@
-<div id="playerListView">
-  <button id="playerListBack" class="back-button" onclick="go('')">← Back</button>
-  <table id="playerTable" class="player-table">
-    <thead>
-      <tr><th>Name</th><th>Positions</th><th>Stars</th><th>Team</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
-<div id="playerCardView" style="display:none;">
-  <button id="playerCardBack" class="back-button">← Back</button>
-  <div class="player-card-layout">
-    <div id="playerImageContainer" class="player-image-container">
-      <img id="player-card-image" src="https://andrew-jacobson06.github.io/public-audio/baby.png" alt="Player"/>
-      <div id="jersey-wrapper">
-        <img id="jersey" src="" alt="Jersey Overlay"/>
-      </div>
-    </div>
-    <div id="playerDetails" class="player-details"></div>
-    <div id="playerTraitBars" class="player-trait-bars"></div>
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+    />
+    <?!= include('PlayersStyle'); ?>
+  </head>
+  <body>
+  <div id="playerListView">
+    <button id="playerListBack" class="back-button" onclick="go('')">← Back</button>
+    <table id="playerTable" class="player-table">
+      <thead>
+        <tr><th>Name</th><th>Positions</th><th>Stars</th><th>Team</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
-</div>
+  <div id="playerCardView" style="display:none;">
+    <button id="playerCardBack" class="back-button">← Back</button>
+    <div class="player-card-layout">
+      <div id="playerImageContainer" class="player-image-container">
+        <img id="player-card-image" src="https://andrew-jacobson06.github.io/public-audio/baby.png" alt="Player"/>
+        <div id="jersey-wrapper">
+          <img id="jersey" src="" alt="Jersey Overlay"/>
+        </div>
+      </div>
+      <div id="playerDetails" class="player-details"></div>
+      <div id="playerTraitBars" class="player-trait-bars"></div>
+    </div>
+  </div>
+
+    <?!= include('PlayersScript'); ?>
+  </body>
+</html>

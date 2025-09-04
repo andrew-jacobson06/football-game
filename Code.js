@@ -1,4 +1,5 @@
-function doGet(e) {
+//doGet FOR FULL DEPLOY
+/**function doGet(e) {
   const view = (e && e.parameter && e.parameter.view) || 'menu';
   const template = HtmlService.createTemplateFromFile('MainMenu');
   template.view = view;
@@ -6,7 +7,30 @@ function doGet(e) {
     .evaluate()
     .setTitle('Football Game UI')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}**/
+
+//doGet For Testing Players.html
+/**function doGet(e) {
+  const view = (e && e.parameter && e.parameter.view) || 'menu';
+  const template = HtmlService.createTemplateFromFile('Players');
+  template.view = view;
+  return template
+    .evaluate()
+    .setTitle('Football Game UI')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}**/
+
+//doGet For Testing PlayUI.html
+function doGet(e) {
+  const view = (e && e.parameter && e.parameter.view) || 'menu';
+  const template = HtmlService.createTemplateFromFile('PlayUI');
+  template.view = view;
+  return template
+    .evaluate()
+    .setTitle('Football Game UI')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
+
 function onOpen() {
   SpreadsheetApp.getUi()
     .addItem("Open Play UI", "showPlayUI")
