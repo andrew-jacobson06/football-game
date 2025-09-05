@@ -4521,14 +4521,64 @@
     closeClockModal();
   }
 
-  function spikeBall() {
+  async function spikeBall() {
     console.log('Spike Ball selected');
+    const qbSlot = currentFormation.find(f => f.position === 'QB');
+    const qbName = qbSlot ? qbSlot.player : null;
+    if (!qbName) return;
+    disablePlayControls();
     closeClockModal();
+
+    const predicted = predictPlayType(state.Down, state.Distance);
+    const yardDelta = 0;
+    const newBall = state.BallOn;
+    const newDist = state.Distance;
+    let newDown = state.Down + 1;
+    const timeTaken = 1;
+
+    if (newDown > 4) {
+      await handleTOonDowns('TO on Downs', newBall, qbName, 'No One', { yards: yardDelta }, null, predicted, timeTaken, { completed: false });
+    } else {
+      updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, qbName, 'No One', yardDelta, null, 'Incomplete', predicted, timeTaken);
+      await animatePlay('Pass', { completed: false });
+    }
+
+    applyFatigue(qbName, 'Throw');
+
+    document.getElementById('result').innerHTML = `<strong>${qbName}</strong> spikes the ball.`;
+    updateStateUI();
+    afterPlayComplete();
   }
 
-  function kneel() {
+  async function kneel() {
     console.log('Kneel selected');
+    const qbSlot = currentFormation.find(f => f.position === 'QB');
+    const qbName = qbSlot ? qbSlot.player : null;
+    if (!qbName) return;
+    disablePlayControls();
     closeClockModal();
+
+    const predicted = predictPlayType(state.Down, state.Distance);
+    const yardDelta = -1;
+    const rawNewBall = state.Possession === 'Home' ? state.BallOn + yardDelta : state.BallOn - yardDelta;
+    const newBall = state.Possession === 'Home' ? Math.max(0, rawNewBall) : Math.min(100, rawNewBall);
+    const newDist = state.Distance - yardDelta;
+    let newDown = state.Down + 1;
+    const timeTaken = 3;
+
+    if (newDown > 4) {
+      await handleTOonDowns('TO on Downs', newBall, qbName, '', { yards: yardDelta }, 'NA', predicted, timeTaken);
+    } else {
+      updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, qbName, '', yardDelta, 'NA', 'Kneel', predicted, timeTaken);
+      await animatePlay('Run');
+    }
+
+    applyFatigue(qbName, 'Run');
+    updateFrontendStats(qbName, yardDelta, 'Kneel', state.Possession, 'NA', null);
+
+    document.getElementById('result').innerHTML = `<strong>${qbName}</strong> kneels for -1 yard.`;
+    updateStateUI();
+    afterPlayComplete();
   }
 
   // On load
