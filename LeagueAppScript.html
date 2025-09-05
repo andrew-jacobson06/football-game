@@ -22,6 +22,9 @@
   let defStarPower = false;
   let defStarPowerTackler = '';
   let pendingFGTeam = null;
+  let isTwoPtAttempt = false;
+  let twoPtTeam = null;
+  let postPATState = null;
   const RUN_POSITIONS = ['WR1','RB1','RB2','QB'];
   const ROUTE_OPTIONS = ['No Route','Screen','Short','Medium','Med-Long','Long','Deep'];
   const QB_READ_OPTIONS = ['Primary','2nd','3rd','4th','Checkdown'];
@@ -696,7 +699,7 @@
     });
   }
 
-  const PLAY_BUTTON_IDS = ['passPlayButton','openRun','executeRun','kickButton','puntButton'];
+  const PLAY_BUTTON_IDS = ['passPlayButton','openRun','executeRun','kickButton','puntButton','twoPtButton'];
   const TIMEOUT_IDS = ['homeTimeouts','awayTimeouts'];
 
   function disablePlayControls() {
@@ -845,6 +848,20 @@
     if (play.PlayType === 'Kick XP') {
       return 'Extra Point is Good!';
     }
+    if (play.PlayType === '2PT') {
+      const success = (play.Result || '').toLowerCase().includes('successful');
+      if (play.Receiver && play.Receiver !== '') {
+        if (success) {
+          return `${play.Player} ${play.Yards} yard pass to ${play.Receiver}. 2-point conversion is SUCCESSFUL!`;
+        }
+        return `${play.Player} pass incomplete intended for ${play.Receiver}. 2-point conversion FAILS!`;
+      } else {
+        if (success) {
+          return `${play.Player} runs for ${play.Yards} yards. 2-point conversion is SUCCESSFUL!`;
+        }
+        return `${play.Player} run fails. 2-point conversion FAILS!`;
+      }
+    }
       if (play.Result === 'Sack') {
         const qb = play.Player || '';
         const spot = formatBallOnForPoss(play.NewBallOn, play.Possession);
@@ -909,6 +926,14 @@
         const recoveryPoss = play.RecoveredBy === receiver ? play.Possession : (play.Possession === 'Home' ? 'Away' : 'Home');
         text += ` FUMBLE! Recovered by ${play.RecoveredBy} at the ${formatBallOnForPoss(play.NewBallOn, recoveryPoss)}.`;
       }
+      if (play.afterTdPlay) {
+        const after = play.afterTdPlay;
+        if (after.PlayType === 'Kick XP') {
+          text += ' XP is GOOD!';
+        } else if (after.PlayType === '2PT') {
+          text += ' ' + buildPlayText(after);
+        }
+      }
       return text;
     } else {
       let text = `<strong>${play.Player}</strong> runs for ${play.Yards} Yards.`;
@@ -930,6 +955,15 @@
       if (play.Result === "Fumble" && play.RecoveredBy) {
         const recoveryPoss = play.RecoveredBy === play.Player ? play.Possession : (play.Possession === "Home" ? "Away" : "Home");
         text += ` FUMBLE! Recovered by ${play.RecoveredBy} at the ${formatBallOnForPoss(play.NewBallOn, recoveryPoss)}.`;
+      }
+
+      if (play.afterTdPlay) {
+        const after = play.afterTdPlay;
+        if (after.PlayType === 'Kick XP') {
+          text += ' XP is GOOD!';
+        } else if (after.PlayType === '2PT') {
+          text += ' ' + buildPlayText(after);
+        }
       }
 
       return text;
@@ -985,7 +1019,10 @@
       el.innerHTML = '';
       return;
     }
-    const lastPlay = playHistory[playHistory.length - 1];
+    let lastPlay = playHistory[playHistory.length - 1];
+    if (lastPlay && (lastPlay.PlayType === 'Kick XP' || lastPlay.PlayType === '2PT')) {
+      lastPlay = playHistory[playHistory.length - 2];
+    }
     const text = buildPlayText(lastPlay);
     el.innerHTML = `<strong>Last Play:</strong> ${text}`;
   }
@@ -2396,23 +2433,25 @@
           newBall = state.Possession === 'Home' ? 0 : 100;
         }
       }
-      updatePassingStats(qbName, yards, resultArray.completed, resultArray.intercepted, touchdown, resultArray.sack);
-    if (target) {
-      updateReceivingStats(target.target, yards, resultArray.completed, touchdown, fumble);
-    }
-    if (resultArray.intercepted) {
-      updateDefensiveStatsPass(resultArray.caughtBy, { interception: true });
-    } else {
-      const defenderName = target && target.routeInfo ? target.routeInfo.defender : null;
-      if (defenderName && !resultArray.completed) {
-        if (target.routeInfo.defStarsPctBoost) {
-          updateDefensiveStatsPass(defenderName, { deflection: true });
+      if (!isTwoPtAttempt) {
+        updatePassingStats(qbName, yards, resultArray.completed, resultArray.intercepted, touchdown, resultArray.sack);
+        if (target) {
+          updateReceivingStats(target.target, yards, resultArray.completed, touchdown, fumble);
+        }
+        if (resultArray.intercepted) {
+          updateDefensiveStatsPass(resultArray.caughtBy, { interception: true });
+        } else {
+          const defenderName = target && target.routeInfo ? target.routeInfo.defender : null;
+          if (defenderName && !resultArray.completed) {
+            if (target.routeInfo.defStarsPctBoost) {
+              updateDefensiveStatsPass(defenderName, { deflection: true });
+            }
+          }
+          if (tackler) {
+            updateDefensiveStatsPass(tackler, { tackle: true, yards, fumble, recoveredBy });
+          }
         }
       }
-      if (tackler) {
-        updateDefensiveStatsPass(tackler, { tackle: true, yards, fumble, recoveredBy });
-      }
-    }
     //Handle Interception
     if(resultArray.intercepted){
 
@@ -2421,6 +2460,53 @@
     let timeTaken = 5;  //NEEDS UPDATING
     let predicted = "PASS";  //NEEDS UPDATING
     let result = "Normal";
+
+    if (isTwoPtAttempt) {
+      const success = touchdown && !resultArray.intercepted;
+      state.Previous = state.BallOn;
+      state.BallOn = newBall;
+      if (success) {
+        if (twoPtTeam === 'Home') {
+          state.HomeScore = (parseInt(state.HomeScore, 10) || 0) + 2;
+        } else {
+          state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 2;
+        }
+      }
+      const playLog = logTwoPointPlay(twoPtTeam, qbName, target ? target.target : '', yards, success);
+      if (playHistory.length >= 2) {
+        playHistory[playHistory.length - 2].afterTdPlay = playLog;
+      }
+      renderPlayTimeline();
+      const gameData = {
+        gameId: gameId,
+        quarter: state.Qtr,
+        time: state.Time,
+        down: postPATState.down,
+        distance: postPATState.distance,
+        ballOn: postPATState.ballOn,
+        homeScore: state.HomeScore,
+        awayScore: state.AwayScore,
+        driveStart: postPATState.driveStart,
+        previous: postPATState.previous,
+        possession: postPATState.possession,
+        homeTimeouts: state.HomeTimeouts,
+        awayTimeouts: state.AwayTimeouts
+      };
+      savePlayAndGameWithRetry({ play: playLog, game: gameData });
+      state.Down = postPATState.down;
+      state.Distance = postPATState.distance;
+      state.Possession = postPATState.possession;
+      state.BallOn = postPATState.ballOn;
+      state.Previous = postPATState.previous;
+      state.DriveStart = postPATState.driveStart;
+      isTwoPtAttempt = false;
+      twoPtTeam = null;
+      postPATState = null;
+      updateStateUI();
+      document.getElementById('result').innerHTML = success ? '<strong>2-point conversion is SUCCESSFUL!</strong>' : '<strong>2-point conversion fails.</strong>';
+      afterPlayComplete();
+      return;
+    }
 
     //Handle offense retaining possession
       if(!resultArray.intercepted && (!fumble || recoveredBy !== tackler)){
@@ -2967,8 +3053,54 @@
 
     let result = "Normal";
     let recoveredBy = null;
+    if (isTwoPtAttempt) {
+      const success = touchdown;
+      state.Previous = state.BallOn;
+      state.BallOn = newBall;
+      if (success) {
+        if (twoPtTeam === 'Home') {
+          state.HomeScore = (parseInt(state.HomeScore, 10) || 0) + 2;
+        } else {
+          state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 2;
+        }
+      }
+      const playLog = logTwoPointPlay(twoPtTeam, playerName, '', recordedYards, success);
+      if (playHistory.length >= 2) {
+        playHistory[playHistory.length - 2].afterTdPlay = playLog;
+      }
+      renderPlayTimeline();
+      const gameData = {
+        gameId: gameId,
+        quarter: state.Qtr,
+        time: state.Time,
+        down: postPATState.down,
+        distance: postPATState.distance,
+        ballOn: postPATState.ballOn,
+        homeScore: state.HomeScore,
+        awayScore: state.AwayScore,
+        driveStart: postPATState.driveStart,
+        previous: postPATState.previous,
+        possession: postPATState.possession,
+        homeTimeouts: state.HomeTimeouts,
+        awayTimeouts: state.AwayTimeouts
+      };
+      savePlayAndGameWithRetry({ play: playLog, game: gameData });
+      state.Down = postPATState.down;
+      state.Distance = postPATState.distance;
+      state.Possession = postPATState.possession;
+      state.BallOn = postPATState.ballOn;
+      state.Previous = postPATState.previous;
+      state.DriveStart = postPATState.driveStart;
+      isTwoPtAttempt = false;
+      twoPtTeam = null;
+      postPATState = null;
+      updateStateUI();
+      document.getElementById('result').innerHTML = success ? '<strong>2-point conversion is SUCCESSFUL!</strong>' : '<strong>2-point conversion fails.</strong>';
+      afterPlayComplete();
+      return;
+    }
 
-      if (!touchdown && !safety && tackler && tackler !== "NA") {
+    if (!touchdown && !safety && tackler && tackler !== "NA") {
       const fum = checkForFumble(playerName, tackler);
       if (fum.fumble) {
         result = "Fumble";
@@ -3244,6 +3376,25 @@
     updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, '', '', 0, null, null);
   }
 
+  function goForTwo() {
+    if (pendingFGTeam === null) return;
+    twoPtTeam = pendingFGTeam;
+    pendingFGTeam = null;
+    isTwoPtAttempt = true;
+    postPATState = {
+      down: state.Down,
+      distance: state.Distance,
+      possession: state.Possession,
+      ballOn: state.BallOn,
+      previous: state.Previous,
+      driveStart: state.DriveStart
+    };
+    const startBall = twoPtTeam === 'Home' ? 98 : 2;
+    updateGameState(1, 2, twoPtTeam, startBall, startBall, startBall, '', '', 0, null, null);
+    updateStateUI();
+    enablePlayControls();
+  }
+
   function kickFG() {
     const canPAT = pendingFGTeam !== null;
     const inRange = /**state.Down === 4 &&**/ ((state.Possession === 'Home' && state.BallOn >= 65) || (state.Possession === 'Away' && state.BallOn <= 35));
@@ -3260,6 +3411,10 @@
         state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 1;
       }
       const playLog = logFieldGoalPlay(team, true);
+      if (playHistory.length >= 2) {
+        playHistory[playHistory.length - 2].afterTdPlay = playHistory[playHistory.length - 1];
+      }
+      renderPlayTimeline();
       pendingFGTeam = null;
       const gameData = {
         gameId: gameId,
@@ -3368,6 +3523,32 @@
     };
   }
 
+  function logTwoPointPlay(poss, player, receiver, yards, success) {
+    const resultText = success ? '2Pt Successful' : '2Pt Failed';
+    const localPlay = {
+      Time: state.Time,
+      Down: state.Down,
+      Distance: state.Distance,
+      Qtr: state.Qtr,
+      DriveStart: state.DriveStart,
+      Player: player || '',
+      Receiver: receiver || '',
+      Yards: yards || 0,
+      Result: resultText,
+      NewBallOn: state.BallOn,
+      BallOn: state.Previous,
+      Tackler: '',
+      RecoveredBy: '',
+      Possession: poss,
+      HomeScore: state.HomeScore,
+      AwayScore: state.AwayScore,
+      PlayType: '2PT'
+    };
+    playHistory.push(localPlay);
+    renderPlayTimeline();
+    return localPlay;
+  }
+
   function logPuntPlay(poss, newBallOn) {
     const localPlay = {
       Time: state.Time,
@@ -3424,6 +3605,11 @@
     const canFG = /**state.Down === 4 &&**/ ((state.Possession === 'Home' && state.BallOn >= 65) || (state.Possession === 'Away' && state.BallOn <= 35));
     btn.style.display = '';
     btn.disabled = !(canPAT || canFG);
+    const twoBtn = document.getElementById('twoPtButton');
+    if (twoBtn) {
+      twoBtn.style.display = '';
+      twoBtn.disabled = !canPAT;
+    }
   }
 
   function updatePuntButton() {
