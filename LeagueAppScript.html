@@ -35,6 +35,8 @@
   let selectedPlayer = null;
   let runSelectedPlayer = null;
   let runningClock = false;
+  let chewClock = false;
+  let hurryUp = false;
   let completionTable = [];
   let routeTypeAirYards = [];
   let timeNeededToOpen = [];
@@ -3279,7 +3281,19 @@
     let newTime = state.Time;
     if (typeof timeTaken === 'number') {
       if (runningClock) {
-        timeTaken += randomInt(20, 36);
+        let min = 24;
+        let max = 38;
+        if(chewClock){
+          min = 36;
+          max = 40;
+        }
+        else if(hurryUp){
+          min = 4;
+          max = 8;
+          
+        } else{
+          timeTaken += randomInt(min, max);
+        }
       }
       newTime = state.Time - timeTaken;
     }
@@ -4513,11 +4527,15 @@
 
   function hurryUp() {
     console.log('Hurry Up selected');
+    chewClock = false;
+    hurryUp = true;
     closeClockModal();
   }
 
   function chewClock() {
     console.log('Chew Clock selected');
+    chewClock = true;
+    hurryUp = false;
     closeClockModal();
   }
 
