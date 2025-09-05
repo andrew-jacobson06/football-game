@@ -1184,6 +1184,39 @@
     z-index: 10;
   }
 
+  .clock-button {
+    position: fixed;
+    bottom: 4vw;
+    right: 4vw;
+    padding: 3vw 4vw;
+    background: var(--accent-red);
+    color: var(--text-light);
+    border: none;
+    border-radius: 8px;
+    font-size: 3.5vw;
+    z-index: 1100;
+    cursor: pointer;
+  }
+
+  .clock-panel {
+    width: 90vw;
+    max-width: 90vw;
+    display: flex;
+    flex-direction: column;
+    gap: 4vw;
+  }
+
+  .clock-option {
+    width: 100%;
+    padding: 4vw;
+    font-size: 5vw;
+    background: var(--gray-medium);
+    color: var(--text-light);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
   .formation-field {
     margin-bottom: 4vw;
     overflow-x: auto;
