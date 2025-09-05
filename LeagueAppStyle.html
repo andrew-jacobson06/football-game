@@ -9,6 +9,7 @@
     --gray-light: #2c2c2c;
     --text-light: #F5F5F5;
     --text-muted: #B0B0B0;
+    --text-link: rgb(0, 106, 255);
     --scoreboardHeight: 0px;
   }
 
@@ -306,7 +307,6 @@
     flex: 1 1 0;
   }
   .team-logo {
-    flex: 0 0 50%;
     max-height: clamp(100px,15vw,150px);
     object-fit: contain;
   }
@@ -1921,10 +1921,12 @@
     display: flex;
     gap: 2vw;
     padding: 2vw;
+    justify-content: center;
   }
 
   .stats-tab {
     background: none;
+    width: 50%;
     border: none;
     color: var(--text-muted);
     padding: 1vw 2vw;
@@ -1950,6 +1952,7 @@
     padding: 1vw 3vw;
     color: var(--text-light);
     cursor: pointer;
+    width: 35%;
   }
 
   .stats-content {
@@ -2008,14 +2011,25 @@
     object-fit: contain;
   }
 
+  .stat-value{
+    text-align: center !important;
+  }
+
+  .statCol1{
+    width: 80%;
+  }
+
   .complete-link {
-    text-align: right;
-    margin-top: 1vw;
+    text-align: CENTER;
+    margin-top: 2vw;
   }
 
   .complete-link a,
   .team-cell .team-link {
-    color: var(--text-light);
-    text-decoration: underline;
+    color: var(--text-link);
+    text-decoration: none;
+  }
+  .complete-link a{    
+    font-weight:bold;
   }
 </style>
