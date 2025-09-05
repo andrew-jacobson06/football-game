@@ -37,6 +37,7 @@
   let timeNeededToOpen = [];
   let completionSeparationAdjustment = [];
   let yacBySeparation = {};
+  let gamesListLoaded = false;
 
   function showLoadingScreen(homeLogo, awayLogo) {
     const screen = document.getElementById('loadingScreen');
@@ -113,7 +114,7 @@
         const targetId = tab.getAttribute('data-tab');
         const target = document.getElementById(targetId);
         if (target) target.classList.add('active');
-        if (targetId === 'scores') {
+        if (targetId === 'scores' && !gamesListLoaded) {
           loadGamesList();
         }
       });
@@ -251,6 +252,7 @@
       .withSuccessHandler(games => {
         renderGameCards(games);
         hideAppLoading();
+        gamesListLoaded = true;
       })
       .withFailureHandler(err => {
         console.error(err);
