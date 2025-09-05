@@ -644,8 +644,8 @@
     <div id="clockModal" class="modal">
       <div class="formation-panel clock-panel">
         <span class="close-button" onclick="closeClockModal()">&times;</span>
-        <button class="clock-option" onclick="hurryUp()">Hurry Up</button>
-        <button class="clock-option" onclick="chewClock()">Chew Clock</button>
+        <button id="hurryUpToggle" class="clock-option" onclick="toggleHurryUp()">Hurry Up: Off</button>
+        <button id="chewClockToggle" class="clock-option" onclick="toggleChewClock()">Chew Clock: Off</button>
         <button class="clock-option" onclick="spikeBall()">Spike Ball</button>
         <button class="clock-option" onclick="kneel()">Kneel</button>
       </div>

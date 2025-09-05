@@ -4518,6 +4518,7 @@
   function openClockModal() {
     const modal = document.getElementById('clockModal');
     if (modal) modal.classList.add('open');
+    updateClockToggles();
   }
 
   function closeClockModal() {
@@ -4525,18 +4526,33 @@
     if (modal) modal.classList.remove('open');
   }
 
-  function hurryUp() {
-    console.log('Hurry Up selected');
-    chewClock = false;
-    hurryUp = true;
-    closeClockModal();
+  function updateClockToggles() {
+    const hurryBtn = document.getElementById('hurryUpToggle');
+    const chewBtn = document.getElementById('chewClockToggle');
+    if (hurryBtn) {
+      hurryBtn.classList.toggle('active', hurryUp);
+      hurryBtn.textContent = `Hurry Up: ${hurryUp ? 'On' : 'Off'}`;
+    }
+    if (chewBtn) {
+      chewBtn.classList.toggle('active', chewClock);
+      chewBtn.textContent = `Chew Clock: ${chewClock ? 'On' : 'Off'}`;
+    }
   }
 
-  function chewClock() {
-    console.log('Chew Clock selected');
-    chewClock = true;
-    hurryUp = false;
-    closeClockModal();
+  function toggleHurryUp() {
+    hurryUp = !hurryUp;
+    if (hurryUp) {
+      chewClock = false;
+    }
+    updateClockToggles();
+  }
+
+  function toggleChewClock() {
+    chewClock = !chewClock;
+    if (chewClock) {
+      hurryUp = false;
+    }
+    updateClockToggles();
   }
 
   async function spikeBall() {
