@@ -845,21 +845,30 @@
     if (play.PlayType === 'Kick XP') {
       return 'Extra Point is Good!';
     }
-    if (play.Result === 'Sack') {
-      const qb = play.Player || '';
-      const spot = formatBallOnForPoss(play.NewBallOn, play.Possession);
-      const loss = Math.abs(play.Yards);
-      let text = `${qb} sacked at the ${spot} for a loss of ${loss}`;
-      if (play.Tackler && play.Tackler !== 'NA') {
-        text += ` (${play.Tackler})`;
+      if (play.Result === 'Sack') {
+        const qb = play.Player || '';
+        const spot = formatBallOnForPoss(play.NewBallOn, play.Possession);
+        const loss = Math.abs(play.Yards);
+        let text = `${qb} sacked at the ${spot} for a loss of ${loss}`;
+        if (play.Tackler && play.Tackler !== 'NA') {
+          text += ` (${play.Tackler})`;
+        }
+        text += '.';
+        if (play.RecoveredBy) {
+          const recoveryPoss = play.RecoveredBy === qb ? play.Possession : (play.Possession === 'Home' ? 'Away' : 'Home');
+          text += ` FUMBLE! Recovered by ${play.RecoveredBy} at the ${formatBallOnForPoss(play.NewBallOn, recoveryPoss)}.`;
+        }
+        return text;
       }
-      text += '.';
-      if (play.RecoveredBy) {
-        const recoveryPoss = play.RecoveredBy === qb ? play.Possession : (play.Possession === 'Home' ? 'Away' : 'Home');
-        text += ` FUMBLE! Recovered by ${play.RecoveredBy} at the ${formatBallOnForPoss(play.NewBallOn, recoveryPoss)}.`;
+      if (play.Result === 'Safety' && play.PlayType === 'Pass' && (!play.Receiver || play.Receiver === '')) {
+        const qb = play.Player || '';
+        let text = `${qb} sacked in the end zone for a safety`;
+        if (play.Tackler && play.Tackler !== 'NA') {
+          text += ` (${play.Tackler})`;
+        }
+        text += '.';
+        return text;
       }
-      return text;
-    }
     if (play.PlayType === 'Pass') {
       const qb = play.Player || '';
       const receiver = play.Receiver || '';
@@ -2338,48 +2347,56 @@
     const oldScore = scoringTeam === "Home"
       ? parseInt(state.HomeScore, 10) || 0
       : parseInt(state.AwayScore, 10) || 0;
-    let yards = resultArray.yards || 0;
-    let touchdown = false;
-    let tackler = null;
-    let fumble = false;
-    let recoveredBy = null;
-    let newBall = state.BallOn;
-    let newDown = state.Down;
-    let newDist = state.Distance;
+      let yards = resultArray.yards || 0;
+      let touchdown = false;
+      let tackler = null;
+      let fumble = false;
+      let recoveredBy = null;
+      let newBall = state.BallOn;
+      let newDown = state.Down;
+      let newDist = state.Distance;
+      let safety = false;
 
       //HandleSack
-      if (resultArray.sack){
+        if (resultArray.sack){
+          newBall = state.Possession === 'Home' ? newBall + yards : newBall - yards;
+          const fum = checkForFumble(qbName, resultArray.sackBy, resultArray.sack);
+          if (fum.fumble) {
+            fumble = true;
+            recoveredBy = fum.recoveredBy;
+          }
+          tackler = resultArray.sackBy;
+          updateDefensiveStatsPass(tackler, { tackle: true, yards: yards, sack: true, fumble: fumble, recoveredBy: recoveredBy});
+        } else if (resultArray.intercepted) {
+          const airYards = Number(target?.routeInfo?.airYards) || 0;
+          newBall = state.Possession === 'Home' ? newBall + airYards : newBall - airYards;
+        }
+        //Handle Completed Pass
+        if (resultArray.completed){
         newBall = state.Possession === 'Home' ? newBall + yards : newBall - yards;
-        const fum = checkForFumble(qbName, resultArray.sackBy, resultArray.sack);
-        if (fum.fumble) {
-          fumble = true;
-          recoveredBy = fum.recoveredBy;
+        touchdown = state.Possession === 'Home' ? newBall >= 100 : newBall <= 0;
+        if(touchdown){
+          yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
+          newBall = state.Possession === "Home" ? 100 : 0;
+          resultArray.touchdown = true;
         }
-        tackler = resultArray.sackBy;
-        updateDefensiveStatsPass(tackler, { tackle: true, yards: yards, sack: true, fumble: fumble, recoveredBy: recoveredBy});
-      } else if (resultArray.intercepted) {
-        const airYards = Number(target?.routeInfo?.airYards) || 0;
-        newBall = state.Possession === 'Home' ? newBall + airYards : newBall - airYards;
-      }
-      //Handle Completed Pass
-      if (resultArray.completed){
-      newBall = state.Possession === 'Home' ? newBall + yards : newBall - yards;
-      touchdown = state.Possession === 'Home' ? newBall >= 100 : newBall <= 0;
-      if(touchdown){
-        yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
-        newBall = state.Possession === "Home" ? 100 : 0;
-        resultArray.touchdown = true;
-      }
-      if (!touchdown) {
-        tackler = determineTackler(yards); //NEEDS UPDATING
-        const fum = checkForFumble(target.target, tackler);
-        if (fum.fumble) {
-          fumble = true;
-          recoveredBy = fum.recoveredBy;
+        if (!touchdown) {
+          tackler = determineTackler(yards); //NEEDS UPDATING
+          const fum = checkForFumble(target.target, tackler);
+          if (fum.fumble) {
+            fumble = true;
+            recoveredBy = fum.recoveredBy;
+          }
         }
       }
-    }
-    updatePassingStats(qbName, yards, resultArray.completed, resultArray.intercepted, touchdown, resultArray.sack);
+      if (!touchdown && !resultArray.intercepted) {
+        safety = state.Possession === 'Home' ? newBall <= 0 : newBall >= 100;
+        if (safety) {
+          yards = state.Possession === 'Home' ? -state.BallOn : -(100 - state.BallOn);
+          newBall = state.Possession === 'Home' ? 0 : 100;
+        }
+      }
+      updatePassingStats(qbName, yards, resultArray.completed, resultArray.intercepted, touchdown, resultArray.sack);
     if (target) {
       updateReceivingStats(target.target, yards, resultArray.completed, touchdown, fumble);
     }
@@ -2406,43 +2423,47 @@
     let result = "Normal";
 
     //Handle offense retaining possession
-    if(!resultArray.intercepted && (!fumble || recoveredBy !== tackler)){
-      newDist = newDist - yards;
-      //handle Touchdown
-      if(touchdown){
-        result = "Touchdown";
-        await handleTouchdown(newBall, qbName, target.target, resultArray, result, predicted, timeTaken, resultArray);
-        await celebrateTouchdown(scoringTeam, oldScore, oldScore + 6);
-      }
-      //Handle First Down
-      else if(newDist <= 0){
-        result = "First Down";
-        newDown = 1;
-        const yardsToGoal = state.Possession === "Home" ? 100 - newBall : newBall;
-        newDist = yardsToGoal < 10 ? yardsToGoal : 10;
-        updateGameState(1, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, qbName, target.target, yards, tackler, result, predicted, timeTaken, recoveredBy);
-        await animatePlay('Pass', resultArray);
-      } else{
-        let playType = 'Pass';
-        if (resultArray.sack) {
-          playType = 'Run';
-          result = fumble ? 'Fumble' : 'Sack';
-          target = { target: '' };
-        } else if (!resultArray.completed) {
-          result = 'Incomplete';
+      if(!resultArray.intercepted && (!fumble || recoveredBy !== tackler)){
+        newDist = newDist - yards;
+        const playTypeForSafety = resultArray.sack ? 'Run' : 'Pass';
+        //handle Touchdown
+        if(safety){
+          result = "Safety";
+          await handleSafety(qbName, resultArray.completed ? target.target : '', yards, tackler, predicted, timeTaken, playTypeForSafety, resultArray);
+        } else if(touchdown){
+          result = "Touchdown";
+          await handleTouchdown(newBall, qbName, target.target, resultArray, result, predicted, timeTaken, resultArray);
+          await celebrateTouchdown(scoringTeam, oldScore, oldScore + 6);
         }
-        newDown++;
-        if (newDown > 4) {
-          if(result != 'Incomplete' && result != 'Sack'){
-            result = "TO on Downs";
+        //Handle First Down
+        else if(newDist <= 0){
+          result = "First Down";
+          newDown = 1;
+          const yardsToGoal = state.Possession === "Home" ? 100 - newBall : newBall;
+          newDist = yardsToGoal < 10 ? yardsToGoal : 10;
+          updateGameState(1, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, qbName, target.target, yards, tackler, result, predicted, timeTaken, recoveredBy);
+          await animatePlay('Pass', resultArray);
+        } else{
+          let playType = 'Pass';
+          if (resultArray.sack) {
+            playType = 'Run';
+            result = fumble ? 'Fumble' : 'Sack';
+            target = { target: '' };
+          } else if (!resultArray.completed) {
+            result = 'Incomplete';
           }
-          await handleTOonDowns(result, newBall, qbName, target.target, resultArray, tackler, predicted, timeTaken, resultArray);
-        } else {
-          updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, qbName, target.target, yards, tackler, result, predicted, timeTaken, recoveredBy);
-          await animatePlay(playType, resultArray);
+          newDown++;
+          if (newDown > 4) {
+            if(result != 'Incomplete' && result != 'Sack'){
+              result = "TO on Downs";
+            }
+            await handleTOonDowns(result, newBall, qbName, target.target, resultArray, tackler, predicted, timeTaken, resultArray);
+          } else {
+            updateGameState(newDown, newDist, state.Possession, newBall, state.BallOn, state.DriveStart, qbName, target.target, yards, tackler, result, predicted, timeTaken, recoveredBy);
+            await animatePlay(playType, resultArray);
+          }
         }
       }
-    }
     //Handle Fumble or INT
     else {
       if (resultArray.intercepted) {
@@ -2914,17 +2935,23 @@
       ? parseInt(state.HomeScore, 10) || 0
       : parseInt(state.AwayScore, 10) || 0;
     // Home drives left ➡ right (0 -> 100); Away drives right ➡ left (100 -> 0)
-    const newBall = state.Possession === "Home"
-      ? Math.min(100, Math.max(0, state.BallOn + yardDelta))
-      : Math.max(0, Math.min(100, state.BallOn - yardDelta));
-    const touchdown = state.Possession === "Home"
-      ? (state.BallOn < 100 && newBall >= 100)
-      : (state.BallOn > 0 && newBall <= 0);
+      const rawNewBall = state.Possession === "Home"
+        ? state.BallOn + yardDelta
+        : state.BallOn - yardDelta;
+      const newBall = state.Possession === "Home"
+        ? Math.min(100, Math.max(0, rawNewBall))
+        : Math.max(0, Math.min(100, rawNewBall));
+      const touchdown = state.Possession === "Home"
+        ? (state.BallOn < 100 && newBall >= 100)
+        : (state.BallOn > 0 && newBall <= 0);
+      const safety = !touchdown && (state.Possession === "Home" ? rawNewBall <= 0 : rawNewBall >= 100);
 
-    let recordedYards = yardDelta;
-    if (touchdown) {
-      recordedYards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
-    }
+      let recordedYards = yardDelta;
+      if (touchdown) {
+        recordedYards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
+      } else if (safety) {
+        recordedYards = state.Possession === "Home" ? -state.BallOn : -(100 - state.BallOn);
+      }
     const timeTaken = Math.round(4 + (Math.abs(recordedYards) / 6) * (60 / rbStats.speed));
 
     if (!touchdown) {
@@ -2941,7 +2968,7 @@
     let result = "Normal";
     let recoveredBy = null;
 
-    if (!touchdown && tackler && tackler !== "NA") {
+      if (!touchdown && !safety && tackler && tackler !== "NA") {
       const fum = checkForFumble(playerName, tackler);
       if (fum.fumble) {
         result = "Fumble";
@@ -2963,12 +2990,15 @@
       }
     }
 
-    if (touchdown) {
-      result = "Touchdown";
-      await handleTouchdown(newBall, playerName, "", carryResult, result, predicted, timeTaken);
-      recordedYards = carryResult.yards; // handleTouchdown adjusts yards
-      await celebrateTouchdown(scoringTeam, oldScore, oldScore + 6);
-    } else if (newDist <= 0) {
+      if (safety) {
+        result = "Safety";
+        await handleSafety(playerName, "", recordedYards, tackler, predicted, timeTaken, 'Run');
+      } else if (touchdown) {
+        result = "Touchdown";
+        await handleTouchdown(newBall, playerName, "", carryResult, result, predicted, timeTaken);
+        recordedYards = carryResult.yards; // handleTouchdown adjusts yards
+        await celebrateTouchdown(scoringTeam, oldScore, oldScore + 6);
+      } else if (newDist <= 0) {
       result = "First Down";
       newDown = 1;
       const yardsToGoal = state.Possession === "Home" ? 100 - newBall : newBall;
@@ -2987,17 +3017,17 @@
       }
     }
 
-    applyFatigue(playerName, "Run");
+      applyFatigue(playerName, "Run");
 
-    updateFrontendStats(playerName, recordedYards, result, scoringTeam, tackler, recoveredBy);
-    console.log(carryResult);
+      updateFrontendStats(playerName, recordedYards, result, scoringTeam, tackler, recoveredBy);
+      console.log(carryResult);
 
-    document.getElementById("result").innerHTML = `<strong>${rbStats.name}</strong> ran for <strong>${carryResult.yards} yards</strong><br/><br/>` +
-      `Modifiers: <ul>${carryResult.modLog.map(m => `<li>${m}</li>`).join('')}</ul>`;
+      document.getElementById("result").innerHTML = `<strong>${rbStats.name}</strong> ran for <strong>${carryResult.yards} yards</strong><br/><br/>` +
+        `Modifiers: <ul>${carryResult.modLog.map(m => `<li>${m}</li>`).join('')}</ul>`;
 
-    updateStateUI();
-    //refreshUI();
-    afterPlayComplete();
+      updateStateUI();
+      //refreshUI();
+      afterPlayComplete();
   }
 
   async function handleTouchdown(newBall, playerName, recName, carryResult, result, predicted, timeTaken, resultArray = {}) {//COMPLETED PASS UPDATES
@@ -3018,6 +3048,21 @@
     const newPossession = state.Possession === "Home" ? "Away" : "Home";
     const newBallOn = newPossession === "Home" ? 25 : 75;
     updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, playerName, recName, carryResult.yards, null, null, predicted);
+  }
+
+  async function handleSafety(playerName, recName, yards, tackler, predicted, timeTaken, playType, resultArray = {}) {
+    const scoringTeam = state.Possession === 'Home' ? 'Away' : 'Home';
+    if (scoringTeam === 'Home') {
+      state.HomeScore = (parseInt(state.HomeScore, 10) || 0) + 2;
+    } else {
+      state.AwayScore = (parseInt(state.AwayScore, 10) || 0) + 2;
+    }
+    const newBall = state.Possession === 'Home' ? 0 : 100;
+    updateGameState(1, 10, state.Possession, newBall, state.BallOn, state.DriveStart, playerName, recName, yards, tackler, 'Safety', predicted, timeTaken);
+    await animatePlay(playType, resultArray);
+    const newPossession = scoringTeam;
+    const newBallOn = newPossession === 'Home' ? 25 : 75;
+    updateGameState(1, 10, newPossession, newBallOn, newBallOn, newBallOn, playerName, recName, yards, null, null, predicted);
   }
 
   async function handleTOonDowns(result, newBall, playerName, recName, carryResult, tackler, predicted, timeTaken, resultArray = {}) {//COMPLETED PASS UPDATES
