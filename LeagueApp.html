@@ -327,9 +327,10 @@
 
         <button id="toggleControlPanel" class="control-toggle">Show Control Panel</button>
         <div id="controlPanel" class="control-panel collapsed">
-          <button id="openFormation">Edit Formation</button>
-          <button id="viewLOS">View LOS</button>
-          <button id="openRoutes">Set Receiver Routes</button>
+          <button id="openFormation">Formation</button>
+          <button id="viewLOS">LOS</button>
+          <button id="openRoutes">Set Routes</button> 
+          <button id="clockButton" class="clock-button" onclick="openClockModal()">Manage Clock</button>
           <div class="button-row">
             <button id="openRun">▶️ Run Play</button>
             <button id="passPlayButton" onclick="passPlay()" disabled>🏈 Pass Play</button>
@@ -639,9 +640,7 @@
         </table>
       </div>
     </div>
-
-    <button id="clockButton" class="clock-button" onclick="openClockModal()">Clock Management</button>
-
+   
     <div id="clockModal" class="modal">
       <div class="formation-panel clock-panel">
         <span class="close-button" onclick="closeClockModal()">&times;</span>

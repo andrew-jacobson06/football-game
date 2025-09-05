@@ -536,7 +536,9 @@
     background: var(--gray-medium);
     border-radius: 4px;
     padding: 5vw;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);  
+    justify-content: center;
+    display: grid;
   }
   .control-panel.collapsed {
     display: none;
@@ -562,8 +564,8 @@
   }
   .button-row {
     display: flex;
-    gap: 3.75vw;
-    margin-top: 5vw;
+    gap: 1vw;
+    margin-top: 2vw;
   }
   .button-row button {
     flex: 1;
@@ -578,6 +580,8 @@
     border-radius: 4px;
     cursor: pointer;
     transition: background 0.3s, color 0.3s;
+    margin-bottom: 1vw;
+
   }
   button:hover {
     background: var(--accent-red-dark);
@@ -1184,19 +1188,17 @@
     z-index: 10;
   }
 
-  .clock-button {
-    position: fixed;
-    bottom: 4vw;
-    right: 4vw;
-    padding: 3vw 4vw;
+  .clock-button {  
+    padding: 2vw 4vw;
+    font-size: clamp(14px, 4vw, 20px);
     background: var(--accent-red);
     color: var(--text-light);
     border: none;
-    border-radius: 8px;
-    font-size: 3.5vw;
-    z-index: 1100;
+    border-radius: 4px;
     cursor: pointer;
+    transition: background 0.3s, color 0.3s;
   }
+
 
   .clock-panel {
     width: 90vw;
