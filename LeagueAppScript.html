@@ -4501,6 +4501,36 @@
     }
   }
 
+  function openClockModal() {
+    const modal = document.getElementById('clockModal');
+    if (modal) modal.classList.add('open');
+  }
+
+  function closeClockModal() {
+    const modal = document.getElementById('clockModal');
+    if (modal) modal.classList.remove('open');
+  }
+
+  function hurryUp() {
+    console.log('Hurry Up selected');
+    closeClockModal();
+  }
+
+  function chewClock() {
+    console.log('Chew Clock selected');
+    closeClockModal();
+  }
+
+  function spikeBall() {
+    console.log('Spike Ball selected');
+    closeClockModal();
+  }
+
+  function kneel() {
+    console.log('Kneel selected');
+    closeClockModal();
+  }
+
   // On load
   refreshUI().catch(console.error);
 </script>
