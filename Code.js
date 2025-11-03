@@ -376,16 +376,22 @@ function predictPlayType(down, distance) {
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return "Run";
 
+  const headers = data[0];
+  const downIdx = headers.indexOf('Down');
+  const distanceIdx = headers.indexOf('Distance');
+  const playTypeIdx = headers.indexOf('PlayType');
+  if (downIdx === -1 || distanceIdx === -1 || playTypeIdx === -1) return "Run";
+
   const filtered = data.slice(1)
     .filter(row => {
-      const d = parseInt(row[1], 10);
-      const dist = parseInt(row[2], 10);
+      const d = parseInt(row[downIdx], 10);
+      const dist = parseInt(row[distanceIdx], 10);
       return d === down && Math.abs(dist - distance) <= 2;
     });
 
   if (filtered.length === 0) return "Run";
 
-  const runCount = filtered.filter(r => r[3] === "Run").length;
+  const runCount = filtered.filter(r => r[playTypeIdx] === "Run").length;
   const pctRun = runCount / filtered.length;
 
   return Math.random() < pctRun ? "Run" : "Pass";
@@ -397,58 +403,67 @@ function logPlayHistory(play) {
     return;
   }
 
-    const {
-      gameid,
-      time,
-      qtr,
-      possession,
-      down,
-      distance,
-      ballon,
-      playtype,
-      player,
-      receiver,
-      yards,
-      defensepredicted,
-      predictioncorrect,
-      tackler,
-      result,
-      desc,
-      recoveredby,
-      newdown,
-      newdist,
-      newballon,
-      drivestart,
-      homescore,
-      awayscore
-    } = play;
+  const {
+    gameid,
+    playid,
+    time,
+    qtr,
+    possession,
+    down,
+    distance,
+    ballon,
+    playtype,
+    player,
+    receiver,
+    yards,
+    defensepredicted,
+    predictioncorrect,
+    tackler,
+    result,
+    defenseresult,
+    turnover,
+    description,
+    desc,
+    recoveredby,
+    newdown,
+    newdist,
+    newballon,
+    drivestart,
+    homescore,
+    awayscore
+  } = play;
 
-    sheet.appendRow([
-      String(gameid || ""),
-      Number(time) || 0,
-      Number(qtr) || 0,
-      String(possession || ""),
-      Number(down) || 0,
-      Number(distance) || 0,
-      Number(ballon) || 0,
-      String(playtype || ""),
-      String(player || ""),
-      String(receiver || ""),
-      Number(yards) || 0,
-      String(defensepredicted || ""),
-      predictioncorrect === true || predictioncorrect === "true" ? true : false,
-      String(tackler || ""),
-      String(result || ""),
-      String(desc || ""),
-      String(recoveredby || ""),
-      Number(newdown) || 0,
-      Number(newdist) || 0,
-      Number(newballon) || 0,
-      Number(drivestart) || 0,
-      Number(homescore) || 0,
-      Number(awayscore) || 0
-    ]);
-  }
+  const descriptionValue = description !== undefined && description !== null && description !== '' ? description : (desc || "");
+
+  sheet.appendRow([
+    String(gameid || ""),
+    String(playid || ""),
+    Number(time) || 0,
+    Number(qtr) || 0,
+    String(possession || ""),
+    Number(down) || 0,
+    Number(distance) || 0,
+    Number(ballon) || 0,
+    String(playtype || ""),
+    String(player || ""),
+    String(receiver || ""),
+    Number(yards) || 0,
+    String(defensepredicted || ""),
+    predictioncorrect === true || predictioncorrect === "true" ? true : false,
+    String(tackler || ""),
+    String(result || ""),
+    String(defenseresult || ""),
+    String(turnover || ""),
+    String(descriptionValue || ""),
+    String(recoveredby || ""),
+    Number(newdown) || 0,
+    Number(newdist) || 0,
+    Number(newballon) || 0,
+    Number(drivestart) || 0,
+    Number(homescore) || 0,
+    Number(awayscore) || 0
+  ]);
+}
 
 function getPlayHistory(gameId) {
   Logger.log(gameId);
@@ -470,6 +485,24 @@ function getPlayHistory(gameId) {
         headers.forEach((key, i) => {
           obj[key] = row[i];
         });
+        if (obj['Defense Result'] !== undefined) {
+          if (obj.DefenseResult === undefined) {
+            obj.DefenseResult = obj['Defense Result'];
+          }
+          delete obj['Defense Result'];
+        }
+        if (obj['Turnover?'] !== undefined) {
+          if (obj.Turnover === undefined) {
+            obj.Turnover = obj['Turnover?'];
+          }
+          delete obj['Turnover?'];
+        }
+        if (obj.Description !== undefined) {
+          obj.ResultCategory = obj.Result;
+          if (obj.Description !== '') {
+            obj.Result = obj.Description;
+          }
+        }
         if (obj.newballon !== undefined && obj.NewBallOn === undefined) {
           obj.NewBallOn = obj.newballon;
           delete obj.newballon;

@@ -3215,11 +3215,117 @@
     updateGameState(1, 10, newPossession, newBall, newBall, newBall, playerName, recName, carryResult.yards, tackler, null, predicted);
   }
 
+  function determinePlayOutcome(result, playType, yards, receiver, tackler, recoveredBy, currentDown) {
+    const description = result || '';
+    let outcome = '';
+    let defenseResult = '';
+    let turnover = 'No';
+    const normalizedPlayType = playType || '';
+    const isPass = normalizedPlayType === 'Pass';
+    const isRun = normalizedPlayType === 'Run';
+    const yardage = typeof yards === 'number' ? yards : Number(yards) || 0;
+    const downNumber = typeof currentDown === 'number' ? currentDown : Number(currentDown) || 0;
+
+    if (normalizedPlayType === 'Kick FG') {
+      outcome = 'FG Good';
+    } else if (normalizedPlayType === 'Kick XP') {
+      outcome = 'XP Good';
+    } else if (normalizedPlayType === '2PT') {
+      outcome = description === '2Pt Successful' ? '2Pt Good' : '2Pt No Good';
+    } else if (normalizedPlayType === 'Punt') {
+      outcome = 'Normal';
+    } else {
+      switch (result) {
+        case 'Fumble':
+          outcome = 'Fumble';
+          if (recoveredBy && tackler && recoveredBy === tackler) {
+            defenseResult = 'Recovered';
+            turnover = 'Yes';
+          } else {
+            defenseResult = 'Forced';
+          }
+          break;
+        case 'Interception':
+          outcome = 'Incompletion';
+          defenseResult = 'Intercepted';
+          turnover = 'Yes';
+          break;
+        case 'Incomplete':
+          outcome = 'Incompletion';
+          defenseResult = 'Incomplete';
+          if (downNumber === 4) {
+            turnover = 'Yes';
+          }
+          break;
+        case 'Sack':
+          outcome = 'Sack';
+          defenseResult = 'Sack';
+          if (downNumber === 4) {
+            turnover = 'Yes';
+          }
+          break;
+        case 'Touchdown':
+          outcome = 'Touchdown';
+          break;
+        case 'Safety':
+          outcome = 'Normal';
+          defenseResult = 'TFL';
+          turnover = 'Yes';
+          break;
+        case 'TO on Downs':
+          turnover = 'Yes';
+          if (isPass && receiver) {
+            outcome = 'Completion';
+            defenseResult = yardage < 0 ? 'TFL' : 'TKL';
+          } else {
+            outcome = 'Normal';
+            defenseResult = yardage < 0 ? 'TFL' : 'TKL';
+          }
+          break;
+        case 'First Down':
+        case 'Normal':
+        case 'Timeout':
+        case 'Kneel':
+          if (isPass && receiver) {
+            outcome = 'Completion';
+          } else {
+            outcome = 'Normal';
+          }
+          break;
+        default:
+          if (isPass && receiver) {
+            outcome = 'Completion';
+          } else if (result) {
+            outcome = result;
+          }
+      }
+    }
+
+    if (!outcome) outcome = 'Normal';
+
+    if (!defenseResult) {
+      if (outcome === 'Completion' || outcome === 'Normal') {
+        if (isRun || isPass) {
+          defenseResult = yardage < 0 ? 'TFL' : 'TKL';
+        }
+      } else if (outcome === 'Sack') {
+        defenseResult = 'Sack';
+      }
+    }
+
+    if (outcome === 'Incompletion' && defenseResult === 'TKL') {
+      defenseResult = 'Incomplete';
+    }
+
+    return { outcome, defenseResult, turnover, description };
+  }
+
   function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, recName, yards, tackler, result, predicted, qtr, time, recoveredBy) {//MAKE PASS UPDATES
       let playType = 'Run';
       if (recName !== '' || result === 'Sack') {
         playType = 'Pass';
       }
+      const { outcome, defenseResult, turnover, description } = determinePlayOutcome(result, playType, yards, recName, tackler, recoveredBy, state.Down);
       const localPlay = {
         Time: time,
         Down: state.Down,
@@ -3230,7 +3336,11 @@
         Player: playerName,
         Receiver: recName,
         Yards: yards,
-        Result: result || "Normal",
+        Result: description || 'Normal',
+        ResultCategory: outcome,
+        DefenseResult: defenseResult,
+        Turnover: turnover,
+        Description: description,
         NewBallOn: ballOn,
         BallOn: previousBallOn,
         Tackler: tackler,
@@ -3244,6 +3354,7 @@
 
       return {
         gameid: gameId,
+        playid: '',
         time: time,
         qtr: qtr,
         possession: poss,
@@ -3257,8 +3368,11 @@
         defensepredicted: predicted,
         predictioncorrect: "",
         tackler: tackler,
-        result: result,
-        desc: "",
+        result: outcome,
+        defenseresult: defenseResult,
+        turnover: turnover,
+        description: description,
+        desc: description,
         recoveredby: recoveredBy,
         newdown: down,
         newdist: distance,
@@ -3489,6 +3603,7 @@
   function logFieldGoalPlay(poss, isExtraPoint = false) {
     const resultText = isExtraPoint ? 'Extra Point' : 'Field Goal';
     const playType = isExtraPoint ? 'Kick XP' : 'Kick FG';
+    const { outcome, defenseResult, turnover, description } = determinePlayOutcome(resultText, playType, 0, '', '', '', state.Down);
     const localPlay = {
       Time: state.Time,
       Down: state.Down,
@@ -3498,7 +3613,11 @@
       Player: '',
       Receiver: '',
       Yards: 0,
-      Result: resultText,
+      Result: description,
+      ResultCategory: outcome,
+      DefenseResult: defenseResult,
+      Turnover: turnover,
+      Description: description,
       NewBallOn: state.BallOn,
       BallOn: state.Previous,
       Tackler: '',
@@ -3512,6 +3631,7 @@
     renderPlayTimeline();
     return {
       gameid: gameId,
+      playid: '',
       time: state.Time,
       qtr: state.Qtr,
       possession: poss,
@@ -3525,8 +3645,11 @@
       defensepredicted: '',
       predictioncorrect: '',
       tackler: '',
-      result: resultText,
-      desc: '',
+      result: outcome,
+      defenseresult: defenseResult,
+      turnover: turnover,
+      description: description,
+      desc: description,
       recoveredby: '',
       newdown: state.Down,
       newdist: state.Distance,
@@ -3539,6 +3662,7 @@
 
   function logTwoPointPlay(poss, player, receiver, yards, success) {
     const resultText = success ? '2Pt Successful' : '2Pt Failed';
+    const { outcome, defenseResult, turnover, description } = determinePlayOutcome(resultText, '2PT', yards || 0, receiver || '', '', '', state.Down);
     const localPlay = {
       Time: state.Time,
       Down: state.Down,
@@ -3548,7 +3672,11 @@
       Player: player || '',
       Receiver: receiver || '',
       Yards: yards || 0,
-      Result: resultText,
+      Result: description,
+      ResultCategory: outcome,
+      DefenseResult: defenseResult,
+      Turnover: turnover,
+      Description: description,
       NewBallOn: state.BallOn,
       BallOn: state.Previous,
       Tackler: '',
@@ -3560,10 +3688,39 @@
     };
     playHistory.push(localPlay);
     renderPlayTimeline();
-    return localPlay;
+    return {
+      gameid: gameId,
+      playid: '',
+      time: state.Time,
+      qtr: state.Qtr,
+      possession: poss,
+      down: state.Down,
+      distance: state.Distance,
+      ballon: state.BallOn,
+      playtype: '2PT',
+      player: player || '',
+      receiver: receiver || '',
+      yards: yards || 0,
+      defensepredicted: '',
+      predictioncorrect: '',
+      tackler: '',
+      result: outcome,
+      defenseresult: defenseResult,
+      turnover: turnover,
+      description: description,
+      desc: description,
+      recoveredby: '',
+      newdown: state.Down,
+      newdist: state.Distance,
+      newballon: state.BallOn,
+      drivestart: state.DriveStart,
+      homescore: state.HomeScore,
+      awayscore: state.AwayScore
+    };
   }
 
   function logPuntPlay(poss, newBallOn) {
+    const { outcome, defenseResult, turnover, description } = determinePlayOutcome('Punt', 'Punt', 40, '', '', '', state.Down);
     const localPlay = {
       Time: state.Time,
       Down: state.Down,
@@ -3573,7 +3730,11 @@
       Player: '',
       Receiver: '',
       Yards: 40,
-      Result: 'Punt',
+      Result: description,
+      ResultCategory: outcome,
+      DefenseResult: defenseResult,
+      Turnover: turnover,
+      Description: description,
       NewBallOn: newBallOn,
       BallOn: state.BallOn,
       Tackler: '',
@@ -3587,6 +3748,7 @@
     renderPlayTimeline();
     return {
       gameid: gameId,
+      playid: '',
       time: state.Time,
       qtr: state.Qtr,
       possession: poss,
@@ -3600,8 +3762,11 @@
       defensepredicted: '',
       predictioncorrect: '',
       tackler: '',
-      result: 'Punt',
-      desc: '',
+      result: outcome,
+      defenseresult: defenseResult,
+      turnover: turnover,
+      description: description,
+      desc: description,
       recoveredby: '',
       newdown: 1,
       newdist: 10,
