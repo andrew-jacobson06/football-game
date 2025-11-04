@@ -11,6 +11,7 @@
   let defensiveStats = [];
   let passingStats = [];
   let receivingStats = [];
+  let pendingPlayContext = null;
   let gameId = 1;
   let playHistory = [];
   let savedFormations = [];
@@ -609,6 +610,8 @@
       const defTeam = team === 'Home' ? 'Away' : 'Home';
       const yards = parseFloat(play.Yards) || 0;
       const result = (play.Result || '').trim();
+      const description = (play.Description || '').trim();
+      const outcome = (play.ResultCategory || '').trim() || result;
       const defenseResult = (play.DefenseResult || '').trim();
       const tackler = play.Tackler && play.Tackler !== 'NA' ? play.Tackler : '';
       const recoveredBy = play.RecoveredBy || play.recoveredby;
@@ -623,7 +626,7 @@
         return entry;
       };
 
-      if (result === 'Sack') {
+      if (description === 'Sack') {
         const qb = play.Passer || play.Player || '';
         if (qb) {
           let ps = passingStats.find(s => s.playername === qb && s.team === team);
@@ -644,13 +647,13 @@
         }
       }
 
-      if (!play.PlayType && result !== 'Sack') return;
+      if (!play.PlayType && description !== 'Sack') return;
 
       if (play.PlayType === 'Run') {
         if (!play.Player) return;
         const player = play.Player;
-        const td = result === 'Touchdown';
-        const fumble = result === 'Fumble';
+        const td = outcome === 'Touchdown';
+        const fumble = outcome === 'Fumble';
 
         let p = frontendStats.find(s => s.playername === player && s.team === team);
         if (!p) {
@@ -665,11 +668,11 @@
       } else if (play.PlayType === 'Pass') {
         const qb = play.Passer || play.Player || '';
         const receiver = play.Target || play.Receiver || '';
-        const isSack = result === 'Sack' || (play.Description && play.Description === 'Sack');
-        const completed = !isSack && result !== 'Incomplete' && result !== 'Interception';
-        const intercepted = !isSack && result === 'Interception';
-        const td = !isSack && result === 'Touchdown';
-        const fumble = !isSack && result === 'Fumble';
+        const isSack = description === 'Sack';
+        const completed = !isSack && outcome !== 'Incomplete' && outcome !== 'Interception';
+        const intercepted = !isSack && outcome === 'Interception';
+        const td = !isSack && outcome === 'Touchdown';
+        const fumble = !isSack && outcome === 'Fumble';
         if (qb) {
           let ps = passingStats.find(s => s.playername === qb && s.team === team);
           if (!ps) {
@@ -714,25 +717,26 @@
       if (tackler) {
         const defenderStats = getDefenderStats(tackler, defTeam);
         if (defenderStats) {
-          if (['TKL', 'TFL', 'Sack'].includes(defenseResult)) {
+          const countedAsSack = description === 'Sack';
+          if (['TKL', 'TFL', 'Sack'].includes(defenseResult) || countedAsSack) {
             defenderStats.tackles = (defenderStats.tackles || 0) + 1;
           }
-          if (['TFL', 'Sack'].includes(defenseResult)) {
+          if (['TFL', 'Sack'].includes(defenseResult) || countedAsSack) {
             defenderStats.tfl = (defenderStats.tfl || 0) + 1;
           }
-          if (defenseResult === 'Sack') {
+          if (countedAsSack) {
             defenderStats.sacks = (defenderStats.sacks || 0) + 1;
           }
           if (defenseResult === 'Deflected') {
             defenderStats.deflections = (defenderStats.deflections || 0) + 1;
           }
-          if (result === 'Fumble') {
+          if (outcome === 'Fumble') {
             defenderStats.ff = (defenderStats.ff || 0) + 1;
           }
         }
       }
 
-      if (result === 'Fumble' && recoveredBy) {
+      if (outcome === 'Fumble' && recoveredBy) {
         const turnoverValue = typeof play.Turnover === 'string'
           ? play.Turnover.trim().toLowerCase()
           : play.Turnover;
@@ -756,12 +760,14 @@
     }
     playType = playType === 'Pass' ? 'Pass' : playType === 'Run' ? 'Run' : playType;
     if (playType !== 'Pass' && playType !== 'Run') return;
-    const resultText = (play.Result || '').toLowerCase();
+    const resultText = (play.ResultCategory || play.Result || '').toLowerCase();
+    const descriptionText = (play.Description || '').toLowerCase();
+    const isSackFromDescription = descriptionText === 'sack';
     const passResult = {
-      completed: playType === 'Pass' && !['incomplete', 'interception', 'sack'].includes(resultText),
+      completed: playType === 'Pass' && !['incomplete', 'interception'].includes(resultText) && !isSackFromDescription,
       intercepted: resultText === 'interception',
       touchdown: resultText === 'touchdown',
-      sack: resultText === 'sack'
+      sack: isSackFromDescription
     };
     await animatePlay(playType, passResult);
   }
@@ -781,8 +787,9 @@
         }
       } else if (play.PlayType === 'Pass') {
         const qb = play.Passer || play.Player;
+        const isSackDescription = (play.Description || '').trim() === 'Sack';
         if (qb && playerTraits[qb]) {
-          if (play.Result === 'Sack') {
+          if (isSackDescription) {
             applyFatigue(qb, 'Sacked');
           } else {
             applyFatigue(qb, 'Throw');
@@ -790,7 +797,8 @@
         }
 
         const receiver = play.Receiver || play.Target;
-        const completed = receiver && play.Result && play.Result !== 'Incomplete' && play.Result !== 'Interception';
+        const outcome = (play.ResultCategory || '').trim();
+        const completed = receiver && outcome && outcome !== 'Incomplete' && outcome !== 'Interception' && !isSackDescription;
         if (completed && playerTraits[receiver]) {
           applyFatigue(receiver, 'Rec');
           applyFatigue(receiver, 'Route');
@@ -1016,6 +1024,7 @@
   }
 
   function buildPlayText(play) {
+    const description = (play.Description || '').trim();
     if (play.Result === 'Timeout') {
       return `${play.Player} Timeout`;
     }
@@ -1039,7 +1048,7 @@
         return `${play.Player} run fails. 2-point conversion FAILS!`;
       }
     }
-      if (play.Result === 'Sack') {
+      if (description === 'Sack') {
         const qb = play.Player || '';
         const spot = formatBallOnForPoss(play.NewBallOn, play.Possession);
         const loss = Math.abs(play.Yards);
@@ -1179,7 +1188,9 @@
     });
     drives.forEach(drive => {
       const last = drive.plays[drive.plays.length - 1];
-      drive.result = (last.Result === 'Sack' && last.RecoveredBy) ? 'Fumble' : (last.Result || '');
+      const lastDescription = (last.Description || '').trim();
+      const lastResult = last.Result || '';
+      drive.result = (lastDescription === 'Sack' && last.RecoveredBy) ? 'Fumble' : lastResult;
       drive.homeScore = last.HomeScore !== undefined ? last.HomeScore : state.HomeScore;
       drive.awayScore = last.AwayScore !== undefined ? last.AwayScore : state.AwayScore;
       const end = Number(last.NewBallOn);
@@ -2743,6 +2754,7 @@
     }
 
     //Handle offense retaining possession
+    pendingPlayContext = { isSack: !!resultArray.sack };
       if(!resultArray.intercepted && (!fumble || recoveredBy !== tackler)){
         newDist = newDist - yards;
         const playTypeForSafety = resultArray.sack ? 'Run' : 'Pass';
@@ -3447,8 +3459,8 @@
     updateGameState(1, 10, newPossession, newBall, newBall, newBall, playerName, recName, carryResult.yards, tackler, null, predicted);
   }
 
-  function determinePlayOutcome(result, playType, yards, receiver, tackler, recoveredBy, currentDown) {
-    const description = result || '';
+  function determinePlayOutcome(result, playType, yards, receiver, tackler, recoveredBy, currentDown, context = {}) {
+    let description = result || '';
     let outcome = '';
     let defenseResult = '';
     let turnover = 'No';
@@ -3457,6 +3469,7 @@
     const isRun = normalizedPlayType === 'Run';
     const yardage = typeof yards === 'number' ? yards : Number(yards) || 0;
     const downNumber = typeof currentDown === 'number' ? currentDown : Number(currentDown) || 0;
+    const isSackContext = !!context.isSack;
 
     if (normalizedPlayType === 'Kick FG') {
       outcome = 'FG Good';
@@ -3470,6 +3483,9 @@
       switch (result) {
         case 'Fumble':
           outcome = 'Fumble';
+          if (isSackContext) {
+            description = 'Sack';
+          }
           if (recoveredBy && tackler && recoveredBy === tackler) {
             defenseResult = 'Recovered';
             turnover = 'Yes';
@@ -3553,11 +3569,12 @@
   }
 
   function logPlayToDB(down, distance, poss, ballOn, previousBallOn, driveStart, playerName, recName, yards, tackler, result, predicted, qtr, time, recoveredBy) {//MAKE PASS UPDATES
+      const context = pendingPlayContext || {};
       let playType = 'Run';
-      if (recName !== '' || result === 'Sack') {
+      if (recName !== '' || result === 'Sack' || context.isSack) {
         playType = 'Pass';
       }
-      const { outcome, defenseResult, turnover, description } = determinePlayOutcome(result, playType, yards, recName, tackler, recoveredBy, state.Down);
+      const { outcome, defenseResult, turnover, description } = determinePlayOutcome(result, playType, yards, recName, tackler, recoveredBy, state.Down, context);
       const localPlay = {
         Time: time,
         Down: state.Down,
@@ -3583,6 +3600,7 @@
         PlayType: playType
       };
       playHistory.push(localPlay);
+      pendingPlayContext = null;
 
       return {
         gameid: gameId,
