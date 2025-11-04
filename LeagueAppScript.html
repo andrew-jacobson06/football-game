@@ -665,25 +665,28 @@
       } else if (play.PlayType === 'Pass') {
         const qb = play.Passer || play.Player || '';
         const receiver = play.Target || play.Receiver || '';
-        const completed = result !== 'Incomplete' && result !== 'Interception';
-        const intercepted = result === 'Interception';
-        const td = result === 'Touchdown';
-        const fumble = result === 'Fumble';
+        const isSack = result === 'Sack' || (play.Description && play.Description === 'Sack');
+        const completed = !isSack && result !== 'Incomplete' && result !== 'Interception';
+        const intercepted = !isSack && result === 'Interception';
+        const td = !isSack && result === 'Touchdown';
+        const fumble = !isSack && result === 'Fumble';
         if (qb) {
           let ps = passingStats.find(s => s.playername === qb && s.team === team);
           if (!ps) {
             ps = { playername: qb, team, attempts: 0, completions: 0, yards: 0, tds: 0, ints: 0, sacks: 0, sackYds: 0};
             passingStats.push(ps);
           }
-          ps.attempts++;
-          if (completed) {
-            ps.completions++;
-            ps.yards += yards;
-            if (td) ps.tds++;
+          if (!isSack) {
+            ps.attempts++;
+            if (completed) {
+              ps.completions++;
+              ps.yards += yards;
+              if (td) ps.tds++;
+            }
+            if (intercepted) ps.ints++;
           }
-          if (intercepted) ps.ints++;
         }
-        if (receiver) {
+        if (receiver && !isSack) {
           let rs = receivingStats.find(s => s.playername === receiver && s.team === team);
           if (!rs) {
             rs = { playername: receiver, team, targets: 0, receptions: 0, yards: 0, tds: 0, fumbles: 0, long: 0 };
