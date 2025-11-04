@@ -2519,10 +2519,10 @@
     //if predicted, pass:  
     predictionEffect = 20;
     //else: 
-    let rollTest = randomInt(0, 100);
-    if(rollTest <= 50){
-        predictionEffect = -10;
-    }
+    //let rollTest = randomInt(0, 100);
+    //if(rollTest <= 50){
+    //    predictionEffect = -10;
+    //}
     //
 
     let passRushSum = defensiveFormation
@@ -2576,8 +2576,11 @@
 
     let sackChance = defensiveFormation
       .filter(f => f.position.startsWith('DL') || f.position.startsWith('LB'))
-      .reduce((sum, f) => sum + Number(playerTraits[f.player]?.defStars || 0), 0);
-    sackChance = sackChance/2 + Math.max(0, predictionEffect);  
+      .reduce((sum, f) => {
+        const defStars = Number(playerTraits[f.player]?.defStars || 0);
+        return sum + (Math.pow(defStars, 2) / 2);
+      }, 0);
+    sackChance = sackChance + Math.max(0, predictionEffect);  
 
     let roll = Math.random() * 100;
     if (roll <= rushStrength) {
