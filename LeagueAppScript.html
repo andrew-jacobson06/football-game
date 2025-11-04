@@ -2102,21 +2102,75 @@
       });
     }
 
-    // DL assignments – fill from DLs, then LBs if needed
-    const dlAssignments = [];
-    olPositions.forEach((ol, i) => {
+    // DL assignments – prioritize edge coverage matchups
+    const teolPlayers = olPositions.map(pos => {
+      const match = currentFormation.find(f => f.position === pos);
+      const playerName = match ? match.player : '';
+      const routeRunning = playerName ? Number(playerTraits[playerName]?.routeRunning || 0) : 0;
+      return { pos, player: playerName, routeRunning };
+    });
+
+    const edgePositions = [...new Set([
+      olPositions[0],
+      olPositions.length > 1 ? olPositions[olPositions.length - 1] : undefined
+    ].filter(Boolean))];
+
+    const assignmentsByPos = {};
+
+    const takeBestCoverageDefender = () => {
+      let bestSource = '';
+      let bestIndex = -1;
+      let bestCoverage = -Infinity;
+
+      [
+        { name: 'lbs', arr: lbs },
+        { name: 'dls', arr: dls }
+      ].forEach(({ name, arr }) => {
+        arr.forEach((player, idx) => {
+          const coverage = Number(player.coverage || 0);
+          if (coverage > bestCoverage) {
+            bestCoverage = coverage;
+            bestSource = name;
+            bestIndex = idx;
+          }
+        });
+      });
+
+      if (bestIndex < 0) return null;
+      if (bestSource === 'lbs') {
+        return lbs.splice(bestIndex, 1)[0];
+      }
+      if (bestSource === 'dls') {
+        return dls.splice(bestIndex, 1)[0];
+      }
+      return null;
+    };
+
+    const edgeDetails = edgePositions
+      .map(pos => teolPlayers.find(t => t.pos === pos) || { pos, player: '', routeRunning: 0 })
+      .sort((a, b) => b.routeRunning - a.routeRunning);
+
+    edgeDetails.forEach(edge => {
+      const defender = takeBestCoverageDefender();
+      assignmentsByPos[edge.pos] = { player: defender ? defender.name : '' };
+    });
+
+    const interiorPositions = olPositions.filter(pos => !assignmentsByPos[pos]);
+    interiorPositions.forEach(pos => {
       let player = null;
       if (dls.length > 0) {
         player = dls.shift();
       } else if (lbs.length > 0) {
         player = lbs.shift();
       }
-      dlAssignments.push({
-        position: `DL${i+1}`,
-        player: player ? player.name : '',
-        align: ol
-      });
+      assignmentsByPos[pos] = { player: player ? player.name : '' };
     });
+
+    const dlAssignments = olPositions.map((ol, i) => ({
+      position: `DL${i+1}`,
+      player: assignmentsByPos[ol] ? assignmentsByPos[ol].player : '',
+      align: ol
+    }));
 
     let assigned = dbAssignments.length + dlAssignments.length;
     let remaining = Math.max(0, 7 - assigned);
