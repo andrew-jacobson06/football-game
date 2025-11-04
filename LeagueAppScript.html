@@ -4804,8 +4804,10 @@
       mountEl.style.position = "absolute";
       if(state.Possession == "Home"){
         mountEl.style.left = `${prevPx}px`;
+        mountEl.style.right = ``;
       } else{
         mountEl.style.right = `${prevPx}px`;
+        mountEl.style.left = ``;
       }
       // Ensure the container dimensions match the SVG so width animates
       // from the starting point instead of the page origin.
