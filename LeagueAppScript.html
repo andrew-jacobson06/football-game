@@ -665,14 +665,15 @@
         if (td) p.tds++;
         if (fumble) p.fumbles++;
         if (yards > p.long) p.long = yards;
-      } else if (play.PlayType === 'Pass') {
+      } 
+      else if (play.PlayType === 'Pass') {
         const qb = play.Passer || play.Player || '';
         const receiver = play.Target || play.Receiver || '';
         const isSack = description === 'Sack';
-        const completed = !isSack && outcome !== 'Incomplete' && outcome !== 'Interception';
-        const intercepted = !isSack && outcome === 'Interception';
+        const completed = !isSack && outcome !== 'Incompletion' && outcome !== 'Incomplete' && outcome !== 'Interception';
+        const intercepted = !isSack && (result === 'Interception' || result === 'Intercepted');
         const td = !isSack && outcome === 'Touchdown';
-        const fumble = !isSack && outcome === 'Fumble';
+        const fumble = outcome === 'Fumble';
         if (qb) {
           let ps = passingStats.find(s => s.playername === qb && s.team === team);
           if (!ps) {
@@ -2522,7 +2523,7 @@
   function determineTimeToThrow() {
     let predictionEffect = 0;
     //if predicted, pass:  
-    predictionEffect = 20;
+    predictionEffect = 5;
     //else: 
     //let rollTest = randomInt(0, 100);
     //if(rollTest <= 50){
