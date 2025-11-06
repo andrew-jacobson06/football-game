@@ -92,6 +92,250 @@
     font-size: clamp(16px, 4vw, 24px);
   }
 
+  /* News feed */
+  .news-feed {
+    display: grid;
+    gap: 3vw;
+    padding: 2.5vw;
+  }
+
+  @media (min-width: 768px) {
+    .news-feed {
+      grid-template-columns: minmax(220px, 2fr) minmax(260px, 3fr);
+      align-items: start;
+    }
+
+    .news-secondary {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .news-panel,
+  .news-feature,
+  .news-secondary-card {
+    background: var(--gray-medium);
+    border: 1px solid var(--gray-light);
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+
+  .news-panel {
+    padding: 3vw;
+  }
+
+  .news-panel-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5vw;
+    margin-bottom: 2vw;
+  }
+
+  .news-panel-title {
+    margin: 0;
+    font-size: clamp(18px, 4vw, 26px);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  .news-panel-meta {
+    color: var(--text-muted);
+    font-size: clamp(12px, 3vw, 16px);
+    text-transform: uppercase;
+  }
+
+  .news-headline-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5vw;
+  }
+
+  .news-headline-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2vw;
+  }
+
+  .news-headline-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 1.5vw;
+    flex: 1;
+    color: var(--text-light);
+    text-decoration: none;
+    font-size: clamp(14px, 3.5vw, 18px);
+    transition: color 0.2s ease;
+  }
+
+  .news-headline-link:hover,
+  .news-headline-link:focus {
+    color: var(--text-link);
+  }
+
+  .headline-icon {
+    font-size: clamp(14px, 4vw, 18px);
+    color: var(--text-muted);
+  }
+
+  .headline-timestamp {
+    color: var(--text-muted);
+    font-size: clamp(12px, 3vw, 14px);
+    white-space: nowrap;
+  }
+
+  .news-feature {
+    padding: 3vw;
+  }
+
+  .feature-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2vw;
+  }
+
+  .feature-tag {
+    font-size: clamp(12px, 3vw, 14px);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .feature-matchup {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: center;
+    gap: 1vw;
+    padding: 2vw;
+    background: var(--gray-light);
+    border-radius: 8px;
+  }
+
+  .feature-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5vw;
+    font-size: clamp(16px, 4vw, 22px);
+    font-weight: 600;
+  }
+
+  .feature-team-record {
+    font-size: clamp(12px, 3vw, 14px);
+    color: var(--text-muted);
+  }
+
+  .feature-kickoff {
+    text-align: center;
+    font-size: clamp(12px, 3vw, 16px);
+    line-height: 1.4;
+  }
+
+  .feature-image {
+    height: clamp(140px, 30vw, 200px);
+    background: linear-gradient(135deg, rgba(193, 2, 6, 0.8), rgba(18, 18, 18, 0.85));
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('https://andrew-jacobson06.github.io/public-images/football-field-texture.jpg') center/cover;
+    opacity: 0.25;
+  }
+
+  .feature-headline {
+    font-size: clamp(18px, 4.5vw, 26px);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .feature-summary {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: clamp(14px, 3.5vw, 16px);
+    line-height: 1.6;
+  }
+
+  .feature-link {
+    align-self: flex-start;
+    font-weight: 600;
+    color: var(--text-link);
+    text-decoration: none;
+    font-size: clamp(14px, 3.5vw, 16px);
+  }
+
+  .feature-link:hover,
+  .feature-link:focus {
+    text-decoration: underline;
+  }
+
+  .news-secondary {
+    display: flex;
+    flex-direction: column;
+    gap: 2vw;
+    padding: 3vw;
+    background: var(--gray-medium);
+    border: 1px solid var(--gray-light);
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+
+  .news-secondary-title {
+    margin: 0;
+    font-size: clamp(16px, 4vw, 22px);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .news-secondary-grid {
+    display: grid;
+    gap: 2vw;
+  }
+
+  @media (min-width: 768px) {
+    .news-secondary-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .news-secondary-card {
+    padding: 2.5vw;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .news-secondary-card:hover,
+  .news-secondary-card:focus-within {
+    transform: translateY(-0.5vw);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  }
+
+  .news-secondary-link {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+  }
+
+  .news-secondary-headline {
+    margin: 0 0 1vw;
+    font-size: clamp(14px, 3.5vw, 18px);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .news-secondary-summary {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: clamp(12px, 3vw, 14px);
+    line-height: 1.5;
+  }
+
   /* Game list */
   .game-list {
     padding: 2.5vw;
