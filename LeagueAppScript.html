@@ -1,5 +1,6 @@
 <script>
   let state = {};
+  let teams = [];
   let players = [];
   let playerTraits = {};
   let rollThresholds = [];
@@ -29,6 +30,25 @@
   const RUN_POSITIONS = ['WR1','RB1','RB2','QB'];
   const ROUTE_OPTIONS = ['No Route','Screen','Short','Medium','Med-Long','Long','Deep'];
   const QB_READ_OPTIONS = ['Primary','2nd','3rd','4th','Checkdown'];
+  const STANDINGS_TABLE_HEADER_HTML = `
+    <thead>
+      <tr>
+        <th class="team-col">TEAM</th>
+        <th>W</th>
+        <th>L</th>
+        <th>T</th>
+        <th class="pct-col">PCT</th>
+        <th>HOME</th>
+        <th>AWAY</th>
+        <th>DIV</th>
+        <th>PF</th>
+        <th>PA</th>
+        <th>DIFF</th>
+        <th>STRK</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
   let receiverRoutes = {};
   let playerReadSelection = {};
   let qbReadAssignments = {};
@@ -174,6 +194,7 @@
       updateStickyOffsets();
       window.addEventListener('resize', updateStickyOffsets);
       loadGamesList();
+      loadTeams().catch(err => console.error(err));
       const backBtn = document.getElementById('backButton');
       if (backBtn) {
         backBtn.addEventListener('click', () => {
@@ -281,6 +302,23 @@
         hideAppLoading();
       })
       .getGamesList();
+  }
+
+  function loadTeams() {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(data => {
+          teams = Array.isArray(data) ? data : [];
+          renderStandings();
+          resolve(teams);
+        })
+        .withFailureHandler(err => {
+          console.error('Failed to load teams', err);
+          renderStandings();
+          reject(err);
+        })
+        .getTeams();
+    });
   }
 
   function renderGameCards(games) {
@@ -2342,6 +2380,243 @@
         alert("There was a problem loading game settings.");
       })
       .getFrontendSettings();
+  }
+
+  function renderStandings() {
+    renderLeagueStandings(teams);
+    renderDivisionStandings(teams);
+  }
+
+  function renderLeagueStandings(teamList) {
+    const tbody = document.getElementById('standingsLeagueBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!Array.isArray(teamList) || !teamList.length) {
+      return;
+    }
+
+    const sortedTeams = [...teamList].sort(sortStandings);
+    sortedTeams.forEach(team => {
+      tbody.appendChild(createStandingsRow(team));
+    });
+  }
+
+  function renderDivisionStandings(teamList) {
+    const container = document.getElementById('standingsDivisionContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!Array.isArray(teamList) || !teamList.length) {
+      return;
+    }
+
+    const divisions = teamList.reduce((acc, team) => {
+      const division = (team.Division || 'Division').toString();
+      if (!acc[division]) {
+        acc[division] = [];
+      }
+      acc[division].push(team);
+      return acc;
+    }, {});
+
+    Object.keys(divisions)
+      .sort((a, b) => a.localeCompare(b))
+      .forEach(divisionName => {
+        const card = document.createElement('article');
+        card.className = 'division-card';
+
+        const header = document.createElement('header');
+        header.className = 'standings-panel-header';
+        header.textContent = formatDivisionTitle(divisionName);
+        card.appendChild(header);
+
+        const scroll = document.createElement('div');
+        scroll.className = 'standings-table-scroll';
+
+        const table = document.createElement('table');
+        table.className = 'standings-table';
+        table.innerHTML = STANDINGS_TABLE_HEADER_HTML;
+
+        const tbody = table.querySelector('tbody');
+        divisions[divisionName]
+          .slice()
+          .sort(sortStandings)
+          .forEach(team => {
+            tbody.appendChild(createStandingsRow(team));
+          });
+
+        scroll.appendChild(table);
+        card.appendChild(scroll);
+        container.appendChild(card);
+      });
+  }
+
+  function createStandingsRow(team) {
+    const tr = document.createElement('tr');
+
+    const teamCell = document.createElement('td');
+    teamCell.className = 'team-cell';
+
+    const abbrSpan = document.createElement('span');
+    const conferenceClass = getConferenceClass(team.Division);
+    abbrSpan.className = ['team-abbr', conferenceClass].filter(Boolean).join(' ');
+    abbrSpan.textContent = (team.Abbrev || '').toString();
+    teamCell.appendChild(abbrSpan);
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'team-name';
+    nameSpan.textContent = formatTeamName(team);
+    teamCell.appendChild(nameSpan);
+
+    tr.appendChild(teamCell);
+
+    const wins = parseInteger(team.W);
+    const losses = parseInteger(team.L);
+    const ties = parseInteger(team.T);
+
+    tr.appendChild(createTextCell(wins));
+    tr.appendChild(createTextCell(losses));
+    tr.appendChild(createTextCell(ties));
+
+    const pctCell = createTextCell(formatWinPct(wins, losses, ties));
+    pctCell.classList.add('pct-col');
+    tr.appendChild(pctCell);
+
+    tr.appendChild(createTextCell((team.Home || '').toString()));
+    tr.appendChild(createTextCell((team.Away || '').toString()));
+    tr.appendChild(createTextCell((team.Div || '').toString()));
+
+    tr.appendChild(createTextCell(formatNumber(team.PF)));
+    tr.appendChild(createTextCell(formatNumber(team.PA)));
+
+    const diffValue = computeDiff(team);
+    const diffCell = createTextCell(formatDiff(diffValue));
+    if (Number.isFinite(diffValue)) {
+      if (diffValue > 0) {
+        diffCell.classList.add('positive');
+      } else if (diffValue < 0) {
+        diffCell.classList.add('negative');
+      }
+    }
+    tr.appendChild(diffCell);
+
+    const streakText = (team.STRK || '').toString();
+    const streakCell = createTextCell(streakText);
+    streakCell.className = getStreakClass(streakText);
+    tr.appendChild(streakCell);
+
+    return tr;
+  }
+
+  function createTextCell(value) {
+    const td = document.createElement('td');
+    td.textContent = value != null ? value : '';
+    return td;
+  }
+
+  function parseInteger(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  }
+
+  function formatWinPct(wins, losses, ties) {
+    const total = wins + losses + ties;
+    if (!total) return '.000';
+    const pct = (wins + ties * 0.5) / total;
+    return pct.toFixed(3).replace(/^0/, '.');
+  }
+
+  function formatNumber(value) {
+    if (value === '' || value == null) return '';
+    const num = Number(value);
+    if (Number.isFinite(num)) {
+      return num;
+    }
+    return value;
+  }
+
+  function computeDiff(team) {
+    if (team.DIFF !== '' && team.DIFF != null) {
+      const diff = Number(team.DIFF);
+      if (Number.isFinite(diff)) {
+        return diff;
+      }
+    }
+    const pf = Number(team.PF);
+    const pa = Number(team.PA);
+    if (Number.isFinite(pf) && Number.isFinite(pa)) {
+      return pf - pa;
+    }
+    return null;
+  }
+
+  function formatDiff(value) {
+    if (!Number.isFinite(value)) {
+      return '';
+    }
+    if (value === 0) {
+      return '0';
+    }
+    return value > 0 ? `+${value}` : value.toString();
+  }
+
+  function getStreakClass(streak) {
+    const normalized = (streak || '').toString().toUpperCase();
+    if (!normalized) return 'streak';
+    if (normalized.startsWith('W')) return 'streak hot';
+    if (normalized.startsWith('L')) return 'streak cold';
+    return 'streak';
+  }
+
+  function formatTeamName(team) {
+    const location = (team.Location || '').toString().trim();
+    const name = (team.Name || '').toString().trim();
+    if (location && name) return `${location} ${name}`;
+    return location || name || '';
+  }
+
+  function formatDivisionTitle(name) {
+    const trimmed = (name || '').toString().trim();
+    if (!trimmed) return 'Division';
+    return /division$/i.test(trimmed) ? trimmed : `${trimmed} Division`;
+  }
+
+  function getConferenceClass(division) {
+    const value = (division || '').toString().toLowerCase();
+    if (!value) return '';
+    if (value.includes('east') || value.includes('south')) return 'nfc';
+    if (value.includes('west') || value.includes('north')) return 'afc';
+    return '';
+  }
+
+  function sortStandings(a, b) {
+    const pctA = computeWinPctValues(a);
+    const pctB = computeWinPctValues(b);
+    if (pctA !== pctB) {
+      return pctB - pctA;
+    }
+
+    const diffA = computeDiff(a);
+    const diffB = computeDiff(b);
+    const diffAValue = Number.isFinite(diffA) ? diffA : 0;
+    const diffBValue = Number.isFinite(diffB) ? diffB : 0;
+    if (diffAValue !== diffBValue) {
+      return diffBValue - diffAValue;
+    }
+
+    const pfA = Number(a.PF) || 0;
+    const pfB = Number(b.PF) || 0;
+    return pfB - pfA;
+  }
+
+  function computeWinPctValues(team) {
+    const wins = parseInteger(team.W);
+    const losses = parseInteger(team.L);
+    const ties = parseInteger(team.T);
+    const total = wins + losses + ties;
+    if (!total) return 0;
+    return (wins + ties * 0.5) / total;
   }
 
   function runBlockVsRunDef(ballCarrier) {

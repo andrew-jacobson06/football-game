@@ -115,6 +115,32 @@ function getGamesList() {
   }));
 }
 
+function getTeams() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Teams');
+  if (!sheet) {
+    throw new Error("Sheet 'Teams' not found.");
+  }
+
+  const data = sheet.getDataRange().getValues();
+  if (!data || data.length < 2) {
+    return [];
+  }
+
+  const headers = data[0];
+
+  return data
+    .slice(1)
+    .filter(row => row && row[0] !== '' && row[0] != null)
+    .slice(0, 10)
+    .map(row => {
+      const team = {};
+      headers.forEach((key, index) => {
+        team[key] = row[index];
+      });
+      return team;
+    });
+}
+
 function getPlayerTraits() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Players");
   if (!sheet) {
