@@ -817,6 +817,15 @@
     background-color: yellow;
     z-index: 1;
   }
+  #fgPost {
+    position: absolute;
+    right: 5%; /* stick to the far right edge */
+    top: 20%; /* start from vertical center */
+    transform: translateY(-50%); /* perfectly center vertically */
+    height: 200px;
+    z-index: 5; /* make sure it’s above the field */
+    pointer-events: none; /* optional: ignore mouse clicks */
+  }
   /* 2D overlay that sits on top of the field */
   .driveWrapper {
     position: absolute;               /* overlay */
