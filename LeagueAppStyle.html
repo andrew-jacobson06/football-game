@@ -2157,12 +2157,12 @@
       --arrow-h: clamp(6px, 3vw, 9px);   /* half-height (top & bottom) */
       --arrow-l: clamp(12px, 3vw, 18px); /* length (left border) */
       --arc-color: #333;
-      --arc-width: 5px;
+      --arc-width: 0.5vw;
       --arc-duration: 1.2s;
     }
     /* Container for pass arcs; absolutely positioned so its left coordinate
        can be set dynamically via JavaScript when drawing the arc. */
-    .arc-container { position: absolute; top: -20%; }
+    .arc-container { position: absolute; height: calc(min(85vw, 1200px) * 0.3);}
     /* SVG line styling */
     .arc-path {
       fill: none;
@@ -2175,6 +2175,7 @@
     @keyframes draw { to { stroke-dashoffset: 0; } }
     /* Arrowhead = your CSS triangle, positioned & rotated */
   /* Arrow with short shaft behind it */
+
   .arc-arrow {
     position: absolute;
     display: flex;

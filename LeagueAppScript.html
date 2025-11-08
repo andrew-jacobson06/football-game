@@ -5104,10 +5104,9 @@
       end:   { x: x1, y: y1 }
     };
   }
-  function buildArcWithArrow(mountEl, { prevPx, currPx, rise, direction = "up" }) {
+   function buildArcWithArrow(mountEl, { prevPx, currPx, rise, direction = "up" }) {
     return new Promise(resolve => {
       let width = Math.abs(currPx - prevPx);
-
       const cs = getComputedStyle(document.documentElement);
       const stroke  = parseFloat(cs.getPropertyValue('--arc-width')) || 5;
       const arrowL  = parseFloat(cs.getPropertyValue('--arrow-l'))   || 12;
@@ -5120,9 +5119,9 @@
       if(state.Possession == "Away"){
         pad = -1;
       }
-      const baselineY = rise + pad;
+      const baselineY = calcResponsiveWidth()/2;// rise + pad;
       const vbWidth = width + pad * 2;
-      const vbHeight = baselineY + rise + pad;
+      const vbHeight = "100%";//baselineY + rise + pad;
       // Build SVG
       const svgNS = "http://www.w3.org/2000/svg";
       const svg = document.createElementNS(svgNS, "svg");
@@ -5130,15 +5129,12 @@
       svg.setAttribute("width", vbWidth);
       svg.setAttribute("height", vbHeight);
       const { d, start, end } = makeArcPath(pad, baselineY, width, rise, direction);
-
       // Compute control point (same as makeArcPath) for reversed path’s angle math
       const cx = pad + width / 2;
       const cy = direction === "up" ? baselineY - rise : baselineY + rise;
-
       // Use drawStart/drawEnd so the rest of your code remains unchanged
       const drawStart = start;
       const drawEnd   = end;
-
       const path = document.createElementNS(svgNS, "path");
       path.setAttribute("class", "arc-path");
       path.setAttribute("pathLength", "1");
@@ -5173,19 +5169,19 @@
       }
       // Start at the base (start anchor), end at the right anchor
       arrow.style.left = `${arrowLeft}px`;
-      arrow.style.top  = `${start.y}px`;
+      arrow.style.top  = `50%`;
       mountEl.appendChild(arrow);
       // ✅ Circle at the starting point
       const circle = document.createElement("span");
       circle.className = "arc-start";
       circle.style.left = `${start.x}px`;
-      circle.style.top  = `${start.y}px`;
+      circle.style.top  = `50%`;
       mountEl.appendChild(circle);
       // Animate the arrow's position in sync with the path draw
       const animation = arrow.animate(
         [
-          { left: `${start.x}px`, top: `${start.y}px` },
-          { left: `${arrowLeft}px`, top: `${end.y}px` }
+          { left: `${start.x}px`, top: `50%` },
+          { left: `${arrowLeft}px`, top: `50%` }
         ],
         { duration: durMs, easing, fill: 'forwards' }
       );
@@ -5198,6 +5194,13 @@
     rise: 150,
     direction: "up"
   });**/
+  function calcResponsiveWidth() {
+    const vw = window.innerWidth * 0.85; // 85vw
+    const minVal = Math.min(vw, 1200);
+    const result = minVal * 0.3; // multiply by 0.3
+    return result; // in pixels
+  }
+
   
 
   function playSound(id) {
