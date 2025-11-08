@@ -1,6 +1,8 @@
 <script>
   let state = {};
   let teams = [];
+  let teamsLoaded = false;
+  let teamsLoadingPromise = null;
   let players = [];
   let playerTraits = {};
   let rollThresholds = [];
@@ -144,8 +146,12 @@
         const targetId = tab.getAttribute('data-tab');
         const target = document.getElementById(targetId);
         if (target) target.classList.add('active');
-        if (targetId === 'scores' && !gamesListLoaded) {
-          loadGamesList();
+        if (targetId === 'scores') {
+          if (!gamesListLoaded) {
+            loadGamesList();
+          }
+        } else if (targetId === 'standings') {
+          ensureStandingsReady();
         }
       });
     });
@@ -167,6 +173,15 @@
         const targetId = tab.getAttribute('data-tab');
         const target = document.getElementById(targetId);
         if (target) target.classList.add('active');
+      });
+    });
+    document.querySelectorAll('.standings-toggle').forEach(toggle => {
+      toggle.addEventListener('change', () => {
+        if (teamsLoaded) {
+          renderStandings();
+        } else {
+          ensureStandingsReady();
+        }
       });
     });
     document.querySelectorAll('.boxscore-pill').forEach(btn => {
@@ -194,7 +209,7 @@
       updateStickyOffsets();
       window.addEventListener('resize', updateStickyOffsets);
       loadGamesList();
-      loadTeams().catch(err => console.error(err));
+      ensureStandingsReady();
       const backBtn = document.getElementById('backButton');
       if (backBtn) {
         backBtn.addEventListener('click', () => {
@@ -304,21 +319,44 @@
       .getGamesList();
   }
 
-  function loadTeams() {
-    return new Promise((resolve, reject) => {
+  function loadTeams(force = false) {
+    if (teamsLoaded && !force) {
+      return Promise.resolve(teams);
+    }
+
+    if (teamsLoadingPromise && !force) {
+      return teamsLoadingPromise;
+    }
+
+    teamsLoadingPromise = new Promise((resolve, reject) => {
       google.script.run
         .withSuccessHandler(data => {
           teams = Array.isArray(data) ? data : [];
-          renderStandings();
+          teamsLoaded = true;
+          teamsLoadingPromise = null;
           resolve(teams);
         })
         .withFailureHandler(err => {
-          console.error('Failed to load teams', err);
-          renderStandings();
+          teams = [];
+          teamsLoaded = false;
+          teamsLoadingPromise = null;
           reject(err);
         })
         .getTeams();
     });
+
+    return teamsLoadingPromise;
+  }
+
+  function ensureStandingsReady() {
+    return loadTeams()
+      .then(() => {
+        renderStandings();
+      })
+      .catch(err => {
+        console.error('Failed to load teams', err);
+        renderStandings();
+      });
   }
 
   function renderGameCards(games) {
