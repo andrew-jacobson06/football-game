@@ -806,7 +806,8 @@
       completed: playType === 'Pass' && !['incomplete', 'interception'].includes(resultText) && !isSackFromDescription,
       intercepted: resultText === 'interception',
       touchdown: resultText === 'touchdown',
-      sack: isSackFromDescription
+      sack: isSackFromDescription,
+      airYards: Number(play.AirYards) || 0
     };
     await animatePlay(playType, passResult);
   }
@@ -845,9 +846,12 @@
       }
     });
   }
-  async function animatePlay(playType, passResult = {}) { 
+  async function animatePlay(playType, passResult = {}) {
     // use current game state to drive the animation in the proper direction
-    await show3DDrive(state.DriveStart, state.Previous, state.BallOn, playType = playType, passResult); //CHANGE - dont hardcode run and pass
+    const normalizedPassResult = passResult && typeof passResult === 'object'
+      ? { ...passResult, airYards: Number(passResult.airYards) || 0 }
+      : { airYards: 0 };
+    await show3DDrive(state.DriveStart, state.Previous, state.BallOn, playType = playType, normalizedPassResult); //CHANGE - dont hardcode run and pass
   }
 
   function formatBallOn(yard) {
@@ -1015,6 +1019,7 @@
       player: team,
       yards: 0,
       result: 'Timeout',
+      airyards: 0,
       newdown: state.Down,
       newdist: state.Distance,
       newballon: state.BallOn,
@@ -2914,9 +2919,13 @@
       let newDown = state.Down;
       let newDist = state.Distance;
       let safety = false;
+      const yardsToEndzone = state.Possession === 'Home' ? 100 - state.BallOn : state.BallOn;
+      const routeAirYards = Number(target?.routeInfo?.airYards) || 0;
+      let playAirYards = typeof resultArray.airYards === 'number' ? resultArray.airYards : routeAirYards;
 
       //HandleSack
         if (resultArray.sack){
+          playAirYards = 0;
           newBall = state.Possession === 'Home' ? newBall + yards : newBall - yards;
           const fum = checkForFumble(qbName, resultArray.sackBy, resultArray.sack);
           if (fum.fumble) {
@@ -2926,8 +2935,7 @@
           tackler = resultArray.sackBy;
           updateDefensiveStatsPass(tackler, { tackle: true, yards: yards, sack: true, fumble: fumble, recoveredBy: recoveredBy});
         } else if (resultArray.intercepted) {
-          const airYards = Number(target?.routeInfo?.airYards) || 0;
-          newBall = state.Possession === 'Home' ? newBall + airYards : newBall - airYards;
+          newBall = state.Possession === 'Home' ? newBall + playAirYards : newBall - playAirYards;
         }
         //Handle Completed Pass
         if (resultArray.completed){
@@ -2937,6 +2945,7 @@
           yards = state.Possession === "Home" ? (100 - state.BallOn) : state.BallOn;
           newBall = state.Possession === "Home" ? 100 : 0;
           resultArray.touchdown = true;
+          playAirYards = yardsToEndzone;
         }
         if (!touchdown) {
           tackler = determineTackler(yards); //NEEDS UPDATING
@@ -2954,6 +2963,7 @@
           newBall = state.Possession === 'Home' ? 0 : 100;
         }
       }
+      resultArray.airYards = playAirYards;
       if (!isTwoPtAttempt) {
         updatePassingStats(qbName, yards, resultArray.completed, resultArray.intercepted, touchdown, resultArray.sack);
         if (target) {
@@ -3030,7 +3040,7 @@
     }
 
     //Handle offense retaining possession
-    pendingPlayContext = { isSack: !!resultArray.sack };
+    pendingPlayContext = { isSack: !!resultArray.sack, airYards: playAirYards };
       if(!resultArray.intercepted && (!fumble || recoveredBy !== tackler)){
         newDist = newDist - yards;
         const playTypeForSafety = resultArray.sack ? 'Run' : 'Pass';
@@ -3194,7 +3204,7 @@
       loss = Math.max(1, loss - 2);
     }
 
-    return { sack: true, sackBy: sacker, yards: -loss };
+    return { sack: true, sackBy: sacker, yards: -loss, airYards: 0 };
   }
 
   function assignRoutes() {
@@ -3446,7 +3456,7 @@
 
   function determinePassOutcome(qbName, target, routes, completionPct) {
     if (!target) {
-      return { completed: false, intercepted: false, yards: 0, completionRoll: 0 };
+      return { completed: false, intercepted: false, yards: 0, airYards: 0, completionRoll: 0 };
     }
 
     const qb = playerTraits[qbName] || {};
@@ -3459,7 +3469,7 @@
     if (completionRoll <= completionPct) {
       const yac = calcYAC(target.target, routeInfo.separation);
       const totalYards = airYards + (Number(yac) || 0);
-      return { completed: true, intercepted: false, yards: totalYards, caughtBy: target.target, completionRoll };
+      return { completed: true, intercepted: false, yards: totalYards, airYards, caughtBy: target.target, completionRoll };
     }
 
     const qbAccCalc = Math.pow(((Number(qb.accuracy) || 0) - 60) / 10, 2) / 2;
@@ -3473,10 +3483,10 @@
     if (pickRoll <= pickChance) {
       const yac = calcYAC(defenderName, routeInfo.separation);
       const totalYards = airYards + (Number(yac) || 0);
-      return { completed: false, intercepted: true, yards: totalYards, caughtBy: defenderName, completionRoll };
+      return { completed: false, intercepted: true, yards: totalYards, airYards, caughtBy: defenderName, completionRoll };
     }
 
-    return { completed: false, intercepted: false, yards: 0, completionRoll };
+    return { completed: false, intercepted: false, yards: 0, airYards, completionRoll };
   }
 
   function calcYAC(playerName, separation = 0){
@@ -3851,6 +3861,7 @@
         playType = 'Pass';
       }
       const { outcome, defenseResult, turnover, description } = determinePlayOutcome(result, playType, yards, recName, tackler, recoveredBy, state.Down, context);
+      const airYards = typeof context.airYards === 'number' ? context.airYards : 0;
       const localPlay = {
         Time: time,
         Down: state.Down,
@@ -3861,6 +3872,7 @@
         Player: playerName,
         Receiver: recName,
         Yards: yards,
+        AirYards: airYards,
         Result: description || 'Normal',
         ResultCategory: outcome,
         DefenseResult: defenseResult,
@@ -3900,6 +3912,7 @@
         description: description,
         desc: description,
         recoveredby: recoveredBy,
+        airyards: airYards,
         newdown: down,
         newdist: distance,
         newballon: ballOn,
@@ -4139,6 +4152,7 @@
       Player: '',
       Receiver: '',
       Yards: 0,
+      AirYards: 0,
       Result: description,
       ResultCategory: outcome,
       DefenseResult: defenseResult,
@@ -4168,6 +4182,7 @@
       player: '',
       receiver: '',
       yards: 0,
+      airyards: 0,
       defensepredicted: '',
       predictioncorrect: '',
       tackler: '',
@@ -4198,6 +4213,7 @@
       Player: player || '',
       Receiver: receiver || '',
       Yards: yards || 0,
+      AirYards: 0,
       Result: description,
       ResultCategory: outcome,
       DefenseResult: defenseResult,
@@ -4227,6 +4243,7 @@
       player: player || '',
       receiver: receiver || '',
       yards: yards || 0,
+      airyards: 0,
       defensepredicted: '',
       predictioncorrect: '',
       tackler: '',
@@ -4256,6 +4273,7 @@
       Player: '',
       Receiver: '',
       Yards: 40,
+      AirYards: 0,
       Result: description,
       ResultCategory: outcome,
       DefenseResult: defenseResult,
@@ -4285,6 +4303,7 @@
       player: '',
       receiver: '',
       yards: 40,
+      airyards: 0,
       defensepredicted: '',
       predictioncorrect: '',
       tackler: '',
