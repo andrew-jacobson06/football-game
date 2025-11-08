@@ -4916,175 +4916,17 @@
             }
           }, 50);
         } else {
+          let completion = true;
           //lastDot.style.opacity = arrow.style.opacity = 0;
           buildArcWithArrow(passDiv, {
             prevPx: prevPX,
             currPx: currPX,
             rise: 150,
-            direction: "up"
+            direction: "up",
+            complete: completion,
           }).then(resolve);
         }
       }, 400);
-    });
-  }
-  function show3DDriveOLD(startYard, prevYard, currentYard, playType = 'Run', passResult) {
-    passComplete = passResult.completed;
-    passIntercepted = passResult.intercepted;
-    return new Promise(resolve => {
-      const field = document.getElementById("field3D");
-      const fieldWidth = field.offsetWidth;
-      const yardPx = fieldWidth / 120;
-      const fieldHeight = field.offsetHeight;
-      const canvas = document.getElementById("arcCanvas");
-      canvas.width = fieldWidth;
-      canvas.height = fieldHeight;
-      let drivePX = (startYard + 10) * yardPx;
-      let prevPX = (prevYard + 10) * yardPx;
-      let currPX = (currentYard + 10) * yardPx;
-      let drive = document.getElementById("drive3D");
-      const driveDot = drive.querySelector(".drive-dot");
-      // Handle drive line based on direction
-      if (state.Possession == "Home") {
-        drive.style.left = `${drivePX}px`;
-        drive.style.right = `auto`;
-        drive.style.width = `${prevPX - drivePX}px`;
-        driveDot.style.right = 'auto';
-        driveDot.style.left = '0';
-      } else {
-        drivePX = fieldWidth - drivePX;
-        prevPX = fieldWidth - prevPX;
-        currPX = fieldWidth - currPX;
-        drive.style.left = `auto`;
-        drive.style.right = `${drivePX}px`;
-        drive.style.width = `${prevPX - drivePX}px`;
-        driveDot.style.right = '0';
-        driveDot.style.left = 'auto';
-      }
-
-      const lastPlay = document.getElementById("lastPlayMarker");
-      const lastDot = lastPlay.querySelector(".last-dot");
-      const arrow = lastPlay.querySelector(".drive-arrow");
-      const catchPoint = document.getElementById("catchPoint");
-      catchPoint.style.opacity = 0; // Hide previous catch point immediately
-      // Fade out old marker
-      lastPlay.style.opacity = lastDot.style.opacity = arrow.style.opacity = 0;
-      setTimeout(() => {
-        lastPlay.style.transition = "none";
-        lastPlay.style.backgroundColor = playType === 'Pass' ? 'transparent' : 'black';
-        lastPlay.style.width = `0px`;
-        lastPlay.style.opacity = 1;
-        lastDot.style.opacity = 1;
-        arrow.style.opacity = 1;
-        if(state.Possession == "Home"){
-          lastDot.style.left = `0`;
-          lastDot.style.right = `auto`;
-          lastPlay.style.left = `${prevPX}px`;
-          arrow.style.left = `0px`;
-          arrow.style.right = `auto`;
-        } else{
-          lastDot.style.right = `0`;
-          lastDot.style.left = `auto`;
-          lastPlay.style.right = `${prevPX}px`;
-          arrow.style.left = `auto`;
-          arrow.style.right = `0px`;
-        }
-
-        if (playType === 'Run') {
-          lastPlay.style.top = `50%`;
-          lastPlay.style.height = `6px`;
-          arrow.style.top = `-10px`;
-          setTimeout(() => {
-            // Animate based on direction of play
-            if (state.Possession == "Home") {
-              lastPlay.style.transition = "width 1.4s ease, left 1.4s ease";
-              arrow.style.transition = "left 1.4s ease";
-              lastPlay.style.left = `${prevPX}px`;
-              lastPlay.style.right = `auto`;
-              lastPlay.style.width = `${currPX - prevPX}px`;
-              arrow.style.left = `${(currPX - prevPX) - 10}px`;
-              arrow.style.right = `auto`;
-              arrow.style.transform = "rotate(0deg)";
-            } else {
-              lastPlay.style.transition = "width 1.4s ease, right 1.4s ease";
-              arrow.style.transition = "right 1.4s ease";
-              lastPlay.style.left = `auto`;
-              lastPlay.style.right = `${prevPX}px`;
-              lastPlay.style.width = `${(currPX - prevPX)}px`;
-              arrow.style.left = `auto`;
-              arrow.style.right = `${(currPX - prevPX) - 10}px`;
-              arrow.style.transform = "rotate(180deg)";
-            }
-            const playWidth = currPX - prevPX;
-            if (playWidth <= 0) {
-              // No animation to wait for; resolve manually after short delay
-              setTimeout(() => {
-                resolve();
-              }, 300);
-            } else {
-              const onEnd = (e) => {
-                if (e.propertyName === 'width') {
-                  lastPlay.removeEventListener('transitionend', onEnd);
-                  resolve();
-                }
-              };
-              lastPlay.addEventListener('transitionend', onEnd);
-            }
-          }, 50);
-        } else {
-          lastDot.style.opacity = arrow.style.opacity = 0;
-          drawPassArc(prevPX, currPX, passComplete).then(resolve);
-        }
-      }, 400);
-    });
-  }
-  function drawPassArc(x0, x1, passComplete = true) {
-    return new Promise(resolve => {
-      const canvas = document.getElementById("arcCanvas");
-      const ctx = canvas.getContext("2d");
-      const yardPx = canvas.width / 120;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const midX = (x0 + x1) / 2;
-      const y = canvas.height * 0.45;
-      const peakHeight = Math.min(yardPx * 12, Math.max(yardPx * 5, (x1 - x0) * 0.6));
-      ctx.setLineDash([10, 5]);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "black";
-      ctx.lineCap = "round";
-      let offset = 0;
-        let startTime = null;
-        function animate(time) {
-          if (!startTime) startTime = time;
-          const elapsed = time - startTime;
-        offset -= 2;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.setLineDash([10, 5]);
-        ctx.lineDashOffset = offset;
-        ctx.beginPath();
-        ctx.moveTo(x0, y);
-        ctx.quadraticCurveTo(midX, y - peakHeight, x1, y);
-        ctx.stroke();
-        if (elapsed < 3000) {
-          requestAnimationFrame(animate);
-        } else {
-          showCatchPoint(x1, y, passComplete).then(resolve);
-        }
-      }
-      requestAnimationFrame(animate);
-    });
-  }
-  function showCatchPoint(x, y, complete = true) {
-    return new Promise(resolve => {
-      const catchPoint = document.getElementById("catchPoint");
-      catchPoint.innerText = complete ? "➤" : "✖";
-      catchPoint.style.left = `${x - 8}px`;
-      catchPoint.style.top = `${y - 20}px`;
-      catchPoint.style.opacity = 0;
-      // Fade in and stay
-      setTimeout(() => {
-        catchPoint.style.transition = "opacity 0.8s ease";
-        catchPoint.style.opacity = 1;
-        setTimeout(resolve, 800);
-      }, 100);
     });
   }
   //New UI functionality
@@ -5104,7 +4946,7 @@
       end:   { x: x1, y: y1 }
     };
   }
-   function buildArcWithArrow(mountEl, { prevPx, currPx, rise, direction = "up" }) {
+   function buildArcWithArrow(mountEl, { prevPx, currPx, rise, direction = "up", completion }) {
     return new Promise(resolve => {
       let width = Math.abs(currPx - prevPx);
       const cs = getComputedStyle(document.documentElement);
