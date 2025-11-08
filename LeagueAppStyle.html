@@ -789,13 +789,17 @@
     perspective: 1000px;
     position: relative;               /* <-- new */
   }
-  #field3D {
+  #field3D {    
     position: relative;
     width: min(85vw, 1200px);
     height: calc(min(85vw, 1200px) * 0.3);
     transform: rotateX(45deg);
     margin: 0 auto;
-    background: linear-gradient(to right, #007a33 0%, #006622 100%);
+    /* background-color: navy; */
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.2) 0 50%, rgba(0, 0, 0, 0.00) 50% 100%), url(https://t4.ftcdn.net/jpg/04/24/03/09/360_F_424030921_ToDvrWZoPlJCYmmLdFvHxPyuU77WgITz.jpg);
+    background-size: calc(100% / 6) 100%, cover;
+    background-repeat: repeat-x, no-repeat;
+    background-position: left top, center;
     border: 3px solid #333;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     transform-style: preserve-3d;
@@ -813,8 +817,47 @@
     color: white;
     padding-top: 4px;
   }
+
+  .label {
+    position: absolute;
+    bottom: 3px;
+    font-size: 0.7rem;
+    pointer-events: none;
+    white-space: nowrap;
+    font-size: x-large;
+  }
+  
+  /* Bottom labels */
+  .label.bottom {
+    bottom: 3px;
+  }
+
+  /* Top labels */
+  .label.top {
+    top: 3px;
+  }
+  
+  .label.left {
+    transform: translateX(-110%); /* move to left side of line */
+    text-align: right;
+  }
+  
+  .label.right {
+    transform: translateX(10%); /* move to right side of line */
+    text-align: left;
+  }
+  
+  .label.center {
+    bottom: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-weight: bold;
+  }
+  
+  
   .first-down-line {
     background-color: yellow;
+    width: 3px;
     z-index: 1;
   }
   #fgPost {
