@@ -4980,23 +4980,25 @@
             }
           }, 50);
         } else {
-          let completion = true;
           //lastDot.style.opacity = arrow.style.opacity = 0;
           buildArcWithArrow(passDiv, {
             prevPx: prevPX,
             currPx: currPX,
             rise: 150,
             direction: "up",
-            complete: completion,
+            completion: passComplete,
           }).then(resolve);
         }
       }, 400);
     });
   }
   //New UI functionality
-  function makeArcPath(x, y, width, rise, direction = "up") {
+  function makeArcPath(x, y, width, rise, direction = "up", completion) {
     let x0 = x, y0 = y;
     let x1 = x + width, y1 = y;           // baseline anchors  
+    if(!completion){
+      y1 = y-20;
+    }
     let cx = x + width / 2;  
     const cy = direction === "up" ? y - rise : y + rise;
     if(state.Possession == "Away"){
@@ -5034,7 +5036,7 @@
       svg.setAttribute("viewBox", `0 0 ${vbWidth} ${vbHeight}`);
       svg.setAttribute("width", vbWidth);
       svg.setAttribute("height", vbHeight);
-      const { d, start, end } = makeArcPath(pad, baselineY, width, rise, direction);
+      const { d, start, end } = makeArcPath(pad, baselineY, width, rise, direction, completion);
       // Compute control point (same as makeArcPath) for reversed path’s angle math
       const cx = pad + width / 2;
       const cy = direction === "up" ? baselineY - rise : baselineY + rise;
@@ -5076,6 +5078,12 @@
       // Start at the base (start anchor), end at the right anchor
       arrow.style.left = `${arrowLeft}px`;
       arrow.style.top  = `50%`;
+
+      arrow.style.display = 'flex';
+      if(!completion){
+        arrow.style.display = 'none';
+      }
+
       mountEl.appendChild(arrow);
       // ✅ Circle at the starting point
       const circle = document.createElement("span");
