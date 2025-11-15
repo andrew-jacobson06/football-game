@@ -4873,7 +4873,11 @@
   function show3DDrive(startYard, prevYard, currentYard, playType = 'Run', passResult) {
     passComplete = passResult.completed;
     if(playType == "Pass" && !passComplete){
-      currentYard = startYard + passResult.airYards;
+      let airYds = passResult.airYards;
+      if (state.Possession === 'Away') {
+        airYds = - passResult.airYards;
+      }
+      currentYard = prevYard + airYds;
     }
     passIntercepted = passResult.intercepted;
     if(passResult.sack){
