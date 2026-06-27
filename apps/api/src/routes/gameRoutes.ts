@@ -13,7 +13,7 @@ gameRoutes.get("/health", (_req, res) => {
 
 gameRoutes.get("/players", async (_req, res, next) => {
   try {
-    const players = await readSheetObjects("Players!A1:Z");
+    const players = await readSheetObjects("Players!A1:AL");
     res.json({ players });
   } catch (error) {
     next(error);
