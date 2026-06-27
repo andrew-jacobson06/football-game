@@ -147,7 +147,7 @@ function getPlayerTraits() {
     throw new Error("Sheet 'Players' not found.");
   }
 
-  // Pull columns A through AL (0 - 38) to include BallSecurity, DefPos, Image, and transform values
+  // Pull columns A through AM (0 - 38) to include BallSecurity, DefPos, the Player Image from AI, transform values, and jersey image.
   const numCols = 39;
   const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
   Logger.log(data);

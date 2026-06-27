@@ -1,4 +1,5 @@
 <script>
+  const FALLBACK_PLAYER_IMAGE = "https://andrew-jacobson06.github.io/public-audio/baby.png";
   let playerListData = [];
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -35,7 +36,7 @@
     const playerImg = document.getElementById('player-card-image');
     const jerseyImg = document.getElementById('jersey');
     if (playerImg) {
-      playerImg.src = p.image || playerImg.src;
+      playerImg.src = p.image || FALLBACK_PLAYER_IMAGE;
       playerImg.style.transform = `translate(${p.translateX || 0}px, ${p.translateY || 0}px) scale(${p.scale || 1})`;
     }
     if (jerseyImg) jerseyImg.src = p.jersey || '';

@@ -55,12 +55,27 @@ function numberValue(value: string | number | undefined, fallback = 0) {
   return Number.isFinite(result) ? result : fallback;
 }
 
+function firstNonEmpty(...values: Array<string | undefined>) {
+  return values.find((value) => value && value.trim() !== "") ?? "";
+}
+
+function getPlayerImage(player: Player) {
+  return firstNonEmpty(player["Player Image from AI"], player.Image) || FALLBACK_PLAYER_IMAGE;
+}
+
+function getJerseyImage(player: Player) {
+  return firstNonEmpty(player.jersey, player.Jersey, player["Jersey Image"]);
+}
+
 type PlayerCardProps = {
   player: Player;
   onBack: () => void;
 };
 
 export function PlayerCard({ player, onBack }: PlayerCardProps) {
+  const playerImage = getPlayerImage(player);
+  const jerseyImage = getJerseyImage(player);
+
   return (
     <div id="playerCardView">
       <button id="playerCardBack" className="back-button" type="button" onClick={onBack}>← Back</button>
@@ -68,14 +83,14 @@ export function PlayerCard({ player, onBack }: PlayerCardProps) {
         <div id="playerImageContainer" className="player-image-container">
           <img
             id="player-card-image"
-            src={player.Image || FALLBACK_PLAYER_IMAGE}
+            src={playerImage}
             alt="Player"
             style={{
               transform: `translate(${numberValue(player.translateX)}px, ${numberValue(player.translateY)}px) scale(${numberValue(player.scale, 1)})`
             }}
           />
           <div id="jersey-wrapper">
-            {player.jersey && <img id="jersey" src={player.jersey} alt="Jersey Overlay" />}
+            {jerseyImage && <img id="jersey" src={jerseyImage} alt="Jersey Overlay" />}
           </div>
         </div>
         <div id="playerDetails" className="player-details">

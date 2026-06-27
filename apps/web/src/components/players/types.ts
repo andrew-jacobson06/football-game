@@ -34,8 +34,11 @@ export type Player = {
   Coverage?: string | number;
   DefPos?: string;
   Image?: string;
+  "Player Image from AI"?: string;
   translateX?: string | number;
   translateY?: string | number;
   scale?: string | number;
   jersey?: string;
+  Jersey?: string;
+  "Jersey Image"?: string;
 };
