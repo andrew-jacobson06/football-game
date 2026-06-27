@@ -1,7 +1,9 @@
 import type { LeagueGame } from "../types";
 import { formatClock, parseTimeToSeconds } from "../leagueMappers";
 
-export type PlayKind = "Run" | "Pass" | "Punt" | "Field Goal" | "Two Point" | "Timeout";
+export type PlayKind = "Run" | "Pass" | "Punt" | "Field Goal" | "Two Point" | "Timeout" | "Spike" | "Kneel";
+export type FormationSlot = "WR1" | "TEOL1" | "TEOL2" | "TEOL3" | "TEOL4" | "TEOL5" | "WR2" | "WR3" | "QB" | "RB1" | "RB2";
+export type PlayCallOptions = { formation?: Partial<Record<FormationSlot, string>>; routes?: Record<string, string>; reads?: Record<string, string>; runner?: string; clockMode?: "Normal" | "Hurry Up" | "Chew Clock" };
 export type EngineContext = { players: Record<string, unknown>[]; settings: Record<string, unknown>; historyLength: number };
 const n = (v: unknown) => Number(v) || 0;
 export function randomInt(min: number, max: number) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -28,13 +30,17 @@ function nextDownDistance(game: LeagueGame, yards: number) {
   return { down: down + 1, distance: distance - yards, ballOn: newBallOn, touchdown: false, turnover: false };
 }
 function switchPoss(game: LeagueGame) { return game.Possession === "Home" ? "Away" : "Home"; }
-export function runPlay(game: LeagueGame, ctx: EngineContext) { return resolveScrimmage(game, ctx, "Run"); }
-export function passPlay(game: LeagueGame, ctx: EngineContext) { return resolveScrimmage(game, ctx, "Pass"); }
-function resolveScrimmage(game: LeagueGame, ctx: EngineContext, kind: "Run" | "Pass") {
+export function runPlay(game: LeagueGame, ctx: EngineContext, options: PlayCallOptions = {}) { return resolveScrimmage(game, ctx, "Run", options); }
+export function passPlay(game: LeagueGame, ctx: EngineContext, options: PlayCallOptions = {}) { return resolveScrimmage(game, ctx, "Pass", options); }
+function byName(ctx: EngineContext, name?: string) { return ctx.players.find((p) => playerName(p, "") === name); }
+function clockUse(kind: "Run" | "Pass", options: PlayCallOptions) { const base = kind === "Run" ? randomInt(28, 44) : randomInt(8, 35); if (options.clockMode === "Hurry Up") return Math.max(3, Math.round(base * 0.45)); if (options.clockMode === "Chew Clock") return Math.min(45, Math.round(base * 1.35)); return base; }
+function resolveScrimmage(game: LeagueGame, ctx: EngineContext, kind: "Run" | "Pass", options: PlayCallOptions) {
   const offense = game.Possession === "Home" ? game.Home : game.Away;
   const defense = game.Possession === "Home" ? game.Away : game.Home;
-  const qb = choose(byPos(ctx, offense, "QB"));
-  const carrier = kind === "Run" ? choose([...byPos(ctx, offense, "RB"), ...byPos(ctx, offense, "HB"), ...byPos(ctx, offense, "WR")]) : choose([...byPos(ctx, offense, "WR"), ...byPos(ctx, offense, "TE"), ...byPos(ctx, offense, "RB")]);
+  const formation = options.formation ?? {};
+  const routeNames = Object.entries(options.routes ?? {}).filter(([, route]) => route && route !== "No Route").map(([name]) => name);
+  const qb = byName(ctx, formation.QB) ?? choose(byPos(ctx, offense, "QB"));
+  const carrier = kind === "Run" ? (byName(ctx, options.runner) ?? choose([byName(ctx, formation.RB1), byName(ctx, formation.RB2), byName(ctx, formation.QB), ...byPos(ctx, offense, "RB"), ...byPos(ctx, offense, "HB"), ...byPos(ctx, offense, "WR")].filter(Boolean) as Record<string, unknown>[])) : (byName(ctx, routeNames[0]) ?? choose([...routeNames.map((name) => byName(ctx, name)).filter(Boolean) as Record<string, unknown>[], ...byPos(ctx, offense, "WR"), ...byPos(ctx, offense, "TE"), ...byPos(ctx, offense, "RB")]));
   const tackler = choose([...byPos(ctx, defense, "LB"), ...byPos(ctx, defense, "CB"), ...byPos(ctx, defense, "S"), ...teamPlayers(ctx, defense)]);
   const off = kind === "Run" ? average(trait(carrier, "vision"), trait(carrier, "speed")) : average(average(trait(qb, "accuracy"), trait(qb, "readDefense")), average(trait(carrier, "routeRunning"), trait(carrier, "hands")));
   const def = average(trait(tackler, "tackling"), kind === "Run" ? trait(tackler, "runDef") : trait(tackler, "coverage"));
@@ -42,7 +48,7 @@ function resolveScrimmage(game: LeagueGame, ctx: EngineContext, kind: "Run" | "P
   const complete = kind === "Run" || roll > 36;
   const sack = kind === "Pass" && roll <= 12;
   const yards = sack ? -randomInt(1, 9) : complete ? Math.max(-3, Math.round((roll - 45) / 7) + randomInt(0, kind === "Run" ? 5 : 9)) : 0;
-  const next = nextDownDistance(game, yards); const clock = advanceQuarter(game, randomInt(kind === "Run" ? 28 : 8, kind === "Run" ? 44 : 35));
+  const next = nextDownDistance(game, yards); const clock = advanceQuarter(game, clockUse(kind, options));
   const scoringSide = game.Possession; let homeScore = n(game.HomeScore), awayScore = n(game.AwayScore);
   if (next.touchdown) {
     if (scoringSide === "Home") homeScore += 6;
@@ -52,7 +58,7 @@ function resolveScrimmage(game: LeagueGame, ctx: EngineContext, kind: "Run" | "P
   const updated: LeagueGame = { ...game, HomeScore: homeScore, AwayScore: awayScore, Qtr: clock.qtr, Time: clock.time, Down: next.down, Distance: next.distance, BallOn: next.ballOn, Possession: possession };
   const player = playerName(kind === "Run" ? carrier : qb, `${offense} Player`); const receiver = kind === "Pass" ? playerName(carrier, "Receiver") : "";
   const result = next.touchdown ? "Touchdown" : next.turnover ? "Turnover on downs" : sack ? "Sack" : kind === "Pass" && !complete ? "Incomplete" : `${yards} yard ${kind.toLowerCase()}`;
-  return buildResult(game, updated, kind, player, receiver, yards, playerName(tackler, "Tackler"), result, ctx.historyLength);
+  return buildResult(game, updated, kind, player, receiver, yards, playerName(tackler, "Tackler"), `${result}${kind === "Pass" && options.routes?.[receiver] ? ` (${options.routes[receiver]} route)` : ""}`, ctx.historyLength);
 }
 export function punt(game: LeagueGame, ctx: EngineContext) {
   const yards = randomInt(35, 55); const ball = Math.max(1, 100 - Math.min(99, n(game.BallOn) + yards)); const clock = advanceQuarter(game, randomInt(8, 14));
@@ -66,6 +72,8 @@ export function kickFG(game: LeagueGame, ctx: EngineContext) {
 }
 export function goForTwo(game: LeagueGame, ctx: EngineContext) { const made = randomInt(1,100) <= 47; let hs=n(game.HomeScore), as=n(game.AwayScore); if (made) { if (game.Possession === "Home") hs += 2; else as += 2; } const updated={...game, HomeScore:hs, AwayScore:as, Down:1, Distance:10, BallOn:25, Possession:switchPoss(game)}; return buildResult(game, updated, "Two Point", game.Possession, "", made ? 2 : 0, "", `Two-point conversion ${made ? "good" : "failed"}`, ctx.historyLength); }
 export function handleTimeout(game: LeagueGame, ctx: EngineContext) { const key = game.Possession === "Home" ? "HomeTimeouts" : "AwayTimeouts"; const current = Number((game as unknown as Record<string, unknown>)[key] ?? 3); const updated = { ...game, [key]: Math.max(0, current - 1) }; return buildResult(game, updated, "Timeout", game.Possession, "", 0, "", `${game.Possession} timeout`, ctx.historyLength); }
+export function spikeBall(game: LeagueGame, ctx: EngineContext) { const clock = advanceQuarter(game, 1); const updated = { ...game, Qtr: clock.qtr, Time: clock.time, Down: Math.min(4, n(game.Down) + 1), Distance: game.Distance }; return buildResult(game, updated, "Spike", game.Possession, "", 0, "", "Spike ball", ctx.historyLength); }
+export function kneel(game: LeagueGame, ctx: EngineContext, options: PlayCallOptions = {}) { const clock = advanceQuarter(game, options.clockMode === "Hurry Up" ? 5 : 40); const next = nextDownDistance(game, -1); const updated = { ...game, Qtr: clock.qtr, Time: clock.time, Down: next.down, Distance: next.distance, BallOn: next.ballOn, Possession: next.turnover ? switchPoss(game) : game.Possession }; return buildResult(game, updated, "Kneel", game.Possession, "", -1, "", "QB kneel", ctx.historyLength); }
 function buildResult(prev: LeagueGame, game: LeagueGame, playtype: PlayKind, player: string, receiver: string, yards: number, tackler: string, result: string, historyLength: number) {
   const play = { gameid: prev.GameId, playid: `${prev.GameId}-${Date.now()}-${historyLength + 1}`, time: parseTimeToSeconds(prev.Time), qtr: prev.Qtr, possession: prev.Possession, down: prev.Down, distance: prev.Distance, ballon: prev.BallOn, playtype, player, receiver, yards, defensepredicted: "Run", predictioncorrect: playtype === "Run", tackler, result, defenseresult: "", turnover: result.includes("Turnover") ? "Yes" : "", description: result, recoveredby: "", airyards: playtype === "Pass" ? yards : 0, newdown: game.Down, newdist: game.Distance, newballon: game.BallOn, drivestart: (prev as unknown as Record<string, unknown>).DriveStart ?? 25, homescore: game.HomeScore, awayscore: game.AwayScore };
   return { game, play, text: `${playtype}: ${result}` };
