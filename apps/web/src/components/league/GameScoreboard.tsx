@@ -3,7 +3,6 @@ import { formatClock, formatQuarter } from "./leagueMappers";
 export function GameScoreboard({ game }: { game: LeagueGame }) {
   return (
     <div className="scoreboard">
-      <div className="score-banner"></div>
       <div className="team-block home">
         <div className="team-info">
           <img
