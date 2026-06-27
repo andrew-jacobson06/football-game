@@ -4871,6 +4871,10 @@
 
   //UI Functions ONLY - ANIMATIONS BELOW!
   function show3DDrive(startYard, prevYard, currentYard, playType = 'Run', passResult) {
+    //hid incomplete if nec.
+    const catchPoint = document.getElementById("catchPoint");
+    catchPoint.style.display = 'none';
+
     passComplete = passResult.completed;
     if(playType == "Pass" && !passComplete){
       let airYds = passResult.airYards;
@@ -5012,7 +5016,8 @@
       end:   { x: x1, y: y1 }
     };
   }
-   function buildArcWithArrow(mountEl, { prevPx, currPx, rise, direction = "up", completion }) {
+  
+  function buildArcWithArrow(mountEl, { prevPx, currPx, rise, direction = "up", completion }) {
     return new Promise(resolve => {
       let width = Math.abs(currPx - prevPx);
       const cs = getComputedStyle(document.documentElement);
@@ -5082,6 +5087,7 @@
       arrow.style.display = 'flex';
       if(!completion){
         arrow.style.display = 'none';
+        showCatchPoint(currPx, end.y, state.Possession == "Home");
       }
 
       mountEl.appendChild(arrow);
@@ -5115,6 +5121,27 @@
     return result; // in pixels
   }
 
+  function showCatchPoint(x, y, homeBall) {
+    return new Promise(resolve => {
+      const catchPoint = document.getElementById("catchPoint");
+      catchPoint.innerText = "✖";
+      if(homeBall){
+        catchPoint.style.left = `${x - 8}px`;
+        catchPoint.style.right = ``;
+      } else{
+        catchPoint.style.right = `${x - 8}px`;
+        catchPoint.style.left = ``;
+      }
+      catchPoint.style.opacity = 0;
+      catchPoint.style.display = 'block';
+      // Fade in and stay
+      setTimeout(() => {
+        catchPoint.style.transition = "opacity 0.8s ease";
+        catchPoint.style.opacity = 1;
+        setTimeout(resolve, 800);
+      }, 100);
+    });
+  }
   
 
   function playSound(id) {
