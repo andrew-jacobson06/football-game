@@ -23,6 +23,7 @@ body {
 }
 
 .backend-status {
+  display: none;
   position: fixed;
   right: 1vw;
   top: 1vw;
@@ -40,6 +41,7 @@ body {
 }
 
 .migration-nav {
+  display: none;
   position: fixed;
   top: calc(1vw + 44px);
   left: 1vw;
