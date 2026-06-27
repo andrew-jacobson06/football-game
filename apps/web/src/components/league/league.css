@@ -1196,3 +1196,7 @@
 .los-player.empty { visibility: hidden; }
 .formation-actions { display: flex; justify-content: flex-end; gap: 2vw; }
 @media (max-width: 700px) { .formation-field { min-width: 620px; } .routes-board { min-height: 420px; } .player-item { max-width: 100%; flex-basis: 100%; } }
+.eligible-receiver-list { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 16px; color: var(--text-dark); font-weight: 800; }
+.eligible-receiver-chip { display: inline-flex; align-items: center; gap: 8px; border: 2px solid var(--text-muted); border-radius: 999px; background: #fff; color: #111; padding: 6px 10px; font-size: 13px; font-weight: 800; cursor: grab; }
+.eligible-receiver-chip .los-player { width: 32px; height: 32px; flex: 0 0 32px; background: #111; color: #fff; }
+.eligible-receiver-chip:active { cursor: grabbing; }

@@ -1,5 +1,5 @@
 import type { LeagueGame } from "../types";
-import { formatClock, parseTimeToSeconds } from "../leagueMappers";
+import { parseTimeToSeconds } from "../leagueMappers";
 
 export type PlayKind = "Run" | "Pass" | "Punt" | "Field Goal" | "Two Point" | "Timeout" | "Spike" | "Kneel";
 export type FormationSlot = "WR1" | "TEOL1" | "TEOL2" | "TEOL3" | "TEOL4" | "TEOL5" | "WR2" | "WR3" | "QB" | "RB1" | "RB2";
@@ -16,8 +16,8 @@ function trait(p: Record<string, unknown> | undefined, key: string, fallback = 5
 function advanceQuarter(game: LeagueGame, secondsUsed: number) {
   const left = Math.max(0, parseTimeToSeconds(game.Time) - secondsUsed);
   let qtr: string | number = game.Qtr;
-  let time: string | number = formatClock(left);
-  if (left === 0 && Number(game.Qtr) < 4) { qtr = Number(game.Qtr) + 1; time = "15:00"; }
+  let time: string | number = left;
+  if (left === 0 && Number(game.Qtr) < 4) { qtr = Number(game.Qtr) + 1; time = 15 * 60; }
   else if (left === 0 && Number(game.Qtr) >= 4) qtr = "FINAL";
   return { qtr, time };
 }
