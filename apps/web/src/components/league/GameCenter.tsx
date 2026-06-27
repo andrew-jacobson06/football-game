@@ -18,19 +18,115 @@ function normalizeGame(game: LeagueGame, state: Record<string, unknown> | null):
   if (!state) return game;
   return { ...game, GameId: (state.Id ?? game.GameId) as string | number, Home: str(state.Home ?? game.Home), Away: str(state.Away ?? game.Away), HomeScore: (state.HomeScore ?? game.HomeScore) as string | number, AwayScore: (state.AwayScore ?? game.AwayScore) as string | number, Qtr: (state.Qtr ?? game.Qtr) as string | number, Time: (state.Time ?? game.Time) as string | number, Down: (state.Down ?? game.Down) as string | number, Distance: (state.Distance ?? game.Distance) as string | number, BallOn: (state.BallOn ?? game.BallOn) as string | number, Possession: str(state.Possession ?? game.Possession), HomeLogo: str(state.HomeLogo ?? game.HomeLogo ?? ""), AwayLogo: str(state.AwayLogo ?? game.AwayLogo ?? ""), ...(state as Record<string, unknown>) };
 }
-function playText(play: Play) {
-  const result = str(playField(play, "Result", "result")); const type = str(playField(play, "PlayType", "playtype")); const desc = str(playField(play, "Description", "description"));
-  const player = str(playField(play, "Player", "Passer", "player")); const rec = str(playField(play, "Receiver", "Target", "receiver")); const yards = playField(play, "Yards", "yards") ?? 0;
+function playText(play: Play, game?: LeagueGame): string {
+  const description = str(playField(play, "Description", "description")).trim();
+  const result = str(playField(play, "Result", "result"));
+  const type = str(playField(play, "PlayType", "playtype"));
+  const player = str(playField(play, "Player", "Passer", "player"));
+  const receiver = str(playField(play, "Receiver", "Target", "receiver"));
+  const yards = playField(play, "Yards", "yards") ?? 0;
+  const tackler = str(playField(play, "Tackler", "tackler"));
+  const possession = str(playField(play, "Possession", "possession"));
+  const newBallOn = (playField(play, "NewBallOn", "newBallOn", "newballon") as string | number) ?? 50;
+  const recoveredBy = str(playField(play, "RecoveredBy", "recoveredby"));
   if (result === "Timeout") return `${player} Timeout`;
   if (type === "Kick FG") return "Field Goal is Good!";
   if (type === "Kick XP") return "Extra Point is Good!";
-  if (desc === "Sack") return `${player} sacked for a loss of ${Math.abs(num(yards))}.`;
-  if (type === "Pass" || rec) {
-    if (result === "Interception") return `${player} pass intended for ${rec}. Intercepted.`;
-    if (["Incomplete", "Incompletion"].includes(result)) return `${player} pass intended for ${rec}. Incomplete.`;
-    return `${player} pass to ${rec} for ${yards} yards.${result && !["Normal", "Fumble"].includes(result) ? ` ${result}!` : ""}`;
+  if (type === "2PT") {
+    const success = result.toLowerCase().includes("successful");
+    if (receiver) return success ? `${player} ${yards} yard pass to ${receiver}. 2-point conversion is SUCCESSFUL!` : `${player} pass incomplete intended for ${receiver}. 2-point conversion FAILS!`;
+    return success ? `${player} runs for ${yards} yards. 2-point conversion is SUCCESSFUL!` : `${player} run fails. 2-point conversion FAILS!`;
   }
-  return `${player} runs for ${yards} yards.${result && !["Normal", "Fumble"].includes(result) ? ` ${result}!` : ""}`;
+  if (description === "Sack") {
+    const spot = formatBallOnForPoss(newBallOn, possession);
+    let text = `${player} sacked at the ${spot} for a loss of ${Math.abs(num(yards))}`;
+    if (tackler && tackler !== "NA") text += ` (${tackler})`;
+    text += ".";
+    if (recoveredBy) {
+      const recoveryPoss = recoveredBy === player ? possession : possession === "Home" ? "Away" : "Home";
+      text += ` FUMBLE! Recovered by ${recoveredBy} at the ${formatBallOnForPoss(newBallOn, recoveryPoss)}.`;
+    }
+    return text;
+  }
+  if (result === "Safety" && type === "Pass" && !receiver) {
+    let text = `${player} sacked in the end zone for a safety`;
+    if (tackler && tackler !== "NA") text += ` (${tackler})`;
+    return `${text}.`;
+  }
+  if (type === "Pass") {
+    const isTouchdown = result.toLowerCase().includes("touchdown");
+    let text: string;
+    if (result === "Interception") {
+      const poss = possession === "Home" ? "Away" : "Home";
+      const interceptor = recoveredBy || tackler;
+      text = `${player} pass intended for ${receiver}. Intercepted at the ${formatBallOnForPoss(newBallOn, poss)} by ${interceptor}.`;
+    } else if (result === "Incomplete") {
+      text = `${player} pass intended for ${receiver}. Incomplete.`;
+    } else {
+      text = `${player} pass to ${receiver}`;
+      if (!isTouchdown) text += ` to ${formatBallOnForPoss(newBallOn, possession)}`;
+      text += ` for ${yards} yards`;
+      if (!isTouchdown && tackler && tackler !== "NA") text += ` (${tackler})`;
+      text += ".";
+    }
+    if (result && !["Normal", "Fumble", "Interception", "Incomplete"].includes(result)) {
+      if (isTouchdown) text += ` <span style="color:green; font-weight:bold;">Touchdown!</span>`;
+      else if (result === "TO on Downs") text += ` <span style="color:red; font-weight:bold;">${result}!</span>`;
+      else text += ` <strong>${result}!</strong>`;
+    }
+    if (result === "Fumble" && recoveredBy) {
+      const recoveryPoss = recoveredBy === receiver ? possession : possession === "Home" ? "Away" : "Home";
+      text += ` FUMBLE! Recovered by ${recoveredBy} at the ${formatBallOnForPoss(newBallOn, recoveryPoss)}.`;
+    }
+    return text;
+  }
+  let text = `<strong>${player}</strong> runs for ${yards} Yards.`;
+  if (result && result !== "Normal" && result !== "Fumble") {
+    if (result === "Touchdown") text += ` <span style="color:green; font-weight:bold;">${result}!</span>`;
+    else if (result === "TO on Downs") text += ` <span style="color:red; font-weight:bold;">${result}!</span>`;
+    else text += ` <strong>${result}!</strong>`;
+  }
+  if (result !== "Touchdown" && tackler && tackler !== "NA") text += ` Tackle made at the ${formatBallOnForPoss(newBallOn, possession)} by ${tackler}.`;
+  if (result === "Fumble" && recoveredBy) {
+    const recoveryPoss = recoveredBy === player ? possession : possession === "Home" ? "Away" : "Home";
+    text += ` FUMBLE! Recovered by ${recoveredBy} at the ${formatBallOnForPoss(newBallOn, recoveryPoss)}.`;
+  }
+  void game;
+  return text;
+}
+
+type Drive = { key: string; possession: string; driveStart: number; plays: Play[]; result: string; homeScore: unknown; awayScore: unknown; yards: number; playsCount: number };
+function groupPlaysByDrive(plays: Play[], game: LeagueGame): Drive[] {
+  const drives: Drive[] = [];
+  let current: Drive | null = null;
+  plays.forEach((play) => {
+    const player = playField(play, "Player", "Passer", "player");
+    const type = str(playField(play, "PlayType", "playtype"));
+    if (!player || (type && !["Run", "Pass"].includes(type))) return;
+    const possession = str(playField(play, "Possession", "possession"));
+    const driveStart = num(playField(play, "DriveStart", "drivestart"));
+    const key = `${possession}-${driveStart}`;
+    if (!current || current.key !== key) {
+      current = { key, possession, driveStart, plays: [], result: "", homeScore: game.HomeScore, awayScore: game.AwayScore, yards: 0, playsCount: 0 };
+      drives.push(current);
+    }
+    current.plays.push(play);
+  });
+  drives.forEach((drive) => {
+    const last = drive.plays[drive.plays.length - 1];
+    const lastDescription = str(playField(last, "Description", "description")).trim();
+    const lastResult = str(playField(last, "Result", "result"));
+    drive.result = lastDescription === "Sack" && playField(last, "RecoveredBy", "recoveredby") ? "Fumble" : lastResult;
+    drive.homeScore = playField(last, "HomeScore", "homescore") ?? game.HomeScore;
+    drive.awayScore = playField(last, "AwayScore", "awayscore") ?? game.AwayScore;
+    const end = num(playField(last, "NewBallOn", "newBallOn", "newballon"));
+    drive.yards = drive.possession === "Home" ? end - drive.driveStart : drive.driveStart - end;
+    drive.playsCount = drive.plays.length;
+  });
+  return drives;
+}
+function PlayByPlayTab({ game, history }: { game: LeagueGame; history: Play[] }) {
+  return <div className="drive-log" id="playTimeline">{groupPlaysByDrive(history, game).map((drive) => <details className="drive-section" key={drive.key} open><summary className="drive-header"><span className="drive-toggle" aria-hidden="true">^</span><img className="drive-logo" src={drive.possession === "Home" ? game.HomeLogo || "" : game.AwayLogo || ""} alt="" /><span className="drive-overview"><span className="drive-result">{drive.result}</span><span className="drive-summary">{drive.playsCount} Plays, {drive.yards} Yards</span></span><span className="drive-score"><span><span className="team-name">{game.Home}</span> <span className="score-value">{String(drive.homeScore ?? "")}</span></span><span><span className="team-name">{game.Away}</span> <span className="score-value">{String(drive.awayScore ?? "")}</span></span></span></summary><div className="drive-plays">{drive.plays.map((play, i) => { const downDist = formatDownDistance((playField(play, "Down", "down") as string | number) ?? 1, (playField(play, "Distance", "distance") as string | number) ?? 10); const spot = formatBallOnForPoss((playField(play, "BallOn", "ballon") as string | number) ?? 50, str(playField(play, "Possession", "possession"))); return <div className="play-row" key={String(play.PlayId ?? play.playid ?? `${drive.key}-${i}`)}><div className="play-situation">{downDist} at {spot}</div><div className="play-desc" dangerouslySetInnerHTML={{ __html: `(${formatClock((playField(play, "Time", "time") as string | number) ?? "0:00")} - ${formatQuarter((playField(play, "QTR", "Qtr", "quarter") as string | number) ?? game.Qtr)}) ${playText(play, game)}` }} /></div>; })}</div></details>)}</div>;
 }
 function scoreByQuarter(history: Play[], game: LeagueGame) {
   const home = [0, 0, 0, 0]; const away = [0, 0, 0, 0]; let ph = 0; let pa = 0;
@@ -58,9 +154,9 @@ function LeaderCard({ game, history, players, setTab }: { game: LeagueGame; hist
 function ScoreChart({ game, history }: { game: LeagueGame; history: Play[] }) { const { home, away } = scoreByQuarter(history, game); return <div className="score-chart"><table><thead><tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th><th>T</th></tr></thead><tbody><tr><td className="team-cell"><img src={game.HomeLogo} className="team-logo-small" alt="" /><span>{game.Home}</span></td>{home.map((s, i) => <td key={i}>{s}</td>)}<td className="total-cell">{game.HomeScore}</td></tr><tr><td className="team-cell"><img src={game.AwayLogo} className="team-logo-small" alt="" /><span>{game.Away}</span></td>{away.map((s, i) => <td key={i}>{s}</td>)}<td className="total-cell">{game.AwayScore}</td></tr></tbody></table></div>; }
 export function GameCenter({ game, onBack }: { game: LeagueGame; onBack: () => void }) {
   const [tab, setTab] = useState<GameTab>("gamecast"); const [currentGame, setCurrentGame] = useState(game); const [history, setHistory] = useState<Play[]>([]); const [players, setPlayers] = useState<Play[]>([]); const [settings, setSettings] = useState<Record<string, unknown>>({}); const [log, setLog] = useState(["Loading game state, play history, players, and frontend settings..."]); const ctx = useMemo(() => ({ players, settings, historyLength: history.length }), [players, settings, history.length]);
-  useEffect(() => { let active = true; Promise.all([getGameState(game.GameId), getPlayHistory(game.GameId), getPlayerTraits(), getFrontendSettings()]).then(([stateRes, historyRes, playerRes, settingsRes]) => { if (!active) return; setCurrentGame(normalizeGame(game, stateRes.gameState)); setHistory(historyRes.plays); setPlayers(playerRes.players); setSettings(settingsRes); setLog(historyRes.plays.length ? historyRes.plays.slice(-20).reverse().map(playText) : ["Game loaded. No prior play history found."]); }).catch((error: unknown) => setLog((l) => [`Failed to load live game data: ${error instanceof Error ? error.message : String(error)}`, ...l])); return () => { active = false; }; }, [game]);
+  useEffect(() => { let active = true; Promise.all([getGameState(game.GameId), getPlayHistory(game.GameId), getPlayerTraits(), getFrontendSettings()]).then(([stateRes, historyRes, playerRes, settingsRes]) => { if (!active) return; setCurrentGame(normalizeGame(game, stateRes.gameState)); setHistory(historyRes.plays); setPlayers(playerRes.players); setSettings(settingsRes); setLog(historyRes.plays.length ? historyRes.plays.slice(-20).reverse().map((play) => playText(play)) : ["Game loaded. No prior play history found."]); }).catch((error: unknown) => setLog((l) => [`Failed to load live game data: ${error instanceof Error ? error.message : String(error)}`, ...l])); return () => { active = false; }; }, [game]);
   const persist = async (result: ReturnType<typeof runPlay>) => { setCurrentGame(result.game); setHistory((h) => [...h, result.play]); setLog((l) => [result.text, ...l]); const gamePayload = { gameId: result.game.GameId, quarter: result.game.Qtr, time: result.game.Time, down: result.game.Down, distance: result.game.Distance, ballOn: result.game.BallOn, homeScore: result.game.HomeScore, awayScore: result.game.AwayScore, driveStart: (result.game as unknown as Record<string, unknown>).DriveStart, previous: currentGame.BallOn, possession: result.game.Possession, homeTimeouts: (result.game as unknown as Record<string, unknown>).HomeTimeouts, awayTimeouts: (result.game as unknown as Record<string, unknown>).AwayTimeouts }; try { await savePlayAndGame(result.game.GameId, { play: result.play, game: gamePayload }); } catch (error) { setLog((l) => [`Save failed: ${error instanceof Error ? error.message : String(error)}`, ...l]); } };
   const action = (label: string) => { if (label === "Run Play") void persist(runPlay(currentGame, ctx)); else if (label === "Pass Play") void persist(passPlay(currentGame, ctx)); else if (label === "Field Goal") void persist(kickFG(currentGame, ctx)); else if (label === "Punt") void persist(punt(currentGame, ctx)); else if (label === "Two Point") void persist(goForTwo(currentGame, ctx)); else if (label === "Timeout") void persist(handleTimeout(currentGame, ctx)); };
   const drivePlays = history.filter((p) => str(playField(p, "Possession", "possession")) === currentGame.Possession).length; const driveYards = currentGame.Possession === "Home" ? num(currentGame.BallOn) - num((currentGame as unknown as Play).DriveStart) : num((currentGame as unknown as Play).DriveStart) - num(currentGame.BallOn); const lastPlay = history.length ? playText(history[history.length - 1]) : "";
-  return <div id="gameUI"><button className="back-button league-back-button" type="button" onClick={onBack}>← Back</button><GameScoreboard game={currentGame} /><div className="spectate-control"><label className="spectate-switch"><input type="checkbox" onChange={(e) => setLog((l) => [`Spectate ${e.target.checked ? "ON" : "OFF"}`, ...l])} /><span className="spectate-slider" /></label><div className="spectate-meta"><div className="spectate-label">Spectate</div><div className="spectate-status">OFF</div></div></div><div className="tabs">{(["gamecast", "playbyplay", "boxscore", "teamstats"] as GameTab[]).map((t) => <button key={t} className={`tab-button ${tab === t ? "active" : ""}`} type="button" onClick={() => setTab(t)}>{t === "gamecast" ? "Gamecast" : t === "playbyplay" ? "Play-by-Play" : t === "boxscore" ? "Box Score" : "Team Stats"}</button>)}</div>{tab === "gamecast" && <div className="tab-content active"><div className="game-info"><div className="info-block"><div className="info-label">DOWN:</div><div className="info-value">{formatDownDistance(currentGame.Down, currentGame.Distance)}</div></div><div className="info-block"><div className="info-label">BALL ON:</div><div className="info-value">{formatBallOnForPoss(currentGame.BallOn, currentGame.Possession)}</div></div><div className="info-block"><div className="info-label">DRIVE:</div><div className="info-value">{drivePlays} plays, {driveYards} yards</div></div></div><GameField />{lastPlay && <div className="last-play-desc"><strong>Last Play:</strong> {lastPlay}</div>}<GameControls onAction={action} /><ScoreChart game={currentGame} history={history} /><LeaderCard game={currentGame} history={history} players={players} setTab={setTab} /><GameLog messages={log} /></div>}{tab !== "gamecast" && <div className="tab-content active"><div className="placeholder-panel"><h2>{tab === "playbyplay" ? "Play-by-Play" : tab === "boxscore" ? "Box Score" : "Team Stats"}</h2>{history.map((p, i) => <p key={String(p.PlayId ?? p.playid ?? i)}>{formatClock((playField(p, "Time", "time") as string | number) ?? "0:00")} - {formatQuarter((playField(p, "QTR", "Qtr", "quarter") as string | number) ?? currentGame.Qtr)}: {playText(p)}</p>)}</div></div>}</div>;
+  return <div id="gameUI"><button className="back-button league-back-button" type="button" onClick={onBack}>← Back</button><GameScoreboard game={currentGame} /><div className="spectate-control"><label className="spectate-switch"><input type="checkbox" onChange={(e) => setLog((l) => [`Spectate ${e.target.checked ? "ON" : "OFF"}`, ...l])} /><span className="spectate-slider" /></label><div className="spectate-meta"><div className="spectate-label">Spectate</div><div className="spectate-status">OFF</div></div></div><div className="tabs">{(["gamecast", "playbyplay", "boxscore", "teamstats"] as GameTab[]).map((t) => <button key={t} className={`tab-button ${tab === t ? "active" : ""}`} type="button" onClick={() => setTab(t)}>{t === "gamecast" ? "Gamecast" : t === "playbyplay" ? "Play-by-Play" : t === "boxscore" ? "Box Score" : "Team Stats"}</button>)}</div>{tab === "gamecast" && <div className="tab-content active"><div className="game-info"><div className="info-block"><div className="info-label">DOWN:</div><div className="info-value">{formatDownDistance(currentGame.Down, currentGame.Distance)}</div></div><div className="info-block"><div className="info-label">BALL ON:</div><div className="info-value">{formatBallOnForPoss(currentGame.BallOn, currentGame.Possession)}</div></div><div className="info-block"><div className="info-label">DRIVE:</div><div className="info-value">{drivePlays} plays, {driveYards} yards</div></div></div><GameField />{lastPlay && <div className="last-play-desc"><strong>Last Play:</strong> {lastPlay}</div>}<GameControls onAction={action} /><ScoreChart game={currentGame} history={history} /><LeaderCard game={currentGame} history={history} players={players} setTab={setTab} /><GameLog messages={log} /></div>}{tab === "playbyplay" && <div className="tab-content active"><PlayByPlayTab game={currentGame} history={history} /></div>}{["boxscore", "teamstats"].includes(tab) && <div className="tab-content active"><div className="placeholder-panel"><h2>{tab === "boxscore" ? "Box Score" : "Team Stats"}</h2>{history.map((p, i) => <p key={String(p.PlayId ?? p.playid ?? i)} dangerouslySetInnerHTML={{ __html: `${formatClock((playField(p, "Time", "time") as string | number) ?? "0:00")} - ${formatQuarter((playField(p, "QTR", "Qtr", "quarter") as string | number) ?? currentGame.Qtr)}: ${playText(p, currentGame)}` }} />)}</div></div>}</div>;
 }

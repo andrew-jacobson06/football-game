@@ -908,3 +908,100 @@
   cursor: pointer;
   font: inherit;
 }
+
+/* Play-by-play drive view ported from the Apps Script game center */
+.drive-log {
+  width: 100%;
+}
+
+.drive-section {
+  border-bottom: 1px solid var(--gray-light);
+}
+
+.drive-section > summary {
+  list-style: none;
+}
+
+.drive-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.drive-header {
+  display: grid;
+  grid-template-columns: 7% 13% 60% 20%;
+  grid-template-rows: 50% 50%;
+  align-items: center;
+  padding: 2vw;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.drive-toggle {
+  grid-row: span 2;
+  color: #4169e1;
+  cursor: pointer;
+  text-align: center;
+  font-size: 8vw;
+}
+
+.drive-section:not([open]) .drive-toggle {
+  transform: rotate(180deg);
+}
+
+.drive-logo {
+  grid-row: span 2;
+  width: 7vw;
+  height: 7vw;
+  object-fit: contain;
+}
+
+.drive-result {
+  font-weight: bold;
+  color: var(--text-light);
+  font-size: 3vw;
+}
+
+.drive-summary {
+  font-size: 3vw;
+}
+
+.drive-overview {
+  grid-row: span 2;
+  display: grid;
+  grid-template-rows: 50% 50%;
+}
+
+.drive-score {
+  grid-row: span 2;
+  display: grid;
+  grid-template-columns: 50% 50%;
+  grid-template-rows: 50% 50%;
+}
+
+.drive-score .team-name {
+  color: var(--text-muted);
+  font-size: 3vw;
+}
+
+.drive-score .score-value {
+  font-weight: bold;
+  color: var(--text-light);
+  font-size: 3vw;
+  display: flex;
+  justify-content: center;
+}
+
+.play-row {
+  border-top: 1px solid var(--gray-light);
+  padding: 2vw 4vw;
+}
+
+.play-situation {
+  font-weight: bold;
+  color: var(--text-light);
+}
+
+.play-desc {
+  color: var(--text-muted);
+  margin-top: 0.5vw;
+}
