@@ -141,62 +141,83 @@ function getTeams() {
     });
 }
 
+function normalizePlayerHeader(header) {
+  return String(header || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 function getPlayerTraits() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Players");
   if (!sheet) {
     throw new Error("Sheet 'Players' not found.");
   }
 
-  // Pull columns A through AM (0 - 38) to include BallSecurity, DefPos, the Player Image from AI, transform values, and jersey image.
-  const numCols = 39;
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
-  Logger.log(data);
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+
+  const headerIndex = {};
+  data[0].forEach((header, index) => {
+    const key = normalizePlayerHeader(header);
+    if (key) headerIndex[key] = index;
+  });
+
+  const valueFor = (row, ...headers) => {
+    for (const header of headers) {
+      const index = headerIndex[normalizePlayerHeader(header)];
+      if (index !== undefined) return row[index];
+    }
+    return '';
+  };
+
   const result = data
-    .filter(row => row[0] != null && row[0] !== '') // Ensure 'team' field exists
-    .map(row => ({
-      team: row[0],
-      name: row[1],
-      position: row[2],
-      offStars: row[3],
-      defStars: row[4],
-      size: row[5],
-      strength: row[6],
-      speed: row[7],
-      stamina: row[8],
-      poise: row[9],
-      accuracy: row[10],
-      armStrength: row[11],
-      readDefense: row[12],
-      juke: row[13],
-      vision: row[14],
-      acceleration: row[15],
-      routeRunning: row[16],
-      jump: row[17],
-      hands: row[18],
-      ballsecurity: row[19],
-      qbFavorite: row[20],
-      runBlocking: row[21],
-      passProtect: row[22],
-      runStop: row[23],
-      tackling: row[24],
-      runDef: row[25],
-      tackleChance: row[26],
-      strip: row[27],
-      passRush: row[28],
-      sackChance: row[29],
-      ballHawk: row[30],
-      readQB: row[31],
-      coverage: row[32],
-      defPos: row[33],
-      image: row[34],
-      translateX: row[35],
-      translateY: row[36],
-      scale: row[37],
-      jersey: row[38],
-      // Local tracking only
-      carries: 0,
-      fatigue: row[8]
-    }));
+    .slice(1)
+    .filter(row => valueFor(row, 'Team') != null && valueFor(row, 'Team') !== '') // Ensure 'team' field exists
+    .map(row => {
+      const stamina = valueFor(row, 'Stamina');
+      return {
+        team: valueFor(row, 'Team'),
+        name: valueFor(row, 'Name'),
+        position: valueFor(row, 'Pos'),
+        offStars: valueFor(row, 'Off Stars'),
+        defStars: valueFor(row, 'Def Stars'),
+        size: valueFor(row, 'Size'),
+        strength: valueFor(row, 'Strength'),
+        speed: valueFor(row, 'Speed'),
+        stamina,
+        poise: valueFor(row, 'Poise'),
+        accuracy: valueFor(row, 'Accuracy'),
+        armStrength: valueFor(row, 'Arm-Strength', 'Arm Strength'),
+        readDefense: valueFor(row, 'Read Defense'),
+        juke: valueFor(row, 'Juke'),
+        vision: valueFor(row, 'Vision'),
+        acceleration: valueFor(row, 'Acceleration'),
+        routeRunning: valueFor(row, 'Route Running'),
+        jump: valueFor(row, 'Jump'),
+        hands: valueFor(row, 'Hands'),
+        ballsecurity: valueFor(row, 'Ball Security'),
+        qbFavorite: valueFor(row, 'QB Favorite'),
+        runBlocking: valueFor(row, 'Run Blocking'),
+        passProtect: valueFor(row, 'Pass Protect'),
+        runStop: valueFor(row, 'RunStop', 'Run Stop'),
+        tackling: valueFor(row, 'Tackling'),
+        runDef: valueFor(row, 'Run Def'),
+        tackleChance: valueFor(row, 'Tackle Chance'),
+        strip: valueFor(row, 'Strip'),
+        passRush: valueFor(row, 'PassRush', 'Pass Rush'),
+        sackChance: valueFor(row, 'Sack Chance'),
+        ballHawk: valueFor(row, 'Ball Hawk'),
+        readQB: valueFor(row, 'Read QB'),
+        coverage: valueFor(row, 'Coverage'),
+        defPos: valueFor(row, 'DefPos', 'Def Pos'),
+        image: valueFor(row, 'Image', 'Player Image from AI'),
+        translateX: valueFor(row, 'translateX'),
+        translateY: valueFor(row, 'translateY'),
+        scale: valueFor(row, 'scale'),
+        jersey: valueFor(row, 'jersey', 'Jersey', 'Jersey Image'),
+        // Local tracking only
+        carries: 0,
+        fatigue: stamina
+      };
+    });
   Logger.log(result);
 
   return result;
