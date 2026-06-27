@@ -4,12 +4,13 @@ import { Stars } from "./Stars";
 type PlayerListProps = {
   players: Player[];
   onSelectPlayer: (player: Player) => void;
+  onBack?: () => void;
 };
 
-export function PlayerList({ players, onSelectPlayer }: PlayerListProps) {
+export function PlayerList({ players, onSelectPlayer, onBack }: PlayerListProps) {
   return (
     <div id="playerListView">
-      <button id="playerListBack" className="back-button" type="button">← Back</button>
+      <button id="playerListBack" className="back-button" type="button" onClick={onBack}>← Back</button>
       <table id="playerTable" className="player-table">
         <thead>
           <tr>

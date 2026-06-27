@@ -4,7 +4,11 @@ import { PlayerCard } from "./PlayerCard";
 import { PlayerList } from "./PlayerList";
 import type { Player } from "./types";
 
-export function PlayersScreen() {
+type PlayersScreenProps = {
+  onBack?: () => void;
+};
+
+export function PlayersScreen({ onBack }: PlayersScreenProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +37,7 @@ export function PlayersScreen() {
     <>
       {isLoading && <p className="players-message">Loading players...</p>}
       {error && <p className="players-message players-message--error">{error}</p>}
-      {!isLoading && !error && <PlayerList players={players} onSelectPlayer={setSelectedPlayer} />}
+      {!isLoading && !error && <PlayerList players={players} onSelectPlayer={setSelectedPlayer} onBack={onBack} />}
     </>
   );
 }
