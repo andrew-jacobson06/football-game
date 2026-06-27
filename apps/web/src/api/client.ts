@@ -27,3 +27,19 @@ export async function getPlayers(): Promise<{ players: Player[] }> {
 
   return response.json();
 }
+
+export async function getTeams(): Promise<{
+  teams: Record<string, unknown>[];
+}> {
+  const response = await fetch(`${API_BASE_URL}/teams`);
+  if (!response.ok) throw new Error("Failed to load teams from backend API");
+  return response.json();
+}
+
+export async function getGames(): Promise<{
+  games: Record<string, unknown>[];
+}> {
+  const response = await fetch(`${API_BASE_URL}/games`);
+  if (!response.ok) throw new Error("Failed to load games from backend API");
+  return response.json();
+}

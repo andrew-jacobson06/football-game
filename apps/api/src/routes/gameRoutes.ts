@@ -7,7 +7,7 @@ gameRoutes.get("/health", (_req, res) => {
   res.json({
     ok: true,
     app: "football-game-api",
-    message: "API is running"
+    message: "API is running",
   });
 });
 
@@ -24,6 +24,15 @@ gameRoutes.get("/teams", async (_req, res, next) => {
   try {
     const teams = await readSheetObjects("Teams!A1:Z");
     res.json({ teams });
+  } catch (error) {
+    next(error);
+  }
+});
+
+gameRoutes.get("/games", async (_req, res, next) => {
+  try {
+    const games = await readSheetObjects("Games!A1:Z");
+    res.json({ games });
   } catch (error) {
     next(error);
   }
@@ -50,7 +59,7 @@ gameRoutes.post("/plays", async (req, res, next) => {
       yard_line,
       play_call,
       result,
-      yards_gained
+      yards_gained,
     } = req.body;
 
     const playId = crypto.randomUUID();
@@ -67,7 +76,7 @@ gameRoutes.post("/plays", async (req, res, next) => {
       play_call,
       result,
       yards_gained,
-      new Date().toISOString()
+      new Date().toISOString(),
     ];
 
     await appendSheetRow("Plays!A:L", row);
@@ -80,8 +89,8 @@ gameRoutes.post("/plays", async (req, res, next) => {
         play_number,
         play_call,
         result,
-        yards_gained
-      }
+        yards_gained,
+      },
     });
   } catch (error) {
     next(error);
