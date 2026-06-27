@@ -6,9 +6,15 @@ export function parseInteger(value: unknown, fallback = 0): number {
 }
 
 export function parseTimeToSeconds(time: string | number): number {
-  if (typeof time === "number") return time;
-  const [minutes = "0", seconds = "0"] = String(time || "0:00").split(":");
-  return parseInteger(minutes) * 60 + parseInteger(seconds);
+  if (typeof time === "number") return Math.max(0, Math.floor(time));
+  const value = String(time ?? "").trim();
+  if (!value) return 0;
+  if (!value.includes(":")) {
+    const seconds = Number(value);
+    return Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;
+  }
+  const [minutes = "0", seconds = "0"] = value.split(":");
+  return Math.max(0, parseInteger(minutes) * 60 + parseInteger(seconds));
 }
 
 export function formatClock(secondsOrTime: string | number): string {
