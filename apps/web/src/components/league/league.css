@@ -1106,3 +1106,37 @@
   .stats-row { grid-template-columns: 1fr; }
   .boxscore-card, .team-stats-card { margin-inline: 0; }
 }
+
+.play-caller {
+  margin: 3vw 0;
+  border: 1px solid #ffffff22;
+  border-radius: 14px;
+  padding: clamp(12px, 2.5vw, 24px);
+  background: linear-gradient(180deg, var(--gray-medium), var(--gray-dark));
+}
+.control-panel-toggle { width: 100%; padding: 12px; border: 0; border-radius: 10px; background: var(--accent-red); color: white; font-weight: 700; cursor: pointer; }
+.play-caller.collapsed { padding: 1vw; }
+.game-controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+.game-controls button, .game-modal-panel button, .clock-options button { border: 0; border-radius: 10px; padding: 10px 14px; background: var(--gray-light); color: var(--text-light); cursor: pointer; }
+.game-controls.primary button { background: var(--accent-red); font-weight: 700; }
+.game-controls button:disabled { opacity: .45; cursor: not-allowed; }
+.play-call-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; color: var(--text-muted); }
+.game-modal { position: fixed; inset: 0; background: rgba(0,0,0,.78); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.game-modal-panel { position: relative; width: min(960px, 96vw); max-height: 92vh; overflow: auto; padding: clamp(18px, 4vw, 34px); border-radius: 16px; background: var(--gray-medium); box-shadow: 0 20px 60px #000a; }
+.formation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.formation-picker { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid #ffffff22; border-radius: 12px; background: var(--gray-dark); }
+.formation-picker.required span::after { content: " *"; color: var(--accent-red); }
+.formation-picker select, .route-row select { min-height: 38px; border-radius: 8px; border: 1px solid #ffffff33; background: #111; color: white; }
+.los-preview { position: relative; display: grid; grid-template-columns: repeat(8, minmax(70px, 1fr)); gap: 10px; padding: 28px 12px; background: #1f7a3a; border-radius: 14px; }
+.los-defense, .los-backfield { grid-column: 1 / -1; text-align: center; font-weight: 700; }
+.los-line-react { grid-column: 1 / -1; height: 4px; background: #61a5ff; }
+.los-token { min-height: 78px; padding: 8px; border-radius: 999px; background: #ffffffee; color: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 12px; }
+.los-backfield { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+.route-list { display: grid; gap: 10px; }
+.route-row { display: grid; grid-template-columns: 1fr 150px 120px; gap: 10px; align-items: center; padding: 10px; background: var(--gray-dark); border-radius: 10px; }
+.rusher-options { display: flex; flex-wrap: wrap; gap: 12px; margin: 18px 0; }
+.rusher-option { display: flex; flex-direction: column; gap: 6px; align-items: center; min-width: 100px; }
+.rusher-option.selected { outline: 3px solid var(--accent-red); }
+.clock-options { display: grid; gap: 12px; }
+.clock-options .active { background: var(--accent-red); }
+@media (max-width: 700px) { .route-row { grid-template-columns: 1fr; } .los-preview { grid-template-columns: repeat(2, 1fr); } }
