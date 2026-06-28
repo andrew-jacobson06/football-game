@@ -45,7 +45,7 @@ export function simulateSingleCarry(stats: CarryStats) {
   //  for 80: add 1.5 to roll 
   //  for 90: add 2.25 to roll
   //  for 100: add 3 to roll
-  let visionMod = (trait(stats.runner, "vision") + Math.min(0, trait(stats.runner, "fatigue")) - 60) * 0.75;
+  const visionMod = (trait(stats.runner, "vision") + Math.min(0, trait(stats.runner, "fatigue")) - 60) * 0.75;
   roll += visionMod
   //HARDCODED 88 ALERT!
   if (roll < 88){
@@ -90,7 +90,7 @@ export function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (safeMax - safeMin + 1)) + safeMin;
 }
 
-function applyTraitEffect(traitName: string, traitValue: number, condition: Boolean, modLog: string[]) {
+function applyTraitEffect(traitName: string, traitValue: number, condition: boolean, modLog: string[]) {
   if (!condition) return 0;
   const deviation = traitValue - 60;
   const triggerChance = Math.abs(deviation) / 100;
