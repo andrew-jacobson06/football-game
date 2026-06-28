@@ -1,0 +1,198 @@
+/* Field-only styles for GameField.tsx */
+
+.field-wrapper {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto 5vw;
+  overflow-x: auto;
+  overflow-y: hidden;
+  perspective: 1000px;
+  position: relative;
+}
+
+#field3D,
+.field3D {
+  position: relative;
+  width: min(85vw, 1200px);
+  height: calc(min(85vw, 1200px) * 0.3);
+  transform: rotateX(45deg);
+  margin: 0 auto;
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0.2) 0 50%,
+      rgba(0, 0, 0, 0) 50% 100%
+    ),
+    url("https://t4.ftcdn.net/jpg/04/24/03/09/360_F_424030921_ToDvrWZoPlJCYmmLdFvHxPyuU77WgITz.jpg");
+  background-size: calc(100% / 6) 100%, cover;
+  background-repeat: repeat-x, no-repeat;
+  background-position: left top, center;
+  border: 3px solid #333;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  transform-style: preserve-3d;
+  overflow: hidden;
+  z-index: 3;
+}
+
+.yardline {
+  position: absolute;
+  bottom: 0;
+  width: 2px;
+  height: 100%;
+  background-color: white;
+  text-align: center;
+  font-size: clamp(10px, 3.5vw, 50px);
+  color: white;
+  padding-top: 4px;
+}
+
+.label {
+  position: absolute;
+  font-size: x-large;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.label.top {
+  top: 3px;
+}
+
+.label.bottom {
+  bottom: 3px;
+}
+
+.label.left {
+  transform: translateX(-110%);
+  text-align: right;
+}
+
+.label.right {
+  transform: translateX(10%);
+  text-align: left;
+}
+
+.line-of-scrimmage {
+  background-color: #1f7cff;
+  width: 3px;
+  z-index: 2;
+  box-shadow: 0 0 8px rgba(31, 124, 255, 0.9);
+}
+
+.first-down-line {
+  background-color: yellow;
+  width: 3px;
+  z-index: 1;
+}
+
+#fgPostLeft {
+  position: absolute;
+  left: 5%;
+  top: 5%;
+  transform: scaleX(-1);
+  height: 12vw;
+  z-index: 5;
+  pointer-events: none;
+}
+
+#fgPost {
+  position: absolute;
+  right: 5%;
+  top: 5%;
+  height: 12vw;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.driveWrapper {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(85vw, 1200px);
+  height: calc(min(85vw, 1200px) * 0.3);
+  z-index: 10;
+  pointer-events: none;
+}
+
+#catchPoint {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.drive-line,
+.play-line {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 0.5vw;
+}
+
+.drive-line {
+  background-color: white;
+  border-radius: 0;
+}
+
+.drive-line::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  background-color: white;
+  border-radius: 50%;
+}
+
+.play-line {
+  background-color: #333;
+  border-radius: 0;
+  animation: grow-line 2s forwards;
+}
+
+.play-line::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -10px;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  background-color: #333;
+  border-radius: 50%;
+}
+
+.play-line::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -10px;
+  transform: translateY(-50%);
+  border-top: clamp(6px, 3vw, 9px) solid transparent;
+  border-bottom: clamp(6px, 3vw, 9px) solid transparent;
+  border-left: clamp(12px, 3vw, 18px) solid #333;
+}
+
+.arc-container {
+  position: absolute;
+  height: calc(min(85vw, 1200px) * 0.3);
+}
+
+@keyframes grow-line {
+  from {
+    transform: translateY(-50%) scaleX(0);
+    transform-origin: left center;
+  }
+
+  to {
+    transform: translateY(-50%) scaleX(1);
+    transform-origin: left center;
+  }
+}
+
+@media (min-width: 1024px) {
+  .yardline {
+    font-size: 24px;
+    padding-top: 6px;
+  }
+}
