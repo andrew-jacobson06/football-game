@@ -3,9 +3,20 @@ import type { LeagueGame } from "./types";
 type Play = Record<string, unknown>;
 
 const num = (v: unknown) => Number(v) || 0;
+const str = (v: unknown) => String(v ?? "");
+
+function playField(play: Play | undefined, ...keys: string[]) {
+  if (!play) return undefined;
+  const key = keys.find((candidate) => play[candidate] !== undefined);
+  return key ? play[key] : undefined;
+}
+
+function clampYard(yard: number) {
+  return Math.max(0, Math.min(100, yard));
+}
 
 function getFieldPercent(yardLine: unknown) {
-  const yard = Math.max(0, Math.min(100, num(yardLine)));
+  const yard = clampYard(num(yardLine));
 
   // Your old static field uses 0-100 as left-to-right field position.
   // 0 = left goal line, 100 = right goal line.
@@ -22,6 +33,39 @@ function getDriveLeftPercent(start: unknown, current: unknown) {
   const startYard = num(start);
   const currentYard = num(current);
   return `${Math.min(startYard, currentYard)}%`;
+}
+
+function getRunAnimation(lastPlay: Play | undefined, fallbackBallOn: number) {
+  const playType = str(playField(lastPlay, "playtype", "PlayType"));
+  if (!lastPlay || (playType !== "Run" && playType !== "Kneel")) return null;
+
+  const start = clampYard(num(playField(lastPlay, "ballon", "BallOn", "Previous", "previous") ?? fallbackBallOn));
+  const possession = str(playField(lastPlay, "possession", "Possession"));
+  const result = str(playField(lastPlay, "result", "Result", "description", "Description"));
+  const rawEnd = num(playField(lastPlay, "newballon", "NewBallOn", "newBallOn") ?? fallbackBallOn);
+
+  const end = clampYard(
+    result === "Touchdown"
+      ? possession === "Home"
+        ? 100
+        : 0
+      : result === "Safety"
+        ? possession === "Home"
+          ? 0
+          : 100
+        : rawEnd
+  );
+
+  const left = Math.min(start, end);
+  const width = Math.abs(end - start);
+  const movesRight = end >= start;
+
+  return {
+    key: str(playField(lastPlay, "playid", "PlayId")) || `${start}-${end}-${playType}`,
+    left,
+    width,
+    directionClass: movesRight ? "play-line--right" : "play-line--left",
+  };
 }
 
 export function GameField({
@@ -41,18 +85,7 @@ export function GameField({
       ? Math.min(100, ballOn + distance)
       : Math.max(0, ballOn - distance);
 
-  const previousBallOn = lastPlay
-    ? num(
-        lastPlay.BallOn ??
-          lastPlay.ballon ??
-          lastPlay.PreviousBallOn ??
-          lastPlay.previousBallOn ??
-          ballOn
-      )
-    : ballOn;
-
-  const playLeft = Math.min(previousBallOn, ballOn);
-  const playWidth = Math.abs(ballOn - previousBallOn);
+  const runAnimation = getRunAnimation(lastPlay, ballOn);
 
   const yardMarkers = [
     { left: 8.3333, label: null },
@@ -138,14 +171,17 @@ export function GameField({
           }}
         />
 
-        <div
-          className="play-line"
-          id="play"
-          style={{
-            left: `${playLeft}%`,
-            width: `${playWidth}%`,
-          }}
-        />
+        {runAnimation && (
+          <div
+            key={runAnimation.key}
+            className={`play-line ${runAnimation.directionClass}`}
+            id="play"
+            style={{
+              left: `${runAnimation.left}%`,
+              width: `${runAnimation.width}%`,
+            }}
+          />
+        )}
 
         <div id="arc-container" className="arc-container" />
       </div>
