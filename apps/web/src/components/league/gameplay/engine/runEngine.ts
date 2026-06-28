@@ -1,5 +1,5 @@
 import type { LeagueGame } from "../../types";
-import type { EngineContext, PlayCallOptions } from "./types";
+import type { EngineContext, FrontendSettings, PlayCallOptions, RunBreakawaySetting, RunThreshold } from "./types";
 import { advanceBall, advanceQuarter, byName, byPosition, choose, clockRunoff, defenseTeam, isSafety, isTouchdown, n, nextDownDistance, offenseTeam, playerName, switchPoss, teamPlayers, trait, weightedChoose } from "./utils";
 import { buildResult } from "./playLogger";
 
@@ -18,7 +18,14 @@ export function checkForFumble(ctx: EngineContext, runnerName: string, tacklerNa
   const defStars = trait(defender, "defStars", 50), offStars = trait(runner, "offStars", 50);
   return { fumble: true, recoveredBy: Math.random() * (defStars + offStars) < offStars ? runnerName : tacklerName };
 }
-export function simulateSingleCarry(stats: { name: string; runner?: Record<string, unknown>; offStar?: boolean; defStar?: boolean; autoStuff?: boolean; autoRelease?: boolean }) {
+type CarryStats = { name: string; runner?: Record<string, unknown>; offStar?: boolean; defStar?: boolean; autoStuff?: boolean; autoRelease?: boolean; settings?: FrontendSettings };
+
+function settingArray<T>(settings: FrontendSettings | undefined, key: keyof FrontendSettings): T[] {
+  const value = settings?.[key];
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+export function simulateSingleCarry(stats: CarryStats) {
   const modLog: string[] = [];
   //if auto stuff, -3 > 2 yards is the range +1 yard for straight up check against each vision and strength
   if (stats.autoStuff) {
@@ -98,7 +105,7 @@ function applyTraitEffect(traitName: string, traitValue: number, condition: Bool
 }
 
 //Strength check, size check - size + strength/2.2 chance of avoiding loss and turning into 1-2 yard gain
-export function maybeAvoidLoss(yards: number, stats: { name: string; runner?: Record<string, unknown>; offStar?: boolean; defStar?: boolean; autoStuff?: boolean; autoRelease?: boolean }, modLog: string[]) {
+export function maybeAvoidLoss(yards: number, stats: CarryStats, modLog: string[]) {
   if (yards < 0) {
     const power = trait(stats.runner, "size") + trait(stats.runner, "strength") + Math.min(0, trait(stats.runner, "fatigue"));
     const chanceToAvoid = power / 2.2; //CHANGE - no hard code
@@ -116,7 +123,7 @@ export function maybeAvoidLoss(yards: number, stats: { name: string; runner?: Re
 //  for 80: add 2 yard
 //  for 90: add 3 yard
 //  for 100: add 4 yard
-export function adjustChunkRunForSpeed(yards: number, stats: { name: string; runner?: Record<string, unknown>; offStar?: boolean; defStar?: boolean; autoStuff?: boolean; autoRelease?: boolean }, modLog: string[], yac: boolean) {
+export function adjustChunkRunForSpeed(yards: number, stats: CarryStats, modLog: string[], yac: boolean) {
     if (yac && yards >= 5){
       const bonus = Math.floor((trait(stats.runner, "speed") + Math.min(0, trait(stats.runner, "fatigue")) - 60) / 5); //CHANGE no hard code
       if (bonus !== 0) modLog.push(`Yard ${bonus > 0 ? "+" : ""}${bonus} Speed`);
@@ -130,10 +137,11 @@ export function adjustChunkRunForSpeed(yards: number, stats: { name: string; run
     return yards;
   }
 
-export function getYardageOutcome(roll: number, stats: { name: string; runner?: Record<string, unknown>; offStar?: boolean; defStar?: boolean; autoStuff?: boolean; autoRelease?: boolean }, modLog: string[]) {
+export function getYardageOutcome(roll: number, stats: CarryStats, modLog: string[]) {
   if (roll >= 100){
     return getStrictBreakawayYards(stats, modLog);
   }
+  const rollThresholds = settingArray<RunThreshold>(stats.settings, "thresholds");
   for (const r of rollThresholds) {
     if (roll >= r.rollMin && roll < r.rollMax) {
       if (r.label === "RunType_Breakaway") {
@@ -146,13 +154,14 @@ export function getYardageOutcome(roll: number, stats: { name: string; runner?: 
 }
 
 //Speed Check -
-export function getStrictBreakawayYards(stats: { name: string; runner?: Record<string, unknown>; offStar?: boolean; defStar?: boolean; autoStuff?: boolean; autoRelease?: boolean }, modLog: string[]) {
+export function getStrictBreakawayYards(stats: CarryStats, modLog: string[]) {
   const baseRoll = Math.floor(Math.random() * 100);
   const speedBoost = Math.floor((trait(stats.runner, "speed") + Math.min(0, trait(stats.runner, "fatigue")) - 60) * 0.3);
   const adjustedRoll = Math.min(100, baseRoll + Math.max(0, speedBoost));
   if (speedBoost !== 0) modLog.push(`Pre +${speedBoost} Speed`);
 
   let cumulative = 0;
+  const breakawaySettings = settingArray<RunBreakawaySetting>(stats.settings, "breakaways");
   for (const range of breakawaySettings) {
     if (adjustedRoll >= 100){
       return randomInt(81, 100);
@@ -247,7 +256,7 @@ export function rollDefStarPower(ctx: EngineContext, defense: string) {
 //NEEDS TRansition TO THIS CLASS
 export function runBlockVsRunDef(
   ctx: EngineContext,
-  offense: string,
+  _offense: string,
   defense: string,
   formation: Record<string, string | undefined>,
   ballCarrierName: string
@@ -395,7 +404,8 @@ export function runPlay(game: LeagueGame, ctx: EngineContext, options: PlayCallO
     offStar: offStarPower, 
     defStar: defStarPower, 
     autoStuff: autoStuffVal, 
-    autoRelease: autoReleaseVal 
+    autoRelease: autoReleaseVal,
+    settings: ctx.settings
   });
 
   const newBall = advanceBall(game, carry.yards);

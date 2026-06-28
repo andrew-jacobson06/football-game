@@ -11,9 +11,26 @@ export type PlayCallOptions = {
   clockMode?: ClockMode;
 };
 export type PlayerTrait = Record<string, unknown>;
+export type RunThreshold = { label: string; minYards: number; maxYards: number; rollMin: number; rollMax: number };
+export type RunBreakawaySetting = { label: string; percentage: number; minYards: number; maxYards: number };
+export type FrontendSettings = Record<string, unknown> & {
+  thresholds?: RunThreshold[];
+  breakaways?: RunBreakawaySetting[];
+  staminaDrains?: Record<string, number>;
+  drainSettings?: Record<string, number>;
+  tackleTable?: unknown[];
+  tackleSettings?: unknown[];
+  completionTable?: unknown[];
+  routeTypeAirYards?: unknown[];
+  timeNeededToThrow?: unknown[];
+  timeNeededToOpen?: unknown[];
+  completionSeparationAdjustment?: unknown[];
+  yacBySeparation?: Record<string, unknown>;
+  sackLossTable?: unknown[];
+};
 export type EngineContext = {
   players: PlayerTrait[];
-  settings: Record<string, unknown>;
+  settings: FrontendSettings;
   historyLength: number;
 };
 export type PlayResult = {

@@ -7,13 +7,32 @@ import { GameField } from "./GameField";
 import { GameControls } from "./GameControls";
 import { GameLog } from "./GameLog";
 import { goForTwo, handleTimeout, kickFG, kneel, passPlay, punt, runPlay, spikeBall } from "./gameplay/gameEngine";
-import type { PlayCallOptions } from "./gameplay/gameEngine";
+import type { FrontendSettings, PlayCallOptions } from "./gameplay/gameEngine";
 
 type Play = Record<string, unknown>;
 type Stat = { playername: string; team: string; attempts?: number; completions?: number; yards: number; tds?: number; ints?: number; carries?: number; receptions?: number; targets?: number; sacks?: number; sackYds?: number; tackles?: number; tfl?: number; ff?: number; fr?: number; deflections?: number; fumbles?: number; long?: number };
 const str = (v: unknown) => String(v ?? "");
 const num = (v: unknown) => Number(v) || 0;
 const playField = (p: Play, ...keys: string[]) => keys.map((k) => p[k]).find((v) => v !== undefined && v !== null && v !== "");
+
+
+function normalizeFrontendSettings(settings: Record<string, unknown>): FrontendSettings {
+  const normalized = settings as FrontendSettings;
+  normalized.drainSettings = normalized.drainSettings ?? normalized.staminaDrains;
+  normalized.tackleSettings = normalized.tackleSettings ?? normalized.tackleTable;
+  normalized.timeNeededToOpen = normalized.timeNeededToOpen ?? normalized.timeNeededToThrow;
+  normalized.thresholds = Array.isArray(normalized.thresholds) ? normalized.thresholds : [];
+  normalized.breakaways = Array.isArray(normalized.breakaways) ? normalized.breakaways : [];
+  normalized.staminaDrains = normalized.staminaDrains ?? {};
+  normalized.tackleTable = Array.isArray(normalized.tackleTable) ? normalized.tackleTable : [];
+  normalized.completionTable = Array.isArray(normalized.completionTable) ? normalized.completionTable : [];
+  normalized.routeTypeAirYards = Array.isArray(normalized.routeTypeAirYards) ? normalized.routeTypeAirYards : [];
+  normalized.timeNeededToThrow = Array.isArray(normalized.timeNeededToThrow) ? normalized.timeNeededToThrow : [];
+  normalized.completionSeparationAdjustment = Array.isArray(normalized.completionSeparationAdjustment) ? normalized.completionSeparationAdjustment : [];
+  normalized.yacBySeparation = normalized.yacBySeparation ?? {};
+  normalized.sackLossTable = Array.isArray(normalized.sackLossTable) ? normalized.sackLossTable : [];
+  return normalized;
+}
 
 function normalizeGame(game: LeagueGame, state: Record<string, unknown> | null): LeagueGame {
   if (!state) return game;
@@ -180,8 +199,8 @@ function LeaderCard({ game, history, players, setTab }: { game: LeagueGame; hist
 }
 function ScoreChart({ game, history }: { game: LeagueGame; history: Play[] }) { const { home, away } = scoreByQuarter(history, game); return <div className="score-chart"><table><thead><tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th><th>T</th></tr></thead><tbody><tr><td className="team-cell"><img src={game.HomeLogo} className="team-logo-small" alt="" /><span>{game.Home}</span></td>{home.map((s, i) => <td key={i}>{s}</td>)}<td className="total-cell">{game.HomeScore}</td></tr><tr><td className="team-cell"><img src={game.AwayLogo} className="team-logo-small" alt="" /><span>{game.Away}</span></td>{away.map((s, i) => <td key={i}>{s}</td>)}<td className="total-cell">{game.AwayScore}</td></tr></tbody></table></div>; }
 export function GameCenter({ game, onBack }: { game: LeagueGame; onBack: () => void }) {
-  const [tab, setTab] = useState<GameTab>("gamecast"); const [currentGame, setCurrentGame] = useState(game); const [history, setHistory] = useState<Play[]>([]); const [players, setPlayers] = useState<Play[]>([]); const [settings, setSettings] = useState<Record<string, unknown>>({}); const [playOptions, setPlayOptions] = useState<PlayCallOptions>({ clockMode: "Normal", formation: {}, routes: {}, reads: {} }); const [log, setLog] = useState(["Loading game state, play history, players, and frontend settings..."]); const ctx = useMemo(() => ({ players, settings, historyLength: history.length }), [players, settings, history.length]);
-  useEffect(() => { let active = true; Promise.all([getGameState(game.GameId), getPlayHistory(game.GameId), getPlayerTraits(), getFrontendSettings()]).then(([stateRes, historyRes, playerRes, settingsRes]) => { if (!active) return; setCurrentGame(normalizeGame(game, stateRes.gameState)); setHistory(historyRes.plays); setPlayers(playerRes.players); setSettings(settingsRes); setLog(historyRes.plays.length ? historyRes.plays.slice(-20).reverse().map((play) => playText(play)) : ["Game loaded. No prior play history found."]); }).catch((error: unknown) => setLog((l) => [`Failed to load live game data: ${error instanceof Error ? error.message : String(error)}`, ...l])); return () => { active = false; }; }, [game]);
+  const [tab, setTab] = useState<GameTab>("gamecast"); const [currentGame, setCurrentGame] = useState(game); const [history, setHistory] = useState<Play[]>([]); const [players, setPlayers] = useState<Play[]>([]); const [settings, setSettings] = useState<FrontendSettings>(normalizeFrontendSettings({})); const [playOptions, setPlayOptions] = useState<PlayCallOptions>({ clockMode: "Normal", formation: {}, routes: {}, reads: {} }); const [log, setLog] = useState(["Loading game state, play history, players, and frontend settings..."]); const ctx = useMemo(() => ({ players, settings, historyLength: history.length }), [players, settings, history.length]);
+  useEffect(() => { let active = true; Promise.all([getGameState(game.GameId), getPlayHistory(game.GameId), getPlayerTraits(), getFrontendSettings()]).then(([stateRes, historyRes, playerRes, settingsRes]) => { if (!active) return; setCurrentGame(normalizeGame(game, stateRes.gameState)); setHistory(historyRes.plays); setPlayers(playerRes.players); setSettings(normalizeFrontendSettings(settingsRes)); setLog(historyRes.plays.length ? historyRes.plays.slice(-20).reverse().map((play) => playText(play)) : ["Game loaded. No prior play history found."]); }).catch((error: unknown) => setLog((l) => [`Failed to load live game data: ${error instanceof Error ? error.message : String(error)}`, ...l])); return () => { active = false; }; }, [game]);
   const persist = async (result: ReturnType<typeof runPlay>) => { setCurrentGame(result.game); setHistory((h) => [...h, result.play]); setLog((l) => [result.text, ...l]); const gamePayload = { gameId: result.game.GameId, quarter: result.game.Qtr, time: result.game.Time, down: result.game.Down, distance: result.game.Distance, ballOn: result.game.BallOn, homeScore: result.game.HomeScore, awayScore: result.game.AwayScore, driveStart: (result.game as unknown as Record<string, unknown>).DriveStart, previous: currentGame.BallOn, possession: result.game.Possession, homeTimeouts: (result.game as unknown as Record<string, unknown>).HomeTimeouts, awayTimeouts: (result.game as unknown as Record<string, unknown>).AwayTimeouts }; try { await savePlayAndGame(result.game.GameId, { play: result.play, game: gamePayload }); } catch (error) { setLog((l) => [`Save failed: ${error instanceof Error ? error.message : String(error)}`, ...l]); } };
   const action = (label: string, options: PlayCallOptions = playOptions) => { if (label === "Run Play") void persist(runPlay(currentGame, ctx, options)); else if (label === "Pass Play") void persist(passPlay(currentGame, ctx, options)); else if (label === "Field Goal") void persist(kickFG(currentGame, ctx)); else if (label === "Punt") void persist(punt(currentGame, ctx)); else if (label === "Two Point") void persist(goForTwo(currentGame, ctx)); else if (label === "Timeout") void persist(handleTimeout(currentGame, ctx)); else if (label === "Spike") void persist(spikeBall(currentGame, ctx)); else if (label === "Kneel") void persist(kneel(currentGame, ctx, options)); };
   const drivePlays = history.filter((p) => str(playField(p, "Possession", "possession")) === currentGame.Possession).length; const driveYards = currentGame.Possession === "Home" ? num(currentGame.BallOn) - num((currentGame as unknown as Play).DriveStart) : num((currentGame as unknown as Play).DriveStart) - num(currentGame.BallOn); const lastPlay = history.length ? playText(history[history.length - 1]) : "";
