@@ -147,14 +147,21 @@
 .play-line {
   background-color: #333;
   border-radius: 0;
-  animation: grow-line 2s forwards;
+  animation: grow-line 1.4s ease forwards;
+}
+
+.play-line--right {
+  transform-origin: left center;
+}
+
+.play-line--left {
+  transform-origin: right center;
 }
 
 .play-line::before {
   content: "";
   position: absolute;
   top: 50%;
-  left: -10px;
   transform: translateY(-50%);
   width: 12px;
   height: 12px;
@@ -162,15 +169,31 @@
   border-radius: 50%;
 }
 
+.play-line--right::before {
+  left: -10px;
+}
+
+.play-line--left::before {
+  right: -10px;
+}
+
 .play-line::after {
   content: "";
   position: absolute;
   top: 50%;
-  right: -10px;
   transform: translateY(-50%);
   border-top: clamp(6px, 3vw, 9px) solid transparent;
   border-bottom: clamp(6px, 3vw, 9px) solid transparent;
+}
+
+.play-line--right::after {
+  right: -10px;
   border-left: clamp(12px, 3vw, 18px) solid #333;
+}
+
+.play-line--left::after {
+  left: -10px;
+  border-right: clamp(12px, 3vw, 18px) solid #333;
 }
 
 .arc-container {
@@ -181,12 +204,10 @@
 @keyframes grow-line {
   from {
     transform: translateY(-50%) scaleX(0);
-    transform-origin: left center;
   }
 
   to {
     transform: translateY(-50%) scaleX(1);
-    transform-origin: left center;
   }
 }
 
