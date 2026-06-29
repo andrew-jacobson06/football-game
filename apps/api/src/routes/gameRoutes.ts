@@ -47,11 +47,33 @@ function settingRows(rows: Row[], prefix: string) { return rows.filter((r) => ty
 async function getFrontendSettingsFromSheet() {
   const { rows } = await sheetRows("Settings");
   let cumulative = 0;
+
   const thresholds = rows.flatMap((r) => {
-    const [label, pct, minYards, maxYards] = r;
-    if (typeof label !== "string" || !label.startsWith("RunType_") || typeof pct !== "number" || pct <= 0) return [];
-    const out = { label, minYards, maxYards, rollMin: cumulative, rollMax: cumulative + pct };
-    cumulative += pct; return [out];
+    const [label, pctRaw, minYardsRaw, maxYardsRaw] = r;
+
+    const pct = Number(pctRaw);
+    const minYards = Number(minYardsRaw);
+    const maxYards = Number(maxYardsRaw);
+
+    if (
+      typeof label !== "string" ||
+      !label.startsWith("RunType_") ||
+      !Number.isFinite(pct) ||
+      pct <= 0
+    ) {
+      return [];
+    }
+
+    const out = {
+      label,
+      minYards,
+      maxYards,
+      rollMin: cumulative,
+      rollMax: cumulative + pct,
+    };
+
+    cumulative += pct;
+    return [out];
   });
   const yacBySeparation: Record<string, unknown[]> = {};
   const yardBreaks = (rows[74] || []).slice(1).map(Number);

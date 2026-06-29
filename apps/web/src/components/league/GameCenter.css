@@ -87,7 +87,7 @@
 #fgPostLeft {
   position: absolute;
   left: 5%;
-  top: 5%;
+  bottom: 50%;
   transform: scaleX(-1);
   height: 12vw;
   z-index: 5;
@@ -97,7 +97,7 @@
 #fgPost {
   position: absolute;
   right: 5%;
-  top: 5%;
+  bottom: 50%;
   height: 12vw;
   z-index: 5;
   pointer-events: none;
@@ -105,7 +105,7 @@
 
 .driveWrapper {
   position: absolute;
-  top: 0;
+  top: 2vw;
   left: 50%;
   transform: translateX(-50%);
   width: min(85vw, 1200px);
@@ -128,9 +128,9 @@
 .drive-line::before {
   content: "";
   position: absolute;
-  top: 50%;
+  /* top: 50%; */
   left: var(--drive-dot-left, 0%);
-  transform: translate(-50%, -50%);
+  /*transform: translate(-50%, -50%);*/
   width: 12px;
   height: 12px;
   background-color: white;
