@@ -124,17 +124,17 @@
   background-color: white;
   border-radius: 0;
 }
-
-.drive-line::before {
+.drive-line::before,
+.play-line::before {
   content: "";
   position: absolute;
-  /* top: 50%; */
-  left: var(--drive-dot-left, 0%);
-  /*transform: translate(-50%, -50%);*/
+  top: 50%;
+  left: 0;
   width: 12px;
   height: 12px;
-  background-color: white;
   border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
 }
 
 /*
@@ -163,7 +163,7 @@
   transform: translate(-100%, -50%);
 }
 
-.play-line::before,
+
 .play-line::after {
   content: "";
   position: absolute;
@@ -173,10 +173,10 @@
 
 /* Dot is always play start */
 .play-line::before {
-  width: 12px;
-  height: 12px;
+  /* width: 12px;
+  height: 12px; */
   background-color: #333;
-  border-radius: 50%;
+  /* border-radius: 50%; */
 }
 
 /* Arrow is always play end */
@@ -188,9 +188,9 @@
 }
 
 /* Right-moving play: start dot left, arrow right */
-.play-line--right::before {
+/* .play-line--right::before {
   left: -10px;
-}
+} */
 
 .play-line--right::after {
   right: -10px;
@@ -198,9 +198,9 @@
 }
 
 /* Left-moving play: start dot right, arrow left */
-.play-line--left::before {
+/* .play-line--left::before {
   right: -10px;
-}
+} */
 
 .play-line--left::after {
   left: -10px;
