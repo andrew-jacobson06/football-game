@@ -1,4 +1,12 @@
-export type { PlayKind, FormationSlot, PlayCallOptions, EngineContext, FrontendSettings } from "./engine/types";
+export type {
+  PlayKind,
+  FormationSlot,
+  PlayCallOptions,
+  EngineContext,
+  FrontendSettings,
+  DefensiveAssignment,
+  RunPlayState
+} from "./engine/types";
 export { runPlay, simulateSingleCarry, determineTackler, checkForFumble } from "./engine/runEngine";
 export { passPlay, determineTimeToThrow, handleSack, assignRoutes, determineSeparation, choosePassTarget, determineCompletionPct, determinePassOutcome, calcYAC } from "./engine/passEngine";
 export { punt, kickFG, goForTwo, handleTimeout, spikeBall, kneel } from "./engine/specialTeamsEngine";

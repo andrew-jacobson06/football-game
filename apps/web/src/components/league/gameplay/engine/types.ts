@@ -3,12 +3,19 @@ import type { LeagueGame } from "../../types";
 export type PlayKind = "Run" | "Pass" | "Punt" | "Field Goal" | "Two Point" | "Timeout" | "Spike" | "Kneel";
 export type FormationSlot = "WR1" | "TEOL1" | "TEOL2" | "TEOL3" | "TEOL4" | "TEOL5" | "WR2" | "WR3" | "QB" | "RB1" | "RB2";
 export type ClockMode = "Normal" | "Hurry Up" | "Chew Clock";
+export type DefensiveAssignment = {
+  position: string;
+  player: string;
+  align?: FormationSlot;
+};
+
 export type PlayCallOptions = {
   formation?: Partial<Record<FormationSlot, string>>;
   routes?: Record<string, string>;
   reads?: Record<string, string>;
   runner?: string;
   clockMode?: ClockMode;
+  defense?: DefensiveAssignment[];
 };
 export type PlayerTrait = Record<string, unknown>;
 export type RunThreshold = { label: string; minYards: number; maxYards: number; rollMin: number; rollMax: number };
@@ -43,4 +50,12 @@ export type NormalizedOutcome = {
   defenseResult: string;
   turnover: string;
   description: string;
+};
+export type RunPlayState = {
+  yards: number;
+  runner: string;
+  tackler?: string;
+  stopped: boolean;
+  stopReason?: string;
+  log: string[];
 };

@@ -1,7 +1,22 @@
 import type { LeagueGame } from "../../types";
-import type { EngineContext, FrontendSettings, PlayCallOptions, RunBreakawaySetting, RunThreshold } from "./types";
+import type { EngineContext, FrontendSettings, PlayCallOptions, RunBreakawaySetting, RunThreshold, DefensiveAssignment } from "./types";
 import { advanceBall, advanceQuarter, byName, byPosition, choose, clockRunoff, defenseTeam, isSafety, isTouchdown, n, nextDownDistance, offenseTeam, playerName, switchPoss, teamPlayers, trait, weightedChoose } from "./utils";
-import { buildResult } from "./playLogger";
+import {
+  performLineWinLoss,
+  performVisionCheck,
+  pickRunLaneTarget,
+  createRunPlayState,
+  performDlSwipeCheck,
+  handleRunnerTackle,
+  performDlWrapCheck,
+  performDlJukeCheck,
+  getOtherWinningDLs,
+  resolveRemainingDlPursuit,
+  performAccelerationCheck,
+  randomInt,
+  addYards,
+  stopRun
+} from "./runEngineHelper";
 
 export function determineTackler(ctx: EngineContext, defense: string, yards: number) {
   const defenders = teamPlayers(ctx, defense);
@@ -82,13 +97,6 @@ export function simulateSingleCarry(stats: CarryStats) {
   return { name: stats.name, roll, yards, modLog };
 }
 
-//helper
-export function randomInt(min: number, max: number): number {
-  const safeMin = Math.ceil(min);
-  const safeMax = Math.floor(max);
-
-  return Math.floor(Math.random() * (safeMax - safeMin + 1)) + safeMin;
-}
 
 function applyTraitEffect(traitName: string, traitValue: number, condition: boolean, modLog: string[]) {
   if (!condition) return 0;
@@ -368,7 +376,7 @@ export function tryAutoRelease(
   return roll <= starPower;
 }
 
-export function runPlay(game: LeagueGame, ctx: EngineContext, options: PlayCallOptions = {}) {
+export function runPlayOld(game: LeagueGame, ctx: EngineContext, options: PlayCallOptions = {}) {
   const offense = offenseTeam(game), defense = defenseTeam(game);
   const formation = options.formation ?? {};
   const runner = byName(ctx, options.runner) ?? byName(ctx, formation.RB1) ?? byName(ctx, formation.RB2) ?? byName(ctx, formation.QB) ?? choose([...byPosition(ctx, offense, "RB"), ...byPosition(ctx, offense, "WR"), ...byPosition(ctx, offense, "QB")]);
@@ -420,4 +428,165 @@ export function runPlay(game: LeagueGame, ctx: EngineContext, options: PlayCallO
   const clock = advanceQuarter(game, clockRunoff(options.clockMode, Math.max(3, 12 - Math.floor(trait(runner, "speed") / 15)), ["Touchdown", "Safety", "TO on Downs", "Fumble"].includes(result)));
   const updated = { ...game, HomeScore: hs, AwayScore: as, Qtr: clock.qtr, Time: clock.time, Down: next.down, Distance: next.distance, BallOn: next.ballOn, Previous: game.BallOn, DriveStart: next.turnover || td || safety ? next.ballOn : (game as unknown as Record<string, unknown>).DriveStart ?? game.BallOn, Possession: possession };
   return buildResult(game, updated, "Run", runnerName, "", yards, tackler, result, ctx.historyLength, { recoveredby: fumble.recoveredBy });
+}
+
+export function runPlay(
+  game: LeagueGame,
+  ctx: EngineContext,
+  options: PlayCallOptions = {}
+) {
+  const offense = offenseTeam(game);
+  const defense = defenseTeam(game);
+
+  console.log("Offense:", offense);
+  console.log("Defense:", defense);
+
+  const offenseFormation = options.formation ?? {};
+  const defenseFormation = options.defense ?? [];
+
+  const runnerName = options.runner ?? offenseFormation.RB1 ?? offenseFormation.QB ?? "";
+
+  if (!runnerName) {
+    throw new Error("No runner available for run play.");
+  }
+
+  const runState = createRunPlayState(runnerName);
+
+  const lineWinLossArray = performLineWinLoss(
+    offenseFormation,
+    defenseFormation,
+    ctx.players
+  );
+
+  const olWins = lineWinLossArray.filter((battle) => battle.winner === "OL").length;
+  const dlWins = lineWinLossArray.filter((battle) => battle.winner === "DL").length;
+  const runBlockingModifier = (olWins - dlWins) * 10;
+
+  const visionCheck = performVisionCheck(
+    runnerName,
+    ctx.players,
+    lineWinLossArray,
+    runBlockingModifier
+  );
+
+  const runLaneTarget = pickRunLaneTarget(
+    lineWinLossArray,
+    visionCheck,
+    ctx.players
+  );
+
+  let dlWrapResult: ReturnType<typeof performDlWrapCheck> | null = null;
+  let dlSwipeResult: ReturnType<typeof performDlSwipeCheck> | null = null;
+  let fallForwardResult: ReturnType<typeof handleRunnerTackle> | null = null;    
+  let dlJukeResult: ReturnType<typeof performDlJukeCheck> | null = null;
+  let otherWinningDLsAfterJuke: ReturnType<typeof getOtherWinningDLs> = [];
+  let dlPursuitResult: ReturnType<typeof resolveRemainingDlPursuit> | null = null;
+
+  //IF the runner doesn't hit a hole...
+  if (!visionCheck.getsPastDL) {
+    const backfieldYards = randomInt(-5, -1);
+
+    addYards(
+      runState,
+      backfieldYards,
+      `${runState.runner} fails to hit the hole and is forced into the backfield`
+    );
+
+    dlWrapResult = performDlWrapCheck(
+      runLaneTarget.selectedPlayer,
+      ctx.players
+    );
+
+    if (dlWrapResult.wrapped) {
+      fallForwardResult = handleRunnerTackle(
+        runState,
+        dlWrapResult.defender,
+        "DL Backfield Wrap",
+        ctx.players
+      );
+    } 
+    else {
+      dlJukeResult = performDlJukeCheck(
+        runState.runner,
+        dlWrapResult.defender,
+        ctx.players
+      );
+
+      if (!dlJukeResult.juked) {
+        fallForwardResult = handleRunnerTackle(
+          runState,
+          dlWrapResult.defender,
+          "DL Backfield Juke Failed",
+          ctx.players
+        );
+      } 
+      else {
+        otherWinningDLsAfterJuke = getOtherWinningDLs(
+          lineWinLossArray,
+          dlWrapResult.defender
+        );
+
+        if (otherWinningDLsAfterJuke.length === 0) {
+          runState.log.push(
+            `${runState.runner} jukes ${dlWrapResult.defender} and escapes toward the second level.`
+          );
+        } else {
+          runState.log.push(
+            `${runState.runner} jukes ${dlWrapResult.defender}, but other defensive linemen are still in pursuit.`
+          );
+
+          dlPursuitResult = resolveRemainingDlPursuit(
+            runState,
+            otherWinningDLsAfterJuke,
+            ctx.players
+          );
+
+          console.log("DL pursuit result:", dlPursuitResult);
+        }
+      }
+    }
+  }
+  //Otherwise, if the runner DOES hit a hole...
+  else {
+    dlSwipeResult =
+      runLaneTarget.selectedSide === "OL"
+        ? performDlSwipeCheck(lineWinLossArray, runLaneTarget, ctx.players)
+        : null;
+
+    if (dlSwipeResult?.tackled) {
+      runState.yards = 0;
+
+      fallForwardResult = handleRunnerTackle(
+        runState,
+        dlSwipeResult.defender,
+        "DL Swipe Tackle",
+        ctx.players
+      );
+    } else {
+      runState.log.push(
+        `${runState.runner} hits the hole behind ${runLaneTarget.selectedPlayer} and clears the defensive line.`
+      );
+    }
+  }
+
+  console.log("OL wins:", olWins);
+  console.log("DL wins:", dlWins);
+  console.log("Run blocking modifier:", runBlockingModifier);
+  console.log("Vision check:", visionCheck);
+  console.log("Run lane target:", runLaneTarget);
+  console.log("DL wrap result:", dlWrapResult);
+  console.log("DL swipe result:", dlSwipeResult);
+  console.log("Fall forward result:", fallForwardResult);
+  console.log("Run state:", runState);
+  console.log("DL juke result:", dlJukeResult);
+  console.log("Other winning DLs after juke:", otherWinningDLsAfterJuke);
+  console.log("DL pursuit result:", dlPursuitResult);
+
+  if (runState.stopped) {
+    console.log("Run stopped during DL phase:", runState);
+    //return runState;
+  }
+
+  console.log("Run survived DL phase:", runState);
+  //return runState;
 }
