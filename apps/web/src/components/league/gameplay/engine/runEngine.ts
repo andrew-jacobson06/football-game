@@ -713,7 +713,10 @@ export function runPlay(
       runLaneTarget,
       offenseFormation,
       ctx.players,
-      secondLevelDefender
+      secondLevelDefender,
+      ctx.settings,
+      lineWinLossArray,
+      jukedBackfieldDefenders
     );
 
     console.log("LB second level result:", lbSecondLevelResult);

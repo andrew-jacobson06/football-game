@@ -784,8 +784,9 @@ export function pickShortAccelerationDefender(
 ): DefensiveAssignment | undefined {
   const runnerSlot = (Object.entries(offenseFormation) as [FormationSlot, string | undefined][])
     .find(([, player]) => player === runnerName)?.[0];
+  const beatenDefenderSet = new Set(jukedDefenders.filter(Boolean));
   const linebacker = pickLinebackerForRunLane(
-    defenseFormation,
+    defenseFormation.filter((assignment) => !beatenDefenderSet.has(assignment.player)),
     runLaneTarget.selectedSlot,
     runnerSlot
   );
@@ -799,6 +800,37 @@ export function pickShortAccelerationDefender(
   );
 
   return weightedPickDefenderByDefStars(candidates, players);
+}
+
+function getRemainingSecondLevelDefenders(
+  defenseFormation: DefensiveAssignment[],
+  lineWinLossArray: LineWinLossResult[],
+  beatenDefenders: Set<string>,
+  includeDefensiveLinemen: boolean
+): DefensiveAssignment[] {
+  const remainingLinebackers = defenseFormation.filter(
+    (assignment) =>
+      assignment.player &&
+      assignment.position.startsWith("LB") &&
+      !beatenDefenders.has(assignment.player)
+  );
+
+  const remainingDefensiveLinemen = includeDefensiveLinemen
+    ? lineWinLossArray
+        .filter(
+          (battle) =>
+            battle.defensePlayer &&
+            battle.defensePosition.startsWith("DL") &&
+            !beatenDefenders.has(battle.defensePlayer)
+        )
+        .map((battle) => ({
+          position: battle.defensePosition,
+          player: battle.defensePlayer,
+          align: battle.slot,
+        }))
+    : [];
+
+  return [...remainingLinebackers, ...remainingDefensiveLinemen];
 }
 
 export type LbSecondLevelResult = {
@@ -864,79 +896,25 @@ export function performLbJukeCheck(
 }
 
 
-function getOtherLinebackerInPlay(
-  defenseFormation: DefensiveAssignment[],
-  beatenLinebacker: DefensiveAssignment
-): DefensiveAssignment | undefined {
-  return defenseFormation.find((assignment) =>
-    assignment.player &&
-    assignment.position.startsWith("LB") &&
-    assignment.player !== beatenLinebacker.player
-  );
-}
-
-function hasDbChasingPlay(
-  defenseFormation: DefensiveAssignment[],
-  runLaneTarget: RunLaneTargetResult
-): boolean {
-  void defenseFormation;
-  void runLaneTarget;
-  // TODO: Calculate DB pursuit once defensive back chase logic is implemented.
-  return false;
-}
-
-function resolvePostJukeSecondLevelPressure(
-  runState: RunPlayState,
-  defenseFormation: DefensiveAssignment[],
-  beatenLinebacker: DefensiveAssignment,
-  runLaneTarget: RunLaneTargetResult,
-  players: PlayerTrait[]
-): LbNextLevelPressureResult {
-  const otherLinebacker = getOtherLinebackerInPlay(defenseFormation, beatenLinebacker);
-  const hasDbChase = hasDbChasingPlay(defenseFormation, runLaneTarget);
-  const runnerAcceleration = trait(findPlayerByName(players, runState.runner), "acceleration");
-
-  if (!otherLinebacker && !hasDbChase) {
-    runState.log.push(`${runState.runner} has no other linebackers or defensive backs in chase and takes off into the secondary.`);
-    return { hasDbChase, runnerAcceleration, escaped: true };
-  }
-
-  if (otherLinebacker) {
-    const accelerationRoll = Math.random() * 100;
-    const escaped = accelerationRoll <= runnerAcceleration;
-
-    if (escaped) {
-      runState.log.push(
-        `${runState.runner} accelerates past ${otherLinebacker.player} (roll ${accelerationRoll.toFixed(2)} <= ${runnerAcceleration.toFixed(2)}) and takes off into the secondary.`
-      );
-    } else {
-      handleRunnerTackle(
-        runState,
-        otherLinebacker.player,
-        "LB Post-Juke Acceleration Failed",
-        players
-      );
-    }
-
-    return { otherLinebacker, hasDbChase, accelerationRoll, runnerAcceleration, escaped };
-  }
-
-  runState.log.push(`${runState.runner} beat the linebacker, but DB chase resolution is not implemented yet.`);
-  return { hasDbChase, runnerAcceleration, escaped: true };
-}
-
 export function resolveLinebackerSecondLevel(
   runState: RunPlayState,
   defenseFormation: DefensiveAssignment[],
   runLaneTarget: RunLaneTargetResult,
   offenseFormation: Partial<Record<FormationSlot, string>>,
   players: PlayerTrait[],
-  selectedDefender?: DefensiveAssignment
+  selectedDefender?: DefensiveAssignment,
+  settings?: FrontendSettings,
+  lineWinLossArray: LineWinLossResult[] = [],
+  beatenDefenders: string[] = []
 ): LbSecondLevelResult {
   const runnerSlot = (Object.entries(offenseFormation) as [FormationSlot, string | undefined][])
     .find(([, player]) => player === runState.runner)?.[0];
+  const beatenDefenderSet = new Set(beatenDefenders.filter(Boolean));
+  const eligibleDefenseFormation = defenseFormation.filter(
+    (assignment) => !assignment.player || !beatenDefenderSet.has(assignment.player)
+  );
   const linebacker = selectedDefender ?? pickLinebackerForRunLane(
-    defenseFormation,
+    eligibleDefenseFormation,
     runLaneTarget.selectedSlot,
     runnerSlot
   );
@@ -946,16 +924,81 @@ export function resolveLinebackerSecondLevel(
     return { stopped: false };
   }
 
+  const restartSecondLevelCycle = (beatenDefender: string, action: "juke" | "truck") => {
+    beatenDefenderSet.add(beatenDefender);
+    const remainingBeforeAcceleration = getRemainingSecondLevelDefenders(
+      defenseFormation,
+      lineWinLossArray,
+      beatenDefenderSet,
+      true
+    );
+
+    if (remainingBeforeAcceleration.length === 0) {
+      runState.log.push(
+        `${runState.runner} has no remaining linebackers or defensive linemen after the ${action} and accelerates into the secondary.`
+      );
+      return undefined;
+    }
+
+    const escapeAccelerationResult = performPostTruckAccelerationCheck(runState.runner, players);
+    if (escapeAccelerationResult.acceleratedPast) {
+      runState.log.push(
+        `${runState.runner} accelerates past the remaining defenders after the ${action} (roll ${escapeAccelerationResult.roll.toFixed(2)} <= ${escapeAccelerationResult.accelPastChance.toFixed(2)}%) and breaks into the secondary.`
+      );
+      return undefined;
+    }
+
+    runState.log.push(
+      `${runState.runner} cannot accelerate past the remaining defenders after the ${action} (roll ${escapeAccelerationResult.roll.toFixed(2)} > ${escapeAccelerationResult.accelPastChance.toFixed(2)}%), so the next defender-runner interaction is reevaluated.`
+    );
+
+    const accelerationYards = getAccelToLBYards(
+      findPlayerByName(players, runState.runner),
+      settings,
+      runState.log
+    );
+    addYards(
+      runState,
+      accelerationYards,
+      `${runState.runner} restarts downhill after the ${action}`
+    );
+
+    const remainingDefenders = getRemainingSecondLevelDefenders(
+      defenseFormation,
+      lineWinLossArray,
+      beatenDefenderSet,
+      accelerationYards <= 3
+    );
+    const nextDefender = weightedPickDefenderByDefStars(remainingDefenders, players);
+
+    if (!nextDefender) {
+      runState.log.push(
+        `${runState.runner} has no remaining eligible defenders after gaining +${accelerationYards} and accelerates into the secondary.`
+      );
+      return undefined;
+    }
+
+    return resolveLinebackerSecondLevel(
+      runState,
+      defenseFormation,
+      runLaneTarget,
+      offenseFormation,
+      players,
+      nextDefender,
+      settings,
+      lineWinLossArray,
+      Array.from(beatenDefenderSet)
+    );
+  };
+
   runState.log.push(`${runState.runner} meets ${linebacker.player} at the second level.`);
 
   const wrapResult = performDefenderWrapCheck(linebacker.player, players);
   let carryDefenderResult: CarryDefenderResult | undefined;
   let fallForwardResult: FallForwardResult | undefined;
   let jukeResult: LbJukeResult | undefined;
-  let nextLevelPressure: LbNextLevelPressureResult | undefined;
   let secondChanceAttempt: RunnerDefenderSecondChanceAttempt | undefined;
   let truckResult: TruckAttemptResult | undefined;
-  let truckAccelerationResult: TruckAccelerationResult | undefined;
 
   if (wrapResult.wrapped) {
     carryDefenderResult = handleLbWrapTackle(runState, linebacker.player, "LB Second-Level Wrap", players);
@@ -980,13 +1023,20 @@ export function resolveLinebackerSecondLevel(
         runState.log.push(
           `${runState.runner} jukes ${linebacker.player} at the second level (roll ${jukeResult.roll.toFixed(2)} < ${jukeResult.targetToBeat.toFixed(2)}).`
         );
-        nextLevelPressure = resolvePostJukeSecondLevelPressure(
-          runState,
-          defenseFormation,
-          linebacker,
-          runLaneTarget,
-          players
-        );
+        const recursiveResult = restartSecondLevelCycle(linebacker.player, "juke");
+        if (recursiveResult) {
+          return {
+            ...recursiveResult,
+            linebacker,
+            wrapResult,
+            jukeResult,
+            fallForwardResult,
+            carryDefenderResult,
+            secondChanceAttempt,
+            truckResult,
+            stopped: runState.stopped,
+          };
+        }
       } else {
         fallForwardResult = handleRunnerTackle(
           runState,
@@ -1013,27 +1063,19 @@ export function resolveLinebackerSecondLevel(
           `${runState.runner} trucks ${linebacker.player} at the second level (roll ${truckResult.roll.toFixed(2)} <= ${truckResult.truckChance.toFixed(2)}%) and tries to accelerate again.`
         );
 
-        const otherLinebacker = getOtherLinebackerInPlay(defenseFormation, linebacker);
-        const hasDbChase = hasDbChasingPlay(defenseFormation, runLaneTarget);
-        truckAccelerationResult = performPostTruckAccelerationCheck(runState.runner, players);
-
-        if (!otherLinebacker && !hasDbChase) {
-          runState.log.push(`${runState.runner} has no remaining second-level defenders in chase after the truck.`);
-        } else if (truckAccelerationResult.acceleratedPast) {
-          runState.log.push(
-            `${runState.runner} accelerates past the remaining defenders after contact (roll ${truckAccelerationResult.roll.toFixed(2)} <= ${truckAccelerationResult.accelPastChance.toFixed(2)}%).`
-          );
-        } else {
-          const pursuingDefender = otherLinebacker?.player || linebacker.player;
-          runState.log.push(
-            `${runState.runner} cannot accelerate past the remaining defenders after the truck (roll ${truckAccelerationResult.roll.toFixed(2)} > ${truckAccelerationResult.accelPastChance.toFixed(2)}%).`
-          );
-          handleRunnerTackle(
-            runState,
-            pursuingDefender,
-            "LB Post-Truck Acceleration Failed",
-            players
-          );
+        const recursiveResult = restartSecondLevelCycle(linebacker.player, "truck");
+        if (recursiveResult) {
+          return {
+            ...recursiveResult,
+            linebacker,
+            wrapResult,
+            jukeResult,
+            fallForwardResult,
+            carryDefenderResult,
+            secondChanceAttempt,
+            truckResult,
+            stopped: runState.stopped,
+          };
         }
       }
     }
@@ -1047,8 +1089,6 @@ export function resolveLinebackerSecondLevel(
     carryDefenderResult,
     secondChanceAttempt,
     truckResult,
-    truckAccelerationResult,
-    nextLevelPressure,
     stopped: runState.stopped,
   };
 }
