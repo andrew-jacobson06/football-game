@@ -1,5 +1,5 @@
 import type { LeagueGame } from "../../types";
-import type { EngineContext, FrontendSettings, PlayCallOptions, RunBreakawaySetting, RunThreshold } from "./types";
+import type { EngineContext, FrontendSettings, PlayCallOptions, RunAccelToLBSetting, RunBreakawaySetting, RunThreshold } from "./types";
 import { buildResult } from "./playLogger";
 import { advanceBall, advanceQuarter, byName, byPosition, choose, clockRunoff, defenseTeam, isSafety, isTouchdown, n, nextDownDistance, offenseTeam, playerName, switchPoss, teamPlayers, trait, weightedChoose } from "./utils";
 import {
@@ -37,6 +37,34 @@ type CarryStats = { name: string; runner?: Record<string, unknown>; offStar?: bo
 function settingArray<T>(settings: FrontendSettings | undefined, key: keyof FrontendSettings): T[] {
   const value = settings?.[key];
   return Array.isArray(value) ? (value as T[]) : [];
+}
+
+export function getAccelToLBYards(runner: Record<string, unknown> | undefined, settings: FrontendSettings | undefined, modLog?: string[]) {
+  const baseRoll = Math.floor(Math.random() * 101);
+  const acceleration = trait(runner, "acceleration");
+  const accelerationMod = ((acceleration / 10) ** 2) / 9;
+  const adjustedRoll = Math.min(100, baseRoll + accelerationMod);
+
+  let cumulative = 0;
+  const accelToLBSettings = settingArray<RunAccelToLBSetting>(settings, "accelToLBYards");
+  for (const range of accelToLBSettings) {
+    cumulative += Number(range.percentage) || 0;
+    if (adjustedRoll <= cumulative) {
+      const yards = Number(range.yards) || 0;
+      modLog?.push(
+        `Yard +${yards} Accel to LB (roll ${adjustedRoll.toFixed(2)} = ${baseRoll} + ${accelerationMod.toFixed(2)})`
+      );
+      return yards;
+    }
+  }
+
+  const fallbackYards = Number(accelToLBSettings[accelToLBSettings.length - 1]?.yards) || 0;
+  if (fallbackYards) {
+    modLog?.push(
+      `Yard +${fallbackYards} Accel to LB (capped roll ${adjustedRoll.toFixed(2)})`
+    );
+  }
+  return fallbackYards;
 }
 
 // ---------------------------------------------------------------------------
@@ -573,6 +601,12 @@ export function runPlay(
         ctx.players
       );
     } else {
+      addYards(
+        runState,
+        getAccelToLBYards(byName(ctx, runState.runner), ctx.settings, runState.log),
+        `${runState.runner} accelerates to the second level before meeting a linebacker`
+      );
+
       runState.log.push(
         `${runState.runner} hits the hole behind ${runLaneTarget.selectedPlayer} and clears the defensive line.`
       );
