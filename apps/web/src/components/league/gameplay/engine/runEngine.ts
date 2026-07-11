@@ -17,6 +17,7 @@ import {
   addYards,
   getAccelToLBYards,
   resolveLinebackerSecondLevel,
+  pickShortAccelerationDefender,
 } from "./runEngineHelper";
 
 export function determineTackler(ctx: EngineContext, defense: string, yards: number) {
@@ -599,11 +600,37 @@ export function runPlay(
   //if hit hole or juked out of backfield...
   else {
     console.log("Run survived DL phase:", runState);
+
+    const accelToSecondLevelYards = getAccelToLBYards(
+      byName(ctx, runState.runner),
+      ctx.settings,
+      runState.log
+    );
+    const jukedBackfieldDefenders = [
+      dlJukeResult?.juked ? dlJukeResult.defender : undefined,
+      ...(dlPursuitResult?.steps
+        .filter((step) => step.outcome === "Juked")
+        .map((step) => step.defender) ?? []),
+    ].filter((defender): defender is string => Boolean(defender));
+    const secondLevelDefender =
+      accelToSecondLevelYards <= 3
+        ? pickShortAccelerationDefender(
+            defenseFormation,
+            lineWinLossArray,
+            runLaneTarget,
+            offenseFormation,
+            runState.runner,
+            jukedBackfieldDefenders,
+            ctx.players
+          )
+        : undefined;
     
     addYards(
       runState,
-      getAccelToLBYards(byName(ctx, runState.runner), ctx.settings, runState.log),
-      `${runState.runner} accelerates to the second level before meeting a linebacker`
+      accelToSecondLevelYards,
+      secondLevelDefender?.position.startsWith("DL")
+        ? `${runState.runner} accelerates through a short crease before meeting a defensive lineman`
+        : `${runState.runner} accelerates to the second level before meeting a linebacker`
     );
 
     runState.log.push(
@@ -615,7 +642,8 @@ export function runPlay(
       defenseFormation,
       runLaneTarget,
       offenseFormation,
-      ctx.players
+      ctx.players,
+      secondLevelDefender
     );
 
     console.log("LB second level result:", lbSecondLevelResult);

@@ -626,6 +626,90 @@ export function pickLinebackerForRunLane(
     : linebackers[linebackers.length - 1];
 }
 
+export function getAdjacentDefensiveLinemenForRunLane(
+  lineWinLossArray: LineWinLossResult[],
+  selectedSlot: FormationSlot,
+  jukedDefenders: string[] = []
+): DefensiveAssignment[] {
+  const selectedIndex = TEOL_SLOTS.indexOf(selectedSlot);
+  if (selectedIndex < 0) return [];
+
+  const jukedDefenderSet = new Set(jukedDefenders.filter(Boolean));
+
+  return [selectedIndex - 1, selectedIndex + 1]
+    .map((index) => TEOL_SLOTS[index])
+    .filter((slot): slot is FormationSlot => Boolean(slot))
+    .map((slot) => lineWinLossArray.find((battle) => battle.slot === slot))
+    .filter((battle): battle is LineWinLossResult =>
+      Boolean(
+        battle?.defensePlayer &&
+        battle.defensePosition.startsWith("DL") &&
+        !jukedDefenderSet.has(battle.defensePlayer)
+      )
+    )
+    .map((battle) => ({
+      position: battle.defensePosition,
+      player: battle.defensePlayer,
+      align: battle.slot,
+    }));
+}
+
+export function weightedPickDefenderByDefStars(
+  defenders: DefensiveAssignment[],
+  players: PlayerTrait[]
+): DefensiveAssignment | undefined {
+  const weightedDefenders = defenders
+    .map((defender) => {
+      const defensivePlayer = findPlayerByName(players, defender.player);
+      return {
+        defender,
+        weight: trait(defensivePlayer, "defStars") ** 2,
+      };
+    })
+    .filter(({ weight }) => weight > 0);
+
+  if (weightedDefenders.length === 0) return defenders[0];
+
+  const totalWeight = weightedDefenders.reduce((sum, { weight }) => sum + weight, 0);
+  const roll = Math.random() * totalWeight;
+  let runningTotal = 0;
+
+  for (const weightedDefender of weightedDefenders) {
+    runningTotal += weightedDefender.weight;
+    if (roll <= runningTotal) return weightedDefender.defender;
+  }
+
+  return weightedDefenders[weightedDefenders.length - 1].defender;
+}
+
+export function pickShortAccelerationDefender(
+  defenseFormation: DefensiveAssignment[],
+  lineWinLossArray: LineWinLossResult[],
+  runLaneTarget: RunLaneTargetResult,
+  offenseFormation: Partial<Record<FormationSlot, string>>,
+  runnerName: string,
+  jukedDefenders: string[],
+  players: PlayerTrait[]
+): DefensiveAssignment | undefined {
+  const runnerSlot = (Object.entries(offenseFormation) as [FormationSlot, string | undefined][])
+    .find(([, player]) => player === runnerName)?.[0];
+  const linebacker = pickLinebackerForRunLane(
+    defenseFormation,
+    runLaneTarget.selectedSlot,
+    runnerSlot
+  );
+  const adjacentDefensiveLinemen = getAdjacentDefensiveLinemenForRunLane(
+    lineWinLossArray,
+    runLaneTarget.selectedSlot,
+    jukedDefenders
+  );
+  const candidates = [linebacker, ...adjacentDefensiveLinemen].filter(
+    (defender): defender is DefensiveAssignment => Boolean(defender?.player)
+  );
+
+  return weightedPickDefenderByDefStars(candidates, players);
+}
+
 export type LbSecondLevelResult = {
   linebacker?: DefensiveAssignment;
   wrapResult?: DefenderWrapResult;
@@ -753,11 +837,12 @@ export function resolveLinebackerSecondLevel(
   defenseFormation: DefensiveAssignment[],
   runLaneTarget: RunLaneTargetResult,
   offenseFormation: Partial<Record<FormationSlot, string>>,
-  players: PlayerTrait[]
+  players: PlayerTrait[],
+  selectedDefender?: DefensiveAssignment
 ): LbSecondLevelResult {
   const runnerSlot = (Object.entries(offenseFormation) as [FormationSlot, string | undefined][])
     .find(([, player]) => player === runState.runner)?.[0];
-  const linebacker = pickLinebackerForRunLane(
+  const linebacker = selectedDefender ?? pickLinebackerForRunLane(
     defenseFormation,
     runLaneTarget.selectedSlot,
     runnerSlot
