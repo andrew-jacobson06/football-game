@@ -1,5 +1,5 @@
 import type { LeagueGame } from "../../types";
-import type { EngineContext, FrontendSettings, PlayCallOptions, RunAccelToLBSetting, RunBreakawaySetting, RunThreshold } from "./types";
+import type { EngineContext, FrontendSettings, PlayCallOptions, RunBreakawaySetting, RunThreshold } from "./types";
 import { buildResult } from "./playLogger";
 import { advanceBall, advanceQuarter, byName, byPosition, choose, clockRunoff, defenseTeam, isSafety, isTouchdown, n, nextDownDistance, offenseTeam, playerName, switchPoss, teamPlayers, trait, weightedChoose } from "./utils";
 import {
@@ -15,6 +15,8 @@ import {
   resolveRemainingDlPursuit,
   randomInt,
   addYards,
+  getAccelToLBYards,
+  resolveLinebackerSecondLevel,
 } from "./runEngineHelper";
 
 export function determineTackler(ctx: EngineContext, defense: string, yards: number) {
@@ -39,33 +41,6 @@ function settingArray<T>(settings: FrontendSettings | undefined, key: keyof Fron
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
-export function getAccelToLBYards(runner: Record<string, unknown> | undefined, settings: FrontendSettings | undefined, modLog?: string[]) {
-  const baseRoll = Math.floor(Math.random() * 101);
-  const acceleration = trait(runner, "acceleration");
-  const accelerationMod = ((acceleration / 10) ** 2) / 9;
-  const adjustedRoll = Math.min(100, baseRoll + accelerationMod);
-
-  let cumulative = 0;
-  const accelToLBSettings = settingArray<RunAccelToLBSetting>(settings, "accelToLBYards");
-  for (const range of accelToLBSettings) {
-    cumulative += Number(range.percentage) || 0;
-    if (adjustedRoll <= cumulative) {
-      const yards = Number(range.yards) || 0;
-      modLog?.push(
-        `Yard +${yards} Accel to LB (roll ${adjustedRoll.toFixed(2)} = ${baseRoll} + ${accelerationMod.toFixed(2)})`
-      );
-      return yards;
-    }
-  }
-
-  const fallbackYards = Number(accelToLBSettings[accelToLBSettings.length - 1]?.yards) || 0;
-  if (fallbackYards) {
-    modLog?.push(
-      `Yard +${fallbackYards} Accel to LB (capped roll ${adjustedRoll.toFixed(2)})`
-    );
-  }
-  return fallbackYards;
-}
 
 // ---------------------------------------------------------------------------
 // Legacy single-carry yardage model
@@ -634,5 +609,15 @@ export function runPlay(
     runState.log.push(
       `${runState.runner} hits the hole behind ${runLaneTarget.selectedPlayer} and clears the defensive line.`
     );
+
+    const lbSecondLevelResult = resolveLinebackerSecondLevel(
+      runState,
+      defenseFormation,
+      runLaneTarget,
+      offenseFormation,
+      ctx.players
+    );
+
+    console.log("LB second level result:", lbSecondLevelResult);
   }
 }
