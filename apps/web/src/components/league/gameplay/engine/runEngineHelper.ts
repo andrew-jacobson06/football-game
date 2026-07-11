@@ -333,6 +333,36 @@ export function stopRun(
   return state;
 }
 
+
+export type RunnerDefenderSecondChanceAttempt = {
+  attempt: "Juke" | "Truck";
+  truckChance: number;
+  sizeDifference: number;
+  cappedSizeDifference: number;
+  roll: number;
+};
+
+export function chooseRunnerDefenderSecondChanceAttempt(
+  runnerName: string,
+  defenderName: string,
+  players: PlayerTrait[]
+): RunnerDefenderSecondChanceAttempt {
+  const runner = findPlayerByName(players, runnerName);
+  const defender = findPlayerByName(players, defenderName);
+  const sizeDifference = trait(runner, "size") - trait(defender, "size");
+  const cappedSizeDifference = Math.max(-25, Math.min(25, sizeDifference));
+  const truckChance = 50 + cappedSizeDifference;
+  const roll = Math.random() * 100;
+
+  return {
+    attempt: roll < truckChance ? "Truck" : "Juke",
+    truckChance,
+    sizeDifference,
+    cappedSizeDifference,
+    roll,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Defensive line resolution checks
 // ---------------------------------------------------------------------------
@@ -716,7 +746,7 @@ export type LbSecondLevelResult = {
   jukeResult?: LbJukeResult;
   fallForwardResult?: FallForwardResult;
   carryDefenderResult?: CarryDefenderResult;
-  secondChanceAttempt?: "Juke" | "Truck";
+  secondChanceAttempt?: RunnerDefenderSecondChanceAttempt;
   nextLevelPressure?: LbNextLevelPressureResult;
   stopped: boolean;
 };
@@ -860,16 +890,25 @@ export function resolveLinebackerSecondLevel(
   let fallForwardResult: FallForwardResult | undefined;
   let jukeResult: LbJukeResult | undefined;
   let nextLevelPressure: LbNextLevelPressureResult | undefined;
-  let secondChanceAttempt: "Juke" | "Truck" | undefined;
+  let secondChanceAttempt: RunnerDefenderSecondChanceAttempt | undefined;
 
   if (wrapResult.wrapped) {
     carryDefenderResult = handleLbWrapTackle(runState, linebacker.player, "LB Second-Level Wrap", players);
   } else {
     runState.log.push(`${linebacker.player} fails to wrap ${runState.runner} at the second level.`);
 
-    secondChanceAttempt = Math.random() < 0.5 ? "Juke" : "Truck";
+    secondChanceAttempt = chooseRunnerDefenderSecondChanceAttempt(
+      runState.runner,
+      linebacker.player,
+      players
+    );
 
-    if (secondChanceAttempt === "Juke") {
+    runState.log.push(
+      `${runState.runner} chooses to ${secondChanceAttempt.attempt.toLowerCase()} ${linebacker.player} ` +
+      `(truck chance ${secondChanceAttempt.truckChance.toFixed(2)}%, size diff ${secondChanceAttempt.cappedSizeDifference}).`
+    );
+
+    if (secondChanceAttempt.attempt === "Juke") {
       jukeResult = performLbJukeCheck(runState.runner, linebacker.player, players);
 
       if (jukeResult.juked) {
