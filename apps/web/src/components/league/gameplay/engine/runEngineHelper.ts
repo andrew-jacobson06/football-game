@@ -2,10 +2,18 @@ import type {
   FormationSlot,
   DefensiveAssignment,
   PlayerTrait,
+  RunAccelToLBSetting,
+  FrontendSettings,
   RunPlayState
 } from "./types";
 
 const TEOL_SLOTS: FormationSlot[] = ["TEOL1", "TEOL2", "TEOL3", "TEOL4", "TEOL5"];
+const CENTER_SLOT: FormationSlot = "TEOL3";
+
+function settingArray<T>(settings: FrontendSettings | undefined, key: keyof FrontendSettings): T[] {
+  const value = settings?.[key];
+  return Array.isArray(value) ? (value as T[]) : [];
+}
 
 // ---------------------------------------------------------------------------
 // Player / formation lookup helpers
@@ -438,22 +446,58 @@ export function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-export type DlWrapResult = {
+export function getAccelToLBYards(
+  runner: PlayerTrait | undefined,
+  settings: FrontendSettings | undefined,
+  modLog?: string[]
+) {
+  const baseRoll = Math.floor(Math.random() * 101);
+  const acceleration = trait(runner, "acceleration");
+  const accelerationMod = ((acceleration / 10) ** 2) / 9;
+  const adjustedRoll = Math.min(100, baseRoll + accelerationMod);
+
+  let cumulative = 0;
+  const accelToLBSettings = settingArray<RunAccelToLBSetting>(settings, "accelToLBYards");
+  for (const range of accelToLBSettings) {
+    cumulative += Number(range.percentage) || 0;
+    if (adjustedRoll <= cumulative) {
+      const yards = Number(range.yards) || 0;
+      modLog?.push(
+        `Yard +${yards} Accel to LB (roll ${adjustedRoll.toFixed(2)} = ${baseRoll} + ${accelerationMod.toFixed(2)})`
+      );
+      return yards;
+    }
+  }
+
+  const fallbackYards = Number(accelToLBSettings[accelToLBSettings.length - 1]?.yards) || 0;
+  if (fallbackYards) {
+    modLog?.push(
+      `Yard +${fallbackYards} Accel to LB (capped roll ${adjustedRoll.toFixed(2)})`
+    );
+  }
+  return fallbackYards;
+}
+
+export type DefenderWrapResult = {
   defender: string;
+  defenderTackling: number;
   dlTackling: number;
   wrapScore: number;
   roll: number;
   wrapped: boolean;
 };
-export function performDlWrapCheck(
+
+export type DlWrapResult = DefenderWrapResult;
+
+export function performDefenderWrapCheck(
   defenderName: string,
   players: PlayerTrait[]
-): DlWrapResult {
+): DefenderWrapResult {
   const defender = findPlayerByName(players, defenderName);
 
-  const dlTackling = trait(defender, "tackling");
+  const defenderTackling = trait(defender, "tackling");
 
-  const wrapScore = dlTackling / 2;
+  const wrapScore = defenderTackling / 2;
 
   const roll = Math.random() * 100;
 
@@ -461,10 +505,113 @@ export function performDlWrapCheck(
 
   return {
     defender: defenderName,
-    dlTackling,
+    defenderTackling,
+    dlTackling: defenderTackling,
     wrapScore,
     roll,
     wrapped,
+  };
+}
+
+export function performDlWrapCheck(
+  defenderName: string,
+  players: PlayerTrait[]
+): DlWrapResult {
+  return performDefenderWrapCheck(defenderName, players);
+}
+
+
+type RunLaneSide = "left" | "center" | "right";
+
+function laneSide(slot: FormationSlot): RunLaneSide {
+  const slotIndex = TEOL_SLOTS.indexOf(slot);
+  const centerIndex = TEOL_SLOTS.indexOf(CENTER_SLOT);
+
+  if (slotIndex < 0 || slotIndex === centerIndex) return "center";
+  return slotIndex < centerIndex ? "left" : "right";
+}
+
+function assignmentSide(assignment: DefensiveAssignment): RunLaneSide {
+  return assignment.align ? laneSide(assignment.align) : "center";
+}
+
+function lbPositionNumber(assignment: DefensiveAssignment): number {
+  return Number(assignment.position.match(/\d+/)?.[0] ?? 0);
+}
+
+export function pickLinebackerForRunLane(
+  defenseFormation: DefensiveAssignment[],
+  selectedSlot: FormationSlot,
+  runnerSlot?: FormationSlot
+): DefensiveAssignment | undefined {
+  const linebackers = defenseFormation
+    .filter((assignment) => assignment.player && assignment.position.startsWith("LB"))
+    .sort((a, b) => lbPositionNumber(a) - lbPositionNumber(b));
+
+  if (linebackers.length === 0) return undefined;
+  if (linebackers.length === 1) return linebackers[0];
+
+  const side = laneSide(selectedSlot);
+
+  if (side === "center") {
+    return (
+      linebackers.find((assignment) => runnerSlot && assignment.align === runnerSlot) ??
+      linebackers.find((assignment) => assignmentSide(assignment) === "center") ??
+      linebackers[0]
+    );
+  }
+
+  const sameSideLinebacker = linebackers.find(
+    (assignment) => assignmentSide(assignment) === side
+  );
+
+  if (sameSideLinebacker) return sameSideLinebacker;
+
+  return side === "left"
+    ? linebackers[0]
+    : linebackers[linebackers.length - 1];
+}
+
+export type LbSecondLevelResult = {
+  linebacker?: DefensiveAssignment;
+  wrapResult?: DefenderWrapResult;
+  stopped: boolean;
+};
+
+export function resolveLinebackerSecondLevel(
+  runState: RunPlayState,
+  defenseFormation: DefensiveAssignment[],
+  runLaneTarget: RunLaneTargetResult,
+  offenseFormation: Partial<Record<FormationSlot, string>>,
+  players: PlayerTrait[]
+): LbSecondLevelResult {
+  const runnerSlot = (Object.entries(offenseFormation) as [FormationSlot, string | undefined][])
+    .find(([, player]) => player === runState.runner)?.[0];
+  const linebacker = pickLinebackerForRunLane(
+    defenseFormation,
+    runLaneTarget.selectedSlot,
+    runnerSlot
+  );
+
+  if (!linebacker) {
+    runState.log.push(`${runState.runner} reaches the second level with no linebacker in position.`);
+    return { stopped: false };
+  }
+
+  runState.log.push(`${runState.runner} meets ${linebacker.player} at the second level.`);
+
+  const wrapResult = performDefenderWrapCheck(linebacker.player, players);
+
+  if (wrapResult.wrapped) {
+    handleRunnerTackle(runState, linebacker.player, "LB Second-Level Wrap", players);
+  } else {
+    runState.log.push(`${linebacker.player} fails to wrap ${runState.runner} at the second level.`);
+  }
+
+  return {
+    linebacker,
+    wrapResult,
+    stopped: runState.stopped,
   };
 }
 
