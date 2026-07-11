@@ -384,7 +384,7 @@ export function performTruckAttempt(
   const runnerPower = trait(runner, "size") + trait(runner, "strength");
   const defenderPower = trait(defender, "size") + trait(defender, "strength");
   const totalPower = runnerPower + defenderPower;
-  const truckChance = totalPower > 0 ? (runnerPower / totalPower) * 100 : 0;
+  const truckChance = totalPower > 0 ? (runnerPower / (totalPower + 80)) * 100 : 0;
   const roll = Math.random() * 100;
 
   return {
