@@ -600,17 +600,7 @@ export function runPlay(
         "DL Swipe Tackle",
         ctx.players
       );
-    } else {
-      addYards(
-        runState,
-        getAccelToLBYards(byName(ctx, runState.runner), ctx.settings, runState.log),
-        `${runState.runner} accelerates to the second level before meeting a linebacker`
-      );
-
-      runState.log.push(
-        `${runState.runner} hits the hole behind ${runLaneTarget.selectedPlayer} and clears the defensive line.`
-      );
-    }
+    } 
   }
 
   console.log("OL wins:", olWins);
@@ -626,11 +616,23 @@ export function runPlay(
   console.log("Other winning DLs after juke:", otherWinningDLsAfterJuke);
   console.log("DL pursuit result:", dlPursuitResult);
 
+  //if tackled in backfield or snuffed at line
   if (runState.stopped) {
     console.log("Run stopped during DL phase:", runState);
     //return runState;
   }
+  //if hit hole or juked out of backfield...
+  else {
+    console.log("Run survived DL phase:", runState);
+    
+    addYards(
+      runState,
+      getAccelToLBYards(byName(ctx, runState.runner), ctx.settings, runState.log),
+      `${runState.runner} accelerates to the second level before meeting a linebacker`
+    );
 
-  console.log("Run survived DL phase:", runState);
-  //return runState;
+    runState.log.push(
+      `${runState.runner} hits the hole behind ${runLaneTarget.selectedPlayer} and clears the defensive line.`
+    );
+  }
 }
