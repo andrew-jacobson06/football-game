@@ -1,5 +1,6 @@
 import type { LeagueGame } from "../../types";
-import type { EngineContext, FrontendSettings, PlayCallOptions, RunBreakawaySetting, RunThreshold, DefensiveAssignment } from "./types";
+import type { EngineContext, FrontendSettings, PlayCallOptions, RunBreakawaySetting, RunThreshold } from "./types";
+import { buildResult } from "./playLogger";
 import { advanceBall, advanceQuarter, byName, byPosition, choose, clockRunoff, defenseTeam, isSafety, isTouchdown, n, nextDownDistance, offenseTeam, playerName, switchPoss, teamPlayers, trait, weightedChoose } from "./utils";
 import {
   performLineWinLoss,
@@ -12,10 +13,8 @@ import {
   performDlJukeCheck,
   getOtherWinningDLs,
   resolveRemainingDlPursuit,
-  performAccelerationCheck,
   randomInt,
   addYards,
-  stopRun
 } from "./runEngineHelper";
 
 export function determineTackler(ctx: EngineContext, defense: string, yards: number) {
@@ -39,6 +38,10 @@ function settingArray<T>(settings: FrontendSettings | undefined, key: keyof Fron
   const value = settings?.[key];
   return Array.isArray(value) ? (value as T[]) : [];
 }
+
+// ---------------------------------------------------------------------------
+// Legacy single-carry yardage model
+// ---------------------------------------------------------------------------
 
 export function simulateSingleCarry(stats: CarryStats) {
   const modLog: string[] = [];
@@ -202,6 +205,9 @@ export function maybeBoostRollForAcceleration(acceleration: number, fatigue: num
   return boost;
 }
 
+// ---------------------------------------------------------------------------
+// Legacy run-play support
+// ---------------------------------------------------------------------------
 
 //ballCarrier.offStars ^2 chance of true. Otherwise false
 //NEEDS TRansition TO THIS CLASS
@@ -430,6 +436,10 @@ export function runPlayOld(game: LeagueGame, ctx: EngineContext, options: PlayCa
   return buildResult(game, updated, "Run", runnerName, "", yards, tackler, result, ctx.historyLength, { recoveredby: fumble.recoveredBy });
 }
 
+// ---------------------------------------------------------------------------
+// Current run-play pipeline
+// ---------------------------------------------------------------------------
+
 export function runPlay(
   game: LeagueGame,
   ctx: EngineContext,
@@ -482,7 +492,7 @@ export function runPlay(
   let otherWinningDLsAfterJuke: ReturnType<typeof getOtherWinningDLs> = [];
   let dlPursuitResult: ReturnType<typeof resolveRemainingDlPursuit> | null = null;
 
-  //IF the runner doesn't hit a hole...
+  // Backfield branch: the runner missed the hole and must beat the winning DL.
   if (!visionCheck.getsPastDL) {
     const backfieldYards = randomInt(-5, -1);
 
@@ -546,7 +556,7 @@ export function runPlay(
       }
     }
   }
-  //Otherwise, if the runner DOES hit a hole...
+  // Frontside branch: the runner found the intended lane and may face a swipe attempt.
   else {
     dlSwipeResult =
       runLaneTarget.selectedSide === "OL"

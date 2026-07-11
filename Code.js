@@ -262,6 +262,9 @@ function getBreakawayYards() {
 function getAccelToLBs() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
   const data = sheet.getDataRange().getValues();
+
+  // Reads the "RUN PLAY _ ACCEL TO LINE BACKERS" Settings rows:
+  // accel_to_LB_N | percentage | yds
   const accelYds = data
     .filter(row => typeof row[0] === "string" && row[0].startsWith("accel_to_LB_"))
     .map(row => ({
@@ -416,7 +419,7 @@ function getFrontendSettings() {
   Logger.log("Fetching frontend settings...");
   const thresholds = getRunThresholdsFromSettings();
   Logger.log(thresholds);
-  data= {
+  const data = {
     thresholds: getRunThresholdsFromSettings(),
     breakaways: getBreakawayYards(),
     accelToLBYards: getAccelToLBs(),

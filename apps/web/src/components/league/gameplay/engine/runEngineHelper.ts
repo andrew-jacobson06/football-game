@@ -7,6 +7,10 @@ import type {
 
 const TEOL_SLOTS: FormationSlot[] = ["TEOL1", "TEOL2", "TEOL3", "TEOL4", "TEOL5"];
 
+// ---------------------------------------------------------------------------
+// Player / formation lookup helpers
+// ---------------------------------------------------------------------------
+
 export type OlDlMatchup = {
   slot: FormationSlot;
   offensePlayer: string;
@@ -59,6 +63,10 @@ export function findPlayerByName(
     return name === playerName;
   });
 }
+
+// ---------------------------------------------------------------------------
+// Line-of-scrimmage checks
+// ---------------------------------------------------------------------------
 
 export type LineWinLossResult = {
   slot: FormationSlot;
@@ -281,6 +289,11 @@ export function pickRunLaneTarget(
     candidates,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Run-lane selection and run-state mutation helpers
+// ---------------------------------------------------------------------------
+
 export function createRunPlayState(runner: string): RunPlayState {
   return {
     yards: 0,
@@ -311,6 +324,10 @@ export function stopRun(
   state.log.push(`${tackler} stops ${state.runner}. Reason: ${reason}.`);
   return state;
 }
+
+// ---------------------------------------------------------------------------
+// Defensive line resolution checks
+// ---------------------------------------------------------------------------
 
 export type DlSwipeResult = {
   attempted: boolean;
