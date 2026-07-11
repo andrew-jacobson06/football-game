@@ -629,9 +629,52 @@ export function pickLinebackerForRunLane(
 export type LbSecondLevelResult = {
   linebacker?: DefensiveAssignment;
   wrapResult?: DefenderWrapResult;
+  jukeResult?: LbJukeResult;
   carryDefenderResult?: CarryDefenderResult;
+  secondChanceAttempt?: "Juke" | "Truck";
   stopped: boolean;
 };
+
+export type LbJukeResult = {
+  runner: string;
+  defender: string;
+  runnerJukeTrait: number;
+  defenderTacklingTrait: number;
+  rbJukeScore: number;
+  lbDefendScore: number;
+  targetToBeat: number;
+  roll: number;
+  juked: boolean;
+};
+
+export function performLbJukeCheck(
+  runnerName: string,
+  defenderName: string,
+  players: PlayerTrait[]
+): LbJukeResult {
+  const runner = findPlayerByName(players, runnerName);
+  const defender = findPlayerByName(players, defenderName);
+
+  const runnerJukeTrait = trait(runner, "juke");
+  const defenderTacklingTrait = trait(defender, "tackling");
+
+  const rbJukeScore = 15 + ((runnerJukeTrait / 10) ** 2) / 3;
+  const lbDefendScore = ((defenderTacklingTrait / 15) ** 2) / 2;
+  const targetToBeat = rbJukeScore - lbDefendScore;
+  const roll = Math.random() * 100;
+
+  return {
+    runner: runnerName,
+    defender: defenderName,
+    runnerJukeTrait,
+    defenderTacklingTrait,
+    rbJukeScore,
+    lbDefendScore,
+    targetToBeat,
+    roll,
+    juked: roll < targetToBeat,
+  };
+}
 
 export function resolveLinebackerSecondLevel(
   runState: RunPlayState,
@@ -657,17 +700,44 @@ export function resolveLinebackerSecondLevel(
 
   const wrapResult = performDefenderWrapCheck(linebacker.player, players);
   let carryDefenderResult: CarryDefenderResult | undefined;
+  let jukeResult: LbJukeResult | undefined;
+  let secondChanceAttempt: "Juke" | "Truck" | undefined;
 
   if (wrapResult.wrapped) {
     carryDefenderResult = handleLbWrapTackle(runState, linebacker.player, "LB Second-Level Wrap", players);
   } else {
     runState.log.push(`${linebacker.player} fails to wrap ${runState.runner} at the second level.`);
+
+    secondChanceAttempt = Math.random() < 0.5 ? "Juke" : "Truck";
+
+    if (secondChanceAttempt === "Juke") {
+      jukeResult = performLbJukeCheck(runState.runner, linebacker.player, players);
+
+      if (jukeResult.juked) {
+        runState.log.push(
+          `${runState.runner} jukes ${linebacker.player} at the second level (roll ${jukeResult.roll.toFixed(2)} < ${jukeResult.targetToBeat.toFixed(2)}).`
+        );
+      } else {
+        carryDefenderResult = handleLbWrapTackle(
+          runState,
+          linebacker.player,
+          "LB Second-Level Juke Failed",
+          players
+        );
+      }
+    } else {
+      runState.log.push(
+        `${runState.runner} lowers a shoulder into ${linebacker.player}; truck check is not implemented yet.`
+      );
+    }
   }
 
   return {
     linebacker,
     wrapResult,
+    jukeResult,
     carryDefenderResult,
+    secondChanceAttempt,
     stopped: runState.stopped,
   };
 }
