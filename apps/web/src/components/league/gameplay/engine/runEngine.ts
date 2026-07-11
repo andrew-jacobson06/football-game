@@ -20,7 +20,7 @@ import {
   pickShortAccelerationDefender,
   chooseRunnerDefenderSecondChanceAttempt,
   performTruckAttempt,
-  performPostTruckAccelerationCheck,
+  performPostTruckorJukeAccelerationCheck,
 } from "./runEngineHelper";
 
 export function determineTackler(ctx: EngineContext, defense: string, yards: number) {
@@ -565,9 +565,10 @@ export function runPlay(
               `${runState.runner} has no remaining penetrating defensive linemen to beat after the truck and escapes toward the second level.`
             );
           } else {
-            const accelerationResult = performPostTruckAccelerationCheck(
+            const accelerationResult = performPostTruckorJukeAccelerationCheck(
               runState.runner,
-              ctx.players
+              ctx.players,
+              "truck"
             );
 
             if (accelerationResult.acceleratedPast) {

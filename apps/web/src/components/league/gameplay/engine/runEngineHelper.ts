@@ -398,25 +398,33 @@ export function performTruckAttempt(
   };
 }
 
-export type TruckAccelerationResult = {
+export type PostContactAccelerationCheckType = "truck" | "juke";
+
+export type TruckOrJukeAccelerationResult = {
   runner: string;
+  checkType: PostContactAccelerationCheckType;
   runnerAcceleration: number;
   accelPastChance: number;
   roll: number;
   acceleratedPast: boolean;
 };
 
-export function performPostTruckAccelerationCheck(
+export function performPostTruckorJukeAccelerationCheck(
   runnerName: string,
-  players: PlayerTrait[]
-): TruckAccelerationResult {
+  players: PlayerTrait[],
+  checkType: PostContactAccelerationCheckType
+): TruckOrJukeAccelerationResult {
   const runner = findPlayerByName(players, runnerName);
   const runnerAcceleration = trait(runner, "acceleration");
-  const accelPastChance = ((runnerAcceleration / 10) ** 2) / 3;
+  const accelPastChance =
+    checkType === "juke"
+      ? runnerAcceleration
+      : ((runnerAcceleration / 10) ** 2) / 3;
   const roll = Math.random() * 100;
 
   return {
     runner: runnerName,
+    checkType,
     runnerAcceleration,
     accelPastChance,
     roll,
@@ -841,7 +849,7 @@ export type LbSecondLevelResult = {
   carryDefenderResult?: CarryDefenderResult;
   secondChanceAttempt?: RunnerDefenderSecondChanceAttempt;
   truckResult?: TruckAttemptResult;
-  truckAccelerationResult?: TruckAccelerationResult;
+  truckAccelerationResult?: TruckOrJukeAccelerationResult;
   nextLevelPressure?: LbNextLevelPressureResult;
   stopped: boolean;
 };
@@ -940,7 +948,11 @@ export function resolveLinebackerSecondLevel(
       return undefined;
     }
 
-    const escapeAccelerationResult = performPostTruckAccelerationCheck(runState.runner, players);
+    const escapeAccelerationResult = performPostTruckorJukeAccelerationCheck(
+      runState.runner,
+      players,
+      action
+    );
     if (escapeAccelerationResult.acceleratedPast) {
       runState.log.push(
         `${runState.runner} accelerates past the remaining defenders after the ${action} (roll ${escapeAccelerationResult.roll.toFixed(2)} <= ${escapeAccelerationResult.accelPastChance.toFixed(2)}%) and breaks into the secondary.`
@@ -1139,16 +1151,9 @@ export function getOtherWinningDLs(
   );
 }
 
-export type AccelerationCheckResult = {
-  runner: string;
-  runnerAcceleration: number;
-  roll: number;
-  succeeded: boolean;
-};
-
 export type DlPursuitStep = {
   defender: string;
-  accelerationCheck: AccelerationCheckResult;
+  accelerationCheck: TruckOrJukeAccelerationResult;
   wrapResult?: DlWrapResult;
   jukeResult?: DlJukeResult;
   outcome: "Accelerated Past DLs" | "Wrapped" | "Juked" | "Juke Failed";
@@ -1161,26 +1166,6 @@ export type DlPursuitResult = {
   steps: DlPursuitStep[];
 };
 
-export function performAccelerationCheck(
-  runnerName: string,
-  players: PlayerTrait[]
-): AccelerationCheckResult {
-  const runner = findPlayerByName(players, runnerName);
-
-  const runnerAcceleration = trait(runner, "acceleration");
-
-  const roll = Math.random() * 100;
-
-  const succeeded = roll <= runnerAcceleration;
-
-  return {
-    runner: runnerName,
-    runnerAcceleration,
-    roll,
-    succeeded,
-  };
-}
-
 export function resolveRemainingDlPursuit(
   runState: RunPlayState,
   remainingWinningDLs: LineWinLossResult[],
@@ -1191,12 +1176,13 @@ export function resolveRemainingDlPursuit(
   for (const dlBattle of remainingWinningDLs) {
     const defenderName = dlBattle.defensePlayer;
 
-    const accelerationCheck = performAccelerationCheck(
+    const accelerationCheck = performPostTruckorJukeAccelerationCheck(
       runState.runner,
-      players
+      players,
+      "juke"
     );
 
-    if (accelerationCheck.succeeded) {
+    if (accelerationCheck.acceleratedPast) {
       steps.push({
         defender: defenderName,
         accelerationCheck,
