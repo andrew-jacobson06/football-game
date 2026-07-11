@@ -19,6 +19,8 @@ import {
   resolveLinebackerSecondLevel,
   pickShortAccelerationDefender,
   chooseRunnerDefenderSecondChanceAttempt,
+  performTruckAttempt,
+  performPostTruckAccelerationCheck,
 } from "./runEngineHelper";
 
 export function determineTackler(ctx: EngineContext, defense: string, yards: number) {
@@ -533,9 +535,59 @@ export function runPlay(
       );
 
       if (dlSecondChanceAttempt.attempt === "Truck") {
-        runState.log.push(
-          `${runState.runner} lowers a shoulder into ${dlWrapResult.defender}; truck check is not implemented yet.`
+        const truckResult = performTruckAttempt(
+          runState.runner,
+          dlWrapResult.defender,
+          ctx.players
         );
+
+        if (!truckResult.trucked) {
+          runState.log.push(
+            `${runState.runner} fails to truck ${dlWrapResult.defender} (roll ${truckResult.roll.toFixed(2)} > ${truckResult.truckChance.toFixed(2)}%).`
+          );
+          fallForwardResult = handleRunnerTackle(
+            runState,
+            dlWrapResult.defender,
+            "DL Backfield Truck Failed",
+            ctx.players
+          );
+        } else {
+          runState.log.push(
+            `${runState.runner} trucks ${dlWrapResult.defender} (roll ${truckResult.roll.toFixed(2)} <= ${truckResult.truckChance.toFixed(2)}%) and tries to restart downhill.`
+          );
+
+          const otherWinningDLsAfterTruck = getOtherWinningDLs(
+            lineWinLossArray,
+            dlWrapResult.defender
+          );
+          if (otherWinningDLsAfterTruck.length === 0) {
+            runState.log.push(
+              `${runState.runner} has no remaining penetrating defensive linemen to beat after the truck and escapes toward the second level.`
+            );
+          } else {
+            const accelerationResult = performPostTruckAccelerationCheck(
+              runState.runner,
+              ctx.players
+            );
+
+            if (accelerationResult.acceleratedPast) {
+              runState.log.push(
+                `${runState.runner} accelerates after contact (roll ${accelerationResult.roll.toFixed(2)} <= ${accelerationResult.accelPastChance.toFixed(2)}%) and escapes toward the second level.`
+              );
+            } else {
+              const pursuingDefender = otherWinningDLsAfterTruck[0]?.defensePlayer || dlWrapResult.defender;
+              runState.log.push(
+                `${runState.runner} cannot accelerate past the remaining defenders after the truck (roll ${accelerationResult.roll.toFixed(2)} > ${accelerationResult.accelPastChance.toFixed(2)}%).`
+              );
+              fallForwardResult = handleRunnerTackle(
+                runState,
+                pursuingDefender,
+                "DL Backfield Post-Truck Acceleration Failed",
+                ctx.players
+              );
+            }
+          }
+        }
       } else {
         dlJukeResult = performDlJukeCheck(
           runState.runner,
@@ -544,7 +596,7 @@ export function runPlay(
         );
       }
 
-      if (dlJukeResult && !dlJukeResult.juked) {
+      if (!runState.stopped && dlJukeResult && !dlJukeResult.juked) {
         fallForwardResult = handleRunnerTackle(
           runState,
           dlWrapResult.defender,

@@ -363,6 +363,67 @@ export function chooseRunnerDefenderSecondChanceAttempt(
   };
 }
 
+
+export type TruckAttemptResult = {
+  runner: string;
+  defender: string;
+  runnerPower: number;
+  defenderPower: number;
+  truckChance: number;
+  roll: number;
+  trucked: boolean;
+};
+
+export function performTruckAttempt(
+  runnerName: string,
+  defenderName: string,
+  players: PlayerTrait[]
+): TruckAttemptResult {
+  const runner = findPlayerByName(players, runnerName);
+  const defender = findPlayerByName(players, defenderName);
+  const runnerPower = trait(runner, "size") + trait(runner, "strength");
+  const defenderPower = trait(defender, "size") + trait(defender, "strength");
+  const totalPower = runnerPower + defenderPower;
+  const truckChance = totalPower > 0 ? (runnerPower / totalPower) * 100 : 0;
+  const roll = Math.random() * 100;
+
+  return {
+    runner: runnerName,
+    defender: defenderName,
+    runnerPower,
+    defenderPower,
+    truckChance,
+    roll,
+    trucked: roll <= truckChance,
+  };
+}
+
+export type TruckAccelerationResult = {
+  runner: string;
+  runnerAcceleration: number;
+  accelPastChance: number;
+  roll: number;
+  acceleratedPast: boolean;
+};
+
+export function performPostTruckAccelerationCheck(
+  runnerName: string,
+  players: PlayerTrait[]
+): TruckAccelerationResult {
+  const runner = findPlayerByName(players, runnerName);
+  const runnerAcceleration = trait(runner, "acceleration");
+  const accelPastChance = ((runnerAcceleration / 10) ** 2) / 3;
+  const roll = Math.random() * 100;
+
+  return {
+    runner: runnerName,
+    runnerAcceleration,
+    accelPastChance,
+    roll,
+    acceleratedPast: roll <= accelPastChance,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Defensive line resolution checks
 // ---------------------------------------------------------------------------
@@ -747,6 +808,8 @@ export type LbSecondLevelResult = {
   fallForwardResult?: FallForwardResult;
   carryDefenderResult?: CarryDefenderResult;
   secondChanceAttempt?: RunnerDefenderSecondChanceAttempt;
+  truckResult?: TruckAttemptResult;
+  truckAccelerationResult?: TruckAccelerationResult;
   nextLevelPressure?: LbNextLevelPressureResult;
   stopped: boolean;
 };
@@ -891,6 +954,8 @@ export function resolveLinebackerSecondLevel(
   let jukeResult: LbJukeResult | undefined;
   let nextLevelPressure: LbNextLevelPressureResult | undefined;
   let secondChanceAttempt: RunnerDefenderSecondChanceAttempt | undefined;
+  let truckResult: TruckAttemptResult | undefined;
+  let truckAccelerationResult: TruckAccelerationResult | undefined;
 
   if (wrapResult.wrapped) {
     carryDefenderResult = handleLbWrapTackle(runState, linebacker.player, "LB Second-Level Wrap", players);
@@ -931,9 +996,46 @@ export function resolveLinebackerSecondLevel(
         );
       }
     } else {
-      runState.log.push(
-        `${runState.runner} lowers a shoulder into ${linebacker.player}; truck check is not implemented yet.`
-      );
+      truckResult = performTruckAttempt(runState.runner, linebacker.player, players);
+
+      if (!truckResult.trucked) {
+        runState.log.push(
+          `${runState.runner} fails to truck ${linebacker.player} at the second level (roll ${truckResult.roll.toFixed(2)} > ${truckResult.truckChance.toFixed(2)}%).`
+        );
+        carryDefenderResult = handleLbWrapTackle(
+          runState,
+          linebacker.player,
+          "LB Second-Level Truck Failed",
+          players
+        );
+      } else {
+        runState.log.push(
+          `${runState.runner} trucks ${linebacker.player} at the second level (roll ${truckResult.roll.toFixed(2)} <= ${truckResult.truckChance.toFixed(2)}%) and tries to accelerate again.`
+        );
+
+        const otherLinebacker = getOtherLinebackerInPlay(defenseFormation, linebacker);
+        const hasDbChase = hasDbChasingPlay(defenseFormation, runLaneTarget);
+        truckAccelerationResult = performPostTruckAccelerationCheck(runState.runner, players);
+
+        if (!otherLinebacker && !hasDbChase) {
+          runState.log.push(`${runState.runner} has no remaining second-level defenders in chase after the truck.`);
+        } else if (truckAccelerationResult.acceleratedPast) {
+          runState.log.push(
+            `${runState.runner} accelerates past the remaining defenders after contact (roll ${truckAccelerationResult.roll.toFixed(2)} <= ${truckAccelerationResult.accelPastChance.toFixed(2)}%).`
+          );
+        } else {
+          const pursuingDefender = otherLinebacker?.player || linebacker.player;
+          runState.log.push(
+            `${runState.runner} cannot accelerate past the remaining defenders after the truck (roll ${truckAccelerationResult.roll.toFixed(2)} > ${truckAccelerationResult.accelPastChance.toFixed(2)}%).`
+          );
+          handleRunnerTackle(
+            runState,
+            pursuingDefender,
+            "LB Post-Truck Acceleration Failed",
+            players
+          );
+        }
+      }
     }
   }
 
@@ -944,6 +1046,8 @@ export function resolveLinebackerSecondLevel(
     fallForwardResult,
     carryDefenderResult,
     secondChanceAttempt,
+    truckResult,
+    truckAccelerationResult,
     nextLevelPressure,
     stopped: runState.stopped,
   };
