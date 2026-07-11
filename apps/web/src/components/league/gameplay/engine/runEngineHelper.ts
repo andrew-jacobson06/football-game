@@ -419,6 +419,37 @@ export function performFallForwardCheck(
   };
 }
 
+export type CarryDefenderResult = {
+  runner: string;
+  runnerSize: number;
+  runnerStrength: number;
+  carryScore: number;
+  rolls: number[];
+  yardsAdded: number;
+};
+
+export function performCarryDefenderChecks(
+  runnerName: string,
+  players: PlayerTrait[]
+): CarryDefenderResult {
+  const runner = findPlayerByName(players, runnerName);
+
+  const runnerSize = trait(runner, "size");
+  const runnerStrength = trait(runner, "strength");
+  const carryScore = (runnerSize + runnerStrength) / 2;
+  const rolls = [Math.random() * 100, Math.random() * 100];
+  const yardsAdded = rolls.filter((roll) => roll <= carryScore).length;
+
+  return {
+    runner: runnerName,
+    runnerSize,
+    runnerStrength,
+    carryScore,
+    rolls,
+    yardsAdded,
+  };
+}
+
 export function handleRunnerTackle(
   state: RunPlayState,
   tackler: string,
@@ -440,6 +471,29 @@ export function handleRunnerTackle(
   state.log.push(`${tackler} tackles ${state.runner}. Reason: ${reason}.`);
 
   return fallForwardResult;
+}
+
+export function handleLbWrapTackle(
+  state: RunPlayState,
+  tackler: string,
+  reason: string,
+  players: PlayerTrait[]
+): CarryDefenderResult {
+  const carryDefenderResult = performCarryDefenderChecks(state.runner, players);
+
+  if (carryDefenderResult.yardsAdded > 0) {
+    state.yards += carryDefenderResult.yardsAdded;
+    state.log.push(
+      `${state.runner} carries ${tackler} for +${carryDefenderResult.yardsAdded} extra ${carryDefenderResult.yardsAdded === 1 ? "yard" : "yards"}.`
+    );
+  }
+
+  state.tackler = tackler;
+  state.stopped = true;
+  state.stopReason = reason;
+  state.log.push(`${tackler} tackles ${state.runner}. Reason: ${reason}.`);
+
+  return carryDefenderResult;
 }
 
 export function randomInt(min: number, max: number): number {
@@ -575,6 +629,7 @@ export function pickLinebackerForRunLane(
 export type LbSecondLevelResult = {
   linebacker?: DefensiveAssignment;
   wrapResult?: DefenderWrapResult;
+  carryDefenderResult?: CarryDefenderResult;
   stopped: boolean;
 };
 
@@ -601,9 +656,10 @@ export function resolveLinebackerSecondLevel(
   runState.log.push(`${runState.runner} meets ${linebacker.player} at the second level.`);
 
   const wrapResult = performDefenderWrapCheck(linebacker.player, players);
+  let carryDefenderResult: CarryDefenderResult | undefined;
 
   if (wrapResult.wrapped) {
-    handleRunnerTackle(runState, linebacker.player, "LB Second-Level Wrap", players);
+    carryDefenderResult = handleLbWrapTackle(runState, linebacker.player, "LB Second-Level Wrap", players);
   } else {
     runState.log.push(`${linebacker.player} fails to wrap ${runState.runner} at the second level.`);
   }
@@ -611,6 +667,7 @@ export function resolveLinebackerSecondLevel(
   return {
     linebacker,
     wrapResult,
+    carryDefenderResult,
     stopped: runState.stopped,
   };
 }
