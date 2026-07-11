@@ -43,7 +43,13 @@ async function getTeamsFromSheet() {
   const { headers, rows } = await sheetRows("Teams");
   return rows.filter((r) => r?.[0] !== "" && r?.[0] != null).slice(0, 10).map((r) => objectFrom(headers, r));
 }
-function settingRows(rows: Row[], prefix: string) { return rows.filter((r) => typeof r[0] === "string" && String(r[0]).startsWith(prefix)); }
+function normalizeSettingLabel(label: unknown) {
+  return String(label || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+function settingRows(rows: Row[], prefix: string) {
+  const normalizedPrefix = normalizeSettingLabel(prefix);
+  return rows.filter((r) => normalizeSettingLabel(r[0]).startsWith(normalizedPrefix));
+}
 async function getFrontendSettingsFromSheet() {
   const { rows } = await sheetRows("Settings");
   let cumulative = 0;
@@ -91,7 +97,9 @@ async function getFrontendSettingsFromSheet() {
   return {
     thresholds,
     breakaways: settingRows(rows, "Break_").map((r) => ({ label: r[0], percentage: parseFloat(String(r[1])), minYards: parseInt(String(r[2]), 10), maxYards: parseInt(String(r[3]), 10) })),
-    accelToLBYards: settingRows(rows, "accel_to_LB_").map((r) => ({ label: r[0], percentage: parseFloat(String(r[1])), yards: parseInt(String(r[2]), 10) })),
+    accelToLBYards: settingRows(rows, "accel_to_LB_")
+      .map((r) => ({ label: r[0], percentage: parseFloat(String(r[1])), yards: parseInt(String(r[2]), 10) }))
+      .filter((r) => Number.isFinite(r.percentage) && Number.isFinite(r.yards)),
     staminaDrains,
     tackleTable: settingRows(rows, "Tackle_").map((r) => ({ label: r[0], yardageCap: Number(r[1]), DL: Number(r[2]) || 0, LB: Number(r[3]) || 0, DBS: Number(r[4]) || 0 })).sort((a,b)=>a.yardageCap-b.yardageCap),
     completionTable: settingRows(rows, "airYards_Completion_").map((r) => ({ label: r[0], pastLos: Number(r[1]), baseCompletion: Number(r[2]), percentage: Number(r[3]) })),

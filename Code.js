@@ -259,6 +259,14 @@ function getBreakawayYards() {
   return breakRanges;
 }
 
+function normalizeSettingLabel(label) {
+  return String(label || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function settingLabelStartsWith(label, prefix) {
+  return normalizeSettingLabel(label).startsWith(normalizeSettingLabel(prefix));
+}
+
 function getAccelToLBs() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
   const data = sheet.getDataRange().getValues();
@@ -266,12 +274,19 @@ function getAccelToLBs() {
   // Reads the "RUN PLAY _ ACCEL TO LINE BACKERS" Settings rows:
   // accel_to_LB_N | percentage | yds
   const accelYds = data
-    .filter(row => typeof row[0] === "string" && row[0].startsWith("accel_to_LB_"))
+    .filter(row => settingLabelStartsWith(row[0], "accel_to_LB_"))
     .map(row => ({
       label: row[0],
       percentage: parseFloat(row[1]),
       yards: parseInt(row[2], 10)
-    }));
+    }))
+    .filter(row => !Number.isNaN(row.percentage) && !Number.isNaN(row.yards));
+  Logger.log(`getAccelToLBs found ${accelYds.length} rows`);
+  if (!accelYds.length) {
+    Logger.log(
+      "No accel-to-LB settings found. Check that Settings labels look like accel_to_LB_1, accel to LB 1, or ACCEL_TO_LB_1 and that percentage/yards cells are numeric."
+    );
+  }
   return accelYds;
 }
 
