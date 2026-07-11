@@ -630,9 +630,19 @@ export type LbSecondLevelResult = {
   linebacker?: DefensiveAssignment;
   wrapResult?: DefenderWrapResult;
   jukeResult?: LbJukeResult;
+  fallForwardResult?: FallForwardResult;
   carryDefenderResult?: CarryDefenderResult;
   secondChanceAttempt?: "Juke" | "Truck";
+  nextLevelPressure?: LbNextLevelPressureResult;
   stopped: boolean;
+};
+
+export type LbNextLevelPressureResult = {
+  otherLinebacker?: DefensiveAssignment;
+  hasDbChase: boolean;
+  accelerationRoll?: number;
+  runnerAcceleration: number;
+  escaped: boolean;
 };
 
 export type LbJukeResult = {
@@ -676,6 +686,68 @@ export function performLbJukeCheck(
   };
 }
 
+
+function getOtherLinebackerInPlay(
+  defenseFormation: DefensiveAssignment[],
+  beatenLinebacker: DefensiveAssignment
+): DefensiveAssignment | undefined {
+  return defenseFormation.find((assignment) =>
+    assignment.player &&
+    assignment.position.startsWith("LB") &&
+    assignment.player !== beatenLinebacker.player
+  );
+}
+
+function hasDbChasingPlay(
+  defenseFormation: DefensiveAssignment[],
+  runLaneTarget: RunLaneTargetResult
+): boolean {
+  void defenseFormation;
+  void runLaneTarget;
+  // TODO: Calculate DB pursuit once defensive back chase logic is implemented.
+  return false;
+}
+
+function resolvePostJukeSecondLevelPressure(
+  runState: RunPlayState,
+  defenseFormation: DefensiveAssignment[],
+  beatenLinebacker: DefensiveAssignment,
+  runLaneTarget: RunLaneTargetResult,
+  players: PlayerTrait[]
+): LbNextLevelPressureResult {
+  const otherLinebacker = getOtherLinebackerInPlay(defenseFormation, beatenLinebacker);
+  const hasDbChase = hasDbChasingPlay(defenseFormation, runLaneTarget);
+  const runnerAcceleration = trait(findPlayerByName(players, runState.runner), "acceleration");
+
+  if (!otherLinebacker && !hasDbChase) {
+    runState.log.push(`${runState.runner} has no other linebackers or defensive backs in chase and takes off into the secondary.`);
+    return { hasDbChase, runnerAcceleration, escaped: true };
+  }
+
+  if (otherLinebacker) {
+    const accelerationRoll = Math.random() * 100;
+    const escaped = accelerationRoll <= runnerAcceleration;
+
+    if (escaped) {
+      runState.log.push(
+        `${runState.runner} accelerates past ${otherLinebacker.player} (roll ${accelerationRoll.toFixed(2)} <= ${runnerAcceleration.toFixed(2)}) and takes off into the secondary.`
+      );
+    } else {
+      handleRunnerTackle(
+        runState,
+        otherLinebacker.player,
+        "LB Post-Juke Acceleration Failed",
+        players
+      );
+    }
+
+    return { otherLinebacker, hasDbChase, accelerationRoll, runnerAcceleration, escaped };
+  }
+
+  runState.log.push(`${runState.runner} beat the linebacker, but DB chase resolution is not implemented yet.`);
+  return { hasDbChase, runnerAcceleration, escaped: true };
+}
+
 export function resolveLinebackerSecondLevel(
   runState: RunPlayState,
   defenseFormation: DefensiveAssignment[],
@@ -700,7 +772,9 @@ export function resolveLinebackerSecondLevel(
 
   const wrapResult = performDefenderWrapCheck(linebacker.player, players);
   let carryDefenderResult: CarryDefenderResult | undefined;
+  let fallForwardResult: FallForwardResult | undefined;
   let jukeResult: LbJukeResult | undefined;
+  let nextLevelPressure: LbNextLevelPressureResult | undefined;
   let secondChanceAttempt: "Juke" | "Truck" | undefined;
 
   if (wrapResult.wrapped) {
@@ -717,8 +791,15 @@ export function resolveLinebackerSecondLevel(
         runState.log.push(
           `${runState.runner} jukes ${linebacker.player} at the second level (roll ${jukeResult.roll.toFixed(2)} < ${jukeResult.targetToBeat.toFixed(2)}).`
         );
+        nextLevelPressure = resolvePostJukeSecondLevelPressure(
+          runState,
+          defenseFormation,
+          linebacker,
+          runLaneTarget,
+          players
+        );
       } else {
-        carryDefenderResult = handleLbWrapTackle(
+        fallForwardResult = handleRunnerTackle(
           runState,
           linebacker.player,
           "LB Second-Level Juke Failed",
@@ -736,8 +817,10 @@ export function resolveLinebackerSecondLevel(
     linebacker,
     wrapResult,
     jukeResult,
+    fallForwardResult,
     carryDefenderResult,
     secondChanceAttempt,
+    nextLevelPressure,
     stopped: runState.stopped,
   };
 }
