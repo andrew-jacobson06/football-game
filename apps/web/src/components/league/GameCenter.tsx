@@ -25,6 +25,7 @@ function normalizeFrontendSettings(settings: Record<string, unknown>): FrontendS
   normalized.timeNeededToOpen = normalized.timeNeededToOpen ?? normalized.timeNeededToThrow;
   normalized.thresholds = Array.isArray(normalized.thresholds) ? normalized.thresholds : [];
   normalized.breakaways = Array.isArray(normalized.breakaways) ? normalized.breakaways : [];
+  normalized.accelToLBYards = Array.isArray(normalized.accelToLBYards) ? normalized.accelToLBYards : [];
   normalized.staminaDrains = normalized.staminaDrains ?? {};
   normalized.tackleTable = Array.isArray(normalized.tackleTable) ? normalized.tackleTable : [];
   normalized.completionTable = Array.isArray(normalized.completionTable) ? normalized.completionTable : [];
