@@ -137,7 +137,7 @@ export function performVisionCheck(
   const allOlWon = totalBattles > 0 && olWins === totalBattles;
   const allDlWon = totalBattles > 0 && dlWins === totalBattles;
 
-  const rawVisionTarget = ((runnerVision * 0.19) + 75) + runBlockingModifier;
+  const rawVisionTarget = ((runnerVision * 0.19) + 70) + runBlockingModifier;
 
   const visionTarget = Math.max(0, Math.min(100, rawVisionTarget));
 

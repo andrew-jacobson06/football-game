@@ -259,6 +259,19 @@ function getBreakawayYards() {
   return breakRanges;
 }
 
+function getAccelToLBs() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
+  const data = sheet.getDataRange().getValues();
+  const accelYds = data
+    .filter(row => typeof row[0] === "string" && row[0].startsWith("accel_to_LB_"))
+    .map(row => ({
+      label: row[0],
+      percentage: parseFloat(row[1]),
+      yards: parseInt(row[2], 10)
+    }));
+  return accelYds;
+}
+
 function getStaminaDrains() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
   const data = sheet.getDataRange().getValues();
@@ -406,6 +419,7 @@ function getFrontendSettings() {
   data= {
     thresholds: getRunThresholdsFromSettings(),
     breakaways: getBreakawayYards(),
+    accelToLBYards: getAccelToLBs(),
     staminaDrains: getStaminaDrains(),
     tackleTable: getTackleDistributions(),
     completionTable: getAirYardsCompletionTable(),
