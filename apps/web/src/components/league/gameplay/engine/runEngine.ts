@@ -18,6 +18,7 @@ import {
   getAccelToLBYards,
   resolveLinebackerSecondLevel,
   pickShortAccelerationDefender,
+  chooseRunnerDefenderSecondChanceAttempt,
 } from "./runEngineHelper";
 
 export function determineTackler(ctx: EngineContext, defense: string, yards: number) {
@@ -520,13 +521,30 @@ export function runPlay(
       );
     } 
     else {
-      dlJukeResult = performDlJukeCheck(
+      const dlSecondChanceAttempt = chooseRunnerDefenderSecondChanceAttempt(
         runState.runner,
         dlWrapResult.defender,
         ctx.players
       );
 
-      if (!dlJukeResult.juked) {
+      runState.log.push(
+        `${runState.runner} chooses to ${dlSecondChanceAttempt.attempt.toLowerCase()} ${dlWrapResult.defender} ` +
+        `(truck chance ${dlSecondChanceAttempt.truckChance.toFixed(2)}%, size diff ${dlSecondChanceAttempt.cappedSizeDifference}).`
+      );
+
+      if (dlSecondChanceAttempt.attempt === "Truck") {
+        runState.log.push(
+          `${runState.runner} lowers a shoulder into ${dlWrapResult.defender}; truck check is not implemented yet.`
+        );
+      } else {
+        dlJukeResult = performDlJukeCheck(
+          runState.runner,
+          dlWrapResult.defender,
+          ctx.players
+        );
+      }
+
+      if (dlJukeResult && !dlJukeResult.juked) {
         fallForwardResult = handleRunnerTackle(
           runState,
           dlWrapResult.defender,
@@ -534,7 +552,7 @@ export function runPlay(
           ctx.players
         );
       } 
-      else {
+      else if (dlJukeResult?.juked) {
         otherWinningDLsAfterJuke = getOtherWinningDLs(
           lineWinLossArray,
           dlWrapResult.defender
