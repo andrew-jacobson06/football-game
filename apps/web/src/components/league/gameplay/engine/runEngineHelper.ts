@@ -674,7 +674,8 @@ export function getSecondarySpeedYards(
 function addSecondarySpeedYards(
   runState: RunPlayState,
   players: PlayerTrait[],
-  settings: FrontendSettings | undefined
+  settings: FrontendSettings | undefined,
+  defenseFormation: DefensiveAssignment[] = []
 ) {
   const secondarySpeedYards = getSecondarySpeedYards(
     findPlayerByName(players, runState.runner),
@@ -688,6 +689,95 @@ function addSecondarySpeedYards(
       `${runState.runner} uses speed in the secondary before pursuit can close`
     );
   }
+
+  resolveSecondaryPursuit(runState, defenseFormation, players);
+}
+
+export type SecondaryPursuitResult = {
+  chaser?: string;
+  runnerSpeed: number;
+  chaserSpeed: number;
+  totalPursuitScore: number;
+  pursuitRoll: number;
+  speedCheck: number;
+  speedRoll: number;
+  escaped: boolean;
+};
+
+export function resolveSecondaryPursuit(
+  runState: RunPlayState,
+  defenseFormation: DefensiveAssignment[],
+  players: PlayerTrait[]
+): SecondaryPursuitResult | undefined {
+  if (runState.stopped) return undefined;
+
+  const pursuitCandidates = defenseFormation
+    .filter((assignment) =>
+      assignment.player &&
+      (assignment.position.startsWith("LB") ||
+        assignment.position.startsWith("DB") ||
+        assignment.position.startsWith("S"))
+    )
+    .map((assignment) => {
+      const player = findPlayerByName(players, assignment.player);
+      const speed = trait(player, "speed");
+      return {
+        assignment,
+        speed,
+        pursuitScore: (speed / 10) ** 2,
+      };
+    })
+    .filter(({ pursuitScore }) => pursuitScore > 0);
+
+  const totalPursuitScore = pursuitCandidates.reduce(
+    (sum, candidate) => sum + candidate.pursuitScore,
+    0
+  );
+
+  if (totalPursuitScore <= 0) return undefined;
+
+  const pursuitRoll = Math.random() * totalPursuitScore;
+  let runningScore = 0;
+  const selectedCandidate =
+    pursuitCandidates.find((candidate) => {
+      runningScore += candidate.pursuitScore;
+      return pursuitRoll <= runningScore;
+    }) ?? pursuitCandidates[pursuitCandidates.length - 1];
+
+  const runnerSpeed = trait(findPlayerByName(players, runState.runner), "speed");
+  const chaserSpeed = selectedCandidate.speed;
+  const rawSpeedCheck = 50 + runnerSpeed - chaserSpeed;
+  const speedCheck = Math.max(5, Math.min(95, rawSpeedCheck));
+  const speedRoll = randomInt(1, 100);
+  const escaped = speedRoll < speedCheck;
+  const chaser = selectedCandidate.assignment.player;
+
+  if (escaped) {
+    runState.log.push(
+      `${runState.runner} outruns ${chaser} in secondary pursuit (roll ${speedRoll} < ${speedCheck.toFixed(2)}%).`
+    );
+  } else {
+    handleRunnerTackle(
+      runState,
+      chaser,
+      "Secondary Pursuit Speed Check",
+      players
+    );
+    runState.log.push(
+      `${chaser} catches ${runState.runner} in secondary pursuit (roll ${speedRoll} >= ${speedCheck.toFixed(2)}%).`
+    );
+  }
+
+  return {
+    chaser,
+    runnerSpeed,
+    chaserSpeed,
+    totalPursuitScore,
+    pursuitRoll,
+    speedCheck,
+    speedRoll,
+    escaped,
+  };
 }
 
 export type DefenderWrapResult = {
@@ -988,7 +1078,7 @@ export function resolveLinebackerSecondLevel(
 
   if (!linebacker) {
     runState.log.push(`${runState.runner} reaches the second level with no linebacker in position and breaks into the secondary.`);
-    addSecondarySpeedYards(runState, players, settings);
+    addSecondarySpeedYards(runState, players, settings, defenseFormation);
     return { stopped: false };
   }
 
@@ -1005,7 +1095,7 @@ export function resolveLinebackerSecondLevel(
       runState.log.push(
         `${runState.runner} has no remaining linebackers or defensive linemen after the ${action} and accelerates into the secondary.`
       );
-      addSecondarySpeedYards(runState, players, settings);
+      addSecondarySpeedYards(runState, players, settings, defenseFormation);
       return undefined;
     }
 
@@ -1018,7 +1108,7 @@ export function resolveLinebackerSecondLevel(
       runState.log.push(
         `${runState.runner} accelerates past the remaining defenders after the ${action} (roll ${escapeAccelerationResult.roll.toFixed(2)} <= ${escapeAccelerationResult.accelPastChance.toFixed(2)}%) and breaks into the secondary.`
       );
-      addSecondarySpeedYards(runState, players, settings);
+      addSecondarySpeedYards(runState, players, settings, defenseFormation);
       return undefined;
     }
 
@@ -1049,7 +1139,7 @@ export function resolveLinebackerSecondLevel(
       runState.log.push(
         `${runState.runner} has no remaining eligible defenders after gaining +${accelerationYards} and accelerates into the secondary.`
       );
-      addSecondarySpeedYards(runState, players, settings);
+      addSecondarySpeedYards(runState, players, settings, defenseFormation);
       return undefined;
     }
 
