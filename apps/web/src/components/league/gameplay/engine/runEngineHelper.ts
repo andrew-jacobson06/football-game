@@ -4,6 +4,7 @@ import type {
   PlayerTrait,
   RunAccelToLBSetting,
   RunSecondarySpeedSetting,
+  RunSecondaryBreakawaySetting,
   FrontendSettings,
   RunPlayState
 } from "./types";
@@ -721,7 +722,110 @@ function addSecondarySpeedYards(
     );
   }
 
-  resolveSecondaryPursuit(runState, defenseFormation, players);
+  const pursuitResult = resolveSecondaryPursuit(runState, defenseFormation, players);
+  if (pursuitResult?.escaped) {
+    addSecondaryBreakawayYards(runState, players, settings);
+    tackleByFastestSecondaryDefender(runState, defenseFormation, players);
+  }
+}
+
+
+/** Rolls true breakaway yardage after the runner has escaped the initial secondary DB/LB chase. A separate speed check determines whether the speed modifier applies to the yardage-bucket roll. */
+export function getSecondaryBreakawayYards(
+  runner: PlayerTrait | undefined,
+  settings: FrontendSettings | undefined,
+  modLog?: string[]
+) {
+  const speed = trait(runner, "speed"); // TRAIT USED: Speed
+  const speedModifier = (speed / 18) ** 2;
+  const modifierChance = ((speed / 15) ** 2) / 100;
+  const modifierRoll = Math.floor(Math.random() * 101);
+  const modifierApplied = modifierRoll <= modifierChance;
+  const baseRoll = Math.floor(Math.random() * 101);
+  const adjustedRoll = Math.min(100, baseRoll + (modifierApplied ? speedModifier : 0));
+
+  let cumulative = 0;
+  const breakawaySettings = settingArray<RunSecondaryBreakawaySetting>(settings, "secondaryBreakawayYards");
+  for (const range of breakawaySettings) {
+    cumulative += Number(range.percentage) || 0;
+    if (adjustedRoll <= cumulative) {
+      const minYards = Number(range.minYards) || 0;
+      const maxYards = Number(range.maxYards) || minYards;
+      const yards = randomInt(Math.min(minYards, maxYards), Math.max(minYards, maxYards));
+      modLog?.push(
+        `Yard +${yards} Breakaway (roll ${adjustedRoll.toFixed(2)} = ${baseRoll}${modifierApplied ? ` + ${speedModifier.toFixed(2)} Speed` : ""}; speed bonus roll ${modifierRoll} <= ${modifierChance.toFixed(2)} ${modifierApplied ? "applied" : "failed"})`
+      );
+      return yards;
+    }
+  }
+
+  const fallback = breakawaySettings[breakawaySettings.length - 1];
+  if (fallback) {
+    const minYards = Number(fallback.minYards) || 0;
+    const maxYards = Number(fallback.maxYards) || minYards;
+    const yards = randomInt(Math.min(minYards, maxYards), Math.max(minYards, maxYards));
+    modLog?.push(
+      `Yard +${yards} Breakaway (capped roll ${adjustedRoll.toFixed(2)}; speed bonus ${modifierApplied ? "applied" : "failed"})`
+    );
+    return yards;
+  }
+
+  modLog?.push(
+    `Breakaway yardage skipped because no Breakaway_ settings were loaded (roll ${adjustedRoll.toFixed(2)}).`
+  );
+  return 0;
+}
+
+function addSecondaryBreakawayYards(
+  runState: RunPlayState,
+  players: PlayerTrait[],
+  settings: FrontendSettings | undefined
+) {
+  const breakawayYards = getSecondaryBreakawayYards(
+    findPlayerByName(players, runState.runner),
+    settings,
+    runState.log
+  );
+  if (breakawayYards > 0) {
+    addYards(
+      runState,
+      breakawayYards,
+      `${runState.runner} breaks away after escaping the initial secondary pursuit`
+    );
+  }
+}
+
+function tackleByFastestSecondaryDefender(
+  runState: RunPlayState,
+  defenseFormation: DefensiveAssignment[],
+  players: PlayerTrait[]
+) {
+  if (runState.stopped) return;
+
+  const fastestDefender = defenseFormation
+    .filter((assignment) =>
+      assignment.player &&
+      (assignment.position.startsWith("DB") ||
+        assignment.position.startsWith("LB") ||
+        assignment.position.startsWith("S"))
+    )
+    .map((assignment) => ({
+      assignment,
+      speed: trait(findPlayerByName(players, assignment.player), "speed"), // TRAIT USED: Speed
+    }))
+    .sort((a, b) => b.speed - a.speed)[0];
+
+  if (!fastestDefender) return;
+
+  handleRunnerTackle(
+    runState,
+    fastestDefender.assignment.player,
+    "Breakaway End Fastest Secondary Defender",
+    players
+  );
+  runState.log.push(
+    `${fastestDefender.assignment.player} makes the automatic tackle after the breakaway as the fastest DB/LB/S on the field.`
+  );
 }
 
 export type SecondaryPursuitResult = {
