@@ -11,6 +11,7 @@ import type {
 const TEOL_SLOTS: FormationSlot[] = ["TEOL1", "TEOL2", "TEOL3", "TEOL4", "TEOL5"];
 const CENTER_SLOT: FormationSlot = "TEOL3";
 
+/** Reads an optional frontend setting array and returns an empty list when the setting is absent. Run-yardage helpers use this to stay safe when tuning data is not loaded. */
 function settingArray<T>(settings: FrontendSettings | undefined, key: keyof FrontendSettings): T[] {
   const value = settings?.[key];
   return Array.isArray(value) ? (value as T[]) : [];
@@ -27,6 +28,7 @@ export type OlDlMatchup = {
   defensePosition: string;
 };
 
+/** Builds the offensive-line versus defensive-line battles for each trench slot. It is used by `performLineWinLoss` to decide who controls each run lane. */
 export function buildOlDlMatchups(
   offense: Partial<Record<FormationSlot, string>>,
   defense: DefensiveAssignment[]
@@ -47,6 +49,7 @@ export function buildOlDlMatchups(
     .filter((matchup) => matchup.offensePlayer || matchup.defensePlayer);
 }
 
+/** Normalizes trait-name spelling and casing before reading a numeric player trait. It is the central trait accessor used by every helper in this file and by run-engine callers. */
 export function trait(player: PlayerTrait | undefined, key: string): number {
   if (!player) return 0;
 
@@ -63,6 +66,7 @@ export function trait(player: PlayerTrait | undefined, key: string): number {
   return Number(value ?? 0);
 }
 
+/** Looks up a player object by the display/name fields used across roster data. It is used anywhere the run engine has a player name but needs trait values. */
 export function findPlayerByName(
   players: PlayerTrait[],
   playerName: string
@@ -92,6 +96,7 @@ export type LineWinLossResult = {
   winner: "DL" | "OL";
 };
 
+/** Resolves every OL/DL trench matchup and records whether the blocker or defender wins. `runPlay` uses this as the first phase of the detailed run simulation. */
 export function performLineWinLoss(
   offenseFormation: Partial<Record<FormationSlot, string>>,
   defenseFormation: DefensiveAssignment[],
@@ -103,15 +108,18 @@ export function performLineWinLoss(
     const offensivePlayer = findPlayerByName(players, matchup.offensePlayer);
     const defensivePlayer = findPlayerByName(players, matchup.defensePlayer);
 
-    const olRunBlocking = trait(offensivePlayer, "Run Blocking");
-    const dlRunStop = trait(defensivePlayer, "RunStop");
+    const olRunBlocking = trait(offensivePlayer, "Run Blocking"); // TRAIT USED: RunBlocking - measures how well this blocker controls the run lane.
+    const dlRunStop = trait(defensivePlayer, "RunStop"); // TRAIT USED: RunStop - measures how likely this defender is to penetrate the lane.
 
+    // Start the trench battle at 50/50, then shift it by the defender-minus-blocker trait gap.
     const rawDlWinChance = 50 + dlRunStop - olRunBlocking;
 
+    // Clamp the chance so great players matter without making a single matchup completely deterministic.
     const dlWinChance = Math.max(5, Math.min(95, rawDlWinChance));
 
     const roll = Math.random() * 100;
 
+    // Low rolls are defensive wins because `dlWinChance` is the DL success target.
     const winner: "DL" | "OL" = roll <= dlWinChance ? "DL" : "OL";
 
     return {
@@ -138,6 +146,7 @@ export type VisionCheckResult = {
   getsPastDL: boolean;
 };
 
+/** Determines whether the runner sees and reaches the intended hole after the line battle. `runPlay` uses the result to branch into either a backfield challenge or a clean lane. */
 export function performVisionCheck(
   runnerName: string,
   players: PlayerTrait[],
@@ -145,8 +154,9 @@ export function performVisionCheck(
   runBlockingModifier: number
 ): VisionCheckResult {
   const runner = findPlayerByName(players, runnerName);
-  const runnerVision = trait(runner, "vision");
+  const runnerVision = trait(runner, "vision"); // TRAIT USED: Vision - determines whether the runner can identify and hit the crease.
 
+  // Count line wins to detect automatic outcomes and explain how blocking modifies the vision target.
   const olWins = lineWinLossArray.filter((battle) => battle.winner === "OL").length;
   const dlWins = lineWinLossArray.filter((battle) => battle.winner === "DL").length;
   const totalBattles = lineWinLossArray.length;
@@ -154,11 +164,13 @@ export function performVisionCheck(
   const allOlWon = totalBattles > 0 && olWins === totalBattles;
   const allDlWon = totalBattles > 0 && dlWins === totalBattles;
 
+  // Vision starts from the runner trait plus the line result; the clamp keeps the target in percent-roll bounds.
   const rawVisionTarget = ((runnerVision * 0.19) + 75) + runBlockingModifier;
 
   const visionTarget = Math.max(0, Math.min(100, rawVisionTarget));
 
   if (allOlWon) {
+    // Perfect blocking means every gap is clean enough that the runner automatically reaches the second phase.
     return {
       runner: runnerName,
       runnerVision,
@@ -171,6 +183,7 @@ export function performVisionCheck(
   }
 
   if (allDlWon) {
+    // Perfect penetration means the runner has no viable read and is automatically trapped in the backfield.
     return {
       runner: runnerName,
       runnerVision,
@@ -184,6 +197,7 @@ export function performVisionCheck(
 
   const roll = Math.random() * 100;
 
+  // Passing this percentage check sends the play past the DL; failing it creates the backfield challenge.
   const getsPastDL = roll <= visionTarget;
 
   return {
@@ -213,6 +227,7 @@ export type RunLaneTargetResult = {
   }[];
 };
 
+/** Chooses one candidate proportionally to its trait value. Lane and defender selection helpers use it when several successful blockers or defenders could become the focal point. */
 function weightedPick<T extends { traitValue: number }>(
   candidates: T[]
 ): { selected: T; totalWeight: number; roll: number } {
@@ -250,6 +265,7 @@ function weightedPick<T extends { traitValue: number }>(
   };
 }
 
+/** Picks the specific blocker or defender that defines the run lane after the vision check. `runPlay` uses this selected target to decide DL swipe/wrap pressure and second-level alignment. */
 export function pickRunLaneTarget(
   lineWinLossArray: LineWinLossResult[],
   visionCheck: VisionCheckResult,
@@ -263,7 +279,7 @@ export function pickRunLaneTarget(
     .map((battle) => {
       if (visionPassed) {
         const offensivePlayer = findPlayerByName(players, battle.offensePlayer);
-        const traitValue = trait(offensivePlayer, "runBlocking");
+        const traitValue = trait(offensivePlayer, "runBlocking"); // TRAIT USED: RunBlocking
 
         return {
           slot: battle.slot,
@@ -274,7 +290,7 @@ export function pickRunLaneTarget(
       }
 
       const defensivePlayer = findPlayerByName(players, battle.defensePlayer);
-      const traitValue = trait(defensivePlayer, "runStop");
+      const traitValue = trait(defensivePlayer, "runStop"); // TRAIT USED: RunStop
 
       return {
         slot: battle.slot,
@@ -303,6 +319,7 @@ export function pickRunLaneTarget(
 // Run-lane selection and run-state mutation helpers
 // ---------------------------------------------------------------------------
 
+/** Creates the mutable state object that tracks yards, stoppage, tackler, and human-readable run logs. `runPlay` passes this object through every phase. */
 export function createRunPlayState(runner: string): RunPlayState {
   return {
     yards: 0,
@@ -312,6 +329,7 @@ export function createRunPlayState(runner: string): RunPlayState {
   };
 }
 
+/** Adds yardage to the current run state and records the reason in the play log. It is used throughout the run pipeline whenever acceleration, contact, or pursuit changes the gain. */
 export function addYards(
   state: RunPlayState,
   yards: number,
@@ -322,6 +340,7 @@ export function addYards(
   return state;
 }
 
+/** Marks the run as stopped without running extra contact checks. It is available for direct stoppages, though most current tackles use `handleRunnerTackle` or `handleLbWrapTackle`. */
 export function stopRun(
   state: RunPlayState,
   tackler: string,
@@ -343,6 +362,7 @@ export type RunnerDefenderSecondChanceAttempt = {
   roll: number;
 };
 
+/** Decides whether a runner who survived initial contact should truck or juke based on the size matchup. DL and LB contact branches use this before resolving the chosen move. */
 export function chooseRunnerDefenderSecondChanceAttempt(
   runnerName: string,
   defenderName: string,
@@ -350,7 +370,7 @@ export function chooseRunnerDefenderSecondChanceAttempt(
 ): RunnerDefenderSecondChanceAttempt {
   const runner = findPlayerByName(players, runnerName);
   const defender = findPlayerByName(players, defenderName);
-  const sizeDifference = trait(runner, "size") - trait(defender, "size");
+  const sizeDifference = trait(runner, "size") - trait(defender, "size"); // TRAIT USED: Size TRAIT USED: Size
   const cappedSizeDifference = Math.max(-25, Math.min(25, sizeDifference));
   const truckChance = 50 + cappedSizeDifference;
   const roll = Math.random() * 100;
@@ -375,6 +395,7 @@ export type TruckAttemptResult = {
   trucked: boolean;
 };
 
+/** Resolves a truck attempt by comparing runner and defender power. It is used after `chooseRunnerDefenderSecondChanceAttempt` selects Truck. */
 export function performTruckAttempt(
   runnerName: string,
   defenderName: string,
@@ -382,8 +403,8 @@ export function performTruckAttempt(
 ): TruckAttemptResult {
   const runner = findPlayerByName(players, runnerName);
   const defender = findPlayerByName(players, defenderName);
-  const runnerPower = trait(runner, "size") + trait(runner, "strength");
-  const defenderPower = trait(defender, "size") + trait(defender, "strength");
+  const runnerPower = trait(runner, "size") + trait(runner, "strength"); // TRAIT USED: Size TRAIT USED: Strength
+  const defenderPower = trait(defender, "size") + trait(defender, "strength"); // TRAIT USED: Size TRAIT USED: Strength
   const totalPower = runnerPower + defenderPower;
   const truckChance = totalPower > 0 ? (runnerPower / (totalPower + 80)) * 100 : 0;
   const roll = Math.random() * 100;
@@ -410,13 +431,14 @@ export type TruckOrJukeAccelerationResult = {
   acceleratedPast: boolean;
 };
 
+/** Checks whether the runner can accelerate away after a successful truck or juke. Backfield pursuit and second-level restart logic use it before assigning another defender. */
 export function performPostTruckorJukeAccelerationCheck(
   runnerName: string,
   players: PlayerTrait[],
   checkType: PostContactAccelerationCheckType
 ): TruckOrJukeAccelerationResult {
   const runner = findPlayerByName(players, runnerName);
-  const runnerAcceleration = trait(runner, "acceleration");
+  const runnerAcceleration = trait(runner, "acceleration"); // TRAIT USED: Acceleration
   const accelPastChance =
     checkType === "juke"
       ? runnerAcceleration
@@ -448,6 +470,7 @@ export type DlSwipeResult = {
   tackled: boolean;
 };
 
+/** Gives a beaten defensive lineman a chance to swipe the runner at the line. `runPlay` uses it on clean frontside lanes before the runner accelerates to linebackers. */
 export function performDlSwipeCheck(
   lineWinLossArray: LineWinLossResult[],
   runLaneTarget: RunLaneTargetResult,
@@ -463,7 +486,7 @@ export function performDlSwipeCheck(
 
   const defensivePlayer = findPlayerByName(players, matchup.defensePlayer);
 
-  const dlTackling = trait(defensivePlayer, "tackling");
+  const dlTackling = trait(defensivePlayer, "tackling"); // TRAIT USED: Tackling
 
   const swipeScore = ((dlTackling / 17) ** 2) / 2;
 
@@ -493,14 +516,15 @@ export type FallForwardResult = {
   yardsAdded: number;
 };
 
+/** Gives a tackled runner a chance to fall forward for an extra yard. Tackle handlers use it when the runner is brought down by DL-style contact. */
 export function performFallForwardCheck(
   runnerName: string,
   players: PlayerTrait[]
 ): FallForwardResult {
   const runner = findPlayerByName(players, runnerName);
 
-  const runnerSize = trait(runner, "size");
-  const runnerStrength = trait(runner, "strength");
+  const runnerSize = trait(runner, "size"); // TRAIT USED: Size
+  const runnerStrength = trait(runner, "strength"); // TRAIT USED: Strength
 
   const fallForwardScore = (((runnerSize + runnerStrength) / 20) ** 2);
 
@@ -528,14 +552,15 @@ export type CarryDefenderResult = {
   yardsAdded: number;
 };
 
+/** Gives a wrapped runner up to two extra yards for carrying a defender. Linebacker tackle handling uses it to model power through contact. */
 export function performCarryDefenderChecks(
   runnerName: string,
   players: PlayerTrait[]
 ): CarryDefenderResult {
   const runner = findPlayerByName(players, runnerName);
 
-  const runnerSize = trait(runner, "size");
-  const runnerStrength = trait(runner, "strength");
+  const runnerSize = trait(runner, "size"); // TRAIT USED: Size
+  const runnerStrength = trait(runner, "strength"); // TRAIT USED: Strength
   const carryScore = (runnerSize + runnerStrength) / 2;
   const rolls = [Math.random() * 100, Math.random() * 100];
   const yardsAdded = rolls.filter((roll) => roll <= carryScore).length;
@@ -550,6 +575,7 @@ export function performCarryDefenderChecks(
   };
 }
 
+/** Applies a standard tackle, including the fall-forward check, and marks the play stopped. DL tackles, pursuit tackles, and secondary pursuit all call this helper. */
 export function handleRunnerTackle(
   state: RunPlayState,
   tackler: string,
@@ -573,6 +599,7 @@ export function handleRunnerTackle(
   return fallForwardResult;
 }
 
+/** Applies a linebacker wrap tackle, including possible carry-the-defender yards, and marks the play stopped. The second-level branch uses it for LB wraps and failed trucks. */
 export function handleLbWrapTackle(
   state: RunPlayState,
   tackler: string,
@@ -596,17 +623,19 @@ export function handleLbWrapTackle(
   return carryDefenderResult;
 }
 
+/** Returns an inclusive random integer for yardage ranges. Both legacy and current run logic use it for bounded random gains or losses. */
 export function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+/** Rolls how many yards the runner gains while accelerating from the line to linebacker depth. `runPlay` and second-level restart logic use it before choosing the next defender. */
 export function getAccelToLBYards(
   runner: PlayerTrait | undefined,
   settings: FrontendSettings | undefined,
   modLog?: string[]
 ) {
   const baseRoll = Math.floor(Math.random() * 101);
-  const acceleration = trait(runner, "acceleration");
+  const acceleration = trait(runner, "acceleration"); // TRAIT USED: Acceleration
   const accelerationMod = ((acceleration / 10) ** 2) / 9;
   const adjustedRoll = Math.min(100, baseRoll + accelerationMod);
 
@@ -632,13 +661,14 @@ export function getAccelToLBYards(
   return fallbackYards;
 }
 
+/** Rolls extra open-field yards using the runner's speed and configured secondary-yard buckets. Secondary entry points use it before resolving chase pursuit. */
 export function getSecondarySpeedYards(
   runner: PlayerTrait | undefined,
   settings: FrontendSettings | undefined,
   modLog?: string[]
 ) {
   const baseRoll = Math.floor(Math.random() * 101);
-  const speed = trait(runner, "speed");
+  const speed = trait(runner, "speed"); // TRAIT USED: Speed
   const speedMod = (speed / 15) ** 2;
   const adjustedRoll = Math.min(100, baseRoll + speedMod);
 
@@ -671,6 +701,7 @@ export function getSecondarySpeedYards(
   return 0;
 }
 
+/** Adds open-field speed yardage and immediately resolves secondary pursuit. It is used when a runner clears linebackers or no linebacker is in position. */
 function addSecondarySpeedYards(
   runState: RunPlayState,
   players: PlayerTrait[],
@@ -704,6 +735,7 @@ export type SecondaryPursuitResult = {
   escaped: boolean;
 };
 
+/** Selects a DB/LB/safety chaser and compares speed to decide whether the runner is caught in the secondary. It is called after secondary speed yardage is awarded. */
 export function resolveSecondaryPursuit(
   runState: RunPlayState,
   defenseFormation: DefensiveAssignment[],
@@ -720,7 +752,7 @@ export function resolveSecondaryPursuit(
     )
     .map((assignment) => {
       const player = findPlayerByName(players, assignment.player);
-      const speed = trait(player, "speed");
+      const speed = trait(player, "speed"); // TRAIT USED: Speed
       return {
         assignment,
         speed,
@@ -791,13 +823,14 @@ export type DefenderWrapResult = {
 
 export type DlWrapResult = DefenderWrapResult;
 
+/** Checks whether any named defender wraps the runner cleanly based on tackling. DL and LB wrap wrappers both delegate here. */
 export function performDefenderWrapCheck(
   defenderName: string,
   players: PlayerTrait[]
 ): DefenderWrapResult {
   const defender = findPlayerByName(players, defenderName);
 
-  const defenderTackling = trait(defender, "tackling");
+  const defenderTackling = trait(defender, "tackling"); // TRAIT USED: Tackling
 
   const wrapScore = defenderTackling / 2;
 
@@ -815,6 +848,7 @@ export function performDefenderWrapCheck(
   };
 }
 
+/** Names the generic wrap check as a defensive-line wrap for backfield readability. `runPlay` and DL pursuit call it during DL contact. */
 export function performDlWrapCheck(
   defenderName: string,
   players: PlayerTrait[]
@@ -825,6 +859,7 @@ export function performDlWrapCheck(
 
 type RunLaneSide = "left" | "center" | "right";
 
+/** Converts a trench slot into left, center, or right. Linebacker targeting uses it to match pursuit to the run lane. */
 function laneSide(slot: FormationSlot): RunLaneSide {
   const slotIndex = TEOL_SLOTS.indexOf(slot);
   const centerIndex = TEOL_SLOTS.indexOf(CENTER_SLOT);
@@ -833,14 +868,17 @@ function laneSide(slot: FormationSlot): RunLaneSide {
   return slotIndex < centerIndex ? "left" : "right";
 }
 
+/** Converts a defensive assignment alignment into a lane side. `pickLinebackerForRunLane` uses this to find same-side linebackers. */
 function assignmentSide(assignment: DefensiveAssignment): RunLaneSide {
   return assignment.align ? laneSide(assignment.align) : "center";
 }
 
+/** Extracts the numeric linebacker order from a position label. Linebacker selection uses it for stable left-to-right sorting. */
 function lbPositionNumber(assignment: DefensiveAssignment): number {
   return Number(assignment.position.match(/\d+/)?.[0] ?? 0);
 }
 
+/** Chooses the linebacker most responsible for the selected run lane. Second-level resolution and short-acceleration defender selection call this helper. */
 export function pickLinebackerForRunLane(
   defenseFormation: DefensiveAssignment[],
   selectedSlot: FormationSlot,
@@ -874,6 +912,7 @@ export function pickLinebackerForRunLane(
     : linebackers[linebackers.length - 1];
 }
 
+/** Finds defensive linemen adjacent to the chosen lane who can still chase. Short-acceleration pressure uses these DLs when the runner has not created enough space. */
 export function getAdjacentDefensiveLinemenForRunLane(
   lineWinLossArray: LineWinLossResult[],
   selectedSlot: FormationSlot,
@@ -902,6 +941,7 @@ export function getAdjacentDefensiveLinemenForRunLane(
     }));
 }
 
+/** Chooses among eligible defenders by defensive star power. Short-acceleration and second-level restart logic use this when several defenders can challenge. */
 export function weightedPickDefenderByDefStars(
   defenders: DefensiveAssignment[],
   players: PlayerTrait[]
@@ -911,7 +951,7 @@ export function weightedPickDefenderByDefStars(
       const defensivePlayer = findPlayerByName(players, defender.player);
       return {
         defender,
-        weight: trait(defensivePlayer, "defStars") ** 2,
+        weight: trait(defensivePlayer, "defStars") ** 2, // TRAIT USED: DefStars
       };
     })
     .filter(({ weight }) => weight > 0);
@@ -930,6 +970,7 @@ export function weightedPickDefenderByDefStars(
   return weightedDefenders[weightedDefenders.length - 1].defender;
 }
 
+/** Chooses a nearby LB or adjacent DL when the runner gains only a short burst after the line. `runPlay` uses this to keep tight creases from becoming free linebacker entries. */
 export function pickShortAccelerationDefender(
   defenseFormation: DefensiveAssignment[],
   lineWinLossArray: LineWinLossResult[],
@@ -959,6 +1000,7 @@ export function pickShortAccelerationDefender(
   return weightedPickDefenderByDefStars(candidates, players);
 }
 
+/** Lists unbeaten linebackers and, when close enough, defensive linemen still eligible to challenge. The recursive second-level cycle uses it after successful jukes or trucks. */
 function getRemainingSecondLevelDefenders(
   defenseFormation: DefensiveAssignment[],
   lineWinLossArray: LineWinLossResult[],
@@ -1023,6 +1065,7 @@ export type LbJukeResult = {
   juked: boolean;
 };
 
+/** Resolves a runner juke against a linebacker by comparing juke skill against tackling. `resolveLinebackerSecondLevel` uses it when the runner chooses Juke. */
 export function performLbJukeCheck(
   runnerName: string,
   defenderName: string,
@@ -1031,8 +1074,8 @@ export function performLbJukeCheck(
   const runner = findPlayerByName(players, runnerName);
   const defender = findPlayerByName(players, defenderName);
 
-  const runnerJukeTrait = trait(runner, "juke");
-  const defenderTacklingTrait = trait(defender, "tackling");
+  const runnerJukeTrait = trait(runner, "juke"); // TRAIT USED: Juke
+  const defenderTacklingTrait = trait(defender, "tackling"); // TRAIT USED: Tackling
 
   const rbJukeScore = 15 + ((runnerJukeTrait / 10) ** 2) / 3;
   const lbDefendScore = ((defenderTacklingTrait / 15) ** 2) / 2;
@@ -1053,6 +1096,7 @@ export function performLbJukeCheck(
 }
 
 
+/** Runs the linebacker/second-level phase, including wraps, jukes, trucks, recursive restarts, and secondary entry. `runPlay` calls this after the runner clears or survives the defensive line. */
 export function resolveLinebackerSecondLevel(
   runState: RunPlayState,
   defenseFormation: DefensiveAssignment[],
@@ -1267,6 +1311,7 @@ export type DlJukeResult = {
   juked: boolean;
 };
 
+/** Resolves a runner juke against a defensive lineman using the runner's juke trait. Backfield and DL pursuit branches call it after a failed wrap. */
 export function performDlJukeCheck(
   runnerName: string,
   defenderName: string,
@@ -1274,7 +1319,7 @@ export function performDlJukeCheck(
 ): DlJukeResult {
   const runner = findPlayerByName(players, runnerName);
 
-  const runnerJuke = trait(runner, "juke");
+  const runnerJuke = trait(runner, "juke"); // TRAIT USED: Juke
 
   const jukeScore = ((runnerJuke / 10) ** 2) / 2;
 
@@ -1292,6 +1337,7 @@ export function performDlJukeCheck(
   };
 }
 
+/** Returns other penetrating defensive linemen besides the one already challenged. Backfield truck and juke wins use it to continue DL pursuit if needed. */
 export function getOtherWinningDLs(
   lineWinLossArray: LineWinLossResult[],
   challengedDefender: string
@@ -1319,6 +1365,7 @@ export type DlPursuitResult = {
   steps: DlPursuitStep[];
 };
 
+/** Resolves pursuit by any remaining winning defensive linemen after the runner beats the first DL. `runPlay` uses it in the backfield juke branch before moving to linebackers. */
 export function resolveRemainingDlPursuit(
   runState: RunPlayState,
   remainingWinningDLs: LineWinLossResult[],
