@@ -722,4 +722,31 @@ export function runPlay(
 
     console.log("LB second level result:", lbSecondLevelResult);
   }
+
+  const rawYards = runState.yards;
+  const newBall = advanceBall(game, rawYards);
+  const td = isTouchdown(game, newBall);
+  const safety = isSafety(game, newBall);
+  const yards = td
+    ? Math.abs((game.Possession === "Home" ? 100 : 0) - n(game.BallOn))
+    : safety
+      ? -Math.abs(n(game.BallOn) - (game.Possession === "Home" ? 0 : 100))
+      : rawYards;
+  const tackler = td ? "NA" : runState.tackler || determineTackler(ctx, defense, yards);
+  const fumble = td || safety ? { fumble: false, recoveredBy: "" } : checkForFumble(ctx, runnerName, tackler);
+  const next = nextDownDistance(game, yards, newBall);
+  const result = td ? "Touchdown" : safety ? "Safety" : fumble.fumble ? "Fumble" : next.turnover ? "TO on Downs" : yards >= n(game.Distance) ? "First Down" : "Normal";
+  let hs = n(game.HomeScore), as = n(game.AwayScore);
+  if (td) { if (game.Possession === "Home") hs += 6; else as += 6; }
+  if (safety) { if (game.Possession === "Home") as += 2; else hs += 2; }
+  const possession = td || safety || next.turnover || (fumble.fumble && fumble.recoveredBy === tackler) ? switchPoss(game) : game.Possession;
+  const runner = byName(ctx, runnerName);
+  const clock = advanceQuarter(game, clockRunoff(options.clockMode, Math.max(3, 12 - Math.floor(trait(runner, "speed") / 15)), ["Touchdown", "Safety", "TO on Downs", "Fumble"].includes(result)));
+  const updated = { ...game, HomeScore: hs, AwayScore: as, Qtr: clock.qtr, Time: clock.time, Down: next.down, Distance: next.distance, BallOn: next.ballOn, Previous: game.BallOn, DriveStart: next.turnover || td || safety ? next.ballOn : (game as unknown as Record<string, unknown>).DriveStart ?? game.BallOn, Possession: possession };
+
+  return buildResult(game, updated, "Run", runnerName, "", yards, tackler, result, ctx.historyLength, {
+    recoveredby: fumble.recoveredBy,
+    runLog: runState.log,
+    stopReason: runState.stopReason ?? "",
+  });
 }

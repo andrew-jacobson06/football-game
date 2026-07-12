@@ -21,10 +21,12 @@ export type PlayerTrait = Record<string, unknown>;
 export type RunThreshold = { label: string; minYards: number; maxYards: number; rollMin: number; rollMax: number };
 export type RunBreakawaySetting = { label: string; percentage: number; minYards: number; maxYards: number };
 export type RunAccelToLBSetting = { label: string; percentage: number; yards: number };
+export type RunSecondarySpeedSetting = { label: string; percentage: number; minYards: number; maxYards: number };
 export type FrontendSettings = Record<string, unknown> & {
   thresholds?: RunThreshold[];
   breakaways?: RunBreakawaySetting[];
   accelToLBYards?: RunAccelToLBSetting[];
+  secondarySpeedYards?: RunSecondarySpeedSetting[];
   staminaDrains?: Record<string, number>;
   drainSettings?: Record<string, number>;
   tackleTable?: unknown[];
