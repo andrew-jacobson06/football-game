@@ -782,9 +782,26 @@ export function runPlay(
   const clock = advanceQuarter(game, clockRunoff(options.clockMode, Math.max(3, 12 - Math.floor(trait(runner, "speed") / 15)), ["Touchdown", "Safety", "TO on Downs", "Fumble"].includes(result))); // TRAIT USED: Speed
   const updated = { ...game, HomeScore: hs, AwayScore: as, Qtr: clock.qtr, Time: clock.time, Down: next.down, Distance: next.distance, BallOn: next.ballOn, Previous: game.BallOn, DriveStart: next.turnover || td || safety ? next.ballOn : (game as unknown as Record<string, unknown>).DriveStart ?? game.BallOn, Possession: possession };
 
+  const successfulTrucks = runState.log.filter((entry) => /\btrucks\b/i.test(entry)).length;
+  const successfulJukes = runState.log.filter((entry) => /\bjukes\b/i.test(entry)).length;
+  const lineMatchups = lineWinLossArray.map((battle) => ({
+    slot: battle.slot,
+    offensePlayer: battle.offensePlayer,
+    defensePlayer: battle.defensePlayer,
+    winner: battle.winner,
+  }));
+
   return buildResult(game, updated, "Run", runnerName, "", yards, tackler, result, ctx.historyLength, {
     recoveredby: fumble.recoveredBy,
     runLog: runState.log,
     stopReason: runState.stopReason ?? "",
+    lineMatchups,
+    olWins,
+    olLosses: dlWins,
+    dlWins,
+    dlLosses: olWins,
+    trucks: successfulTrucks,
+    brokenTackles: successfulTrucks,
+    jukes: successfulJukes,
   });
 }
