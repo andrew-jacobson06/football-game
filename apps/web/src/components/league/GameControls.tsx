@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { LeagueGame } from "./types";
 import type { PlayCallOptions, FormationSlot, DefensiveAssignment } from "./gameplay/gameEngine";
 
@@ -55,8 +55,6 @@ export function GameControls({ game, players, options, onOptionsChange, onAction
   const [detail, setDetail] = useState<string>("");
 
   
-  const [defense, setDefense] = useState<DefensiveAssignment[]>([]);
-
   const offenseTeam = game.Possession === "Home" ? game.Home : game.Away; 
   const roster = useMemo(() => players.filter((p) => teamOf(p) === offenseTeam), [players, offenseTeam]); 
   const byName = (n?: string) => players.find((p) => nameOf(p) === n);
@@ -67,13 +65,11 @@ export function GameControls({ game, players, options, onOptionsChange, onAction
   const bench = roster.filter((p) => !Object.values(formation).includes(nameOf(p)));
   const setRouteAndRead = (player: string, route: string, readIndex: number) => { const nextRoutes = { ...routes, [player]: route }; const nextReads = normalizeReads(nextRoutes, receivers.map((r) => r.player), { player, readIndex }); setOpt({ routes: nextRoutes, reads: nextReads }); };
 
-  useEffect(() => {
-    setDefense(buildDefense(game, players, formation));
-  }, [game.Possession, game.Home, game.Away, players, formation]);
+  const defense = useMemo(() => buildDefense(game, players, options.formation ?? {}), [game, players, options.formation]);
 
   const optionsWithDefense = (): PlayCallOptions => ({
     ...options,
-    defense: buildDefense(game, players, formation),
+    defense,
   });
 
   const supplementalDefenseRows = [

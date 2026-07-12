@@ -65,3 +65,9 @@ export type RunPlayState = {
   stopReason?: string;
   log: string[];
 };
+export type LineStatMatchup = {
+  slot: FormationSlot;
+  offensePlayer: string;
+  defensePlayer: string;
+  winner: "OL" | "DL";
+};
