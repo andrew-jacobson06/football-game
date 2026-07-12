@@ -100,6 +100,9 @@ async function getFrontendSettingsFromSheet() {
     accelToLBYards: settingRows(rows, "accel_to_LB_")
       .map((r) => ({ label: r[0], percentage: parseFloat(String(r[1])), yards: parseInt(String(r[2]), 10) }))
       .filter((r) => Number.isFinite(r.percentage) && Number.isFinite(r.yards)),
+    secondarySpeedYards: settingRows(rows, "speed_lvl2_")
+      .map((r) => ({ label: r[0], percentage: parseFloat(String(r[1])), minYards: parseInt(String(r[2]), 10), maxYards: parseInt(String(r[3]), 10) }))
+      .filter((r) => Number.isFinite(r.percentage) && Number.isFinite(r.minYards) && Number.isFinite(r.maxYards)),
     staminaDrains,
     tackleTable: settingRows(rows, "Tackle_").map((r) => ({ label: r[0], yardageCap: Number(r[1]), DL: Number(r[2]) || 0, LB: Number(r[3]) || 0, DBS: Number(r[4]) || 0 })).sort((a,b)=>a.yardageCap-b.yardageCap),
     completionTable: settingRows(rows, "airYards_Completion_").map((r) => ({ label: r[0], pastLos: Number(r[1]), baseCompletion: Number(r[2]), percentage: Number(r[3]) })),

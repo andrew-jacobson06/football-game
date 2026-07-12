@@ -3,6 +3,7 @@ import type {
   DefensiveAssignment,
   PlayerTrait,
   RunAccelToLBSetting,
+  RunSecondarySpeedSetting,
   FrontendSettings,
   RunPlayState
 } from "./types";
@@ -631,6 +632,64 @@ export function getAccelToLBYards(
   return fallbackYards;
 }
 
+export function getSecondarySpeedYards(
+  runner: PlayerTrait | undefined,
+  settings: FrontendSettings | undefined,
+  modLog?: string[]
+) {
+  const baseRoll = Math.floor(Math.random() * 101);
+  const speed = trait(runner, "speed");
+  const speedMod = (speed / 15) ** 2;
+  const adjustedRoll = Math.min(100, baseRoll + speedMod);
+
+  let cumulative = 0;
+  const secondarySpeedSettings = settingArray<RunSecondarySpeedSetting>(settings, "secondarySpeedYards");
+  for (const range of secondarySpeedSettings) {
+    cumulative += Number(range.percentage) || 0;
+    if (adjustedRoll <= cumulative) {
+      const minYards = Number(range.minYards) || 0;
+      const maxYards = Number(range.maxYards) || minYards;
+      const yards = randomInt(Math.min(minYards, maxYards), Math.max(minYards, maxYards));
+      modLog?.push(
+        `Yard +${yards} Secondary Speed (roll ${adjustedRoll.toFixed(2)} = ${baseRoll} + ${speedMod.toFixed(2)})`
+      );
+      return yards;
+    }
+  }
+
+  const fallback = secondarySpeedSettings[secondarySpeedSettings.length - 1];
+  if (fallback) {
+    const minYards = Number(fallback.minYards) || 0;
+    const maxYards = Number(fallback.maxYards) || minYards;
+    const yards = randomInt(Math.min(minYards, maxYards), Math.max(minYards, maxYards));
+    modLog?.push(
+      `Yard +${yards} Secondary Speed (capped roll ${adjustedRoll.toFixed(2)})`
+    );
+    return yards;
+  }
+
+  return 0;
+}
+
+function addSecondarySpeedYards(
+  runState: RunPlayState,
+  players: PlayerTrait[],
+  settings: FrontendSettings | undefined
+) {
+  const secondarySpeedYards = getSecondarySpeedYards(
+    findPlayerByName(players, runState.runner),
+    settings,
+    runState.log
+  );
+  if (secondarySpeedYards > 0) {
+    addYards(
+      runState,
+      secondarySpeedYards,
+      `${runState.runner} uses speed in the secondary before pursuit can close`
+    );
+  }
+}
+
 export type DefenderWrapResult = {
   defender: string;
   defenderTackling: number;
@@ -928,7 +987,8 @@ export function resolveLinebackerSecondLevel(
   );
 
   if (!linebacker) {
-    runState.log.push(`${runState.runner} reaches the second level with no linebacker in position.`);
+    runState.log.push(`${runState.runner} reaches the second level with no linebacker in position and breaks into the secondary.`);
+    addSecondarySpeedYards(runState, players, settings);
     return { stopped: false };
   }
 
@@ -945,6 +1005,7 @@ export function resolveLinebackerSecondLevel(
       runState.log.push(
         `${runState.runner} has no remaining linebackers or defensive linemen after the ${action} and accelerates into the secondary.`
       );
+      addSecondarySpeedYards(runState, players, settings);
       return undefined;
     }
 
@@ -957,6 +1018,7 @@ export function resolveLinebackerSecondLevel(
       runState.log.push(
         `${runState.runner} accelerates past the remaining defenders after the ${action} (roll ${escapeAccelerationResult.roll.toFixed(2)} <= ${escapeAccelerationResult.accelPastChance.toFixed(2)}%) and breaks into the secondary.`
       );
+      addSecondarySpeedYards(runState, players, settings);
       return undefined;
     }
 
@@ -987,6 +1049,7 @@ export function resolveLinebackerSecondLevel(
       runState.log.push(
         `${runState.runner} has no remaining eligible defenders after gaining +${accelerationYards} and accelerates into the secondary.`
       );
+      addSecondarySpeedYards(runState, players, settings);
       return undefined;
     }
 
