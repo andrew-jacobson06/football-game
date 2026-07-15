@@ -545,6 +545,38 @@ export function performFallForwardCheck(
   };
 }
 
+
+export type BruiserCheckResult = {
+  runner: string;
+  runnerSize: number;
+  runnerStrength: number;
+  bruiserScore: number;
+  roll: number;
+  succeeded: boolean;
+};
+
+/** Gives a powerful runner a chance to erase a negative-yardage result before normal backfield contact is resolved. */
+export function performBruiserCheck(
+  runnerName: string,
+  players: PlayerTrait[]
+): BruiserCheckResult {
+  const runner = findPlayerByName(players, runnerName);
+
+  const runnerSize = trait(runner, "size"); // TRAIT USED: Size
+  const runnerStrength = trait(runner, "strength"); // TRAIT USED: Strength
+  const bruiserScore = (((runnerSize + runnerStrength) / 2) / 21) ** 2.7;
+  const roll = Math.random() * 100;
+
+  return {
+    runner: runnerName,
+    runnerSize,
+    runnerStrength,
+    bruiserScore,
+    roll,
+    succeeded: roll < bruiserScore,
+  };
+}
+
 export type CarryDefenderResult = {
   runner: string;
   runnerSize: number;
