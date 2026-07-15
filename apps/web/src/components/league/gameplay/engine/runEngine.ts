@@ -22,6 +22,8 @@ import {
   chooseRunnerDefenderSecondChanceAttempt,
   performTruckAttempt,
   performPostTruckorJukeAccelerationCheck,
+  performBruiserCheck,
+  performCarryDefenderChecks,
 } from "./runEngineHelper";
 
 /** Chooses the most plausible tackler after a run or pass play has ended, weighting nearby defender groups by tackling ability. It is used by `runPlay`, `runPlayOld`, and pass-play fumble/tackle resolution when no specific tackler was already recorded. */
@@ -522,6 +524,8 @@ export function runPlay(
   let dlJukeResult: ReturnType<typeof performDlJukeCheck> | null = null;
   let otherWinningDLsAfterJuke: ReturnType<typeof getOtherWinningDLs> = [];
   let dlPursuitResult: ReturnType<typeof resolveRemainingDlPursuit> | null = null;
+  let bruiserResult: ReturnType<typeof performBruiserCheck> | null = null;
+  let bruiserCarryDefenderResult: ReturnType<typeof performCarryDefenderChecks> | null = null;
 
   // Backfield branch: the runner missed the hole and must beat the winning DL.
   if (!visionCheck.getsPastDL) {
@@ -534,11 +538,28 @@ export function runPlay(
       `${runState.runner} fails to hit the hole and is forced into the backfield`
     );
 
-    //CHANGE: add in real performBruiserCheck function
-    const bruiserSuccess = performBruiserCheck();
+    bruiserResult = performBruiserCheck(runState.runner, ctx.players);
 
-    if(bruiserSuccess){
-      //CHANGE: tackle at line of scrimmage with performCarryDefenderChecks 
+    if (bruiserResult.succeeded) {
+      const bruiserTackler = runLaneTarget.selectedPlayer;
+      runState.yards = 0;
+      runState.log.push(
+        `${runState.runner} powers out of the backfield loss (roll ${bruiserResult.roll.toFixed(2)} <= ${bruiserResult.bruiserScore.toFixed(2)}%) and gets back to the line of scrimmage.`
+      );
+
+      bruiserCarryDefenderResult = performCarryDefenderChecks(runState.runner, ctx.players);
+
+      if (bruiserCarryDefenderResult.yardsAdded > 0) {
+        runState.yards += bruiserCarryDefenderResult.yardsAdded;
+        runState.log.push(
+          `${runState.runner} carries ${bruiserTackler} for +${bruiserCarryDefenderResult.yardsAdded} ${bruiserCarryDefenderResult.yardsAdded === 1 ? "yard" : "yards"}.`
+        );
+      }
+
+      runState.tackler = bruiserTackler;
+      runState.stopped = true;
+      runState.stopReason = "Bruiser Check Tackle";
+      runState.log.push(`${bruiserTackler} tackles ${runState.runner}. Reason: Bruiser Check Tackle.`);
     }
     else{
       // The first penetrating DL gets a clean wrap attempt before the runner can choose a counter move.
@@ -706,6 +727,8 @@ export function runPlay(
   console.log("DL juke result:", dlJukeResult);
   console.log("Other winning DLs after juke:", otherWinningDLsAfterJuke);
   console.log("DL pursuit result:", dlPursuitResult);
+  console.log("Bruiser result:", bruiserResult);
+  console.log("Bruiser carry defender result:", bruiserCarryDefenderResult);
 
   //if tackled in backfield or snuffed at line
   if (runState.stopped) {
