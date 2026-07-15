@@ -29,6 +29,7 @@ function normalizeFrontendSettings(settings: Record<string, unknown>): FrontendS
   normalized.accelToLBYards = Array.isArray(normalized.accelToLBYards) ? normalized.accelToLBYards : [];
   normalized.secondarySpeedYards = Array.isArray(normalized.secondarySpeedYards) ? normalized.secondarySpeedYards : [];
   normalized.secondaryBreakawayYards = Array.isArray(normalized.secondaryBreakawayYards) ? normalized.secondaryBreakawayYards : [];
+  normalized.negativeYardage = Array.isArray(normalized.negativeYardage) ? normalized.negativeYardage : [];
   normalized.staminaDrains = normalized.staminaDrains ?? {};
   normalized.tackleTable = Array.isArray(normalized.tackleTable) ? normalized.tackleTable : [];
   normalized.completionTable = Array.isArray(normalized.completionTable) ? normalized.completionTable : [];
