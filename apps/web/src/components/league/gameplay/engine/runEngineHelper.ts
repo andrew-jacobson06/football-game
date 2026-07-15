@@ -702,16 +702,21 @@ export function getBackfieldYards(
 export function getAccelToLBYards(
   runner: PlayerTrait | undefined,
   settings: FrontendSettings | undefined,
-  modLog?: string[]
+  modLog?: string[],
+  type?: string
 ) {
-  const baseRoll = Math.floor(Math.random() * 101);
+  const baseRoll = Math.random() * 100;
   const acceleration = trait(runner, "acceleration"); // TRAIT USED: Acceleration
   const vision = trait(runner, "vision"); // TRAIT USED: Vision
   const accelerationMod = ((acceleration / 10) ** 2) / 12;
-  //CHANGE: For only the very first acceltoLB should vision be considered, otherwise:
-    // const recursiveAccelerationMod = ((acceleration / 10) ** 2) / 9;
+  //For only the very first acceltoLB should vision be considered, otherwise:
+  const recursiveAccelerationMod = ((acceleration / 10) ** 2) / 9;
   const visionMod = (((vision/10)**2)/12);
-  const adjustedRoll = Math.min(100, baseRoll + accelerationMod + visionMod);
+
+  let adjustedRoll = Math.min(100, baseRoll + accelerationMod + visionMod);
+  if(type == "restart"){
+    adjustedRoll = Math.min(100, baseRoll + recursiveAccelerationMod);
+  }
 
   let cumulative = 0;
   const accelToLBSettings = settingArray<RunAccelToLBSetting>(settings, "accelToLBYards");
@@ -742,7 +747,7 @@ export function getSecondarySpeedYards(
   modLog?: string[]
 ) {
   //CHANGE: baseroll should be a decimal 0 - 100
-  const baseRoll = Math.floor(Math.random() * 101);
+  const baseRoll = Math.random() * 100;
   const speed = trait(runner, "speed"); // TRAIT USED: Speed
   const speedMod = (speed / 22) ** 2;
   const adjustedRoll = Math.min(100, baseRoll + speedMod);
@@ -818,9 +823,9 @@ export function getSecondaryBreakawayYards(
   const speedModifier = (speed / 18) ** 2;
   //CHANGE all rolls to be decimal 0-100
   const modifierChance = ((speed / 15) ** 2);
-  const modifierRoll = Math.floor(Math.random() * 101);
+  const modifierRoll = Math.random() * 100;
   const modifierApplied = modifierRoll <= modifierChance;
-  const baseRoll = Math.floor(Math.random() * 101);
+  const baseRoll = Math.random() * 100;
   const adjustedRoll = Math.min(100, baseRoll + (modifierApplied ? speedModifier : 0));
 
   let cumulative = 0;
@@ -1351,7 +1356,8 @@ export function resolveLinebackerSecondLevel(
       const accelerationYards = getAccelToLBYards(
         findPlayerByName(players, runState.runner),
         settings,
-        runState.log
+        runState.log,
+        "restart"
       );
 
       addYards(
