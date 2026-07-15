@@ -444,7 +444,7 @@ export function performPostTruckorJukeAccelerationCheck(
   const accelPastChance =
     checkType === "juke"
       ? runnerAcceleration
-      : ((runnerAcceleration / 8) ** 2) / 2;
+      : ((runnerAcceleration / 9) ** 2) / 2;
   const roll = Math.random() * 100;
 
   return {
