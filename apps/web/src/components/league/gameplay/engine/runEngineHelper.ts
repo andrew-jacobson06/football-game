@@ -5,6 +5,7 @@ import type {
   RunAccelToLBSetting,
   RunSecondarySpeedSetting,
   RunSecondaryBreakawaySetting,
+  RunNegativeYardageSetting,
   FrontendSettings,
   RunPlayState
 } from "./types";
@@ -627,6 +628,42 @@ export function handleLbWrapTackle(
 /** Returns an inclusive random integer for yardage ranges. Both legacy and current run logic use it for bounded random gains or losses. */
 export function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+
+/** Rolls backfield loss yardage from the configured negative-yardage table. Falls back to the old -5 to -1 range when settings are unavailable. */
+export function getBackfieldYards(
+  settings: FrontendSettings | undefined,
+  modLog?: string[]
+): number {
+  const negativeYardageSettings = settingArray<RunNegativeYardageSetting>(settings, "negativeYardage");
+
+  if (!negativeYardageSettings.length) {
+    const fallbackYards = randomInt(-5, -1);
+    modLog?.push(`Yard ${fallbackYards} Backfield loss fallback (negative yardage table missing)`);
+    return fallbackYards;
+  }
+
+  const roll = Math.random() * 100;
+  let cumulative = 0;
+
+  for (const range of negativeYardageSettings) {
+    cumulative += Number(range.percentage) || 0;
+    if (roll <= cumulative) {
+      const minYards = Number(range.minYards) || 0;
+      const maxYards = Number(range.maxYards) || minYards;
+      const yards = randomInt(Math.min(minYards, maxYards), Math.max(minYards, maxYards));
+      modLog?.push(`Yard ${yards} Backfield loss (${range.label}, roll ${roll.toFixed(2)})`);
+      return yards;
+    }
+  }
+
+  const fallback = negativeYardageSettings[negativeYardageSettings.length - 1];
+  const minYards = Number(fallback.minYards) || 0;
+  const maxYards = Number(fallback.maxYards) || minYards;
+  const yards = randomInt(Math.min(minYards, maxYards), Math.max(minYards, maxYards));
+  modLog?.push(`Yard ${yards} Backfield loss (${fallback.label}, capped roll ${roll.toFixed(2)})`);
+  return yards;
 }
 
 /** Rolls how many yards the runner gains while accelerating from the line to linebacker depth. `runPlay` and second-level restart logic use it before choosing the next defender. */

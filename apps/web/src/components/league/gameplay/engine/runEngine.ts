@@ -16,6 +16,7 @@ import {
   randomInt,
   addYards,
   getAccelToLBYards,
+  getBackfieldYards,
   resolveLinebackerSecondLevel,
   pickShortAccelerationDefender,
   chooseRunnerDefenderSecondChanceAttempt,
@@ -525,8 +526,7 @@ export function runPlay(
   // Backfield branch: the runner missed the hole and must beat the winning DL.
   if (!visionCheck.getsPastDL) {
     // A missed hole immediately costs yardage before the runner can attempt to escape the penetrating defender.
-    //CHANGE NUMBER 1: pull in negative yardage chart
-    const backfieldYards = randomInt(-5, -1);
+    const backfieldYards = getBackfieldYards(ctx.settings, runState.log);
 
     addYards(
       runState,

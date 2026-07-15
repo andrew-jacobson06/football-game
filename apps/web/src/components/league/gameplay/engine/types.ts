@@ -23,12 +23,14 @@ export type RunBreakawaySetting = { label: string; percentage: number; minYards:
 export type RunAccelToLBSetting = { label: string; percentage: number; yards: number };
 export type RunSecondarySpeedSetting = { label: string; percentage: number; minYards: number; maxYards: number };
 export type RunSecondaryBreakawaySetting = { label: string; percentage: number; minYards: number; maxYards: number };
+export type RunNegativeYardageSetting = { label: string; percentage: number; minYards: number; maxYards: number };
 export type FrontendSettings = Record<string, unknown> & {
   thresholds?: RunThreshold[];
   breakaways?: RunBreakawaySetting[];
   accelToLBYards?: RunAccelToLBSetting[];
   secondarySpeedYards?: RunSecondarySpeedSetting[];
   secondaryBreakawayYards?: RunSecondaryBreakawaySetting[];
+  negativeYardage?: RunNegativeYardageSetting[];
   staminaDrains?: Record<string, number>;
   drainSettings?: Record<string, number>;
   tackleTable?: unknown[];
