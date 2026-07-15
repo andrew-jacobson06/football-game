@@ -21,7 +21,6 @@ import {
   pickShortAccelerationDefender,
   chooseRunnerDefenderSecondChanceAttempt,
   performTruckAttempt,
-  performPostTruckorJukeAccelerationCheck,
   performBruiserCheck,
   performCarryDefenderChecks,
 } from "./runEngineHelper";
@@ -621,30 +620,18 @@ export function runPlay(
                 `${runState.runner} has no remaining penetrating defensive linemen to beat after the truck and escapes toward the second level.`
               );
             } else {
-              // A successful truck still needs an acceleration check when other DLs won their lanes and can pursue.
-              const accelerationResult = performPostTruckorJukeAccelerationCheck(
-                runState.runner,
+              runState.log.push(
+                `${runState.runner} trucks ${dlWrapResult.defender}, but other defensive linemen are still in pursuit.`
+              );
+
+              dlPursuitResult = resolveRemainingDlPursuit(
+                runState,
+                otherWinningDLsAfterTruck,
                 ctx.players,
                 "truck"
               );
-                //CHANGE: a failed truck should recurse through resolveRemainingDlPursuit just like juke
 
-              if (accelerationResult.acceleratedPast) {
-                runState.log.push(
-                  `${runState.runner} accelerates after contact (roll ${accelerationResult.roll.toFixed(2)} <= ${accelerationResult.accelPastChance.toFixed(2)}%) and escapes toward the second level.`
-                );
-              } else {
-                const pursuingDefender = otherWinningDLsAfterTruck[0]?.defensePlayer || dlWrapResult.defender;
-                runState.log.push(
-                  `${runState.runner} cannot accelerate past the remaining defenders after the truck (roll ${accelerationResult.roll.toFixed(2)} > ${accelerationResult.accelPastChance.toFixed(2)}%).`
-                );
-                fallForwardResult = handleRunnerTackle(
-                  runState,
-                  pursuingDefender,
-                  "DL Backfield Post-Truck Acceleration Failed",
-                  ctx.players
-                );
-              }
+              console.log("DL pursuit result:", dlPursuitResult);
             }
           }
         } 
@@ -685,7 +672,8 @@ export function runPlay(
             dlPursuitResult = resolveRemainingDlPursuit(
               runState,
               otherWinningDLsAfterJuke,
-              ctx.players
+              ctx.players,
+              "juke"
             );
 
             console.log("DL pursuit result:", dlPursuitResult);
