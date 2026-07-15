@@ -407,7 +407,7 @@ export function performTruckAttempt(
   const runnerPower = trait(runner, "size") + trait(runner, "strength"); // TRAIT USED: Size TRAIT USED: Strength
   const defenderPower = trait(defender, "size") + trait(defender, "strength"); // TRAIT USED: Size TRAIT USED: Strength
   const totalPower = runnerPower + defenderPower;
-  const truckChance = totalPower > 0 ? (runnerPower / (totalPower + 80)) * 100 : 0;
+  const truckChance = totalPower > 0 ? (runnerPower / (totalPower + 100)) * 100 : 0;
   const roll = Math.random() * 100;
 
   return {
@@ -443,7 +443,7 @@ export function performPostTruckorJukeAccelerationCheck(
   const accelPastChance =
     checkType === "juke"
       ? runnerAcceleration
-      : ((runnerAcceleration / 10) ** 2) / 3;
+      : ((runnerAcceleration / 8) ** 2) / 2;
   const roll = Math.random() * 100;
 
   return {
@@ -637,8 +637,12 @@ export function getAccelToLBYards(
 ) {
   const baseRoll = Math.floor(Math.random() * 101);
   const acceleration = trait(runner, "acceleration"); // TRAIT USED: Acceleration
-  const accelerationMod = ((acceleration / 10) ** 2) / 9;
-  const adjustedRoll = Math.min(100, baseRoll + accelerationMod);
+  const vision = trait(runner, "vision"); // TRAIT USED: Vision
+  const accelerationMod = ((acceleration / 10) ** 2) / 12;
+  //CHANGE: For only the very first acceltoLB should vision be considered, otherwise:
+    // const recursiveAccelerationMod = ((acceleration / 10) ** 2) / 9;
+  const visionMod = (((vision/10)**2)/12);
+  const adjustedRoll = Math.min(100, baseRoll + accelerationMod + visionMod);
 
   let cumulative = 0;
   const accelToLBSettings = settingArray<RunAccelToLBSetting>(settings, "accelToLBYards");
@@ -668,18 +672,23 @@ export function getSecondarySpeedYards(
   settings: FrontendSettings | undefined,
   modLog?: string[]
 ) {
+  //CHANGE: baseroll should be a decimal 0 - 100
   const baseRoll = Math.floor(Math.random() * 101);
   const speed = trait(runner, "speed"); // TRAIT USED: Speed
-  const speedMod = (speed / 15) ** 2;
+  const speedMod = (speed / 22) ** 2;
   const adjustedRoll = Math.min(100, baseRoll + speedMod);
 
+  let maxYardageMod = 0;
   let cumulative = 0;
   const secondarySpeedSettings = settingArray<RunSecondarySpeedSetting>(settings, "secondarySpeedYards");
   for (const range of secondarySpeedSettings) {
     cumulative += Number(range.percentage) || 0;
     if (adjustedRoll <= cumulative) {
+      if(range.label == 'speed_lvl2_4'){
+        maxYardageMod = Math.floor((speed / 40) ** 2); //TRAIT USED: Speed
+      }
       const minYards = Number(range.minYards) || 0;
-      const maxYards = Number(range.maxYards) || minYards;
+      const maxYards = Number(range.maxYards + maxYardageMod) || minYards;
       const yards = randomInt(Math.min(minYards, maxYards), Math.max(minYards, maxYards));
       modLog?.push(
         `Yard +${yards} Secondary Speed (roll ${adjustedRoll.toFixed(2)} = ${baseRoll} + ${speedMod.toFixed(2)})`
@@ -738,7 +747,8 @@ export function getSecondaryBreakawayYards(
 ) {
   const speed = trait(runner, "speed"); // TRAIT USED: Speed
   const speedModifier = (speed / 18) ** 2;
-  const modifierChance = ((speed / 15) ** 2) / 100;
+  //CHANGE all rolls to be decimal 0-100
+  const modifierChance = ((speed / 15) ** 2);
   const modifierRoll = Math.floor(Math.random() * 101);
   const modifierApplied = modifierRoll <= modifierChance;
   const baseRoll = Math.floor(Math.random() * 101);
@@ -882,10 +892,10 @@ export function resolveSecondaryPursuit(
 
   const runnerSpeed = trait(findPlayerByName(players, runState.runner), "speed");
   const chaserSpeed = selectedCandidate.speed;
-  const rawSpeedCheck = 50 + runnerSpeed - chaserSpeed;
-  const speedCheck = Math.max(5, Math.min(95, rawSpeedCheck));
+  const rawSpeedCheck = 25 + runnerSpeed - chaserSpeed;
+  const speedCheck = Math.max(3, Math.min(65, rawSpeedCheck));
   const speedRoll = randomInt(1, 100);
-  const escaped = speedRoll < speedCheck;
+  const escaped = speedRoll <= speedCheck;
   const chaser = selectedCandidate.assignment.player;
 
   if (escaped) {
@@ -1181,7 +1191,7 @@ export function performLbJukeCheck(
   const runnerJukeTrait = trait(runner, "juke"); // TRAIT USED: Juke
   const defenderTacklingTrait = trait(defender, "tackling"); // TRAIT USED: Tackling
 
-  const rbJukeScore = 15 + ((runnerJukeTrait / 10) ** 2) / 3;
+  const rbJukeScore = 15 + ((runnerJukeTrait / 8) ** 2) / 3;
   const lbDefendScore = ((defenderTacklingTrait / 15) ** 2) / 2;
   const targetToBeat = rbJukeScore - lbDefendScore;
   const roll = Math.random() * 100;
@@ -1214,10 +1224,13 @@ export function resolveLinebackerSecondLevel(
 ): LbSecondLevelResult {
   const runnerSlot = (Object.entries(offenseFormation) as [FormationSlot, string | undefined][])
     .find(([, player]) => player === runState.runner)?.[0];
+
   const beatenDefenderSet = new Set(beatenDefenders.filter(Boolean));
+
   const eligibleDefenseFormation = defenseFormation.filter(
     (assignment) => !assignment.player || !beatenDefenderSet.has(assignment.player)
   );
+
   const linebacker = selectedDefender ?? pickLinebackerForRunLane(
     eligibleDefenseFormation,
     runLaneTarget.selectedSlot,
@@ -1252,56 +1265,63 @@ export function resolveLinebackerSecondLevel(
       players,
       action
     );
+
     if (escapeAccelerationResult.acceleratedPast) {
       runState.log.push(
         `${runState.runner} accelerates past the remaining defenders after the ${action} (roll ${escapeAccelerationResult.roll.toFixed(2)} <= ${escapeAccelerationResult.accelPastChance.toFixed(2)}%) and breaks into the secondary.`
       );
       addSecondarySpeedYards(runState, players, settings, defenseFormation);
       return undefined;
-    }
-
-    runState.log.push(
-      `${runState.runner} cannot accelerate past the remaining defenders after the ${action} (roll ${escapeAccelerationResult.roll.toFixed(2)} > ${escapeAccelerationResult.accelPastChance.toFixed(2)}%), so the next defender-runner interaction is reevaluated.`
-    );
-
-    const accelerationYards = getAccelToLBYards(
-      findPlayerByName(players, runState.runner),
-      settings,
-      runState.log
-    );
-    addYards(
-      runState,
-      accelerationYards,
-      `${runState.runner} restarts downhill after the ${action}`
-    );
-
-    const remainingDefenders = getRemainingSecondLevelDefenders(
-      defenseFormation,
-      lineWinLossArray,
-      beatenDefenderSet,
-      accelerationYards <= 3
-    );
-    const nextDefender = weightedPickDefenderByDefStars(remainingDefenders, players);
-
-    if (!nextDefender) {
+    } 
+    
+    else{
       runState.log.push(
-        `${runState.runner} has no remaining eligible defenders after gaining +${accelerationYards} and accelerates into the secondary.`
+        `${runState.runner} cannot accelerate past the remaining defenders after the ${action} (roll ${escapeAccelerationResult.roll.toFixed(2)} > ${escapeAccelerationResult.accelPastChance.toFixed(2)}%), so the next defender-runner interaction is reevaluated.`
       );
-      addSecondarySpeedYards(runState, players, settings, defenseFormation);
-      return undefined;
+
+      const accelerationYards = getAccelToLBYards(
+        findPlayerByName(players, runState.runner),
+        settings,
+        runState.log
+      );
+
+      addYards(
+        runState,
+        accelerationYards,
+        `${runState.runner} restarts downhill after the ${action}`
+      );
+
+      const remainingDefenders = getRemainingSecondLevelDefenders(
+        defenseFormation,
+        lineWinLossArray,
+        beatenDefenderSet,
+        accelerationYards <= 3
+      );
+
+      const nextDefender = weightedPickDefenderByDefStars(remainingDefenders, players);
+
+      if (!nextDefender) {
+        runState.log.push(
+          `${runState.runner} has no remaining eligible defenders after gaining +${accelerationYards} and accelerates into the secondary.`
+        );
+        addSecondarySpeedYards(runState, players, settings, defenseFormation);
+        return undefined;
+      }
+
+      return resolveLinebackerSecondLevel(
+        runState,
+        defenseFormation,
+        runLaneTarget,
+        offenseFormation,
+        players,
+        nextDefender,
+        settings,
+        lineWinLossArray,
+        Array.from(beatenDefenderSet)
+      );
     }
 
-    return resolveLinebackerSecondLevel(
-      runState,
-      defenseFormation,
-      runLaneTarget,
-      offenseFormation,
-      players,
-      nextDefender,
-      settings,
-      lineWinLossArray,
-      Array.from(beatenDefenderSet)
-    );
+    
   };
 
   runState.log.push(`${runState.runner} meets ${linebacker.player} at the second level.`);
@@ -1422,14 +1442,19 @@ export function performDlJukeCheck(
   players: PlayerTrait[]
 ): DlJukeResult {
   const runner = findPlayerByName(players, runnerName);
+  const defender = findPlayerByName(players, defenderName);
 
   const runnerJuke = trait(runner, "juke"); // TRAIT USED: Juke
+  const defenderTackle = trait(defender, "tackling"); // TRAIT USED: Tackling
 
-  const jukeScore = ((runnerJuke / 10) ** 2) / 2;
+  const jukeScore = 15 + (((runnerJuke / 8) ** 2) / 3);
+  const defenderJukeStop = ((defenderTackle / 17) ** 2) / 2;
+
+  const finalJukeChance = jukeScore - defenderJukeStop;
 
   const roll = Math.random() * 100;
 
-  const juked = roll <= jukeScore;
+  const juked = roll <= finalJukeChance;
 
   return {
     runner: runnerName,

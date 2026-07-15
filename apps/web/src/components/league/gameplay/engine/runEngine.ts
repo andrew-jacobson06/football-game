@@ -525,6 +525,7 @@ export function runPlay(
   // Backfield branch: the runner missed the hole and must beat the winning DL.
   if (!visionCheck.getsPastDL) {
     // A missed hole immediately costs yardage before the runner can attempt to escape the penetrating defender.
+    //CHANGE: pull in negative yardage chart
     const backfieldYards = randomInt(-5, -1);
 
     addYards(
@@ -533,132 +534,142 @@ export function runPlay(
       `${runState.runner} fails to hit the hole and is forced into the backfield`
     );
 
-    // The first penetrating DL gets a clean wrap attempt before the runner can choose a counter move.
-    dlWrapResult = performDlWrapCheck(
-      runLaneTarget.selectedPlayer,
-      ctx.players
-    );
+    //CHANGE: add in real performBruiserCheck function
+    const bruiserSuccess = performBruiserCheck();
 
-    if (dlWrapResult.wrapped) {
-      fallForwardResult = handleRunnerTackle(
-        runState,
-        dlWrapResult.defender,
-        "DL Backfield Wrap",
-        ctx.players
-      );
-    } 
-    else {
-      // If the wrap fails, the runner chooses the more natural second-chance move for the size matchup.
-      const dlSecondChanceAttempt = chooseRunnerDefenderSecondChanceAttempt(
-        runState.runner,
-        dlWrapResult.defender,
+    if(bruiserSuccess){
+      //CHANGE: tackle at line of scrimmage with performCarryDefenderChecks 
+    }
+    else{
+      // The first penetrating DL gets a clean wrap attempt before the runner can choose a counter move.
+      dlWrapResult = performDlWrapCheck(
+        runLaneTarget.selectedPlayer,
         ctx.players
       );
 
-      runState.log.push(
-        `${runState.runner} chooses to ${dlSecondChanceAttempt.attempt.toLowerCase()} ${dlWrapResult.defender} ` +
-        `(truck chance ${dlSecondChanceAttempt.truckChance.toFixed(2)}%, size diff ${dlSecondChanceAttempt.cappedSizeDifference}).`
-      );
-
-      if (dlSecondChanceAttempt.attempt === "Truck") {
-        // Truck attempts compare combined size/strength power and either restart the run or end in a tackle.
-        const truckResult = performTruckAttempt(
-          runState.runner,
-          dlWrapResult.defender,
-          ctx.players
-        );
-
-        if (!truckResult.trucked) {
-          runState.log.push(
-            `${runState.runner} fails to truck ${dlWrapResult.defender} (roll ${truckResult.roll.toFixed(2)} > ${truckResult.truckChance.toFixed(2)}%).`
-          );
-          fallForwardResult = handleRunnerTackle(
-            runState,
-            dlWrapResult.defender,
-            "DL Backfield Truck Failed",
-            ctx.players
-          );
-        } else {
-          runState.log.push(
-            `${runState.runner} trucks ${dlWrapResult.defender} (roll ${truckResult.roll.toFixed(2)} <= ${truckResult.truckChance.toFixed(2)}%) and tries to restart downhill.`
-          );
-
-          const otherWinningDLsAfterTruck = getOtherWinningDLs(
-            lineWinLossArray,
-            dlWrapResult.defender
-          );
-          if (otherWinningDLsAfterTruck.length === 0) {
-            runState.log.push(
-              `${runState.runner} has no remaining penetrating defensive linemen to beat after the truck and escapes toward the second level.`
-            );
-          } else {
-            // A successful truck still needs an acceleration check when other DLs won their lanes and can pursue.
-            const accelerationResult = performPostTruckorJukeAccelerationCheck(
-              runState.runner,
-              ctx.players,
-              "truck"
-            );
-
-            if (accelerationResult.acceleratedPast) {
-              runState.log.push(
-                `${runState.runner} accelerates after contact (roll ${accelerationResult.roll.toFixed(2)} <= ${accelerationResult.accelPastChance.toFixed(2)}%) and escapes toward the second level.`
-              );
-            } else {
-              const pursuingDefender = otherWinningDLsAfterTruck[0]?.defensePlayer || dlWrapResult.defender;
-              runState.log.push(
-                `${runState.runner} cannot accelerate past the remaining defenders after the truck (roll ${accelerationResult.roll.toFixed(2)} > ${accelerationResult.accelPastChance.toFixed(2)}%).`
-              );
-              fallForwardResult = handleRunnerTackle(
-                runState,
-                pursuingDefender,
-                "DL Backfield Post-Truck Acceleration Failed",
-                ctx.players
-              );
-            }
-          }
-        }
-      } else {
-        // Juke attempts are the agility counter to a failed DL wrap.
-        dlJukeResult = performDlJukeCheck(
-          runState.runner,
-          dlWrapResult.defender,
-          ctx.players
-        );
-      }
-
-      if (!runState.stopped && dlJukeResult && !dlJukeResult.juked) {
-        // A failed backfield juke gives the original defender the tackle, with fall-forward contact still possible.
+      if (dlWrapResult.wrapped) {
         fallForwardResult = handleRunnerTackle(
           runState,
           dlWrapResult.defender,
-          "DL Backfield Juke Failed",
+          "DL Backfield Wrap",
           ctx.players
         );
       } 
-      else if (dlJukeResult?.juked) {
-        // After beating the first DL, only other DLs that won their matchups can continue the backfield pursuit chain.
-        otherWinningDLsAfterJuke = getOtherWinningDLs(
-          lineWinLossArray,
-          dlWrapResult.defender
+      else {
+        // If the wrap fails, the runner chooses the more natural second-chance move for the size matchup.
+        const dlSecondChanceAttempt = chooseRunnerDefenderSecondChanceAttempt(
+          runState.runner,
+          dlWrapResult.defender,
+          ctx.players
         );
 
-        if (otherWinningDLsAfterJuke.length === 0) {
-          runState.log.push(
-            `${runState.runner} jukes ${dlWrapResult.defender} and escapes toward the second level.`
-          );
-        } else {
-          runState.log.push(
-            `${runState.runner} jukes ${dlWrapResult.defender}, but other defensive linemen are still in pursuit.`
-          );
+        runState.log.push(
+          `${runState.runner} chooses to ${dlSecondChanceAttempt.attempt.toLowerCase()} ${dlWrapResult.defender} ` +
+          `(truck chance ${dlSecondChanceAttempt.truckChance.toFixed(2)}%, size diff ${dlSecondChanceAttempt.cappedSizeDifference}).`
+        );
 
-          dlPursuitResult = resolveRemainingDlPursuit(
-            runState,
-            otherWinningDLsAfterJuke,
+        if (dlSecondChanceAttempt.attempt === "Truck") {
+          // Truck attempts compare combined size/strength power and either restart the run or end in a tackle.
+          const truckResult = performTruckAttempt(
+            runState.runner,
+            dlWrapResult.defender,
             ctx.players
           );
 
-          console.log("DL pursuit result:", dlPursuitResult);
+          if (!truckResult.trucked) {
+            runState.log.push(
+              `${runState.runner} fails to truck ${dlWrapResult.defender} (roll ${truckResult.roll.toFixed(2)} > ${truckResult.truckChance.toFixed(2)}%).`
+            );
+            fallForwardResult = handleRunnerTackle(
+              runState,
+              dlWrapResult.defender,
+              "DL Backfield Truck Failed",
+              ctx.players
+            );
+          } else {
+            runState.log.push(
+              `${runState.runner} trucks ${dlWrapResult.defender} (roll ${truckResult.roll.toFixed(2)} <= ${truckResult.truckChance.toFixed(2)}%) and tries to restart downhill.`
+            );
+
+            const otherWinningDLsAfterTruck = getOtherWinningDLs(
+              lineWinLossArray,
+              dlWrapResult.defender
+            );
+            if (otherWinningDLsAfterTruck.length === 0) {
+              runState.log.push(
+                `${runState.runner} has no remaining penetrating defensive linemen to beat after the truck and escapes toward the second level.`
+              );
+            } else {
+              // A successful truck still needs an acceleration check when other DLs won their lanes and can pursue.
+              const accelerationResult = performPostTruckorJukeAccelerationCheck(
+                runState.runner,
+                ctx.players,
+                "truck"
+              );
+                //CHANGE: a failed truck should recurse through resolveRemainingDlPursuit just like juke
+
+              if (accelerationResult.acceleratedPast) {
+                runState.log.push(
+                  `${runState.runner} accelerates after contact (roll ${accelerationResult.roll.toFixed(2)} <= ${accelerationResult.accelPastChance.toFixed(2)}%) and escapes toward the second level.`
+                );
+              } else {
+                const pursuingDefender = otherWinningDLsAfterTruck[0]?.defensePlayer || dlWrapResult.defender;
+                runState.log.push(
+                  `${runState.runner} cannot accelerate past the remaining defenders after the truck (roll ${accelerationResult.roll.toFixed(2)} > ${accelerationResult.accelPastChance.toFixed(2)}%).`
+                );
+                fallForwardResult = handleRunnerTackle(
+                  runState,
+                  pursuingDefender,
+                  "DL Backfield Post-Truck Acceleration Failed",
+                  ctx.players
+                );
+              }
+            }
+          }
+        } 
+        else {
+          // Juke attempts are the agility counter to a failed DL wrap.
+          dlJukeResult = performDlJukeCheck(
+            runState.runner,
+            dlWrapResult.defender,
+            ctx.players
+          );
         }
+
+        if (!runState.stopped && dlJukeResult && !dlJukeResult.juked) {
+          // A failed backfield juke gives the original defender the tackle, with fall-forward contact still possible.
+          fallForwardResult = handleRunnerTackle(
+            runState,
+            dlWrapResult.defender,
+            "DL Backfield Juke Failed",
+            ctx.players
+          );
+        } 
+        else if (dlJukeResult?.juked) {
+          // After beating the first DL, only other DLs that won their matchups can continue the backfield pursuit chain.
+          otherWinningDLsAfterJuke = getOtherWinningDLs(
+            lineWinLossArray,
+            dlWrapResult.defender
+          );
+
+          if (otherWinningDLsAfterJuke.length === 0) {
+            runState.log.push(
+              `${runState.runner} jukes ${dlWrapResult.defender} and escapes toward the second level.`
+            );
+          } else {
+            runState.log.push(
+              `${runState.runner} jukes ${dlWrapResult.defender}, but other defensive linemen are still in pursuit.`
+            );
+
+            dlPursuitResult = resolveRemainingDlPursuit(
+              runState,
+              otherWinningDLsAfterJuke,
+              ctx.players
+            );
+
+            console.log("DL pursuit result:", dlPursuitResult);
+          }
+      }
       }
     }
   }
@@ -711,12 +722,14 @@ export function runPlay(
       ctx.settings,
       runState.log
     );
+
     const jukedBackfieldDefenders = [
       dlJukeResult?.juked ? dlJukeResult.defender : undefined,
       ...(dlPursuitResult?.steps
         .filter((step) => step.outcome === "Juked")
         .map((step) => step.defender) ?? []),
     ].filter((defender): defender is string => Boolean(defender));
+
     // Short acceleration keeps nearby DLs alive as possible tacklers; longer acceleration means only second-level defenders are in position.
     const secondLevelDefender =
       accelToSecondLevelYards <= 3
