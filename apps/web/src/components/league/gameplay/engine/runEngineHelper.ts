@@ -1567,7 +1567,8 @@ export type DlPursuitResult = {
 export function resolveRemainingDlPursuit(
   runState: RunPlayState,
   remainingWinningDLs: LineWinLossResult[],
-  players: PlayerTrait[]
+  players: PlayerTrait[],
+  accelerationCheckType: PostContactAccelerationCheckType
 ): DlPursuitResult {
   const steps: DlPursuitStep[] = [];
 
@@ -1577,7 +1578,7 @@ export function resolveRemainingDlPursuit(
     const accelerationCheck = performPostTruckorJukeAccelerationCheck(
       runState.runner,
       players,
-      "juke"
+      accelerationCheckType
     );
 
     if (accelerationCheck.acceleratedPast) {
