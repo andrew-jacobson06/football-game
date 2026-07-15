@@ -525,7 +525,7 @@ export function runPlay(
   // Backfield branch: the runner missed the hole and must beat the winning DL.
   if (!visionCheck.getsPastDL) {
     // A missed hole immediately costs yardage before the runner can attempt to escape the penetrating defender.
-    //CHANGE: pull in negative yardage chart
+    //CHANGE NUMBER 1: pull in negative yardage chart
     const backfieldYards = randomInt(-5, -1);
 
     addYards(
