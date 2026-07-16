@@ -98,8 +98,13 @@ async function getFrontendSettingsFromSheet() {
     thresholds,
     breakaways: settingRows(rows, "Break_").map((r) => ({ label: r[0], percentage: parseFloat(String(r[1])), minYards: parseInt(String(r[2]), 10), maxYards: parseInt(String(r[3]), 10) })),
     accelToLBYards: settingRows(rows, "accel_to_LB_")
-      .map((r) => ({ label: r[0], percentage: parseFloat(String(r[1])), yards: parseInt(String(r[2]), 10) }))
-      .filter((r) => Number.isFinite(r.percentage) && Number.isFinite(r.yards)),
+      .map((r) => ({
+        label: r[0],
+        percentage: parseFloat(String(r[1])),
+        minYards: parseInt(String(r[2]), 10),
+        maxYards: parseInt(String(r[3]), 10),
+      }))
+      .filter((r) => Number.isFinite(r.percentage) && Number.isFinite(r.minYards) && Number.isFinite(r.maxYards)),
     secondarySpeedYards: settingRows(rows, "speed_lvl2_")
       .map((r) => ({ label: r[0], percentage: parseFloat(String(r[1])), minYards: parseInt(String(r[2]), 10), maxYards: parseInt(String(r[3]), 10) }))
       .filter((r) => Number.isFinite(r.percentage) && Number.isFinite(r.minYards) && Number.isFinite(r.maxYards)),
