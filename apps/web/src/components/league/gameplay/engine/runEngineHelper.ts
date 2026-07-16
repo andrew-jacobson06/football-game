@@ -114,7 +114,7 @@ export function performLineWinLoss(
     const dlRunStop = trait(defensivePlayer, "RunStop"); // TRAIT USED: RunStop - measures how likely this defender is to penetrate the lane.
 
     // Start the trench battle at 50/50, then shift it by the defender-minus-blocker trait gap.
-    const rawDlWinChance = 50 + dlRunStop - olRunBlocking;
+    const rawDlWinChance = 50 + ((dlRunStop/20) ** 2.8) - ((olRunBlocking/20) ** 2.8);
 
     // Clamp the chance so great players matter without making a single matchup completely deterministic.
     const dlWinChance = Math.max(5, Math.min(95, rawDlWinChance));
