@@ -47,6 +47,7 @@ export function logPlayToDB(prev: LeagueGame, game: LeagueGame, playtype: PlayKi
     drivestart: (prev as unknown as Record<string, unknown>).DriveStart ?? prev.BallOn,
     homescore: game.HomeScore,
     awayscore: game.AwayScore,
+    ...extra,
   };
 }
 
