@@ -148,9 +148,73 @@ async function getPlayHistory(gameId: string) {
   result.sort((a,b) => (Number(a.QTR ?? a.Qtr ?? 0) - Number(b.QTR ?? b.Qtr ?? 0)) || (parseTime(b.Time) - parseTime(a.Time)));
   return result;
 }
+function playValueForHeader(play: Record<string, unknown>, header: string) {
+  const direct = play[header];
+  if (direct !== undefined) return direct;
+
+  const normalized = normHeader(header);
+  const aliases: Record<string, string[]> = {
+    gameid: ["gameid"],
+    playid: ["playid"],
+    time: ["time"],
+    qtr: ["qtr", "quarter"],
+    quarter: ["qtr", "quarter"],
+    possession: ["possession"],
+    down: ["down"],
+    distance: ["distance"],
+    ballon: ["ballon"],
+    playtype: ["playtype"],
+    player: ["player"],
+    receiver: ["receiver"],
+    yards: ["yards"],
+    defensepredicted: ["defensepredicted"],
+    predictioncorrect: ["predictioncorrect"],
+    tackler: ["tackler"],
+    result: ["result"],
+    defenseresult: ["defenseresult"],
+    turnover: ["turnover"],
+    turnoverflag: ["turnover"],
+    description: ["description", "desc"],
+    recoveredby: ["recoveredby"],
+    airyards: ["airyards"],
+    newdown: ["newdown"],
+    newdist: ["newdist"],
+    newdistance: ["newdist"],
+    newballon: ["newballon"],
+    drivestart: ["drivestart"],
+    homescore: ["homescore"],
+    awayscore: ["awayscore"],
+    lineMatchups: ["lineMatchups", "linematchups"],
+    linematchups: ["lineMatchups", "linematchups"],
+    olwins: ["olWins", "olwins"],
+    ollosses: ["olLosses", "ollosses"],
+    dlwins: ["dlWins", "dlwins"],
+    dllosses: ["dlLosses", "dllosses"],
+    jukes: ["jukes"],
+    trucks: ["trucks"],
+    brokentackles: ["brokenTackles", "brokentackles"],
+    stopreason: ["stopReason", "stopreason"],
+    runlog: ["runLog", "runlog"],
+  };
+
+  for (const key of aliases[normalized] ?? [normalized]) {
+    if (play[key] !== undefined) return play[key];
+  }
+
+  return "";
+}
+function sheetSafe(value: unknown) {
+  if (Array.isArray(value) || (value && typeof value === "object")) return JSON.stringify(value);
+  if (typeof value === "boolean") return value;
+  return value ?? "";
+}
 async function logPlayHistory(play: Record<string, unknown>) {
-  const descriptionValue = play.description ?? play.desc ?? "";
-  await appendSheetRow("PlayHistory!A:AA", [String(play.gameid || ""), String(play.playid || ""), asNumber(play.time), asNumber(play.qtr), String(play.possession || ""), asNumber(play.down), asNumber(play.distance), asNumber(play.ballon), String(play.playtype || ""), String(play.player || ""), String(play.receiver || ""), asNumber(play.yards), String(play.defensepredicted || ""), play.predictioncorrect === true || play.predictioncorrect === "true", String(play.tackler || ""), String(play.result || ""), String(play.defenseresult || ""), String(play.turnover || ""), String(descriptionValue || ""), String(play.recoveredby || ""), asNumber(play.airyards), asNumber(play.newdown), asNumber(play.newdist), asNumber(play.newballon), asNumber(play.drivestart), asNumber(play.homescore), asNumber(play.awayscore)]);
+  const { headers, rows } = await sheetRows("PlayHistory");
+  const playId = String(play.playid || play.PlayId || "");
+  if (playId && rows.some((row) => String(row[headers.findIndex((h) => normHeader(h) === "playid")] ?? "") === playId)) {
+    return;
+  }
+  await appendSheetRow("PlayHistory!A:ZZ", headers.map((header) => sheetSafe(playValueForHeader(play, header))));
 }
 async function pushGameState(game: Record<string, unknown>) {
   const { headers, rows } = await sheetRows("Games"); const rowIndex = rows.findIndex((r) => String(r[0]) === String(game.gameId)); if (rowIndex === -1) throw new Error(`No row found for gameId: ${game.gameId}`);
