@@ -720,21 +720,32 @@ export function getAccelToLBYards(
 
   let cumulative = 0;
   const accelToLBSettings = settingArray<RunAccelToLBSetting>(settings, "accelToLBYards");
+  const yardsForRange = (range: RunAccelToLBSetting | undefined) => {
+    if (!range) return 0;
+    const legacyYards = Number(range.yards);
+    const minYards = Number.isFinite(Number(range.minYards)) ? Number(range.minYards) : legacyYards;
+    const maxYards = Number.isFinite(Number(range.maxYards)) ? Number(range.maxYards) : minYards;
+
+    if (!Number.isFinite(minYards) || !Number.isFinite(maxYards)) return 0;
+    return randomInt(Math.min(minYards, maxYards), Math.max(minYards, maxYards));
+  };
+
   for (const range of accelToLBSettings) {
     cumulative += Number(range.percentage) || 0;
     if (adjustedRoll <= cumulative) {
-      const yards = Number(range.yards) || 0;
+      const yards = yardsForRange(range);
       modLog?.push(
-        `Yard +${yards} Accel to LB (roll ${adjustedRoll.toFixed(2)} = ${baseRoll} + ${accelerationMod.toFixed(2)})`
+        `Yard +${yards} Accel to LB (${range.label}, roll ${adjustedRoll.toFixed(2)} = ${baseRoll.toFixed(2)}${type === "restart" ? ` + ${recursiveAccelerationMod.toFixed(2)} Accel` : ` + ${accelerationMod.toFixed(2)} Accel + ${visionMod.toFixed(2)} Vision`})`
       );
       return yards;
     }
   }
 
-  const fallbackYards = Number(accelToLBSettings[accelToLBSettings.length - 1]?.yards) || 0;
+  const fallbackRange = accelToLBSettings[accelToLBSettings.length - 1];
+  const fallbackYards = yardsForRange(fallbackRange);
   if (fallbackYards) {
     modLog?.push(
-      `Yard +${fallbackYards} Accel to LB (capped roll ${adjustedRoll.toFixed(2)})`
+      `Yard +${fallbackYards} Accel to LB (${fallbackRange?.label ?? "fallback"}, capped roll ${adjustedRoll.toFixed(2)})`
     );
   }
   return fallbackYards;
