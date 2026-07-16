@@ -23,7 +23,7 @@ export function handleSack(game: LeagueGame, ctx: EngineContext, qbName: string,
   const sacker = weightedChoose(rushers, (p) => trait(p, "sackChance"));
   const loss = Math.max(1, Math.floor(Math.random() * 9) + 1 - (Math.random() * 100 < trait(byName(ctx, qbName), "juke") ? 2 : 0));
   const yards = -loss; const newBall = advanceBall(game, yards); const safety = isSafety(game, newBall);
-  const fumble = checkForFumble(ctx, qbName, playerName(sacker, "NA"), true);
+  const fumble = checkForFumble(ctx, qbName, playerName(sacker, "NA"));
   const next = nextDownDistance(game, yards, newBall);
   let hs = n(game.HomeScore), as = n(game.AwayScore); if (safety) { if (game.Possession === "Home") as += 2; else hs += 2; }
   const result = safety ? "Safety" : fumble.fumble ? "Fumble" : next.turnover ? "TO on Downs" : "Sack";
