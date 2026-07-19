@@ -44,6 +44,12 @@ type LineStatMatchup = {
   defensePlayer?: string;
   winner?: "OL" | "DL" | string;
 };
+/**
+ * Converts line matchup data from the play record into a uniform array.
+ * The backend may send this as a parsed array or as a JSON string, so this
+ * helper accepts both shapes and safely falls back to an empty list when the
+ * value is absent or malformed.
+ */
 function parseLineMatchups(value: unknown): LineStatMatchup[] {
   if (Array.isArray(value)) return value as LineStatMatchup[];
   if (typeof value !== "string" || !value.trim()) return [];
@@ -83,12 +89,23 @@ type Stat = {
 };
 const str = (v: unknown) => String(v ?? "");
 const num = (v: unknown) => Number(v) || 0;
+/**
+ * Reads the first populated value from a play record using several possible
+ * key names. Play history can contain backend-style PascalCase, lower-case, or
+ * legacy field names, so the UI uses this small compatibility layer instead of
+ * hard-coding one spelling everywhere.
+ */
 const playField = (p: Play, ...keys: string[]) =>
   keys.map((k) => p[k]).find((v) => v !== undefined && v !== null && v !== "");
 const logoSrc = (value: unknown) => {
   const src = str(value).trim();
   return src || undefined;
 };
+/**
+ * Renders a team logo when one is available and a football placeholder when it
+ * is not. Keeping that fallback in one component prevents every scoreboard,
+ * drive, and stats section from repeating the same missing-logo check.
+ */
 function TeamLogo({
   src,
   className,
@@ -108,6 +125,11 @@ function TeamLogo({
   );
 }
 
+/**
+ * Normalizes frontend settings from the API into the shape expected by the
+ * gameplay engine. Older responses use several legacy key names, and missing
+ * tables should behave like empty tables rather than crashing play resolution.
+ */
 function normalizeFrontendSettings(
   settings: Record<string, unknown>,
 ): FrontendSettings {
@@ -163,6 +185,11 @@ function normalizeFrontendSettings(
   return normalized;
 }
 
+/**
+ * Merges the schedule row with the latest persisted game state. The schedule
+ * gives us stable team metadata, while the live state owns mutable fields like
+ * score, clock, down, distance, field position, possession, and timeout data.
+ */
 function normalizeGame(
   game: LeagueGame,
   state: Record<string, unknown> | null,
@@ -186,6 +213,11 @@ function normalizeGame(
     ...(state as Record<string, unknown>),
   };
 }
+/**
+ * Builds the human-readable play description shown in the log and play-by-play.
+ * The branches mirror football outcomes: special teams/conversions first, then
+ * sacks/safeties, then passes, and finally standard run results.
+ */
 function playText(play: Play, game?: LeagueGame): string {
   const description = str(playField(play, "Description", "description")).trim();
   const result = str(playField(play, "Result", "result"));
@@ -197,7 +229,8 @@ function playText(play: Play, game?: LeagueGame): string {
   const possession = str(playField(play, "Possession", "possession"));
   const newBallOn =
     (playField(play, "NewBallOn", "newBallOn", "newballon") as
-      string | number) ?? 50;
+      | string
+      | number) ?? 50;
   const recoveredBy = str(playField(play, "RecoveredBy", "recoveredby"));
   if (result === "Timeout") return `${player} Timeout`;
   if (type === "Kick FG") return "Field Goal is Good!";
@@ -305,6 +338,12 @@ type Drive = {
   yards: number;
   playsCount: number;
 };
+/**
+ * Groups raw play history into drive sections. A drive is identified by the
+ * team in possession plus its starting yard line, then summarized from the last
+ * football play in that group so the play-by-play view can show result, score,
+ * total yards, and play count.
+ */
 function groupPlaysByDrive(plays: Play[], game: LeagueGame): Drive[] {
   const drives: Drive[] = [];
   let current: Drive | null = null;
@@ -355,6 +394,11 @@ function groupPlaysByDrive(plays: Play[], game: LeagueGame): Drive[] {
   });
   return drives;
 }
+/**
+ * Displays play history as collapsible drive cards. Each row recomputes its
+ * situation from the play snapshot so historical down, distance, ball spot,
+ * clock, and quarter remain accurate even after the live game state changes.
+ */
 function PlayByPlayTab({
   game,
   history,
@@ -431,6 +475,11 @@ function PlayByPlayTab({
     </div>
   );
 }
+/**
+ * Reconstructs quarter-by-quarter scoring by comparing each play's stored
+ * score to the previous play's score. If no history exists, the current score
+ * is placed in the first quarter so the chart still has meaningful values.
+ */
 function scoreByQuarter(history: Play[], game: LeagueGame) {
   const home = [0, 0, 0, 0];
   const away = [0, 0, 0, 0];
@@ -453,6 +502,11 @@ function scoreByQuarter(history: Play[], game: LeagueGame) {
   }
   return { home, away };
 }
+/**
+ * Aggregates player box-score stats from the normalized play history. This is
+ * intentionally derived in the UI so passing, rushing, receiving, defensive,
+ * and line-play tables all update immediately after an optimistic play result.
+ */
 function calcStats(history: Play[]) {
   const pass: Stat[] = [],
     rush: Stat[] = [],
@@ -559,10 +613,19 @@ function calcStats(history: Play[]) {
 const avg = (yards = 0, plays = 0) =>
   plays ? (yards / plays).toFixed(1) : "0.0";
 const sacksText = (s: Stat) => `${s.sacks || 0}-${Math.abs(s.sackYds || 0)}`;
+/**
+ * Converts a clock value into seconds. Team-stat possession time math is easier
+ * when both MM:SS strings and numeric values are reduced to a single unit.
+ */
 function parseTimeSeconds(v: unknown) {
   const parts = str(v).split(":").map(Number);
   return parts.length === 2 ? (parts[0] || 0) * 60 + (parts[1] || 0) : num(v);
 }
+/**
+ * Shared table renderer for all player stat groups. It keeps placeholder, team
+ * total, header, and cell markup consistent across passing, rushing, receiving,
+ * defensive, and off-ball sections.
+ */
 function TeamTable({
   title,
   columns,
@@ -609,6 +672,11 @@ function TeamTable({
     </div>
   );
 }
+/**
+ * Renders player-level statistics with home, overview, and away subtabs. The
+ * row builder functions below filter and total the already-aggregated stat
+ * buckets so each table can present either full or condensed columns.
+ */
 function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
   const [subtab, setSubtab] = useState<"Home" | "Overview" | "Away">("Home");
   const stats = useMemo(() => calcStats(history), [history]);
@@ -865,6 +933,11 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
     </div>
   );
 }
+/**
+ * Derives team-level totals from play history: yardage, first downs, conversion
+ * rates, turnovers, sacks, and possession time. Possession time is calculated
+ * from the difference between consecutive clock snapshots.
+ */
 function computeTeamStats(history: Play[], game: LeagueGame) {
   const init = () => ({
     firstDowns: 0,
@@ -894,7 +967,8 @@ function computeTeamStats(history: Play[], game: LeagueGame) {
   };
   history.forEach((play) => {
     const team = str(playField(play, "Possession", "possession")) as
-      "Home" | "Away";
+      | "Home"
+      | "Away";
     if (!teams[team]) return;
     const yards = num(playField(play, "Yards", "yards"));
     const down = num(playField(play, "Down", "down"));
@@ -965,6 +1039,11 @@ function computeTeamStats(history: Play[], game: LeagueGame) {
   });
   return teams;
 }
+/**
+ * Presents team comparison stats side by side. The row descriptors below keep
+ * formatting rules close to the labels while allowing simple stat keys and
+ * custom formatters to share one table rendering path.
+ */
 function TeamStatsTab({
   game,
   history,
@@ -1110,6 +1189,11 @@ function TeamStatsTab({
     </div>
   );
 }
+/**
+ * Extracts the current game leaders from the box-score aggregates and renders
+ * a compact Gamecast summary. Clicking the card footer jumps to the full box
+ * score for deeper player stats.
+ */
 function LeaderCard({
   game,
   history,
@@ -1226,6 +1310,11 @@ function LeaderCard({
     </div>
   );
 }
+/**
+ * Shows the scoring summary by quarter plus current totals. The chart depends
+ * on reconstructed scoring from history, while the total column uses the live
+ * game state as the authoritative current score.
+ */
 function ScoreChart({ game, history }: { game: LeagueGame; history: Play[] }) {
   const { home, away } = scoreByQuarter(history, game);
   return (
@@ -1267,6 +1356,11 @@ function ScoreChart({ game, history }: { game: LeagueGame; history: Play[] }) {
     </div>
   );
 }
+/**
+ * Main live-game container. It loads API data, owns the current tab and live
+ * game state, coordinates the field/controls components, dispatches play calls
+ * to the engine, and persists successful play results back to the backend.
+ */
 export function GameCenter({
   game,
   onBack,

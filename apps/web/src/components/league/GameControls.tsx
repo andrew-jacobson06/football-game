@@ -27,6 +27,11 @@ type Props = {
   selectedFormationPlayer?: string;
 };
 
+/**
+ * These small accessors normalize player records that may use different API
+ * casing. The controls can then work with names, positions, teams, images, and
+ * traits without repeating fallback property checks.
+ */
 function nameOf(p: Player) {
   return str(p.name ?? p.Name);
 }
@@ -42,6 +47,11 @@ function imgOf(p?: Player) {
 function trait(p: Player | undefined, key: string) {
   return Number(p?.[key] ?? p?.[key[0].toUpperCase() + key.slice(1)] ?? 0);
 }
+/**
+ * Reusable modal shell for routes, run selection, and clock management. It
+ * centralizes the close button and panel sizing classes so each modal only
+ * needs to supply its specific controls.
+ */
 function ControlModal({
   children,
   onClose,
@@ -66,6 +76,11 @@ function ControlModal({
     </div>
   );
 }
+/**
+ * Determines who can receive a pass from the current formation. Wide receivers
+ * and running backs are always considered, and the outside-most occupied
+ * linemen are treated as exposed eligible slots for this eight-player ruleset.
+ */
 function eligibleReceivers(formation: Partial<Record<FormationSlot, string>>) {
   const occupiedLinemen = OL_SLOTS.filter((slot) => formation[slot]);
   const exposedLinemen =
@@ -79,6 +94,11 @@ function eligibleReceivers(formation: Partial<Record<FormationSlot, string>>) {
       Boolean(x.player),
     );
 }
+/**
+ * Compact player avatar used throughout controls. It intentionally accepts a
+ * missing player record so formation slots and route chips can still render
+ * when only a name is known.
+ */
 function PlayerBubble({
   name,
   player,
@@ -97,6 +117,11 @@ function PlayerBubble({
     </div>
   );
 }
+/**
+ * Rebuilds the quarterback read order after a route changes. The preferred
+ * player gets the requested read slot, then remaining routed receivers fill the
+ * first unused read labels in stable formation order.
+ */
 function normalizeReads(
   nextRoutes: Record<string, string>,
   orderedPlayers: string[],
@@ -130,6 +155,12 @@ function normalizeReads(
   return nextReads;
 }
 
+/**
+ * Creates an eight-player defensive preview from the offense formation. It
+ * picks the non-possessing team, ranks defenders by defensive stars inside each
+ * position group, aligns coverage to receivers, aligns linemen to blockers, and
+ * fills any remaining spots with linebackers/safeties.
+ */
 function buildDefense(
   game: LeagueGame,
   players: Player[],
@@ -188,6 +219,11 @@ function buildDefense(
   return out.slice(0, EXPECTED_PLAYERS_PER_SIDE);
 }
 
+/**
+ * Play-calling panel for the team in possession. It manages formation editing,
+ * route/read assignment, runner and clock options, generated defensive preview,
+ * and the final play-call payload sent back to GameCenter.
+ */
 export function GameControls({
   game,
   players,
@@ -234,8 +270,12 @@ export function GameControls({
   const bench = roster.filter(
     (p) => !Object.values(formation).includes(nameOf(p)),
   );
-  const fieldedNames = Object.values(formation).filter((name): name is string => Boolean(name));
-  const selectedBenchPlayer = bench.some((player) => nameOf(player) === selected)
+  const fieldedNames = Object.values(formation).filter((name): name is string =>
+    Boolean(name),
+  );
+  const selectedBenchPlayer = bench.some(
+    (player) => nameOf(player) === selected,
+  )
     ? selected
     : "";
   const selectedFieldPlayer = fieldedNames.includes(selectedFormationPlayer)
@@ -332,15 +372,21 @@ export function GameControls({
         <div className="field-formation-bench" aria-label="Offensive bench">
           <div className="field-formation-bench-header">
             <h4>Bench</h4>
-            <span>Pick a bench player to place/swap. Select a fielded player, then click open bench space to remove them.</span>
+            <span>
+              Pick a bench player to place/swap. Select a fielded player, then
+              click open bench space to remove them.
+            </span>
           </div>
           <div
             className={`bench bench-ten-wide ${selectedFieldPlayer ? "remove-target" : ""}`}
             onClick={(event) => {
-              if (event.currentTarget !== event.target || !selectedFieldPlayer) return;
+              if (event.currentTarget !== event.target || !selectedFieldPlayer)
+                return;
 
               const nextFormation = Object.fromEntries(
-                Object.entries(formation).filter(([, player]) => player !== selectedFieldPlayer),
+                Object.entries(formation).filter(
+                  ([, player]) => player !== selectedFieldPlayer,
+                ),
               ) as Partial<Record<FormationSlot, string>>;
 
               setOpt({ formation: nextFormation, routes: {}, reads: {} });
@@ -355,11 +401,17 @@ export function GameControls({
                 : "Offensive bench players"
             }
             onKeyDown={(event) => {
-              if (!selectedFieldPlayer || (event.key !== "Enter" && event.key !== " ")) return;
+              if (
+                !selectedFieldPlayer ||
+                (event.key !== "Enter" && event.key !== " ")
+              )
+                return;
               event.preventDefault();
 
               const nextFormation = Object.fromEntries(
-                Object.entries(formation).filter(([, player]) => player !== selectedFieldPlayer),
+                Object.entries(formation).filter(
+                  ([, player]) => player !== selectedFieldPlayer,
+                ),
               ) as Partial<Record<FormationSlot, string>>;
 
               setOpt({ formation: nextFormation, routes: {}, reads: {} });
@@ -371,7 +423,9 @@ export function GameControls({
               <button
                 type="button"
                 onClick={() =>
-                  setSelected(selectedBenchPlayer === nameOf(p) ? "" : nameOf(p))
+                  setSelected(
+                    selectedBenchPlayer === nameOf(p) ? "" : nameOf(p),
+                  )
                 }
                 className={`player-item ${selectedBenchPlayer === nameOf(p) ? "selected" : ""}`}
                 key={nameOf(p)}
