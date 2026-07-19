@@ -1797,6 +1797,12 @@
   overflow-y: auto;
 }
 
+.bench-ten-wide.remove-target {
+  cursor: copy;
+  outline: 2px dashed rgba(34, 197, 94, 0.65);
+  outline-offset: 4px;
+}
+
 .bench-ten-wide .player-item {
   width: 100%;
   max-width: none;
