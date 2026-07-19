@@ -1,0 +1,67 @@
+.game-field-toggle {
+  position: absolute;
+  top: clamp(12px, 2vw, 20px);
+  right: clamp(12px, 2vw, 20px);
+  z-index: 350;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(248, 250, 252, 0.28);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.86);
+  color: #f8fafc;
+  padding: 10px 14px;
+  font-size: clamp(13px, 2vw, 16px);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.game-field-toggle:hover,
+.game-field-toggle:focus-visible {
+  border-color: var(--accent-red);
+  color: #fff;
+  outline: none;
+}
+
+.game-field-toggle-icon {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.game-field-panel[hidden] {
+  display: none;
+}
+
+.field-console-stage.field-collapsed {
+  padding-top: 68px;
+}
+
+.field-console-stage.field-collapsed .game-field-toggle {
+  left: clamp(12px, 2vw, 20px);
+  right: auto;
+}
+
+.field-console-stage.field-collapsed .play-caller {
+  position: relative;
+  top: auto;
+  right: auto;
+  transform: none;
+  width: min(760px, calc(100% - 28px));
+  margin: 0 auto;
+}
+
+@media (max-width: 720px) {
+  .game-field-toggle {
+    left: clamp(10px, 3vw, 16px);
+    right: clamp(10px, 3vw, 16px);
+    justify-content: center;
+  }
+
+  .field-console-stage.field-collapsed .game-field-toggle {
+    right: clamp(10px, 3vw, 16px);
+  }
+}
