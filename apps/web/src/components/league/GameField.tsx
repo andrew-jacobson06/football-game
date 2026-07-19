@@ -1,3 +1,5 @@
+import "./GameField.css";
+
 type GameFieldActionName = "loadExampleJson" | "runJsonFromBox" | "resetCurrentPlan";
 
 declare global {
