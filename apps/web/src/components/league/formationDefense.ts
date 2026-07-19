@@ -17,12 +17,21 @@ function teamOf(p: Player) {
 function trait(p: Player | undefined, key: string) {
   return Number(p?.[key] ?? p?.[key[0].toUpperCase() + key.slice(1)] ?? 0);
 }
+function dbCoverageScore(p: Player) {
+  return (
+    trait(p, "coverage") +
+    trait(p, "readQB") +
+    trait(p, "speed") +
+    trait(p, "acceleration")
+  );
+}
 
 /**
  * Creates an eight-player defensive preview from the offense formation. It
  * picks the non-possessing team, ranks defenders by defensive stars inside each
- * position group, aligns coverage to receivers, aligns linemen to blockers, and
- * fills any remaining spots with linebackers/safeties.
+ * position group, ranks DBs by coverage, Read QB, speed, and acceleration
+ * with defensive stars as the tiebreaker, aligns coverage to receivers, aligns
+ * linemen to blockers, and fills any remaining spots with linebackers/safeties.
  */
 export function buildDefense(
   game: LeagueGame,
@@ -39,7 +48,18 @@ export function buildDefense(
           str(p.defPos ?? p.DefPos ?? p.defensePosition).toUpperCase() === d,
       )
       .sort((a, b) => trait(b, sortBy) - trait(a, sortBy));
-  const dbs = by("DB", "coverage"),
+  const byDbCoverage = () =>
+    defenders
+      .filter(
+        (p) =>
+          str(p.defPos ?? p.DefPos ?? p.defensePosition).toUpperCase() === "DB",
+      )
+      .sort(
+        (a, b) =>
+          dbCoverageScore(b) - dbCoverageScore(a) ||
+          trait(b, "defStars") - trait(a, "defStars"),
+      );
+  const dbs = byDbCoverage(),
     dls = by("DL", "size"),
     lbs = by("LB"),
     safeties = by("S");
@@ -83,7 +103,7 @@ export function buildDefense(
   };
   const byName = (playerName?: string) =>
     players.find((p) => nameOf(p) === playerName);
-  // Saved receivers and linemen are ranked by offensive stars so the best coverage DBs and biggest DLs match the best WRs/OLs.
+  // Saved receivers and linemen are ranked by offensive stars so the best DB coverage-score defenders and biggest DLs match the best WRs/OLs.
   const byOffStars = (a: FormationSlot, b: FormationSlot) =>
     trait(byName(formation[b]), "offStars") -
     trait(byName(formation[a]), "offStars");
