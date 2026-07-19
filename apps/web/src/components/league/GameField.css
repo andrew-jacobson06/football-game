@@ -237,6 +237,14 @@ body {
     opacity 280ms ease;
 }
 
+.token.offense {
+  z-index: 85;
+}
+
+.token.defense {
+  z-index: 65;
+}
+
 .token img {
   width: 54px;
   height: 54px;
@@ -272,6 +280,13 @@ body {
   font-weight: 900;
   white-space: nowrap;
   pointer-events: none;
+}
+
+.token.defense .name {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 3px;
 }
 
 .token.active-runner img {

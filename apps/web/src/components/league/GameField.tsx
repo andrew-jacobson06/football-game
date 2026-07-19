@@ -23,6 +23,7 @@ type AnimationPlayer = {
   yard?: number;
   headUrl?: string;
   className?: string;
+  unit?: "offense" | "defense";
   assignment?: PlayerAssignment;
 };
 type PlayerMoveStep = {
@@ -161,6 +162,25 @@ const DEFAULT_LINEUPS_BY_POSITION: Record<
   TE1: { lane: "RT", yardOffsetFromLos: -1 },
   TE2: { lane: "LT", yardOffsetFromLos: -1 },
 };
+
+const defensiveLineupForPosition = (position?: string) => {
+  const normalized = String(position || "").toUpperCase();
+  if (DEFAULT_LINEUPS_BY_POSITION[normalized])
+    return DEFAULT_LINEUPS_BY_POSITION[normalized];
+  const [, group, rawIndex] = normalized.match(/^(DB|LB|DL|S)(\d+)?$/) || [];
+  const index = Number(rawIndex || 1);
+  if (group === "DB")
+    return DEFAULT_LINEUPS_BY_POSITION[`DB${Math.min(Math.max(index, 1), 3)}`];
+  if (group === "LB")
+    return DEFAULT_LINEUPS_BY_POSITION[`LB${Math.min(Math.max(index, 1), 3)}`];
+  if (group === "DL")
+    return DEFAULT_LINEUPS_BY_POSITION[`DL${Math.min(Math.max(index, 1), 5)}`];
+  if (group === "S")
+    return DEFAULT_LINEUPS_BY_POSITION[`S${Math.min(Math.max(index, 1), 2)}`];
+  if (normalized === "FS") return DEFAULT_LINEUPS_BY_POSITION.FS;
+  return undefined;
+};
+
 const FORMATION_SLOT_LINEUP: Record<FormationSlot, FormationSlotSetup> = {
   WR1: DEFAULT_LINEUPS_BY_POSITION.WR1,
   WR2: DEFAULT_LINEUPS_BY_POSITION.WR2,
@@ -255,6 +275,13 @@ const animationPlayerId = (
     .toLowerCase()
     .replace(/[^a-z0-9_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
+const unitClassForPlayer = (player: Pick<AnimationPlayer, "unit" | "id" | "role" | "position">) => {
+  if (player.unit) return player.unit;
+  const marker = String(player.role || player.position || player.id).toUpperCase();
+  return /^(DB|LB|DL|FS|S\d*)/.test(marker) || String(player.id).startsWith("def-")
+    ? "defense"
+    : "offense";
+};
 
 export default function GameField({
   formationMode = false,
@@ -321,6 +348,7 @@ export default function GameField({
           ),
           position: slot,
           role: slot,
+          unit: "offense" as const,
           headUrl: imgOf(player),
         },
       ];
@@ -337,8 +365,9 @@ export default function GameField({
         ),
         position: assignment.position,
         role: assignment.position,
+        unit: "defense" as const,
         lane: assignment.align
-          ? FORMATION_SLOT_LINEUP[assignment.align]?.lane
+          ? FORMATION_SLOT_LINEUP[assignment.align as FormationSlot]?.lane
           : undefined,
         headUrl: imgOf(player),
       };
@@ -544,7 +573,7 @@ export default function GameField({
         if (step.yard !== undefined) player.yard = step.yard;
         player.el.style.left = `${player.x}%`;
         player.el.style.top = `${yardToYPct(player.yard)}%`;
-        player.el.className = `token ${player.team.toLowerCase()} ${player.className || ""}`;
+        player.el.className = `token ${player.team.toLowerCase()} ${unitClassForPlayer(player)} ${player.className || ""}`;
         updateScreenPositionsWithoutFootball();
         await wait(durationMs);
       };
@@ -669,11 +698,14 @@ export default function GameField({
         plan.meta?.startYard ??
         50;
       const normalizedPlayers = plan.players.map((player) => {
-        const lineup = player.role
-          ? DEFAULT_LINEUPS_BY_POSITION[player.role]
-          : player.position
-            ? DEFAULT_LINEUPS_BY_POSITION[player.position]
-            : undefined;
+        const lineup =
+          player.unit === "defense"
+            ? defensiveLineupForPosition(player.role || player.position)
+            : player.role
+              ? DEFAULT_LINEUPS_BY_POSITION[player.role]
+              : player.position
+                ? DEFAULT_LINEUPS_BY_POSITION[player.position]
+                : undefined;
         return normalizePlayerLane(
           {
             ...player,
@@ -722,7 +754,7 @@ export default function GameField({
       plan.players.forEach((rawPlayer) => {
         const player = normalizePlayerLane(rawPlayer, plan.players);
         const el = document.createElement("div");
-        el.className = `token ${player.team.toLowerCase()} ${player.className || ""}`;
+        el.className = `token ${player.team.toLowerCase()} ${unitClassForPlayer(player)} ${player.className || ""}`;
         el.id = `player-${player.id}`;
         el.style.left = `${player.x}%`;
         el.style.top = `${yardToYPct(player.yard)}%`;
