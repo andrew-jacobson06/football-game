@@ -47,7 +47,9 @@ export function buildDefense(
   const reserveProtectedLb = (p: Player) => p !== protectedLb;
   const lbCoverageFallbacks = lbs.filter(reserveProtectedLb);
   const lbLineFallbacks = [...lbCoverageFallbacks].reverse();
+  const dbLineFallbacks = [...dbs].reverse();
   const selectedDefenders = new Set<Player>();
+  const linebackerRoleDefenders = new Set<Player>();
   const take = (arrs: Player[][]) => {
     for (const arr of arrs) {
       while (arr.length) {
@@ -59,6 +61,25 @@ export function buildDefense(
       }
     }
     return undefined;
+  };
+  const takeLineDefender = () => {
+    const player = take([dls, lbLineFallbacks]);
+    if (player) return player;
+    const db = dbLineFallbacks.find((candidate) => !selectedDefenders.has(candidate));
+    if (
+      db &&
+      trait(db, "size") < 50 &&
+      protectedLb &&
+      !selectedDefenders.has(protectedLb) &&
+      trait(protectedLb, "size") >= 50
+    ) {
+      selectedDefenders.add(protectedLb);
+      linebackerRoleDefenders.add(db);
+      return protectedLb;
+    }
+    const dbFallback = take([dbLineFallbacks]);
+    if (dbFallback) return dbFallback;
+    return take([lbs]);
   };
   const byName = (playerName?: string) =>
     players.find((p) => nameOf(p) === playerName);
@@ -79,7 +100,7 @@ export function buildDefense(
   ol.forEach((slot, i) =>
     out.push({
       position: `DL${i + 1}`,
-      player: nameOf(take([dls, lbLineFallbacks, lbs]) ?? {}),
+      player: nameOf(takeLineDefender() ?? {}),
       align: slot,
     }),
   );
@@ -98,7 +119,10 @@ export function buildDefense(
   while (out.length < EXPECTED_PLAYERS_PER_SIDE) {
     const p = take([safeties, lbs, dbs, dls]);
     if (!p) break;
-    out.push({ position: `S${out.length + 1}`, player: nameOf(p) });
+    out.push({
+      position: linebackerRoleDefenders.has(p) ? `LB${out.length + 1}` : `S${out.length + 1}`,
+      player: nameOf(p),
+    });
   }
   return out.slice(0, EXPECTED_PLAYERS_PER_SIDE);
 }

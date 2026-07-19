@@ -41,11 +41,33 @@ export function generateDefensiveFormation(
     dls = group("DL"),
     lbs = group("LB"),
     safeties = group("S");
+  const protectedLb = lbs[0];
+  const lbCoverageFallbacks = lbs.filter((p) => p !== protectedLb);
+  const lbLineFallbacks = [...lbCoverageFallbacks].reverse();
+  const dbLineFallbacks = [...dbs].reverse();
   const used = new Set<PlayerTrait>();
+  const linebackerRolePlayers = new Set<PlayerTrait>();
   const take = (pool: PlayerTrait[]) => {
     const player = pool.find((p) => !used.has(p));
     if (player) used.add(player);
     return player;
+  };
+  const takeLineDefender = () => {
+    const player = take(dls) ?? take(lbLineFallbacks);
+    if (player) return player;
+    const db = dbLineFallbacks.find((candidate) => !used.has(candidate));
+    if (
+      db &&
+      trait(db, "size") < 50 &&
+      protectedLb &&
+      !used.has(protectedLb) &&
+      trait(protectedLb, "size") >= 50
+    ) {
+      used.add(protectedLb);
+      linebackerRolePlayers.add(db);
+      return protectedLb;
+    }
+    return take(dbLineFallbacks) ?? take(lbs);
   };
   const out: FormationEntry[] = [];
   const offenseByPlayerStars = (a: FormationEntry, b: FormationEntry) =>
@@ -70,10 +92,10 @@ export function generateDefensiveFormation(
     .filter((s) => OL_SLOTS.has(String(s.position)))
     .sort(offenseByPlayerStars)
     .forEach((slot, i) => {
-      const p = take(dls) ?? take(lbs);
+      const p = takeLineDefender();
       if (p)
         out.push({
-          position: `${str(p.defPos ?? "DL")}${i + 1}`,
+          position: `DL${i + 1}`,
           player: playerName(p),
           align: slot.position,
         });
@@ -82,7 +104,9 @@ export function generateDefensiveFormation(
   while (out.length < EXPECTED_PLAYERS_PER_SIDE) {
     const p = take(lbs) ?? take(safeties) ?? take(dbs) ?? take(dls);
     if (!p) break;
-    const defPos = str(p.defPos ?? p.DefPos ?? "LB").toUpperCase();
+    const defPos = linebackerRolePlayers.has(p)
+      ? "LB"
+      : str(p.defPos ?? p.DefPos ?? "LB").toUpperCase();
     out.push({
       position: `${defPos}${out.length + 1}`,
       player: playerName(p),
