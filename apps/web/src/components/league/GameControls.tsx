@@ -11,6 +11,7 @@ const WR_SLOTS: FormationSlot[] = ["WR1", "WR2", "WR3", "WR4"];
 const RB_SLOTS: FormationSlot[] = ["RB1", "RB2"];
 const OL_SLOTS: FormationSlot[] = ["LT", "LG", "C", "RG", "RT"];
 const REQUIRED = new Set<FormationSlot>(["QB", "LG", "C", "RG"]);
+const EXPECTED_PLAYERS_PER_SIDE = 8;
 const ROUTES = ["No Route", "Screen", "Short", "Medium", "Deep", "Bomb"];
 const READS = ["1st", "2nd", "3rd", "4th", "5th"];
 
@@ -167,21 +168,24 @@ function buildDefense(
       align: slot,
     }),
   );
-  // Any remaining defenders key on backfield/QB slots before the safety fallback so the final formation has support against runs and passes.
-  let remaining = Math.max(0, 7 - out.length);
-  (["QB", "RB1", "RB2"] as FormationSlot[])
-    .slice(0, remaining)
-    .forEach((slot, i) => {
-      const p = take([lbs, dls, dbs]);
-      if (p)
-        out.push({ position: `LB${i + 1}`, player: nameOf(p), align: slot });
-    });
-  remaining = Math.max(0, 7 - out.length);
-  if (remaining) {
+  // Any remaining defenders key on backfield/QB slots before the safety fallback
+  // so the final formation always matches the eight-player offense.
+  (["QB", "RB1", "RB2"] as FormationSlot[]).forEach((slot) => {
+    if (out.length >= EXPECTED_PLAYERS_PER_SIDE) return;
+    const p = take([lbs, dls, dbs]);
+    if (p)
+      out.push({
+        position: `LB${out.length + 1}`,
+        player: nameOf(p),
+        align: slot,
+      });
+  });
+  while (out.length < EXPECTED_PLAYERS_PER_SIDE) {
     const p = take([safeties, lbs, dbs, dls]);
-    if (p) out.push({ position: "S", player: nameOf(p) });
+    if (!p) break;
+    out.push({ position: `S${out.length + 1}`, player: nameOf(p) });
   }
-  return out;
+  return out.slice(0, EXPECTED_PLAYERS_PER_SIDE);
 }
 
 export function GameControls({
@@ -218,7 +222,10 @@ export function GameControls({
   const runners = (["QB", ...RB_SLOTS, ...WR_SLOTS] as FormationSlot[])
     .map((s) => formation[s])
     .filter((r): r is string => Boolean(r));
-  const validFormation = [...REQUIRED].every((slot) => formation[slot]);
+  const formationPlayerCount = Object.values(formation).filter(Boolean).length;
+  const validFormation =
+    formationPlayerCount === EXPECTED_PLAYERS_PER_SIDE &&
+    [...REQUIRED].every((slot) => formation[slot]);
   const canPass = receivers.some(
     (r) => routes[r.player] && routes[r.player] !== "No Route",
   );
@@ -289,7 +296,12 @@ export function GameControls({
           <h3>{offenseTeam} Control Console</h3>
           <div className="play-call-summary">
             <span>
-              {validFormation ? "Formation ready" : "Set required formation"}
+              {validFormation
+                ? "Formation ready"
+                : `Set ${EXPECTED_PLAYERS_PER_SIDE}-player formation`}
+            </span>
+            <span>
+              Players: {formationPlayerCount}/{EXPECTED_PLAYERS_PER_SIDE}
             </span>
             <span>Runner: {options.runner || "Auto"}</span>
             <span>Clock: {options.clockMode || "Normal"}</span>
