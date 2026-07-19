@@ -339,6 +339,7 @@ export default function GameField({
   homeLogo,
   homeTeam,
   awayTeam,
+  onSetupTransitionChange,
 }: {
   formationMode?: boolean;
   formation?: Partial<Record<FormationSlot, string>>;
@@ -354,6 +355,7 @@ export default function GameField({
   homeLogo?: string;
   homeTeam?: string;
   awayTeam?: string;
+  onSetupTransitionChange?: (active: boolean) => void;
 }) {
   const fieldViewportRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
@@ -369,6 +371,7 @@ export default function GameField({
   const labelsRef = useRef<Record<string, HTMLDivElement>>({});
   const footballCarrierIdRef = useRef<string | null>(null);
   const isRunningRef = useRef(false);
+  const isSetupTransitionRef = useRef(false);
   const footballFollowRafRef = useRef<number | null>(null);
   const activePhaseDurationMsRef = useRef(DEFAULT_PHASE_DURATION_MS);
   const [selectedPlayerMenu, setSelectedPlayerMenu] = useState<{
@@ -1048,12 +1051,100 @@ export default function GameField({
   useEffect(() => {
     if (formationMode) return;
     if (!Object.values(formation).some(Boolean)) return;
-    resetAnimationScene(buildFormationSetupPlan());
+    const nextPlan = buildFormationSetupPlan();
+    const currentPlan = currentPlanRef.current;
+    if (!currentPlan || !Object.keys(playersRef.current).length) {
+      resetAnimationScene(nextPlan);
+      return;
+    }
+
+    const currentLos = currentPlan.lines.find((line) => line.id === "los")?.yard;
+    const nextLos = nextPlan.lines.find((line) => line.id === "los")?.yard;
+    const currentFirstDown = currentPlan.lines.find(
+      (line) => line.id === "firstDown",
+    )?.yard;
+    const nextFirstDown = nextPlan.lines.find(
+      (line) => line.id === "firstDown",
+    )?.yard;
+    if (currentLos === nextLos && currentFirstDown === nextFirstDown) {
+      resetAnimationScene(nextPlan);
+      return;
+    }
+
+    let cancelled = false;
+    const runSetupTransition = async () => {
+      isSetupTransitionRef.current = true;
+      onSetupTransitionChange?.(true);
+      try {
+        currentPlanRef.current = nextPlan;
+        updateLinePositions();
+        await wait(350);
+        if (cancelled) return;
+        activePhaseDurationMsRef.current = 700;
+        const moves = nextPlan.players.flatMap((targetPlayer) => {
+          if (!playersRef.current[targetPlayer.id]) return [];
+          const lineup =
+            targetPlayer.unit === "defense"
+              ? defensiveLineupForPosition(
+                  targetPlayer.role || targetPlayer.position,
+                )
+              : targetPlayer.role
+                ? DEFAULT_LINEUPS_BY_POSITION[targetPlayer.role]
+                : targetPlayer.position
+                  ? DEFAULT_LINEUPS_BY_POSITION[targetPlayer.position]
+                  : undefined;
+          const normalized = normalizePlayerLane(
+            {
+              ...targetPlayer,
+              yard:
+                targetPlayer.yard ??
+                (lineup && nextLos !== undefined
+                  ? nextLos + offenseDirection * lineup.yardOffsetFromLos
+                  : nextLos),
+            },
+            nextPlan.players,
+          );
+          return [
+            applyPlayerMove({
+              playerId: targetPlayer.id,
+              lane: normalized.lane,
+              x: normalized.x,
+              yard: normalized.yard,
+              durationMs: 700,
+            }),
+          ];
+        });
+        await Promise.all(moves);
+        if (!cancelled) {
+          syncFootballToCarrierDom();
+          scrollViewportToFootball();
+        }
+      } finally {
+        if (!cancelled) {
+          activePhaseDurationMsRef.current = DEFAULT_PHASE_DURATION_MS;
+          isSetupTransitionRef.current = false;
+          onSetupTransitionChange?.(false);
+        }
+      }
+    };
+    void runSetupTransition();
+    return () => {
+      cancelled = true;
+      isSetupTransitionRef.current = false;
+      onSetupTransitionChange?.(false);
+    };
   }, [
+    applyPlayerMove,
     buildFormationSetupPlan,
     formation,
     formationMode,
+    normalizePlayerLane,
+    offenseDirection,
+    onSetupTransitionChange,
     resetAnimationScene,
+    scrollViewportToFootball,
+    syncFootballToCarrierDom,
+    updateLinePositions,
   ]);
 
   useEffect(() => {
