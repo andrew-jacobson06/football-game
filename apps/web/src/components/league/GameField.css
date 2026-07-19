@@ -1,0 +1,510 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 32%),
+    linear-gradient(180deg, #101827 0%, #030712 100%);
+  font-family: Arial, Helvetica, sans-serif;
+  color: #f8fafc;
+}
+
+.game-shell {
+  width: min(1100px, 96vw);
+  margin: 0 auto;
+  padding: 16px 0 32px;
+}
+
+.scorebug {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.9);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.score-main {
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 0.08em;
+}
+
+.situation {
+  font-size: 14px;
+  color: #cbd5e1;
+  text-align: right;
+}
+
+.field-viewport {
+  width: 100%;
+  height: 680px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 24px;
+  border: 5px solid #f8fafc;
+  background: #0f172a;
+  box-shadow:
+    inset 0 0 80px rgba(0, 0, 0, 0.38),
+    0 22px 44px rgba(0, 0, 0, 0.45);
+}
+
+.field-wrap {
+  position: relative;
+  width: 100%;
+  height: 2200px;
+  overflow: hidden;
+  border-radius: 0;
+  border: 0;
+
+  background-image: url("https://andrew-jacobson06.github.io/public-audio/fieldbg.png");
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.38);
+}
+
+.field-title {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  z-index: 130;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.camera-note {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 130;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.team-end {
+  width: 82.5%;
+  height: 5.6%;
+  text-align: center;
+  background: rgb(255 116 0 / 60%);
+  position: absolute;
+  left: 50%;
+  z-index: 5;
+  transform: translateX(-50%);
+  font-size: 7.5vw;
+  font-weight: 1000;
+  letter-spacing: 0.22em;
+  color: rgba(255, 255, 255);
+  pointer-events: none;
+  transition: top 300ms linear, opacity 200ms ease;
+}
+
+.hash {
+  position: absolute;
+  width: 16px;
+  height: 2px;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.62);
+  transform: translate(-50%, -50%);
+  transition: top 300ms linear, opacity 200ms ease;
+  pointer-events: none;
+}
+
+.yard-number {
+  position: absolute;
+  left: 50%;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 16px;
+  font-weight: 1000;
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  transition: top 300ms linear, opacity 200ms ease;
+  pointer-events: none;
+}
+
+.field-line {
+  position: absolute;
+  left: 7%;
+  width: 86%;
+  height: 4px;
+  z-index: 20;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: top 300ms linear, opacity 200ms ease;
+}
+
+.los-line {
+  background: rgba(59, 130, 246, 0.95);
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.95);
+}
+
+.first-down-line {
+  background: rgba(250, 204, 21, 0.95);
+  box-shadow: 0 0 16px rgba(250, 204, 21, 0.95);
+}
+
+.end-line {
+  background: rgba(248, 113, 113, 0.95);
+  box-shadow: 0 0 16px rgba(248, 113, 113, 0.95);
+}
+
+.line-label {
+  position: absolute;
+  right: 12px;
+  z-index: 35;
+  transform: translateY(-50%);
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #0f172a;
+  background: #f8fafc;
+  font-size: 11px;
+  font-weight: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: top 300ms linear, opacity 200ms ease;
+}
+
+.token {
+  position: absolute;
+  width: 54px;
+  height: 54px;
+  z-index: 70;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  transition:
+    left 700ms linear,
+    top 700ms linear,
+    transform 280ms ease,
+    filter 280ms ease,
+    opacity 280ms ease;
+}
+
+.token img {
+  width: 54px;
+  height: 54px;
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #f8fafc;
+  background: #fff;
+  box-shadow:
+    0 7px 14px rgba(0, 0, 0, 0.45),
+    0 0 0 3px rgba(15, 23, 42, 0.65);
+}
+
+.token.por img {
+  border-color: #38bdf8;
+}
+
+.token.clt img {
+  border-color: #fb7185;
+}
+
+.token .name {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  margin-top: 3px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.84);
+  color: #f8fafc;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.token.active-runner img {
+  box-shadow:
+    0 0 0 4px rgba(250, 204, 21, 0.88),
+    0 0 26px rgba(250, 204, 21, 0.82),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.token.handoff-qb img,
+.token.handoff-target img {
+  box-shadow:
+    0 0 0 4px rgba(56, 189, 248, 0.75),
+    0 0 24px rgba(56, 189, 248, 0.65),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.token.ol-win img {
+  box-shadow:
+    0 0 0 4px rgba(34, 197, 94, 0.82),
+    0 0 24px rgba(34, 197, 94, 0.7),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.token.dl-lost img,
+.token.missed img,
+.token.trucked img {
+  filter: grayscale(0.35) brightness(0.75);
+  transform: rotate(-12deg) scale(0.92);
+  box-shadow:
+    0 0 0 4px rgba(148, 163, 184, 0.7),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.token.dl-win img,
+.token.ol-lost img,
+.token.penetrating img {
+  box-shadow:
+    0 0 0 4px rgba(239, 68, 68, 0.85),
+    0 0 24px rgba(239, 68, 68, 0.7),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.token.juking img {
+  box-shadow:
+    0 0 0 4px rgba(168, 85, 247, 0.85),
+    0 0 24px rgba(168, 85, 247, 0.75),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.token.trucking img {
+  box-shadow:
+    0 0 0 4px rgba(249, 115, 22, 0.85),
+    0 0 24px rgba(249, 115, 22, 0.75),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.token.chasing img {
+  box-shadow:
+    0 0 0 4px rgba(251, 113, 133, 0.75),
+    0 0 22px rgba(251, 113, 133, 0.6),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.token.tackling img {
+  transform: scale(1.06);
+  box-shadow:
+    0 0 0 4px rgba(248, 113, 113, 0.9),
+    0 0 26px rgba(248, 113, 113, 0.82),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.token.tackled img {
+  filter: brightness(0.8);
+  transform: rotate(14deg) scale(0.92);
+  box-shadow:
+    0 0 0 4px rgba(148, 163, 184, 0.8),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.token.celebrating img {
+  animation: celebrate-bounce 650ms ease-in-out infinite alternate;
+  box-shadow:
+    0 0 0 4px rgba(250, 204, 21, 0.9),
+    0 0 28px rgba(250, 204, 21, 0.8),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes celebrate-bounce {
+  from {
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    transform: translateY(-7px) scale(1.06);
+  }
+}
+
+.football {
+  position: absolute;
+  width: 24px;
+  height: 15px;
+  border-radius: 50%;
+  background: #8b4513;
+  border: 2px solid #f4d3a1;
+  transform: translate(-50%, -50%) rotate(-20deg);
+  z-index: 90;
+  transition:
+    left 700ms ease,
+    top 700ms ease,
+    opacity 200ms ease,
+    transform 300ms ease;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+.battle-label {
+  position: absolute;
+  z-index: 100;
+  transform: translate(-50%, -50%);
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 1000;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  transition:
+    top 300ms linear,
+    left 300ms linear,
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+.battle-label.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.04);
+}
+
+.battle-label.win {
+  background: rgba(22, 163, 74, 0.92);
+}
+
+.battle-label.loss {
+  background: rgba(220, 38, 38, 0.92);
+}
+
+.battle-label.neutral {
+  background: rgba(71, 85, 105, 0.92);
+}
+
+.caption {
+  min-height: 58px;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e2e8f0;
+  font-size: 16px;
+  line-height: 1.35;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  color: #0f172a;
+  background: #f8fafc;
+  font-weight: 900;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+button:hover {
+  background: #e0f2fe;
+}
+
+textarea {
+  width: 100%;
+  min-height: 280px;
+  resize: vertical;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(2, 6, 23, 0.9);
+  color: #dbeafe;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  outline: none;
+}
+
+.error-box {
+  display: none;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(127, 29, 29, 0.95);
+  color: #fee2e2;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.field-wrap.first-down-flash {
+  animation: first-down-flash 900ms ease;
+}
+
+.field-wrap.touchdown-flash {
+  animation: touchdown-flash 1100ms ease;
+}
+
+.field-wrap.turnover-flash {
+  animation: turnover-flash 1100ms ease;
+}
+
+@keyframes first-down-flash {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 80px rgba(0, 0, 0, 0.38),
+      0 22px 44px rgba(0, 0, 0, 0.45);
+  }
+
+  50% {
+    box-shadow:
+      inset 0 0 80px rgba(250, 204, 21, 0.34),
+      0 0 36px rgba(250, 204, 21, 0.75);
+  }
+}
+
+@keyframes touchdown-flash {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 80px rgba(0, 0, 0, 0.38),
+      0 22px 44px rgba(0, 0, 0, 0.45);
+  }
+
+  50% {
+    box-shadow:
+      inset 0 0 90px rgba(34, 197, 94, 0.45),
+      0 0 44px rgba(34, 197, 94, 0.8);
+  }
+}
+
+@keyframes turnover-flash {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 80px rgba(0, 0, 0, 0.38),
+      0 22px 44px rgba(0, 0, 0, 0.45);
+  }
+
+  50% {
+    box-shadow:
+      inset 0 0 90px rgba(248, 113, 113, 0.42),
+      0 0 44px rgba(248, 113, 113, 0.82);
+  }
+}
