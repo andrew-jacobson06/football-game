@@ -963,7 +963,7 @@ export default function GameField({
                 <button
                   key={slot}
                   type="button"
-                  className={`field-formation-slot ${slot.startsWith("WR") ? "wr" : slot.startsWith("RB") ? "rb" : slot === "QB" ? "qb" : "teol"} ${REQUIRED_FORMATION_SLOTS.has(slot) ? "required" : ""} ${playerName ? "filled" : "open"} ${selectedFormationPlayer ? "targetable" : ""}`}
+                  className={`field-formation-slot ${slot.startsWith("WR") ? "wr" : slot.startsWith("RB") ? "rb" : slot === "QB" ? "qb" : "teol"} ${REQUIRED_FORMATION_SLOTS.has(slot) ? "required" : ""} ${playerName ? "filled" : "open"} ${selectedFormationPlayer ? "targetable" : ""} ${playerName && selectedFormationPlayer === playerName ? "selected" : ""}`}
                   style={{
                     left: `${LANES[lineup.lane] ?? 50}%`,
                     top: `${yardToYPct(55 + lineup.yardOffsetFromLos)}%`,

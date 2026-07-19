@@ -13,7 +13,6 @@ const OL_SLOTS: FormationSlot[] = ["LT", "LG", "C", "RG", "RT"];
 const REQUIRED = new Set<FormationSlot>(["QB", "LG", "C", "RG"]);
 const ROUTES = ["No Route", "Screen", "Short", "Medium", "Deep", "Bomb"];
 const READS = ["1st", "2nd", "3rd", "4th", "5th"];
-const EMPTY_BENCH_SLOT = "__EMPTY_BENCH_SLOT__";
 
 type Player = Record<string, unknown>;
 type Props = {
@@ -24,6 +23,7 @@ type Props = {
   onAction: (label: string, options?: PlayCallOptions) => void;
   onFormationModeChange?: (active: boolean) => void;
   onSelectedFormationPlayerChange?: (player: string) => void;
+  selectedFormationPlayer?: string;
 };
 
 function nameOf(p: Player) {
@@ -192,6 +192,7 @@ export function GameControls({
   onAction,
   onFormationModeChange,
   onSelectedFormationPlayerChange,
+  selectedFormationPlayer = "",
 }: Props) {
   const [collapsed, setCollapsed] = useState(true);
   const [modal, setModal] = useState<"routes" | "run" | "clock" | null>(null);
@@ -226,10 +227,13 @@ export function GameControls({
   const bench = roster.filter(
     (p) => !Object.values(formation).includes(nameOf(p)),
   );
-  const selectedBenchPlayer =
-    selected === EMPTY_BENCH_SLOT || bench.some((player) => nameOf(player) === selected)
-      ? selected
-      : "";
+  const fieldedNames = Object.values(formation).filter((name): name is string => Boolean(name));
+  const selectedBenchPlayer = bench.some((player) => nameOf(player) === selected)
+    ? selected
+    : "";
+  const selectedFieldPlayer = fieldedNames.includes(selectedFormationPlayer)
+    ? selectedFormationPlayer
+    : "";
 
   useEffect(() => {
     onSelectedFormationPlayerChange?.(
@@ -316,19 +320,41 @@ export function GameControls({
         <div className="field-formation-bench" aria-label="Offensive bench">
           <div className="field-formation-bench-header">
             <h4>Bench</h4>
-            <span>Pick a player to place/swap, or pick Empty to remove a fielded player.</span>
+            <span>Pick a bench player to place/swap. Select a fielded player, then click open bench space to remove them.</span>
           </div>
-          <div className="bench bench-ten-wide">
-            <button
-              type="button"
-              onClick={() =>
-                setSelected(selectedBenchPlayer === EMPTY_BENCH_SLOT ? "" : EMPTY_BENCH_SLOT)
-              }
-              className={`player-item ${selectedBenchPlayer === EMPTY_BENCH_SLOT ? "selected" : ""}`}
-            >
-              <PlayerBubble />
-              <span className="player-name">Empty bench slot</span>
-            </button>
+          <div
+            className={`bench bench-ten-wide ${selectedFieldPlayer ? "remove-target" : ""}`}
+            onClick={(event) => {
+              if (event.currentTarget !== event.target || !selectedFieldPlayer) return;
+
+              const nextFormation = Object.fromEntries(
+                Object.entries(formation).filter(([, player]) => player !== selectedFieldPlayer),
+              ) as Partial<Record<FormationSlot, string>>;
+
+              setOpt({ formation: nextFormation, routes: {}, reads: {} });
+              setSelected("");
+              onSelectedFormationPlayerChange?.("");
+            }}
+            role={selectedFieldPlayer ? "button" : undefined}
+            tabIndex={selectedFieldPlayer ? 0 : undefined}
+            aria-label={
+              selectedFieldPlayer
+                ? `Remove ${selectedFieldPlayer} from the field`
+                : "Offensive bench players"
+            }
+            onKeyDown={(event) => {
+              if (!selectedFieldPlayer || (event.key !== "Enter" && event.key !== " ")) return;
+              event.preventDefault();
+
+              const nextFormation = Object.fromEntries(
+                Object.entries(formation).filter(([, player]) => player !== selectedFieldPlayer),
+              ) as Partial<Record<FormationSlot, string>>;
+
+              setOpt({ formation: nextFormation, routes: {}, reads: {} });
+              setSelected("");
+              onSelectedFormationPlayerChange?.("");
+            }}
+          >
             {bench.map((p) => (
               <button
                 type="button"

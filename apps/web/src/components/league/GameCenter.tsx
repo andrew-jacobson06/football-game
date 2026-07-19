@@ -1529,10 +1529,15 @@ export function GameCenter({
                 players={players}
                 selectedFormationPlayer={selectedFormationPlayer}
                 onFormationSlotClick={(slot) => {
-                  const selectedPlayer = selectedFormationPlayer;
-                  if (!selectedPlayer) return;
-
                   const currentFormation = playOptions.formation ?? {};
+                  const selectedPlayer = selectedFormationPlayer;
+                  const slotPlayer = currentFormation[slot];
+
+                  if (!selectedPlayer) {
+                    if (slotPlayer) setSelectedFormationPlayer(slotPlayer);
+                    return;
+                  }
+
                   const nextFormation = Object.fromEntries(
                     Object.entries(currentFormation).filter(
                       ([formationSlot, player]) =>
@@ -1540,19 +1545,7 @@ export function GameCenter({
                     ),
                   ) as Partial<Record<FormationSlot, string>>;
 
-                  // Selecting an empty bench slot is a remove action: clicking a filled field spot sends that player to the bench without putting anyone back on the field.
-                  if (selectedPlayer === "__EMPTY_BENCH_SLOT__") {
-                    setPlayOptions({
-                      ...playOptions,
-                      formation: nextFormation,
-                      routes: {},
-                      reads: {},
-                    });
-                    setSelectedFormationPlayer("");
-                    return;
-                  }
-
-                  // Otherwise the selected bench player takes the clicked spot. If the spot was occupied, its previous player naturally returns to the bench because they are omitted from the next formation map.
+                  // The selected player takes the clicked spot. If the spot was occupied, its previous player naturally returns to the bench because they are omitted from the next formation map.
                   setPlayOptions({
                     ...playOptions,
                     formation: { ...nextFormation, [slot]: selectedPlayer },
@@ -1571,6 +1564,7 @@ export function GameCenter({
               onAction={action}
               onFormationModeChange={setSettingFormation}
               onSelectedFormationPlayerChange={setSelectedFormationPlayer}
+              selectedFormationPlayer={selectedFormationPlayer}
             />
           </div>
           {lastPlay && (

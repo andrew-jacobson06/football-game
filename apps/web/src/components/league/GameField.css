@@ -581,7 +581,7 @@ textarea {
 
 .field-formation-slot {
   position: absolute;
-  z-index: 145;
+  z-index: 170;
   width: 58px;
   height: 58px;
   padding: 0;
@@ -609,6 +609,12 @@ textarea {
   border-style: solid;
   box-shadow:
     0 0 0 4px rgba(250, 204, 21, 0.42),
+    0 8px 18px rgba(0, 0, 0, 0.45);
+}
+
+.field-formation-slot.selected {
+  box-shadow:
+    0 0 0 5px rgba(34, 197, 94, 0.55),
     0 8px 18px rgba(0, 0, 0, 0.45);
 }
 
@@ -651,7 +657,10 @@ textarea {
 }
 
 .field-formation-slot.defense {
+  z-index: 135;
   border-color: #ef4444;
   color: #fecaca;
   background: rgba(127, 29, 29, 0.86);
+  opacity: 0.38;
+  pointer-events: none;
 }
