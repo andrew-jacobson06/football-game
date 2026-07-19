@@ -26,41 +26,6 @@ body {
   min-height: 100vh;
 }
 
-.backend-status {
-  display: none;
-  position: fixed;
-  right: 1vw;
-  top: 1vw;
-  z-index: 120;
-  max-width: 38vw;
-  padding: 0.65vw 1vw;
-  background: rgba(30, 30, 30, 0.92);
-  border: 1px solid #27ae60;
-  color: var(--text-light);
-  font-size: clamp(10px, 1.2vw, 14px);
-}
-
-.backend-status--error {
-  border-color: #e74c3c;
-}
-
-.migration-nav {
-  display: none;
-  position: fixed;
-  top: calc(1vw + 44px);
-  left: 1vw;
-  z-index: 110;
-}
-
-.migration-nav__button {
-  background: var(--accent-red);
-  color: var(--text-light);
-  border: none;
-  padding: 0.7vw 1.4vw;
-  cursor: pointer;
-  font-family: inherit;
-}
-
 .back-button {
   position: fixed;
   top: 1vw;
@@ -75,6 +40,10 @@ body {
 
 #playerListView {
   padding: 2vw;
+}
+
+.league-app__back {
+  top: 1.25rem;
 }
 
 .player-table {
@@ -254,27 +223,6 @@ body {
 
 .players-message--error {
   color: #fecaca;
-}
-
-.migration-nav {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.migration-nav__button--active {
-  background: var(--accent-red-dark);
-  box-shadow: 0 0 12px rgba(255, 59, 59, 0.45);
-}
-
-.debug-status-screen {
-  min-height: 100vh;
-  padding: 8rem 2rem 2rem;
-  box-sizing: border-box;
-}
-
-.debug-status-screen__back {
-  position: static;
-  margin-top: 1rem;
 }
 
 .main-menu-screen {

@@ -10,11 +10,7 @@ const MENU_SONG_URL =
 
 const menuItems: MainMenuItem[] = [
   { label: "View Players", screen: "players" },
-  {
-    label: "Existing League",
-    placeholderMessage:
-      "Existing League has not been migrated yet. TODO: connect this button when the Games/League screen is ported.",
-  },
+  { label: "Existing League", screen: "league" },
   {
     label: "New League",
     placeholderMessage:
