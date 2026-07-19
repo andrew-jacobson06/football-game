@@ -1,6 +1,6 @@
 import type { LeagueGame } from "../../types";
 import type { EngineContext, FormationSlot, PlayerTrait } from "./types";
-import { defenseTeam, playerName, str, teamPlayers, trait } from "./utils";
+import { byName, defenseTeam, playerName, str, teamPlayers, trait } from "./utils";
 
 export type FormationEntry = {
   position: FormationSlot | string;
@@ -48,9 +48,14 @@ export function generateDefensiveFormation(
     return player;
   };
   const out: FormationEntry[] = [];
-  // Wide receivers create the first defensive obligations: the best available DBs travel to those exact receiver slots.
+  const offenseByPlayerStars = (a: FormationEntry, b: FormationEntry) =>
+    trait(byName(ctx, b.player), "offStars", 0) -
+    trait(byName(ctx, a.player), "offStars", 0);
+
+  // Wide receivers create the first defensive obligations: the best available DBs travel to the highest-star receivers first.
   offense
     .filter((s) => s.position.startsWith("WR"))
+    .sort(offenseByPlayerStars)
     .forEach((slot, i) => {
       const p = take(dbs);
       if (p)
@@ -60,11 +65,12 @@ export function generateDefensiveFormation(
           align: slot.position,
         });
     });
-  // Offensive linemen define the box, so each occupied line slot receives a DL/LB matchup aligned over that saved offensive position.
+  // Offensive linemen define the box, so the best available DLs/LBs align to the highest-star blockers first.
   offense
     .filter((s) => OL_SLOTS.has(String(s.position)))
+    .sort(offenseByPlayerStars)
     .forEach((slot, i) => {
-      const p = take(i % 2 ? lbs : dls) ?? take(dls) ?? take(lbs);
+      const p = take(dls) ?? take(lbs);
       if (p)
         out.push({
           position: `${str(p.defPos ?? "DL")}${i + 1}`,

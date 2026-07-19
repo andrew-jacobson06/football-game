@@ -181,9 +181,12 @@ function buildDefense(
     lbs = by("LB"),
     safeties = by("S");
   const take = (arrs: Player[][]) => arrs.find((a) => a.length)?.shift();
-  // Saved receiver slots drive coverage first, then saved offensive-line slots drive front-seven alignment.
-  const wrs = WR_SLOTS.filter((s) => formation[s]);
-  const ol = OL_SLOTS.filter((s) => formation[s]);
+  const byName = (playerName?: string) => players.find((p) => nameOf(p) === playerName);
+  // Saved receivers and linemen are ranked by offensive stars so the best DBs/DLs match the best WRs/OLs.
+  const byOffStars = (a: FormationSlot, b: FormationSlot) =>
+    trait(byName(formation[b]), "offStars") - trait(byName(formation[a]), "offStars");
+  const wrs = WR_SLOTS.filter((s) => formation[s]).sort(byOffStars);
+  const ol = OL_SLOTS.filter((s) => formation[s]).sort(byOffStars);
   const out: DefensiveAssignment[] = [];
   wrs.forEach((slot, i) =>
     out.push({
