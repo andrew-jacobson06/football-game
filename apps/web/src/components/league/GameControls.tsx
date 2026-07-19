@@ -351,8 +351,8 @@ export function GameControls({
               {settingFormation ? "Hide Bench" : "Set Formation"}
             </button>
             <button
-              disabled={!validFormation}
-              onClick={() => onAction("Run Play", optionsWithDefense())}
+              disabled={!validFormation || runners.length === 0}
+              onClick={() => setModal("run")}
             >
               Call Run Play
             </button>
@@ -364,6 +364,9 @@ export function GameControls({
               }}
             >
               Call Pass Play
+            </button>
+            <button onClick={() => onAction("Punt", optionsWithDefense())}>
+              Call Punt Play
             </button>
           </div>
         </>
@@ -569,7 +572,9 @@ export function GameControls({
           <div className="rusher-options">
             {runners.map((r) => (
               <button
-                className={`rusher-option ${options.runner === r ? "selected" : ""}`}
+                className={`rusher-option ${
+                  (options.runner || runners[0]) === r ? "selected" : ""
+                }`}
                 onClick={() => setOpt({ runner: r })}
                 type="button"
                 key={r}
@@ -583,7 +588,10 @@ export function GameControls({
             disabled={!validFormation}
             onClick={() => {
               setModal(null);
-              onAction("Run Play", optionsWithDefense());
+              onAction("Run Play", {
+                ...optionsWithDefense(),
+                runner: options.runner || runners[0],
+              });
             }}
           >
             Execute Run
