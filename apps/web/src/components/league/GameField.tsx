@@ -767,20 +767,9 @@ export default function GameField() {
 
   return (
     <div className="game-shell">
-      <div className="scorebug">
-        <div className="score-main" id="scoreMain" ref={scoreMainRef}>
-          POR 7 | CLT 3
-        </div>
-        <div className="situation" id="situationText" ref={situationTextRef}>
-          Paste animation JSON below and run play
-        </div>
-      </div>
       <div className="field-viewport" id="fieldViewport" ref={fieldViewportRef}>
         <div className="field-wrap" id="field" ref={fieldRef}>
           <div className="field-title">Dynamic Football Animation View</div>
-          <div className="camera-note" id="cameraNote" ref={cameraNoteRef}>
-            Manual scroll field
-          </div>
           <div className="team-end" id="cltEnd" ref={cltEndRef}>
             WILDFIRE
           </div>
@@ -806,13 +795,13 @@ export default function GameField() {
         Paste a play animation JSON below, or load the example.
       </div>
       <div className="controls">
-        <button type="button" onClick={loadExampleJson}>
+        <button className="jbutton" type="button" onClick={loadExampleJson}>
           Load Example JSON
         </button>
-        <button type="button" onClick={runJsonFromBox}>
+        <button className="jbutton" type="button" onClick={runJsonFromBox}>
           Run JSON Play
         </button>
-        <button type="button" onClick={resetCurrentPlan}>
+        <button className="jbutton" type="button" onClick={resetCurrentPlan}>
           Reset Current Play
         </button>
       </div>

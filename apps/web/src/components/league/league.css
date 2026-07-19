@@ -549,7 +549,6 @@
 }
 .tabs {
   display: flex;
-  margin: 0 0 5vw;
   background: var(--gray-medium);
   border: 1px solid var(--gray-light);
   overflow: hidden;
@@ -559,7 +558,7 @@
 }
 .tab-button {
   flex: 1;
-  padding: 2.5vw 3.75vw;
+  padding: min(1.5vw, 10px);
   background: var(--gray-medium);
   color: var(--text-muted);
   border: none;
@@ -569,7 +568,7 @@
 }
 .tab-button.active {
   color: var(--accent-red);
-  border-bottom: 0.75vw solid var(--accent-red);
+  border-bottom: min(0.5vw, 5px) solid var(--accent-red);
 }
 .game-info {
   display: flex;
