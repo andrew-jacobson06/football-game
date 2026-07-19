@@ -1,35 +1,39 @@
 import type { Player } from "./types";
 import { Stars } from "./Stars";
 
-const FALLBACK_PLAYER_IMAGE = "https://andrew-jacobson06.github.io/public-audio/baby.png";
+const FALLBACK_PLAYER_IMAGE =
+  "https://andrew-jacobson06.github.io/public-audio/baby.png";
 
-const traitGroups: Record<string, Array<{ key: keyof Player; label: string }>> = {
+const traitGroups: Record<
+  string,
+  Array<{ key: keyof Player; label: string }>
+> = {
   "General Traits": [
     { key: "Size", label: "Size" },
     { key: "Strength", label: "Strength" },
     { key: "Stamina", label: "Stamina" },
-    { key: "Ball Security", label: "Ball Security" }
+    { key: "Ball Security", label: "Ball Security" },
   ],
   "Passing Skills": [
     { key: "Poise", label: "Poise" },
     { key: "Accuracy", label: "Accuracy" },
     { key: "Arm-Strength", label: "Arm-Strength" },
-    { key: "Read Defense", label: "Read Defense" }
+    { key: "Read Defense", label: "Read Defense" },
   ],
   "Running Skill": [
     { key: "Acceleration", label: "Acceleration" },
     { key: "Speed", label: "Speed" },
     { key: "Juke", label: "Juke" },
-    { key: "Vision", label: "Vision" }
+    { key: "Vision", label: "Vision" },
   ],
   "Receiving Skill": [
     { key: "Route Running", label: "Route Running" },
     { key: "Jump", label: "Jump" },
-    { key: "Hands", label: "Hands" }
+    { key: "Hands", label: "Hands" },
   ],
   "Off Ball Skills": [
     { key: "Run Blocking", label: "Run Blocking" },
-    { key: "Pass Protect", label: "Pass Protect" }
+    { key: "Pass Protect", label: "Pass Protect" },
   ],
   "Defensive Skills": [
     { key: "RunStop", label: "RunStop" },
@@ -38,8 +42,8 @@ const traitGroups: Record<string, Array<{ key: keyof Player; label: string }>> =
     { key: "Strip", label: "Strip" },
     { key: "Ball Hawk", label: "Ball Hawk" },
     { key: "Read QB", label: "Read QB" },
-    { key: "Coverage", label: "Coverage" }
-  ]
+    { key: "Coverage", label: "Coverage" },
+  ],
 };
 
 function getBarColor(val: number) {
@@ -60,7 +64,10 @@ function firstNonEmpty(...values: Array<string | undefined>) {
 }
 
 function getPlayerImage(player: Player) {
-  return firstNonEmpty(player["Player Image from AI"], player.Image) || FALLBACK_PLAYER_IMAGE;
+  return (
+    firstNonEmpty(player["Player Image from AI"], player.Image) ||
+    FALLBACK_PLAYER_IMAGE
+  );
 }
 
 function getJerseyImage(player: Player) {
@@ -78,7 +85,14 @@ export function PlayerCard({ player, onBack }: PlayerCardProps) {
 
   return (
     <div id="playerCardView">
-      <button id="playerCardBack" className="back-button" type="button" onClick={onBack}>← Back</button>
+      <button
+        id="playerCardBack"
+        className="back-button"
+        type="button"
+        onClick={onBack}
+      >
+        ← Back
+      </button>
       <div className="player-card-layout">
         <div id="playerImageContainer" className="player-image-container">
           <img
@@ -86,26 +100,38 @@ export function PlayerCard({ player, onBack }: PlayerCardProps) {
             src={playerImage}
             alt="Player"
             style={{
-              transform: `translate(${numberValue(player.translateX)}px, ${numberValue(player.translateY)}px) scale(${numberValue(player.scale, 1)})`
+              transform: `translate(${numberValue(player.translateX)}px, ${numberValue(player.translateY)}px) scale(${numberValue(player.scale, 1)})`,
             }}
           />
           <div id="jersey-wrapper">
-            {jerseyImage && <img id="jersey" src={jerseyImage} alt="Jersey Overlay" />}
+            {jerseyImage && (
+              <img id="jersey" src={jerseyImage} alt="Jersey Overlay" />
+            )}
           </div>
         </div>
         <div id="playerDetails" className="player-details">
-          <div><strong>{player.Name}</strong></div>
+          <div>
+            <strong>{player.Name}</strong>
+          </div>
           <div>{player.Team}</div>
-          <div>{player.Pos} / {player.DefPos}</div>
-          <div>Off: <Stars value={player["Off Stars"]} /></div>
-          <div>Def: <Stars value={player["Def Stars"]} /></div>
+          <div>
+            {player.Pos} / {player.DefPos}
+          </div>
+          <div>
+            Off: <Stars value={player["Off Stars"]} />
+          </div>
+          <div>
+            Def: <Stars value={player["Def Stars"]} />
+          </div>
         </div>
         <div id="playerTraitBars" className="player-trait-bars">
           {Object.entries(traitGroups).map(([groupName, traits]) => (
             <details className="trait-group" open key={groupName}>
               <summary>{groupName}</summary>
               {traits.map((trait) => {
-                const val = numberValue(player[trait.key] as string | number | undefined);
+                const val = numberValue(
+                  player[trait.key] as string | number | undefined,
+                );
                 return (
                   <div className="trait-bar-card" key={trait.label}>
                     <div className="trait-bar-header">
@@ -113,7 +139,10 @@ export function PlayerCard({ player, onBack }: PlayerCardProps) {
                       <span className="trait-value">{val}</span>
                     </div>
                     <div className="progress">
-                      <div className={`progress-bar ${getBarColor(val)}`} style={{ width: `${val}%` }} />
+                      <div
+                        className={`progress-bar ${getBarColor(val)}`}
+                        style={{ width: `${val}%` }}
+                      />
                     </div>
                   </div>
                 );
