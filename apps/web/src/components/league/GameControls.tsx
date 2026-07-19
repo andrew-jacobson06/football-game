@@ -170,20 +170,36 @@ function buildDefense(
   // The defense belongs to the team without possession; deriving it here keeps the UI preview and play-call payload in sync with the scoreboard.
   const defenseTeam = game.Possession === "Home" ? game.Away : game.Home;
   const defenders = players.filter((p) => teamOf(p) === defenseTeam);
-  const by = (d: string) =>
+  const by = (d: string, sortBy = "defStars") =>
     defenders
       .filter(
         (p) =>
           str(p.defPos ?? p.DefPos ?? p.defensePosition).toUpperCase() === d,
       )
-      .sort((a, b) => trait(b, "defStars") - trait(a, "defStars"));
-  const dbs = by("DB"),
-    dls = by("DL"),
+      .sort((a, b) => trait(b, sortBy) - trait(a, sortBy));
+  const dbs = by("DB", "coverage"),
+    dls = by("DL", "size"),
     lbs = by("LB"),
     safeties = by("S");
-  const take = (arrs: Player[][]) => arrs.find((a) => a.length)?.shift();
+  const protectedLb = lbs[0];
+  const reserveProtectedLb = (p: Player) => p !== protectedLb;
+  const lbCoverageFallbacks = lbs.filter(reserveProtectedLb);
+  const lbLineFallbacks = [...lbCoverageFallbacks].reverse();
+  const selectedDefenders = new Set<Player>();
+  const take = (arrs: Player[][]) => {
+    for (const arr of arrs) {
+      while (arr.length) {
+        const player = arr.shift();
+        if (player && !selectedDefenders.has(player)) {
+          selectedDefenders.add(player);
+          return player;
+        }
+      }
+    }
+    return undefined;
+  };
   const byName = (playerName?: string) => players.find((p) => nameOf(p) === playerName);
-  // Saved receivers and linemen are ranked by offensive stars so the best DBs/DLs match the best WRs/OLs.
+  // Saved receivers and linemen are ranked by offensive stars so the best coverage DBs and biggest DLs match the best WRs/OLs.
   const byOffStars = (a: FormationSlot, b: FormationSlot) =>
     trait(byName(formation[b]), "offStars") - trait(byName(formation[a]), "offStars");
   const wrs = WR_SLOTS.filter((s) => formation[s]).sort(byOffStars);
@@ -192,14 +208,14 @@ function buildDefense(
   wrs.forEach((slot, i) =>
     out.push({
       position: `DB${i + 1}`,
-      player: nameOf(take([dbs, lbs]) ?? {}),
+      player: nameOf(take([dbs, lbCoverageFallbacks]) ?? {}),
       align: slot,
     }),
   );
   ol.forEach((slot, i) =>
     out.push({
       position: `DL${i + 1}`,
-      player: nameOf(take([dls, lbs]) ?? {}),
+      player: nameOf(take([dls, lbLineFallbacks, lbs]) ?? {}),
       align: slot,
     }),
   );
