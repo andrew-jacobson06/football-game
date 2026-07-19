@@ -994,10 +994,10 @@ export default function GameField({
         >
           <div className="field-title">Dynamic Football Animation View</div>
           <div className="team-end team-end--top" id="awayEnd">
-            WILDFIRE
+            KINGSMEN
           </div>
           <div className="team-end team-end--bottom" id="homeEnd">
-            PORTLAND
+            CHARLOTTE
           </div>
           {homeLogo && (
             <img
