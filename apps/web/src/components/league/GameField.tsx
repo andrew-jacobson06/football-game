@@ -260,6 +260,8 @@ const resolveMoveX = (move?: PlayerMoveStep) =>
   move?.x !== undefined ? move.x : move?.lane ? LANES[move.lane] : undefined;
 const yardToYPct = (yard: number) =>
   91.8 - (Math.max(0, Math.min(100, yard)) / 100) * (91.8 - 8.2);
+const normalizeYard = (yard: string | number) =>
+  Number.isFinite(Number(yard)) ? Number(yard) : 55;
 
 /**
  * Converts a team name into a CSS-safe side class. Known home/away names map to
@@ -326,6 +328,7 @@ export default function GameField({
   onFormationSlotClick,
   onPlayerSubstitute,
   onPlayerChangePosition,
+  ballOn = 55,
   homeLogo,
   homeTeam,
   awayTeam,
@@ -338,6 +341,7 @@ export default function GameField({
   onFormationSlotClick?: (slot: FormationSlot) => void;
   onPlayerSubstitute?: (playerName: string) => void;
   onPlayerChangePosition?: (playerName: string) => void;
+  ballOn?: string | number;
   homeLogo?: string;
   homeTeam?: string;
   awayTeam?: string;
@@ -369,8 +373,10 @@ export default function GameField({
     [players],
   );
 
+  const formationLosYard = normalizeYard(ballOn);
+
   const buildFormationSetupPlan = useCallback((): AnimationPlan => {
-    const losYard = 55;
+    const losYard = formationLosYard;
     const offensePlayers = FORMATION_SLOTS.flatMap((slot) => {
       const playerName = formation[slot];
       if (!playerName) return [];
@@ -426,6 +432,7 @@ export default function GameField({
       },
       camera: { note: "Upcoming play setup" },
       initialFootballCarrierId:
+        offensePlayers.find((player) => player.position === "C")?.id ||
         offensePlayers.find((player) => player.position === "QB")?.id ||
         offensePlayers[0]?.id,
       lines: [
@@ -440,7 +447,14 @@ export default function GameField({
       players: [...offensePlayers, ...defensePlayers],
       phases: [],
     };
-  }, [awayTeam, defense, findFormationPlayer, formation, homeTeam]);
+  }, [
+    awayTeam,
+    defense,
+    findFormationPlayer,
+    formation,
+    formationLosYard,
+    homeTeam,
+  ]);
 
   const showError = useCallback((message: string) => {
     if (errorBoxRef.current) {
@@ -1014,7 +1028,12 @@ export default function GameField({
     if (formationMode) return;
     if (!Object.values(formation).some(Boolean)) return;
     resetAnimationScene(buildFormationSetupPlan());
-  }, [buildFormationSetupPlan, formation, formationMode, resetAnimationScene]);
+  }, [
+    buildFormationSetupPlan,
+    formation,
+    formationMode,
+    resetAnimationScene,
+  ]);
 
   useEffect(() => {
     loadExampleJson();
@@ -1070,7 +1089,7 @@ export default function GameField({
                   className={`field-formation-slot ${slot.startsWith("WR") ? "wr" : slot.startsWith("RB") ? "rb" : slot === "QB" ? "qb" : "teol"} ${REQUIRED_FORMATION_SLOTS.has(slot) ? "required" : ""} ${playerName ? "filled" : "open"} ${selectedFormationPlayer ? "targetable" : ""} ${playerName && selectedFormationPlayer === playerName ? "selected" : ""}`}
                   style={{
                     left: `${LANES[lineup.lane] ?? 50}%`,
-                    top: `${yardToYPct(55 + lineup.yardOffsetFromLos)}%`,
+                    top: `${yardToYPct(formationLosYard + lineup.yardOffsetFromLos)}%`,
                   }}
                   aria-label={
                     playerName
@@ -1114,7 +1133,7 @@ export default function GameField({
                   className="field-formation-slot defense"
                   style={{
                     left: `${LANES[lineup.lane] ?? 50}%`,
-                    top: `${yardToYPct(55 + lineup.yardOffsetFromLos)}%`,
+                    top: `${yardToYPct(formationLosYard + lineup.yardOffsetFromLos)}%`,
                   }}
                   aria-hidden="true"
                 >
