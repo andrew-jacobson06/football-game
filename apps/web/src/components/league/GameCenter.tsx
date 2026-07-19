@@ -1627,6 +1627,8 @@ export function GameCenter({
                 defense={playOptions.defense}
                 players={players}
                 ballOn={currentGame.BallOn}
+                distance={currentGame.Distance}
+                possession={currentGame.Possession}
                 selectedFormationPlayer={selectedFormationPlayer}
                 homeLogo={currentGame.HomeLogo}
                 homeTeam={currentGame.Home}
