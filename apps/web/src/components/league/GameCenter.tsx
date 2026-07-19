@@ -30,7 +30,11 @@ import {
   spikeBall,
 } from "./gameplay/gameEngine";
 import { animatePlay } from "./gameplay/engine/animationAdapter";
-import type { FormationSlot, FrontendSettings, PlayCallOptions } from "./gameplay/gameEngine";
+import type {
+  FormationSlot,
+  FrontendSettings,
+  PlayCallOptions,
+} from "./gameplay/gameEngine";
 
 type Play = Record<string, unknown>;
 type LineStatMatchup = {
@@ -1519,7 +1523,7 @@ export function GameCenter({
               hidden={isGameFieldCollapsed}
             >
               <GameField
-                formationMode={settingFormation || Boolean(playOptions.defense?.length)}
+                formationMode={settingFormation}
                 formation={playOptions.formation}
                 defense={playOptions.defense}
                 players={players}
