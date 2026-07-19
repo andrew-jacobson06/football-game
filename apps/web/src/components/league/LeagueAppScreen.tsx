@@ -10,7 +10,11 @@ import { LeagueStandings } from "./LeagueStandings";
 import { LeagueStats } from "./LeagueStats";
 import { GameCenter } from "./GameCenter";
 import "./league.css";
-export function LeagueAppScreen() {
+type LeagueAppScreenProps = {
+  onBack?: () => void;
+};
+
+export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
   const [activeTab, setActiveTab] = useState<LeagueTab>("scores");
   const [games, setGames] = useState<LeagueGame[]>(mockGames);
   const [teams, setTeams] = useState<LeagueTeam[]>(mockTeams);
@@ -121,6 +125,15 @@ export function LeagueAppScreen() {
       )}
       {!loadingGame && (
         <>
+          {onBack && (
+            <button
+              className="back-button league-app__back"
+              type="button"
+              onClick={onBack}
+            >
+              ← Back
+            </button>
+          )}
           <LeagueHeader activeTab={activeTab} onTabChange={setActiveTab} />
           <div id="tabContents">
             {activeTab === "news" && (
