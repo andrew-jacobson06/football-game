@@ -392,13 +392,11 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   background: var(--gray-medium);
-  padding: clamp(10px, 5vw, 34px) clamp(12px, 7vw, 42px);
   border: 1px solid var(--gray-light);
   box-shadow: 0 0 15px #0008;
   position: sticky;
   top: 0;
   z-index: 90;
-  min-height: clamp(120px, 35vw, 320px);
 }
 .league-back-button {
   position: fixed;
