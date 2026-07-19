@@ -1,98 +1,34 @@
 export default function GameField() {
   
   return (
-    <div className="field-wrapper">
-      <img
-        src="https://andrew-jacobson06.github.io/public-audio/fpost1.png"
-        id="fgPostLeft"
-        alt="Field Goal Post"
-      />
-      <div id="field3D">
-        <div className="yardline" style={{ left: "8.3333%" }}></div>
-        <div className="yardline" style={{ left: "16.6667%"}}>                    
-          <span className="label top left">1</span>
-          <span className="label top right">0</span>               
-          <span className="label bottom left">1</span>
-          <span className="label bottom right">0</span>
-        </div>
-        <div className="yardline" style={{ left: "25%"}}>                
-          <span className="label top left">2</span>
-          <span className="label top right">0</span>               
-          <span className="label bottom left">2</span>
-          <span className="label bottom right">0</span>
-        </div>
-        <div className="yardline" style={{ left: "33.3333%"}}>                
-          <span className="label top left">3</span>
-          <span className="label top right">0</span>               
-          <span className="label bottom left">3</span>
-          <span className="label bottom right">0</span>
-        </div>
-        <div className="yardline" style={{ left: "41.6667%"}}>                 
-          <span className="label top left">4</span>
-          <span className="label top right">0</span>               
-          <span className="label bottom left">4</span>
-          <span className="label bottom right">0</span>
-        </div>
-        <div className="yardline" style={{ left: "50%"}}>                
-          <span className="label top left">5</span>
-          <span className="label top right">0</span>               
-          <span className="label bottom left">5</span>
-          <span className="label bottom right">0</span>
-        </div>
-        <div className="yardline" style={{ left: "58.3333%"}}>              
-          <span className="label top left">4</span>
-          <span className="label top right">0</span>               
-          <span className="label bottom left">4</span>
-          <span className="label bottom right">0</span>
-        </div>
-        <div className="yardline" style={{ left: "66.6667%"}}>                
-          <span className="label top left">3</span>
-          <span className="label top right">0</span>               
-          <span className="label bottom left">3</span>
-          <span className="label bottom right">0</span>
-        </div>
-        <div className="yardline" style={{ left: "75%"}}>               
-          <span className="label top left">2</span>
-          <span className="label top right">0</span>               
-          <span className="label bottom left">2</span>
-          <span className="label bottom right">0</span>
-        </div>
-        <div className="yardline" style={{ left: "83.3333%"}}>              
-          <span className="label top left">1</span>
-          <span className="label top right">0</span>               
-          <span className="label bottom left">1</span>
-          <span className="label bottom right">0</span>
-        </div>
-        <div className="yardline" style={{ left: "91.6667%"}}></div>
-        <div className="yardline" style={{ left: "100%"}}></div>
-        
-        <div id="firstDownLine" className="yardline first-down-line"></div>
+      <div class="game-shell"> 
+        <div class="scorebug"> 
+          <div class="score-main" id="scoreMain">POR 7 | CLT 3</div> 
+          <div class="situation" id="situationText">Paste animation JSON below and run play</div> 
+        </div> 
+        <div class="field-viewport" id="fieldViewport"> 
+          <div class="field-wrap" id="field"> 
+            <div class="field-title">Dynamic Football Animation View</div> 
+            <div class="camera-note" id="cameraNote">Manual scroll field</div> 
+            <div class="team-end" id="cltEnd">WILDFIRE</div> 
+            <div class="team-end" id="porEnd">PORTLAND</div> 
+            <div class="field-line los-line" id="losLine"></div> 
+            <div class="field-line first-down-line" id="firstDownLine"></div> 
+            <div class="field-line end-line" id="endLine"></div> 
+            <div class="line-label" id="losLabel">LOS</div> 
+            <div class="line-label" id="firstDownLabel">1ST</div> 
+            <div class="line-label" id="endLabel">END</div> 
+            <div class="football" id="football"></div> 
+          </div> 
+        </div> 
+        <div class="caption" id="caption"> Paste a play animation JSON below, or load the example. </div> 
+        <div class="controls"> 
+          <button onclick="loadExampleJson()">Load Example JSON</button> 
+          <button onclick="runJsonFromBox()">Run JSON Play</button> 
+          <button onclick="resetCurrentPlan()">Reset Current Play</button> 
+        </div> 
+        <textarea id="jsonInput" spellcheck="false" placeholder="Paste PlayAnimationPlan JSON here..."></textarea> 
+        <div class="error-box" id="errorBox"></div> 
       </div>
-      <img
-        src="https://andrew-jacobson06.github.io/public-audio/fpost1.png"
-        id="fgPost"
-        alt="Field Goal Post"
-      />
-      <div className="driveWrapper">
-
-        
-        <div
-          id="catchPoint"
-          style={{
-            position: "absolute",
-            fontSize: "4vw",
-            color: "var(--gray-light)",
-            opacity: "0",
-            zIndex: 4,
-            pointerEvents: "none",
-            transition: "opacity 0.5s ease",
-          }}
-        ></div>
-        
-        <div className="drive-line" id="drive"></div>
-        <div className="play-line" id="play"></div>
-        <div id="arc-container" className="arc-container"></div>
-      </div>
-    </div>
   );
 }
