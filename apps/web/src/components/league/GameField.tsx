@@ -85,7 +85,7 @@ type RuntimePlayer = Omit<AnimationPlayer, "yard"> & {
 };
 
 const DEFAULT_PHASE_DURATION_MS = 1100;
-const PLAY_WIDTH_INSET_PCT = 7;
+const PLAY_WIDTH_INSET_PCT = 10;
 const PLAY_WIDTH_PCT = 100 - PLAY_WIDTH_INSET_PCT * 2;
 const squeezeFieldX = (originalX: number) =>
   PLAY_WIDTH_INSET_PCT + originalX * (PLAY_WIDTH_PCT / 100);
