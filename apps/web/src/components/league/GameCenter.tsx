@@ -18,6 +18,7 @@ import {
 import { GameScoreboard } from "./GameScoreboard";
 import GameField from "./GameField";
 import { GameControls } from "./GameControls";
+import { buildDefense } from "./formationDefense";
 import { GameLog } from "./GameLog";
 import {
   goForTwo,
@@ -1387,6 +1388,8 @@ export function GameCenter({
   const [isSavingPlay, setIsSavingPlay] = useState(false);
   const [isGameFieldCollapsed, setIsGameFieldCollapsed] = useState(false);
   const [settingFormation, setSettingFormation] = useState(false);
+  const [autoCloseFormationOnSave, setAutoCloseFormationOnSave] =
+    useState(false);
   const [selectedFormationPlayer, setSelectedFormationPlayer] = useState("");
   const previousPossessionRef = useRef(currentGame.Possession);
   const ctx = useMemo(
@@ -1663,21 +1666,31 @@ export function GameCenter({
                     nextFormation[selectedPlayerSlot] = slotPlayer;
                   }
 
+                  const savedFormation = {
+                    ...nextFormation,
+                    [slot]: selectedPlayer,
+                  };
                   setPlayOptions({
                     ...playOptions,
-                    formation: { ...nextFormation, [slot]: selectedPlayer },
+                    formation: savedFormation,
                     routes: {},
                     reads: {},
+                    defense: buildDefense(currentGame, players, savedFormation),
                   });
                   setSelectedFormationPlayer("");
-                  setSettingFormation(false);
+                  if (autoCloseFormationOnSave) {
+                    setSettingFormation(false);
+                    setAutoCloseFormationOnSave(false);
+                  }
                 }}
                 onPlayerSubstitute={(playerName) => {
                   setSelectedFormationPlayer(playerName);
+                  setAutoCloseFormationOnSave(true);
                   setSettingFormation(true);
                 }}
                 onPlayerChangePosition={(playerName) => {
                   setSelectedFormationPlayer(playerName);
+                  setAutoCloseFormationOnSave(true);
                   setSettingFormation(true);
                 }}
               />
@@ -1688,7 +1701,10 @@ export function GameCenter({
               options={playOptions}
               onOptionsChange={setPlayOptions}
               onAction={action}
-              onFormationModeChange={setSettingFormation}
+              onFormationModeChange={(active) => {
+                setAutoCloseFormationOnSave(false);
+                setSettingFormation(active);
+              }}
               onSelectedFormationPlayerChange={setSelectedFormationPlayer}
               selectedFormationPlayer={selectedFormationPlayer}
               requestedFormationMode={settingFormation}
