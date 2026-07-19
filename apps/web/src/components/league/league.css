@@ -1249,45 +1249,6 @@
   background: #111;
   color: white;
 }
-.los-preview {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(8, minmax(70px, 1fr));
-  gap: 10px;
-  padding: 28px 12px;
-  background: #1f7a3a;
-  border-radius: 14px;
-}
-.los-defense,
-.los-backfield {
-  grid-column: 1 / -1;
-  text-align: center;
-  font-weight: 700;
-}
-.los-line-react {
-  grid-column: 1 / -1;
-  height: 4px;
-  background: #61a5ff;
-}
-.los-token {
-  min-height: 78px;
-  padding: 8px;
-  border-radius: 999px;
-  background: #ffffffee;
-  color: #111;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  font-size: 12px;
-}
-.los-backfield {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  flex-wrap: wrap;
-}
 .route-list {
   display: grid;
   gap: 10px;
@@ -1345,9 +1306,6 @@
 @media (max-width: 700px) {
   .route-row {
     grid-template-columns: 1fr;
-  }
-  .los-preview {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -1625,65 +1583,6 @@
   z-index: 2001;
   font-size: clamp(14px, 2.5vw, 24px);
 }
-.los-field {
-  background: #2e7d32;
-  padding: 2vw;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1vw;
-  min-height: 520px;
-}
-.los-line {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 100%;
-  height: 4px;
-  background: #1565c0;
-}
-.los-row {
-  display: flex;
-  justify-content: center;
-  gap: 1vw;
-  width: 100%;
-  min-height: 80px;
-  z-index: 1;
-}
-.los-grid {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 1vw;
-  width: 100%;
-  z-index: 1;
-}
-.los-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1vw;
-}
-.los-player {
-  width: clamp(52px, 7vw, 86px);
-  height: clamp(52px, 7vw, 86px);
-  background: transparent;
-  border-radius: 50%;
-  overflow: hidden;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  color: #fff;
-}
-.los-player img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
-}
-.los-player.empty {
-  visibility: hidden;
-}
 .formation-actions {
   display: flex;
   justify-content: flex-end;
@@ -1723,7 +1622,27 @@
   font-weight: 800;
   cursor: grab;
 }
-.eligible-receiver-chip .los-player {
+.control-player-bubble {
+  width: clamp(52px, 7vw, 86px);
+  height: clamp(52px, 7vw, 86px);
+  background: transparent;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  color: #fff;
+}
+.control-player-bubble img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.control-player-bubble.empty {
+  visibility: hidden;
+}
+.eligible-receiver-chip .control-player-bubble {
   width: 32px;
   height: 32px;
   flex: 0 0 32px;
@@ -1772,16 +1691,9 @@
 .read-summary .summary-row { display: flex; gap: 1vw; }
 .read-summary .summary-label { width: 30%; font-weight: 600; }
 .player-detail { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; color: #000; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); padding: 2vw; z-index: 2001; font-size: clamp(14px, 2.5vw, 24px); }
-.los-field { background: #2e7d32; padding: 2vw; position: relative; display: flex; flex-direction: column; align-items: center; gap: 1vw; min-height: 520px; }
-
-.los-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 1vw; width: 100%; z-index: 1; }
-.los-col { display: flex; flex-direction: column; align-items: center; gap: 1vw; }
-.los-player { width: clamp(52px, 7vw, 86px); height: clamp(52px, 7vw, 86px); background: transparent; border-radius: 50%; overflow: hidden; display: flex; align-items: flex-start; justify-content: center; color: #fff; }
-.los-player img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.los-player.empty { visibility: hidden; }
 .formation-actions { display: flex; justify-content: flex-end; gap: 2vw; }
 @media (max-width: 700px) { .formation-field { min-width: 620px; } .routes-board { min-height: 420px; } .player-item { max-width: 100%; flex-basis: 100%; } }
 .eligible-receiver-list { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 16px; color: var(--text-dark); font-weight: 800; }
 .eligible-receiver-chip { display: inline-flex; align-items: center; gap: 8px; border: 2px solid var(--text-muted); border-radius: 999px; background: #fff; color: #111; padding: 6px 10px; font-size: 13px; font-weight: 800; cursor: grab; }
-.eligible-receiver-chip .los-player { width: 32px; height: 32px; flex: 0 0 32px; background: #111; color: #fff; }
+.eligible-receiver-chip .control-player-bubble { width: 32px; height: 32px; flex: 0 0 32px; background: #111; color: #fff; }
 .eligible-receiver-chip:active { cursor: grabbing; }
