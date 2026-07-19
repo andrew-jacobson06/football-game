@@ -163,6 +163,11 @@ const DEFAULT_LINEUPS_BY_POSITION: Record<
   TE2: { lane: "LT", yardOffsetFromLos: -1 },
 };
 
+/**
+ * Maps a defensive position label to a default field lane and depth. Numbered
+ * labels such as DB4 or DL7 are clamped to the available template positions so
+ * generated defenses still receive reasonable coordinates.
+ */
 const defensiveLineupForPosition = (position?: string) => {
   const normalized = String(position || "").toUpperCase();
   if (DEFAULT_LINEUPS_BY_POSITION[normalized])
@@ -256,7 +261,16 @@ const resolveMoveX = (move?: PlayerMoveStep) =>
 const yardToYPct = (yard: number) =>
   91.8 - (Math.max(0, Math.min(100, yard)) / 100) * (91.8 - 8.2);
 
-const sideClassForTeam = (team: string, homeTeam?: string, awayTeam?: string) => {
+/**
+ * Converts a team name into a CSS-safe side class. Known home/away names map to
+ * stable classes, and arbitrary animation JSON team names are sanitized so they
+ * can still be used in token class names.
+ */
+const sideClassForTeam = (
+  team: string,
+  homeTeam?: string,
+  awayTeam?: string,
+) => {
   const normalizedTeam = team.trim().toLowerCase();
   if (homeTeam && normalizedTeam === homeTeam.trim().toLowerCase())
     return "home";
@@ -266,6 +280,11 @@ const sideClassForTeam = (team: string, homeTeam?: string, awayTeam?: string) =>
     return normalizedTeam;
   return normalizedTeam.replace(/[^a-z0-9_-]+/g, "-") || "home";
 };
+/**
+ * Builds a deterministic DOM-safe player id from unit, slot/position, and name.
+ * Animation phases reference these ids, so the sanitization rules must stay
+ * consistent between setup generation and movement application.
+ */
 const animationPlayerId = (
   prefix: string,
   slotOrPosition: string,
@@ -275,14 +294,29 @@ const animationPlayerId = (
     .toLowerCase()
     .replace(/[^a-z0-9_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
-const unitClassForPlayer = (player: Pick<AnimationPlayer, "unit" | "id" | "role" | "position">) => {
+/**
+ * Infers whether a token should use offense or defense styling. Explicit unit
+ * data wins, otherwise defensive position markers and generated def-* ids are
+ * treated as defense with offense as the default fallback.
+ */
+const unitClassForPlayer = (
+  player: Pick<AnimationPlayer, "unit" | "id" | "role" | "position">,
+) => {
   if (player.unit) return player.unit;
-  const marker = String(player.role || player.position || player.id).toUpperCase();
-  return /^(DB|LB|DL|FS|S\d*)/.test(marker) || String(player.id).startsWith("def-")
+  const marker = String(
+    player.role || player.position || player.id,
+  ).toUpperCase();
+  return /^(DB|LB|DL|FS|S\d*)/.test(marker) ||
+    String(player.id).startsWith("def-")
     ? "defense"
     : "offense";
 };
 
+/**
+ * Visual football field and animation runner. It can render formation-editing
+ * slots, build a static setup preview from selected personnel, or execute a
+ * PlayAnimationPlan by imperatively moving DOM tokens and the football.
+ */
 export default function GameField({
   formationMode = false,
   formation = {},
