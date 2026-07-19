@@ -1286,6 +1286,8 @@ export function GameCenter({
   ]);
   const [isSavingPlay, setIsSavingPlay] = useState(false);
   const [isGameFieldCollapsed, setIsGameFieldCollapsed] = useState(false);
+  const [settingFormation, setSettingFormation] = useState(false);
+  const [selectedFormationPlayer, setSelectedFormationPlayer] = useState("");
   const ctx = useMemo(
     () => ({ players, settings, historyLength: history.length }),
     [players, settings, history.length],
@@ -1499,7 +1501,26 @@ export function GameCenter({
               className="game-field-panel"
               hidden={isGameFieldCollapsed}
             >
-              <GameField />
+              <GameField
+                formationMode={settingFormation}
+                formation={playOptions.formation}
+                players={players}
+                selectedFormationPlayer={selectedFormationPlayer}
+                onFormationSlotClick={(slot) => {
+                  const selectedPlayer = selectedFormationPlayer;
+                  if (!selectedPlayer || playOptions.formation?.[slot]) return;
+                  const nextFormation = Object.fromEntries(
+                    Object.entries(playOptions.formation ?? {}).filter(
+                      ([, player]) => player !== selectedPlayer,
+                    ),
+                  );
+                  setPlayOptions({
+                    ...playOptions,
+                    formation: { ...nextFormation, [slot]: selectedPlayer },
+                  });
+                  setSelectedFormationPlayer("");
+                }}
+              />
             </div>
             <GameControls
               game={currentGame}
@@ -1507,6 +1528,8 @@ export function GameCenter({
               options={playOptions}
               onOptionsChange={setPlayOptions}
               onAction={action}
+              onFormationModeChange={setSettingFormation}
+              onSelectedFormationPlayerChange={setSelectedFormationPlayer}
             />
           </div>
           {lastPlay && (

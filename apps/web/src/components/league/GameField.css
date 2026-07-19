@@ -578,3 +578,74 @@ textarea {
 .player-action-menu button:focus-visible {
   background: #ef4444;
 }
+
+.field-formation-slot {
+  position: absolute;
+  z-index: 145;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border: 2px dashed rgba(248, 250, 252, 0.92);
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.82);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 1000;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+
+.field-formation-slot.required::after {
+  content: "*";
+  position: absolute;
+  top: -8px;
+  right: -2px;
+  color: #f87171;
+  font-size: 18px;
+}
+
+.field-formation-slot.targetable {
+  border-style: solid;
+  box-shadow:
+    0 0 0 4px rgba(250, 204, 21, 0.42),
+    0 8px 18px rgba(0, 0, 0, 0.45);
+}
+
+.field-formation-slot.filled {
+  border-style: solid;
+  background: transparent;
+}
+
+.field-formation-slot img,
+.field-formation-avatar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #f8fafc;
+  border-radius: 50%;
+  background: #fff;
+  object-fit: cover;
+}
+
+.field-formation-slot.qb { border-color: #64b5f6; color: #64b5f6; }
+.field-formation-slot.rb { border-color: #81c784; color: #81c784; }
+.field-formation-slot.wr { border-color: #ffb74d; color: #ffb74d; }
+.field-formation-slot.teol { border-color: #ba68c8; color: #ba68c8; }
+
+.field-formation-name {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  margin-top: 3px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
