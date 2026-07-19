@@ -10,14 +10,14 @@ import type {
   RunPlayState,
 } from "./types";
 
-const TEOL_SLOTS: FormationSlot[] = [
-  "TEOL1",
-  "TEOL2",
-  "TEOL3",
-  "TEOL4",
-  "TEOL5",
+const OL_SLOTS: FormationSlot[] = [
+  "LT",
+  "LG",
+  "C",
+  "RG",
+  "RT",
 ];
-const CENTER_SLOT: FormationSlot = "TEOL3";
+const CENTER_SLOT: FormationSlot = "C";
 
 /** Reads an optional frontend setting array and returns an empty list when the setting is absent. Run-yardage helpers use this to stay safe when tuning data is not loaded. */
 function settingArray<T>(
@@ -44,7 +44,7 @@ export function buildOlDlMatchups(
   offense: Partial<Record<FormationSlot, string>>,
   defense: DefensiveAssignment[],
 ): OlDlMatchup[] {
-  return TEOL_SLOTS.map((slot) => {
+  return OL_SLOTS.map((slot) => {
     const defender = defense.find(
       (d) => d.align === slot && d.position.startsWith("DL"),
     );
@@ -1128,8 +1128,8 @@ type RunLaneSide = "left" | "center" | "right";
 
 /** Converts a trench slot into left, center, or right. Linebacker targeting uses it to match pursuit to the run lane. */
 function laneSide(slot: FormationSlot): RunLaneSide {
-  const slotIndex = TEOL_SLOTS.indexOf(slot);
-  const centerIndex = TEOL_SLOTS.indexOf(CENTER_SLOT);
+  const slotIndex = OL_SLOTS.indexOf(slot);
+  const centerIndex = OL_SLOTS.indexOf(CENTER_SLOT);
 
   if (slotIndex < 0 || slotIndex === centerIndex) return "center";
   return slotIndex < centerIndex ? "left" : "right";
@@ -1189,13 +1189,13 @@ export function getAdjacentDefensiveLinemenForRunLane(
   selectedSlot: FormationSlot,
   jukedDefenders: string[] = [],
 ): DefensiveAssignment[] {
-  const selectedIndex = TEOL_SLOTS.indexOf(selectedSlot);
+  const selectedIndex = OL_SLOTS.indexOf(selectedSlot);
   if (selectedIndex < 0) return [];
 
   const jukedDefenderSet = new Set(jukedDefenders.filter(Boolean));
 
   return [selectedIndex - 1, selectedIndex + 1]
-    .map((index) => TEOL_SLOTS[index])
+    .map((index) => OL_SLOTS[index])
     .filter((slot): slot is FormationSlot => Boolean(slot))
     .map((slot) => lineWinLossArray.find((battle) => battle.slot === slot))
     .filter((battle): battle is LineWinLossResult =>

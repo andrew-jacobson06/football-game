@@ -11,13 +11,14 @@ export type PlayKind =
   | "Kneel";
 export type FormationSlot =
   | "WR1"
-  | "TEOL1"
-  | "TEOL2"
-  | "TEOL3"
-  | "TEOL4"
-  | "TEOL5"
+  | "LT"
+  | "LG"
+  | "C"
+  | "RG"
+  | "RT"
   | "WR2"
   | "WR3"
+  | "WR4"
   | "QB"
   | "RB1"
   | "RB2";

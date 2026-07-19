@@ -35,11 +35,11 @@ export function determineTimeToThrow(
   const protectors = [
     formation.RB1,
     formation.RB2,
-    formation.TEOL1,
-    formation.TEOL2,
-    formation.TEOL3,
-    formation.TEOL4,
-    formation.TEOL5,
+    formation.LT,
+    formation.LG,
+    formation.C,
+    formation.RG,
+    formation.RT,
   ]
     .map((name) => byName(ctx, name))
     .filter(Boolean);

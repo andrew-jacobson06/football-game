@@ -1502,8 +1502,9 @@ export function GameCenter({
               hidden={isGameFieldCollapsed}
             >
               <GameField
-                formationMode={settingFormation}
+                formationMode={settingFormation || Boolean(playOptions.defense?.length)}
                 formation={playOptions.formation}
+                defense={playOptions.defense}
                 players={players}
                 selectedFormationPlayer={selectedFormationPlayer}
                 onFormationSlotClick={(slot) => {

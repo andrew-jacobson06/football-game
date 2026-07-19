@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { FormationSlot } from "./gameplay/gameEngine";
+import type { DefensiveAssignment, FormationSlot } from "./gameplay/gameEngine";
 
 import "./GameField.css";
 
@@ -168,30 +168,32 @@ const FORMATION_SLOT_LINEUP: Record<FormationSlot, FormationSlotSetup> = {
   RB1: DEFAULT_LINEUPS_BY_POSITION.RB1,
   RB2: DEFAULT_LINEUPS_BY_POSITION.RB2,
   QB: DEFAULT_LINEUPS_BY_POSITION.QB,
-  TEOL1: DEFAULT_LINEUPS_BY_POSITION.LT,
-  TEOL2: DEFAULT_LINEUPS_BY_POSITION.LG,
-  TEOL3: DEFAULT_LINEUPS_BY_POSITION.C,
-  TEOL4: DEFAULT_LINEUPS_BY_POSITION.RG,
-  TEOL5: DEFAULT_LINEUPS_BY_POSITION.RT,
+  LT: DEFAULT_LINEUPS_BY_POSITION.LT,
+  LG: DEFAULT_LINEUPS_BY_POSITION.LG,
+  C: DEFAULT_LINEUPS_BY_POSITION.C,
+  RG: DEFAULT_LINEUPS_BY_POSITION.RG,
+  RT: DEFAULT_LINEUPS_BY_POSITION.RT,
+  WR4: DEFAULT_LINEUPS_BY_POSITION.WR4,
 };
 const FORMATION_SLOTS: FormationSlot[] = [
   "WR1",
-  "TEOL1",
-  "TEOL2",
-  "TEOL3",
-  "TEOL4",
-  "TEOL5",
+  "LT",
+  "LG",
+  "C",
+  "RG",
+  "RT",
   "WR2",
   "WR3",
+  "WR4",
   "QB",
   "RB1",
   "RB2",
 ];
 const REQUIRED_FORMATION_SLOTS = new Set<FormationSlot>([
   "QB",
-  "TEOL2",
-  "TEOL3",
-  "TEOL4",
+  "LG",
+  "C",
+  "RG",
 ]);
 const nameOf = (p?: FormationPlayer) => String(p?.name ?? p?.Name ?? "");
 const imgOf = (p?: FormationPlayer) =>
@@ -237,12 +239,14 @@ const yardToYPct = (yard: number) =>
 export default function GameField({
   formationMode = false,
   formation = {},
+  defense = [],
   players = [],
   selectedFormationPlayer = "",
   onFormationSlotClick,
 }: {
   formationMode?: boolean;
   formation?: Partial<Record<FormationSlot, string>>;
+  defense?: DefensiveAssignment[];
   players?: FormationPlayer[];
   selectedFormationPlayer?: string;
   onFormationSlotClick?: (slot: FormationSlot) => void;
@@ -898,6 +902,36 @@ export default function GameField({
                     <span className="field-formation-name">{playerName}</span>
                   )}
                 </button>
+              );
+            })}
+
+          {formationMode &&
+            defense.map((assignment) => {
+              const lineup = assignment.align
+                ? FORMATION_SLOT_LINEUP[assignment.align]
+                : DEFAULT_LINEUPS_BY_POSITION[assignment.position] ??
+                  DEFAULT_LINEUPS_BY_POSITION.LB3;
+              const player = findFormationPlayer(assignment.player);
+              const playerImage = imgOf(player);
+              return (
+                <div
+                  key={`${assignment.position}-${assignment.player}`}
+                  className="field-formation-slot defense filled"
+                  style={{
+                    left: `${LANES[lineup.lane] ?? 50}%`,
+                    top: `${yardToYPct(55 + Math.abs(lineup.yardOffsetFromLos || 1.5))}%`,
+                  }}
+                  aria-label={`${assignment.position}: ${assignment.player}`}
+                >
+                  {playerImage ? (
+                    <img src={playerImage} alt={assignment.player} />
+                  ) : (
+                    <span className="field-formation-avatar">🛡️</span>
+                  )}
+                  <span className="field-formation-name">
+                    {assignment.player}
+                  </span>
+                </div>
               );
             })}
           {selectedPlayerMenu && (

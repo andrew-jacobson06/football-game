@@ -7,16 +7,10 @@ import type {
 } from "./gameplay/gameEngine";
 
 const str = (v: unknown) => String(v ?? "");
-const WR_SLOTS: FormationSlot[] = ["WR1", "WR2", "WR3"];
+const WR_SLOTS: FormationSlot[] = ["WR1", "WR2", "WR3", "WR4"];
 const RB_SLOTS: FormationSlot[] = ["RB1", "RB2"];
-const TEOL_SLOTS: FormationSlot[] = [
-  "TEOL1",
-  "TEOL2",
-  "TEOL3",
-  "TEOL4",
-  "TEOL5",
-];
-const REQUIRED = new Set<FormationSlot>(["QB", "TEOL2", "TEOL3", "TEOL4"]);
+const OL_SLOTS: FormationSlot[] = ["LT", "LG", "C", "RG", "RT"];
+const REQUIRED = new Set<FormationSlot>(["QB", "LG", "C", "RG"]);
 const ROUTES = ["No Route", "Screen", "Short", "Medium", "Deep", "Bomb"];
 const READS = ["1st", "2nd", "3rd", "4th", "5th"];
 
@@ -71,12 +65,12 @@ function ControlModal({
   );
 }
 function eligibleReceivers(formation: Partial<Record<FormationSlot, string>>) {
-  const occupiedTeols = TEOL_SLOTS.filter((slot) => formation[slot]);
-  const exposedTeols =
-    occupiedTeols.length > 1
-      ? [occupiedTeols[0], occupiedTeols[occupiedTeols.length - 1]]
-      : occupiedTeols;
-  const eligibleSlots = [...WR_SLOTS, ...RB_SLOTS, ...exposedTeols];
+  const occupiedLinemen = OL_SLOTS.filter((slot) => formation[slot]);
+  const exposedLinemen =
+    occupiedLinemen.length > 1
+      ? [occupiedLinemen[0], occupiedLinemen[occupiedLinemen.length - 1]]
+      : occupiedLinemen;
+  const eligibleSlots = [...WR_SLOTS, ...RB_SLOTS, ...exposedLinemen];
   return eligibleSlots
     .map((slot) => ({ slot, player: formation[slot] }))
     .filter((x): x is { slot: FormationSlot; player: string } =>
@@ -154,7 +148,7 @@ function buildDefense(
     safeties = by("S");
   const take = (arrs: Player[][]) => arrs.find((a) => a.length)?.shift();
   const wrs = WR_SLOTS.filter((s) => formation[s]);
-  const ol = TEOL_SLOTS.filter((s) => formation[s]);
+  const ol = OL_SLOTS.filter((s) => formation[s]);
   const out: DefensiveAssignment[] = [];
   wrs.forEach((slot, i) =>
     out.push({
@@ -261,6 +255,12 @@ export function GameControls({
     defense,
   });
 
+  const saveFormation = () => {
+    onOptionsChange(optionsWithDefense());
+    setSettingFormation(false);
+    setSelected("");
+  };
+
   return (
     <div
       className={`control-panel play-caller ${collapsed ? "collapsed" : ""}`}
@@ -296,7 +296,7 @@ export function GameControls({
               disabled={!validFormation}
               onClick={() => {
                 if (!canPass) setModal("routes");
-                else onAction("Pass Play", options);
+                else onAction("Pass Play", optionsWithDefense());
               }}
             >
               Call Pass Play
@@ -326,6 +326,20 @@ export function GameControls({
                 </span>
               </button>
             ))}
+          </div>
+          <div className="formation-actions">
+            <button
+              type="button"
+              onClick={() => {
+                setSettingFormation(false);
+                setSelected("");
+              }}
+            >
+              Exit
+            </button>
+            <button type="button" onClick={saveFormation}>
+              Save Formation
+            </button>
           </div>
         </div>
       )}
