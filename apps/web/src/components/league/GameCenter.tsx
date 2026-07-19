@@ -1285,6 +1285,7 @@ export function GameCenter({
     "Loading game state, play history, players, and frontend settings...",
   ]);
   const [isSavingPlay, setIsSavingPlay] = useState(false);
+  const [isGameFieldCollapsed, setIsGameFieldCollapsed] = useState(false);
   const ctx = useMemo(
     () => ({ players, settings, historyLength: history.length }),
     [players, settings, history.length],
@@ -1476,8 +1477,30 @@ export function GameCenter({
               </div>
             </div>
           </div>
-          <div className="field-console-stage">
-            <GameField />
+          <div
+            className={`field-console-stage ${isGameFieldCollapsed ? "field-collapsed" : ""}`}
+          >
+            <button
+              className="game-field-toggle"
+              type="button"
+              aria-expanded={!isGameFieldCollapsed}
+              aria-controls="game-field-panel"
+              onClick={() => setIsGameFieldCollapsed((collapsed) => !collapsed)}
+            >
+              <span>
+                {isGameFieldCollapsed ? "Show Gamefield" : "Hide Gamefield"}
+              </span>
+              <span className="game-field-toggle-icon" aria-hidden="true">
+                {isGameFieldCollapsed ? "▾" : "▴"}
+              </span>
+            </button>
+            <div
+              id="game-field-panel"
+              className="game-field-panel"
+              hidden={isGameFieldCollapsed}
+            >
+              <GameField />
+            </div>
             <GameControls
               game={currentGame}
               players={players}
