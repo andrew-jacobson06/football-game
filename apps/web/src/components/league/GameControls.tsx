@@ -201,7 +201,7 @@ export function GameControls({
   onOptionsChange,
   onAction,
 }: Props) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [modal, setModal] = useState<
     "formation" | "routes" | "run" | "clock" | null
   >(null);
@@ -288,17 +288,11 @@ export function GameControls({
         type="button"
         onClick={() => setCollapsed(!collapsed)}
       >
-        {collapsed ? "Open Play Caller" : "Collapse Play Caller"}
+        {collapsed ? "Open Controls" : "Minimize Controls"}
       </button>
       {!collapsed && (
         <>
-          <h3>{offenseTeam} Play Caller</h3>
-          <div className="game-controls">
-            <button onClick={() => setModal("formation")}>Formation</button>
-            <button onClick={() => setModal("routes")}>Routes</button>
-            <button onClick={() => setModal("run")}>Run Modal</button>
-            <button onClick={() => setModal("clock")}>Clock</button>
-          </div>
+          <h3>{offenseTeam} Control Console</h3>
           <div className="play-call-summary">
             <span>
               {validFormation ? "Formation ready" : "Set required formation"}
@@ -307,24 +301,21 @@ export function GameControls({
             <span>Clock: {options.clockMode || "Normal"}</span>
           </div>
           <div className="game-controls primary">
+            <button onClick={() => setModal("formation")}>Set Formation</button>
             <button
               disabled={!validFormation}
               onClick={() => onAction("Run Play", optionsWithDefense())}
             >
-              Run Play
+              Call Run Play
             </button>
-
             <button
-              disabled={!validFormation || !canPass}
-              onClick={() => onAction("Pass Play", options)}
+              disabled={!validFormation}
+              onClick={() => {
+                if (!canPass) setModal("routes");
+                else onAction("Pass Play", options);
+              }}
             >
-              Pass Play
-            </button>
-            <button onClick={() => onAction("Field Goal", options)}>FG</button>
-            <button onClick={() => onAction("Punt", options)}>Punt</button>
-            <button onClick={() => onAction("Two Point", options)}>2PT</button>
-            <button onClick={() => onAction("Timeout", options)}>
-              Timeout
+              Call Pass Play
             </button>
           </div>
         </>

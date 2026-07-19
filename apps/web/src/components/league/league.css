@@ -1694,3 +1694,72 @@
 .eligible-receiver-chip { display: inline-flex; align-items: center; gap: 8px; border: 2px solid var(--text-muted); border-radius: 999px; background: #fff; color: #111; padding: 6px 10px; font-size: 13px; font-weight: 800; cursor: grab; }
 .eligible-receiver-chip .control-player-bubble { width: 32px; height: 32px; flex: 0 0 32px; background: #111; color: #fff; }
 .eligible-receiver-chip:active { cursor: grabbing; }
+
+.field-console-stage {
+  position: relative;
+}
+
+.field-console-stage .play-caller {
+  position: absolute;
+  right: clamp(14px, 2.5vw, 28px);
+  top: 656px;
+  z-index: 300;
+  transform: translateY(-100%);
+  width: min(760px, calc(100% - 28px));
+  margin: 0;
+  border-color: rgba(248, 250, 252, 0.28);
+  background: rgba(15, 23, 42, 0.94);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+}
+
+.field-console-stage .play-caller.collapsed {
+  width: auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.field-console-stage .control-panel-toggle {
+  width: auto;
+  min-width: 150px;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.42);
+}
+
+.field-console-stage .play-caller:not(.collapsed) .control-panel-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  min-width: 0;
+  padding: 8px 12px;
+}
+
+.field-console-stage .play-caller h3 {
+  margin: 0 135px 12px 0;
+}
+
+.field-console-stage .play-call-summary {
+  margin-bottom: 8px;
+}
+
+.field-console-stage .game-controls.primary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.field-console-stage .game-controls.primary button {
+  min-height: 48px;
+}
+
+@media (max-width: 720px) {
+  .field-console-stage .play-caller {
+    top: 644px;
+  }
+
+  .field-console-stage .game-controls.primary {
+    grid-template-columns: 1fr;
+  }
+}

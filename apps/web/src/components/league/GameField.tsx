@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import "./GameField.css";
 
@@ -214,6 +214,11 @@ export default function GameField() {
   const isRunningRef = useRef(false);
   const footballFollowRafRef = useRef<number | null>(null);
   const activePhaseDurationMsRef = useRef(DEFAULT_PHASE_DURATION_MS);
+  const [selectedPlayerMenu, setSelectedPlayerMenu] = useState<{
+    player: AnimationPlayer;
+    leftPct: number;
+    topPct: number;
+  } | null>(null);
 
   const showError = useCallback((message: string) => {
     if (errorBoxRef.current) {
@@ -463,6 +468,7 @@ export default function GameField() {
       stopFootballFollow();
       playersRef.current = {};
       labelsRef.current = {};
+      setSelectedPlayerMenu(null);
       footballCarrierIdRef.current = null;
       if (scoreMainRef.current)
         scoreMainRef.current.textContent =
@@ -581,6 +587,20 @@ export default function GameField() {
         label.textContent = player.name;
         el.appendChild(img);
         el.appendChild(label);
+        el.tabIndex = 0;
+        el.setAttribute("role", "button");
+        el.setAttribute("aria-label", `Open ${player.name} player actions`);
+        const openPlayerMenu = (event: MouseEvent | KeyboardEvent) => {
+          event.stopPropagation();
+          const target = event.currentTarget as HTMLDivElement;
+          const leftPct = parseFloat(target.style.left) || player.x;
+          const topPct = parseFloat(target.style.top) || yardToYPct(player.yard);
+          setSelectedPlayerMenu({ player, leftPct, topPct });
+        };
+        el.addEventListener("click", openPlayerMenu);
+        el.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") openPlayerMenu(event);
+        });
         field.appendChild(el);
         playersRef.current[player.id] = {
           ...player,
@@ -768,7 +788,12 @@ export default function GameField() {
   return (
     <div className="game-shell">
       <div className="field-viewport" id="fieldViewport" ref={fieldViewportRef}>
-        <div className="field-wrap" id="field" ref={fieldRef}>
+        <div
+          className="field-wrap"
+          id="field"
+          ref={fieldRef}
+          onClick={() => setSelectedPlayerMenu(null)}
+        >
           <div className="field-title">Dynamic Football Animation View</div>
           <div className="team-end" id="cltEnd" ref={cltEndRef}>
             WILDFIRE
@@ -789,6 +814,22 @@ export default function GameField() {
             END
           </div>
           <div className="football" id="football" ref={footballRef} />
+          {selectedPlayerMenu && (
+            <div
+              className="player-action-menu"
+              style={{
+                left: `${selectedPlayerMenu.leftPct}%`,
+                top: `${selectedPlayerMenu.topPct}%`,
+              }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="player-action-menu-title">
+                {selectedPlayerMenu.player.name}
+              </div>
+              <button type="button">Substitute</button>
+              <button type="button">Change Position</button>
+            </div>
+          )}
         </div>
       </div>
       <div className="caption" id="caption" ref={captionRef}>

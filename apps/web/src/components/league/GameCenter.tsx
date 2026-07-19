@@ -1476,19 +1476,21 @@ export function GameCenter({
               </div>
             </div>
           </div>
-          <GameField />
+          <div className="field-console-stage">
+            <GameField />
+            <GameControls
+              game={currentGame}
+              players={players}
+              options={playOptions}
+              onOptionsChange={setPlayOptions}
+              onAction={action}
+            />
+          </div>
           {lastPlay && (
             <div className="last-play-desc">
               <strong>Last Play:</strong> {lastPlay}
             </div>
           )}
-          <GameControls
-            game={currentGame}
-            players={players}
-            options={playOptions}
-            onOptionsChange={setPlayOptions}
-            onAction={action}
-          />
           <ScoreChart game={currentGame} history={history} />
           <LeaderCard
             game={currentGame}
