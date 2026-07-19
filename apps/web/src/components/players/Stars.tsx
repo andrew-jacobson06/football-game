@@ -11,11 +11,15 @@ export function Stars({ value }: StarsProps) {
   return (
     <span className="stars" aria-label={`${numericValue} stars`}>
       {Array.from({ length: full }, (_, index) => (
-        <span className="star full" key={`full-${index}`}>★</span>
+        <span className="star full" key={`full-${index}`}>
+          ★
+        </span>
       ))}
       {half && <span className="star half">★</span>}
       {Array.from({ length: empty }, (_, index) => (
-        <span className="star empty" key={`empty-${index}`}>★</span>
+        <span className="star empty" key={`empty-${index}`}>
+          ★
+        </span>
       ))}
     </span>
   );

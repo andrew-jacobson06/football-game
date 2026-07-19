@@ -7,10 +7,21 @@ type PlayerListProps = {
   onBack?: () => void;
 };
 
-export function PlayerList({ players, onSelectPlayer, onBack }: PlayerListProps) {
+export function PlayerList({
+  players,
+  onSelectPlayer,
+  onBack,
+}: PlayerListProps) {
   return (
     <div id="playerListView">
-      <button id="playerListBack" className="back-button" type="button" onClick={onBack}>← Back</button>
+      <button
+        id="playerListBack"
+        className="back-button"
+        type="button"
+        onClick={onBack}
+      >
+        ← Back
+      </button>
       <table id="playerTable" className="player-table">
         <thead>
           <tr>
@@ -22,11 +33,18 @@ export function PlayerList({ players, onSelectPlayer, onBack }: PlayerListProps)
         </thead>
         <tbody>
           {players.map((player, index) => (
-            <tr key={`${player.Name ?? "player"}-${index}`} onClick={() => onSelectPlayer(player)}>
+            <tr
+              key={`${player.Name ?? "player"}-${index}`}
+              onClick={() => onSelectPlayer(player)}
+            >
               <td>{player.Name}</td>
-              <td>{player.Pos}/{player.DefPos}</td>
               <td>
-                O:<Stars value={player["Off Stars"]} /> D:<Stars value={player["Def Stars"]} />
+                {player.Pos}/{player.DefPos}
+              </td>
+              <td>
+                O:
+                <Stars value={player["Off Stars"]} /> D:
+                <Stars value={player["Def Stars"]} />
               </td>
               <td>{player.Team}</td>
             </tr>
