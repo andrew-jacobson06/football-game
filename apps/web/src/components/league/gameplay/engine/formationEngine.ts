@@ -37,7 +37,20 @@ export function generateDefensiveFormation(
     defenders
       .filter((p) => str(p.defPos ?? p.DefPos).toUpperCase() === defPos)
       .sort((a, b) => trait(b, "defStars") - trait(a, "defStars"));
-  const dbs = group("DB"),
+  const dbCoverageScore = (p: PlayerTrait) =>
+    trait(p, "coverage") +
+    trait(p, "readQB") +
+    trait(p, "speed") +
+    trait(p, "acceleration");
+  const groupDbsByCoverage = () =>
+    defenders
+      .filter((p) => str(p.defPos ?? p.DefPos).toUpperCase() === "DB")
+      .sort(
+        (a, b) =>
+          dbCoverageScore(b) - dbCoverageScore(a) ||
+          trait(b, "defStars") - trait(a, "defStars"),
+      );
+  const dbs = groupDbsByCoverage(),
     dls = group("DL"),
     lbs = group("LB"),
     safeties = group("S");
@@ -74,7 +87,7 @@ export function generateDefensiveFormation(
     trait(byName(ctx, b.player), "offStars", 0) -
     trait(byName(ctx, a.player), "offStars", 0);
 
-  // Wide receivers create the first defensive obligations: the best available DBs travel to the highest-star receivers first.
+  // Wide receivers create the first defensive obligations: the best available DB coverage-score defenders travel to the highest-star receivers first.
   offense
     .filter((s) => s.position.startsWith("WR"))
     .sort(offenseByPlayerStars)
