@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { LeagueGame } from "./types";
 import type {
   PlayCallOptions,
@@ -7,16 +7,6 @@ import type {
 } from "./gameplay/gameEngine";
 
 const str = (v: unknown) => String(v ?? "");
-const LINE_SLOTS: FormationSlot[] = [
-  "WR1",
-  "TEOL1",
-  "TEOL2",
-  "TEOL3",
-  "TEOL4",
-  "TEOL5",
-  "WR2",
-  "WR3",
-];
 const WR_SLOTS: FormationSlot[] = ["WR1", "WR2", "WR3"];
 const RB_SLOTS: FormationSlot[] = ["RB1", "RB2"];
 const TEOL_SLOTS: FormationSlot[] = [
@@ -37,6 +27,8 @@ type Props = {
   options: PlayCallOptions;
   onOptionsChange: (next: PlayCallOptions) => void;
   onAction: (label: string, options?: PlayCallOptions) => void;
+  onFormationModeChange?: (active: boolean) => void;
+  onSelectedFormationPlayerChange?: (player: string) => void;
 };
 
 function nameOf(p: Player) {
@@ -200,15 +192,21 @@ export function GameControls({
   options,
   onOptionsChange,
   onAction,
+  onFormationModeChange,
+  onSelectedFormationPlayerChange,
 }: Props) {
   const [collapsed, setCollapsed] = useState(true);
-  const [modal, setModal] = useState<
-    "formation" | "routes" | "run" | "clock" | null
-  >(null);
+  const [modal, setModal] = useState<"routes" | "run" | "clock" | null>(null);
+  const [settingFormation, setSettingFormation] = useState(false);
   const [selected, setSelected] = useState<string>("");
   const [detail, setDetail] = useState<string>("");
 
   const offenseTeam = game.Possession === "Home" ? game.Home : game.Away;
+
+  useEffect(() => {
+    onFormationModeChange?.(settingFormation);
+  }, [onFormationModeChange, settingFormation]);
+
   const roster = useMemo(
     () => players.filter((p) => teamOf(p) === offenseTeam),
     [players, offenseTeam],
@@ -227,34 +225,18 @@ export function GameControls({
   );
   const setOpt = (patch: Partial<PlayCallOptions>) =>
     onOptionsChange({ ...options, ...patch });
-  const putPlayer = (slot: FormationSlot, player: string) => {
-    const next = Object.fromEntries(
-      Object.entries(formation).filter(([, v]) => v !== player),
-    ) as Partial<Record<FormationSlot, string>>;
-    if (player) next[slot] = player;
-    setOpt({ formation: next });
-    setSelected("");
-  };
-  const removePlayer = (slot: FormationSlot) => {
-    const player = formation[slot];
-    const nextFormation = { ...formation };
-    delete nextFormation[slot];
-    const nextRoutes = { ...routes };
-    const nextReads = { ...reads };
-    if (player) {
-      delete nextRoutes[player];
-      delete nextReads[player];
-    }
-    setOpt({
-      formation: nextFormation,
-      routes: nextRoutes,
-      reads: nextReads,
-      runner: options.runner === player ? undefined : options.runner,
-    });
-  };
   const bench = roster.filter(
     (p) => !Object.values(formation).includes(nameOf(p)),
   );
+  const selectedBenchPlayer = bench.some((player) => nameOf(player) === selected)
+    ? selected
+    : "";
+
+  useEffect(() => {
+    onSelectedFormationPlayerChange?.(
+      settingFormation ? selectedBenchPlayer : "",
+    );
+  }, [onSelectedFormationPlayerChange, selectedBenchPlayer, settingFormation]);
   const setRouteAndRead = (
     player: string,
     route: string,
@@ -301,7 +283,9 @@ export function GameControls({
             <span>Clock: {options.clockMode || "Normal"}</span>
           </div>
           <div className="game-controls primary">
-            <button onClick={() => setModal("formation")}>Set Formation</button>
+            <button onClick={() => setSettingFormation((active) => !active)}>
+              {settingFormation ? "Hide Bench" : "Set Formation"}
+            </button>
             <button
               disabled={!validFormation}
               onClick={() => onAction("Run Play", optionsWithDefense())}
@@ -320,166 +304,30 @@ export function GameControls({
           </div>
         </>
       )}
-      {modal === "formation" && (
-        <ControlModal full onClose={() => setModal(null)}>
-          <h3>Offensive Formation</h3>
-          <div className="formation-field">
-            <div className="formation-row top-row">
-              {LINE_SLOTS.map((slot) => (
-                <div
-                  key={slot}
-                  className={`formation-slot ${slot.startsWith("WR") ? "wr" : "teol"} ${REQUIRED.has(slot) ? "required" : ""} ${formation[slot] ? "filled" : ""}`}
-                  data-label={slot}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) =>
-                    putPlayer(slot, e.dataTransfer.getData("text/plain"))
-                  }
-                  onClick={() => selected && putPlayer(slot, selected)}
-                >
-                  {formation[slot] && (
-                    <div
-                      draggable
-                      onDragStart={(e) =>
-                        e.dataTransfer.setData(
-                          "text/plain",
-                          formation[slot] || "",
-                        )
-                      }
-                    >
-                      <button
-                        type="button"
-                        className="formation-remove"
-                        aria-label={`Remove ${formation[slot]} from ${slot}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removePlayer(slot);
-                        }}
-                      >
-                        ×
-                      </button>
-                      <PlayerBubble
-                        name={formation[slot]}
-                        player={byName(formation[slot])}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="formation-row middle-row">
-              <div
-                className={`formation-slot qb required ${formation.QB ? "filled" : ""}`}
-                data-label="QB"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) =>
-                  putPlayer("QB", e.dataTransfer.getData("text/plain"))
-                }
-                onClick={() => selected && putPlayer("QB", selected)}
-              >
-                {formation.QB && (
-                  <div
-                    draggable
-                    onDragStart={(e) =>
-                      e.dataTransfer.setData("text/plain", formation.QB || "")
-                    }
-                  >
-                    <button
-                      type="button"
-                      className="formation-remove"
-                      aria-label={`Remove ${formation.QB} from QB`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removePlayer("QB");
-                      }}
-                    >
-                      ×
-                    </button>
-                    <PlayerBubble
-                      name={formation.QB}
-                      player={byName(formation.QB)}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="formation-row bottom-row">
-              {(["RB1", "RB2"] as FormationSlot[]).map((slot) => (
-                <div
-                  key={slot}
-                  className={`formation-slot rb ${formation[slot] ? "filled" : ""}`}
-                  data-label={slot}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) =>
-                    putPlayer(slot, e.dataTransfer.getData("text/plain"))
-                  }
-                  onClick={() => selected && putPlayer(slot, selected)}
-                >
-                  {formation[slot] && (
-                    <div
-                      draggable
-                      onDragStart={(e) =>
-                        e.dataTransfer.setData(
-                          "text/plain",
-                          formation[slot] || "",
-                        )
-                      }
-                    >
-                      <button
-                        type="button"
-                        className="formation-remove"
-                        aria-label={`Remove ${formation[slot]} from ${slot}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removePlayer(slot);
-                        }}
-                      >
-                        ×
-                      </button>
-                      <PlayerBubble
-                        name={formation[slot]}
-                        player={byName(formation[slot])}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="bench-wrapper">
+      {settingFormation && (
+        <div className="field-formation-bench" aria-label="Offensive bench">
+          <div className="field-formation-bench-header">
             <h4>Bench</h4>
-            <div className="bench">
-              {bench.map((p) => (
-                <button
-                  type="button"
-                  draggable
-                  onDragStart={(e) =>
-                    e.dataTransfer.setData("text/plain", nameOf(p))
-                  }
-                  onClick={() =>
-                    setSelected(selected === nameOf(p) ? "" : nameOf(p))
-                  }
-                  className={`player-item ${selected === nameOf(p) ? "selected" : ""}`}
-                  key={nameOf(p)}
-                >
-                  <PlayerBubble name={nameOf(p)} player={p} />
-                  <span className="player-name">
-                    {nameOf(p)} - {posOf(p)}
-                  </span>
-                </button>
-              ))}
-            </div>
+            <span>Pick a player, then pick an open field slot.</span>
           </div>
-          <div className="formation-actions">
-            <button
-              onClick={() => setOpt({ formation: {}, routes: {}, reads: {} })}
-            >
-              Clear
-            </button>
-            <button disabled={!validFormation} onClick={() => setModal(null)}>
-              Save
-            </button>
+          <div className="bench bench-ten-wide">
+            {bench.map((p) => (
+              <button
+                type="button"
+                onClick={() =>
+                  setSelected(selectedBenchPlayer === nameOf(p) ? "" : nameOf(p))
+                }
+                className={`player-item ${selectedBenchPlayer === nameOf(p) ? "selected" : ""}`}
+                key={nameOf(p)}
+              >
+                <PlayerBubble name={nameOf(p)} player={p} />
+                <span className="player-name">
+                  {nameOf(p)} - {posOf(p)}
+                </span>
+              </button>
+            ))}
           </div>
-        </ControlModal>
+        </div>
       )}
       {modal === "routes" && (
         <ControlModal wide onClose={() => setModal(null)}>

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { FormationSlot } from "./gameplay/gameEngine";
 
 import "./GameField.css";
+
+type FormationPlayer = Record<string, unknown>;
+type FormationSlotSetup = { lane: string; yardOffsetFromLos: number };
 
 type PlayerAssignment = {
   type?: string;
@@ -157,6 +161,42 @@ const DEFAULT_LINEUPS_BY_POSITION: Record<
   TE1: { lane: "RT", yardOffsetFromLos: -1 },
   TE2: { lane: "LT", yardOffsetFromLos: -1 },
 };
+const FORMATION_SLOT_LINEUP: Record<FormationSlot, FormationSlotSetup> = {
+  WR1: DEFAULT_LINEUPS_BY_POSITION.WR1,
+  WR2: DEFAULT_LINEUPS_BY_POSITION.WR2,
+  WR3: DEFAULT_LINEUPS_BY_POSITION.WR3,
+  RB1: DEFAULT_LINEUPS_BY_POSITION.RB1,
+  RB2: DEFAULT_LINEUPS_BY_POSITION.RB2,
+  QB: DEFAULT_LINEUPS_BY_POSITION.QB,
+  TEOL1: DEFAULT_LINEUPS_BY_POSITION.LT,
+  TEOL2: DEFAULT_LINEUPS_BY_POSITION.LG,
+  TEOL3: DEFAULT_LINEUPS_BY_POSITION.C,
+  TEOL4: DEFAULT_LINEUPS_BY_POSITION.RG,
+  TEOL5: DEFAULT_LINEUPS_BY_POSITION.RT,
+};
+const FORMATION_SLOTS: FormationSlot[] = [
+  "WR1",
+  "TEOL1",
+  "TEOL2",
+  "TEOL3",
+  "TEOL4",
+  "TEOL5",
+  "WR2",
+  "WR3",
+  "QB",
+  "RB1",
+  "RB2",
+];
+const REQUIRED_FORMATION_SLOTS = new Set<FormationSlot>([
+  "QB",
+  "TEOL2",
+  "TEOL3",
+  "TEOL4",
+]);
+const nameOf = (p?: FormationPlayer) => String(p?.name ?? p?.Name ?? "");
+const imgOf = (p?: FormationPlayer) =>
+  String(p?.image ?? p?.Image ?? p?.photo ?? p?.Photo ?? "");
+
 const OFFENSIVE_DEFAULT_LANES: Record<string, string> = Object.fromEntries(
   Object.entries(DEFAULT_LINEUPS_BY_POSITION).map(([position, setup]) => [
     position,
@@ -194,7 +234,19 @@ const resolveMoveX = (move?: PlayerMoveStep) =>
 const yardToYPct = (yard: number) =>
   91.8 - (Math.max(0, Math.min(100, yard)) / 100) * (91.8 - 8.2);
 
-export default function GameField() {
+export default function GameField({
+  formationMode = false,
+  formation = {},
+  players = [],
+  selectedFormationPlayer = "",
+  onFormationSlotClick,
+}: {
+  formationMode?: boolean;
+  formation?: Partial<Record<FormationSlot, string>>;
+  players?: FormationPlayer[];
+  selectedFormationPlayer?: string;
+  onFormationSlotClick?: (slot: FormationSlot) => void;
+}) {
   const fieldViewportRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
   const footballRef = useRef<HTMLDivElement>(null);
@@ -216,6 +268,8 @@ export default function GameField() {
     leftPct: number;
     topPct: number;
   } | null>(null);
+  const findFormationPlayer = (playerName?: string) =>
+    players.find((player) => nameOf(player) === playerName);
 
   const showError = useCallback((message: string) => {
     if (errorBoxRef.current) {
@@ -803,6 +857,49 @@ export default function GameField() {
             END
           </div>
           <div className="football" id="football" ref={footballRef} />
+          {formationMode &&
+            FORMATION_SLOTS.map((slot) => {
+              const lineup = FORMATION_SLOT_LINEUP[slot];
+              const playerName = formation[slot];
+              const player = findFormationPlayer(playerName);
+              const playerImage = imgOf(player);
+              const isOpen = !playerName;
+              return (
+                <button
+                  key={slot}
+                  type="button"
+                  className={`field-formation-slot ${slot.startsWith("WR") ? "wr" : slot.startsWith("RB") ? "rb" : slot === "QB" ? "qb" : "teol"} ${REQUIRED_FORMATION_SLOTS.has(slot) ? "required" : ""} ${playerName ? "filled" : "open"} ${selectedFormationPlayer && isOpen ? "targetable" : ""}`}
+                  style={{
+                    left: `${LANES[lineup.lane] ?? 50}%`,
+                    top: `${yardToYPct(55 + lineup.yardOffsetFromLos)}%`,
+                  }}
+                  aria-label={
+                    playerName
+                      ? `${slot}: ${playerName}`
+                      : selectedFormationPlayer
+                        ? `Place ${selectedFormationPlayer} at ${slot}`
+                        : `${slot} open`
+                  }
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (isOpen) onFormationSlotClick?.(slot);
+                  }}
+                >
+                  {playerName ? (
+                    playerImage ? (
+                      <img src={playerImage} alt={playerName} />
+                    ) : (
+                      <span className="field-formation-avatar">👤</span>
+                    )
+                  ) : (
+                    <span className="field-formation-label">{slot}</span>
+                  )}
+                  {playerName && (
+                    <span className="field-formation-name">{playerName}</span>
+                  )}
+                </button>
+              );
+            })}
           {selectedPlayerMenu && (
             <div
               className="player-action-menu"
