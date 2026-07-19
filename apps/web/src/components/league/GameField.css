@@ -111,7 +111,7 @@ body {
   left: 50%;
   z-index: 5;
   transform: translateX(-50%);
-  font-size: 7.5vw;
+  font-size: min(100px, 12vw);
   font-weight: 1000;
   letter-spacing: 0.22em;
   color: rgba(255, 255, 255);

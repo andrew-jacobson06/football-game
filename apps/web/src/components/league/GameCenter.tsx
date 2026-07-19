@@ -1413,7 +1413,7 @@ export function GameCenter({
         ← Back
       </button>
       <GameScoreboard game={currentGame} />
-      <div className="spectate-control">
+      {/* <div className="spectate-control">
         <label className="spectate-switch">
           <input
             type="checkbox"
@@ -1430,7 +1430,7 @@ export function GameCenter({
           <div className="spectate-label">Spectate</div>
           <div className="spectate-status">OFF</div>
         </div>
-      </div>
+      </div> */}
       <div className="tabs">
         {(["gamecast", "playbyplay", "boxscore", "teamstats"] as GameTab[]).map(
           (t) => (
