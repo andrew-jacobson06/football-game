@@ -324,6 +324,8 @@ export default function GameField({
   players = [],
   selectedFormationPlayer = "",
   onFormationSlotClick,
+  onPlayerSubstitute,
+  onPlayerChangePosition,
   homeLogo,
   homeTeam,
   awayTeam,
@@ -334,6 +336,8 @@ export default function GameField({
   players?: FormationPlayer[];
   selectedFormationPlayer?: string;
   onFormationSlotClick?: (slot: FormationSlot) => void;
+  onPlayerSubstitute?: (playerName: string) => void;
+  onPlayerChangePosition?: (playerName: string) => void;
   homeLogo?: string;
   homeTeam?: string;
   awayTeam?: string;
@@ -1096,6 +1100,36 @@ export default function GameField({
               );
             })}
 
+          {formationMode &&
+            defense.map((assignment) => {
+              const lineup = assignment.align
+                ? FORMATION_SLOT_LINEUP[assignment.align as FormationSlot]
+                : defensiveLineupForPosition(assignment.position);
+              if (!lineup) return null;
+              const player = findFormationPlayer(assignment.player);
+              const playerImage = imgOf(player);
+              return (
+                <div
+                  key={`${assignment.position}-${assignment.player}`}
+                  className="field-formation-slot defense"
+                  style={{
+                    left: `${LANES[lineup.lane] ?? 50}%`,
+                    top: `${yardToYPct(55 + lineup.yardOffsetFromLos)}%`,
+                  }}
+                  aria-hidden="true"
+                >
+                  {playerImage ? (
+                    <img src={playerImage} alt="" />
+                  ) : (
+                    <span className="field-formation-avatar">👤</span>
+                  )}
+                  <span className="field-formation-name">
+                    {assignment.player}
+                  </span>
+                </div>
+              );
+            })}
+
           {selectedPlayerMenu && (
             <div
               className="player-action-menu"
@@ -1108,8 +1142,24 @@ export default function GameField({
               <div className="player-action-menu-title">
                 {selectedPlayerMenu.player.name}
               </div>
-              <button type="button">Substitute</button>
-              <button type="button">Change Position</button>
+              <button
+                type="button"
+                onClick={() => {
+                  onPlayerSubstitute?.(selectedPlayerMenu.player.name);
+                  setSelectedPlayerMenu(null);
+                }}
+              >
+                Substitute
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onPlayerChangePosition?.(selectedPlayerMenu.player.name);
+                  setSelectedPlayerMenu(null);
+                }}
+              >
+                Change Position
+              </button>
             </div>
           )}
         </div>

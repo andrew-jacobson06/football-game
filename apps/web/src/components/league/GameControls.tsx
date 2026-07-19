@@ -25,6 +25,7 @@ type Props = {
   onFormationModeChange?: (active: boolean) => void;
   onSelectedFormationPlayerChange?: (player: string) => void;
   selectedFormationPlayer?: string;
+  requestedFormationMode?: boolean;
 };
 
 /**
@@ -236,6 +237,7 @@ export function GameControls({
   onFormationModeChange,
   onSelectedFormationPlayerChange,
   selectedFormationPlayer = "",
+  requestedFormationMode,
 }: Props) {
   const [collapsed, setCollapsed] = useState(true);
   const [modal, setModal] = useState<"routes" | "run" | "clock" | null>(null);
@@ -245,9 +247,11 @@ export function GameControls({
 
   const offenseTeam = game.Possession === "Home" ? game.Home : game.Away;
 
-  useEffect(() => {
-    onFormationModeChange?.(settingFormation);
-  }, [onFormationModeChange, settingFormation]);
+  const activeFormationMode = requestedFormationMode ?? settingFormation;
+  const setFormationMode = (active: boolean) => {
+    setSettingFormation(active);
+    onFormationModeChange?.(active);
+  };
 
   const roster = useMemo(
     () => players.filter((p) => teamOf(p) === offenseTeam),
@@ -286,10 +290,13 @@ export function GameControls({
     : "";
 
   useEffect(() => {
-    onSelectedFormationPlayerChange?.(
-      settingFormation ? selectedBenchPlayer : "",
-    );
-  }, [onSelectedFormationPlayerChange, selectedBenchPlayer, settingFormation]);
+    if (!activeFormationMode) {
+      onSelectedFormationPlayerChange?.("");
+      return;
+    }
+    if (selectedBenchPlayer)
+      onSelectedFormationPlayerChange?.(selectedBenchPlayer);
+  }, [activeFormationMode, onSelectedFormationPlayerChange, selectedBenchPlayer]);
   const setRouteAndRead = (
     player: string,
     route: string,
@@ -319,7 +326,7 @@ export function GameControls({
   const saveFormation = () => {
     // Saving closes the bench but keeps `options.formation` plus the generated defensive mirror available for the next play call.
     onOptionsChange(optionsWithDefense());
-    setSettingFormation(false);
+    setFormationMode(false);
     setSelected("");
   };
 
@@ -350,8 +357,8 @@ export function GameControls({
             <span>Clock: {options.clockMode || "Normal"}</span>
           </div>
           <div className="game-controls primary">
-            <button onClick={() => setSettingFormation((active) => !active)}>
-              {settingFormation ? "Hide Bench" : "Set Formation"}
+            <button onClick={() => setFormationMode(!activeFormationMode)}>
+              {activeFormationMode ? "Hide Bench" : "Set Formation"}
             </button>
             <button
               disabled={!validFormation || runners.length === 0}
@@ -374,7 +381,7 @@ export function GameControls({
           </div>
         </>
       )}
-      {settingFormation && (
+      {activeFormationMode && (
         <div className="field-formation-bench" aria-label="Offensive bench">
           <div className="field-formation-bench-header">
             <h4>Bench</h4>
@@ -428,11 +435,33 @@ export function GameControls({
             {bench.map((p) => (
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
+                  const benchPlayerName = nameOf(p);
+                  if (selectedFieldPlayer) {
+                    const replaceSlot = Object.entries(formation).find(
+                      ([, player]) => player === selectedFieldPlayer,
+                    )?.[0] as FormationSlot | undefined;
+                    if (replaceSlot) {
+                      setOpt({
+                        formation: {
+                          ...formation,
+                          [replaceSlot]: benchPlayerName,
+                        },
+                        routes: {},
+                        reads: {},
+                      });
+                      setSelected("");
+                      onSelectedFormationPlayerChange?.("");
+                      setFormationMode(false);
+                      return;
+                    }
+                  }
                   setSelected(
-                    selectedBenchPlayer === nameOf(p) ? "" : nameOf(p),
-                  )
-                }
+                    selectedBenchPlayer === benchPlayerName
+                      ? ""
+                      : benchPlayerName,
+                  );
+                }}
                 className={`player-item ${selectedBenchPlayer === nameOf(p) ? "selected" : ""}`}
                 key={nameOf(p)}
               >
@@ -447,7 +476,7 @@ export function GameControls({
             <button
               type="button"
               onClick={() => {
-                setSettingFormation(false);
+                setFormationMode(false);
                 setSelected("");
               }}
             >

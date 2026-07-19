@@ -1637,13 +1637,19 @@ export function GameCenter({
                     return;
                   }
 
+                  const selectedPlayerEntry = Object.entries(
+                    currentFormation,
+                  ).find(([, player]) => player === selectedPlayer);
+                  const selectedPlayerSlot = selectedPlayerEntry?.[0] as
+                    | FormationSlot
+                    | undefined;
                   const nextFormation = Object.fromEntries(
                     Object.entries(currentFormation).filter(
                       ([formationSlot, player]) =>
                         formationSlot !== slot && player !== selectedPlayer,
                     ),
                   ) as Partial<Record<FormationSlot, string>>;
-                  const wouldAddPlayer = !slotPlayer;
+                  const wouldAddPlayer = !slotPlayer && !selectedPlayerSlot;
                   const currentPlayerCount =
                     Object.values(currentFormation).filter(Boolean).length;
 
@@ -1653,7 +1659,10 @@ export function GameCenter({
                   )
                     return;
 
-                  // The selected player takes the clicked spot. If the spot was occupied, its previous player naturally returns to the bench because they are omitted from the next formation map.
+                  if (selectedPlayerSlot && slotPlayer) {
+                    nextFormation[selectedPlayerSlot] = slotPlayer;
+                  }
+
                   setPlayOptions({
                     ...playOptions,
                     formation: { ...nextFormation, [slot]: selectedPlayer },
@@ -1661,6 +1670,15 @@ export function GameCenter({
                     reads: {},
                   });
                   setSelectedFormationPlayer("");
+                  setSettingFormation(false);
+                }}
+                onPlayerSubstitute={(playerName) => {
+                  setSelectedFormationPlayer(playerName);
+                  setSettingFormation(true);
+                }}
+                onPlayerChangePosition={(playerName) => {
+                  setSelectedFormationPlayer(playerName);
+                  setSettingFormation(true);
                 }}
               />
             </div>
@@ -1673,6 +1691,7 @@ export function GameCenter({
               onFormationModeChange={setSettingFormation}
               onSelectedFormationPlayerChange={setSelectedFormationPlayer}
               selectedFormationPlayer={selectedFormationPlayer}
+              requestedFormationMode={settingFormation}
             />
           </div>
           {lastPlay && (
