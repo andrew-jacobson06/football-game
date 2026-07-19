@@ -1386,12 +1386,14 @@ export function GameCenter({
     "Loading game state, play history, players, and frontend settings...",
   ]);
   const [isSavingPlay, setIsSavingPlay] = useState(false);
+  const [isResettingPlay, setIsResettingPlay] = useState(false);
   const [isGameFieldCollapsed, setIsGameFieldCollapsed] = useState(false);
   const [settingFormation, setSettingFormation] = useState(false);
   const [autoCloseFormationOnSave, setAutoCloseFormationOnSave] =
     useState(false);
   const [selectedFormationPlayer, setSelectedFormationPlayer] = useState("");
   const previousPossessionRef = useRef(currentGame.Possession);
+  const playInFlightRef = useRef(false);
   const ctx = useMemo(
     () => ({ players, settings, historyLength: history.length }),
     [players, settings, history.length],
@@ -1446,6 +1448,8 @@ export function GameCenter({
     setSelectedFormationPlayer("");
   }, [currentGame.Possession]);
   const persist = async (result: ReturnType<typeof runPlay>) => {
+    if (playInFlightRef.current) return;
+    playInFlightRef.current = true;
     const previousGame = currentGame;
     const previousBallOn = currentGame.BallOn;
     setIsSavingPlay(true);
@@ -1476,15 +1480,17 @@ export function GameCenter({
         game: gamePayload,
       });
       if (result.play.playtype === "Run") {
-        void animatePlay("Run", null, {
-          ...result.game,
-          Previous: previousBallOn,
-        }).catch((error: unknown) => {
+        try {
+          await animatePlay("Run", null, {
+            ...result.game,
+            Previous: previousBallOn,
+          });
+        } catch (error: unknown) {
           setLog((l) => [
             `Play animation skipped: ${error instanceof Error ? error.message : String(error)}`,
             ...l,
           ]);
-        });
+        }
       }
     } catch (error) {
       setCurrentGame(previousGame);
@@ -1495,10 +1501,11 @@ export function GameCenter({
       ]);
     } finally {
       setIsSavingPlay(false);
+      playInFlightRef.current = false;
     }
   };
   const action = (label: string, options: PlayCallOptions = playOptions) => {
-    if (isSavingPlay) {
+    if (isSavingPlay || isResettingPlay || playInFlightRef.current) {
       setLog((l) => [
         "Play save in progress; wait for it to finish before snapping again.",
         ...l,
@@ -1696,6 +1703,7 @@ export function GameCenter({
                   setAutoCloseFormationOnSave(true);
                   setSettingFormation(true);
                 }}
+                onSetupTransitionChange={setIsResettingPlay}
               />
             </div>
             <GameControls
@@ -1711,6 +1719,7 @@ export function GameCenter({
               onSelectedFormationPlayerChange={setSelectedFormationPlayer}
               selectedFormationPlayer={selectedFormationPlayer}
               requestedFormationMode={settingFormation}
+              disabled={isSavingPlay || isResettingPlay}
             />
           </div>
           {lastPlay && (

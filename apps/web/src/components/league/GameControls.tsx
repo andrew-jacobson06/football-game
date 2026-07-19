@@ -26,6 +26,7 @@ type Props = {
   onSelectedFormationPlayerChange?: (player: string) => void;
   selectedFormationPlayer?: string;
   requestedFormationMode?: boolean;
+  disabled?: boolean;
 };
 
 /**
@@ -171,6 +172,7 @@ export function GameControls({
   onSelectedFormationPlayerChange,
   selectedFormationPlayer = "",
   requestedFormationMode,
+  disabled = false,
 }: Props) {
   const [collapsed, setCollapsed] = useState(true);
   const [modal, setModal] = useState<"routes" | "run" | "clock" | null>(null);
@@ -295,17 +297,17 @@ export function GameControls({
             <span>Clock: {options.clockMode || "Normal"}</span>
           </div>
           <div className="game-controls primary">
-            <button onClick={() => setFormationMode(!activeFormationMode)}>
+            <button disabled={disabled} onClick={() => setFormationMode(!activeFormationMode)}>
               {activeFormationMode ? "Hide Bench" : "Set Formation"}
             </button>
             <button
-              disabled={!validFormation || runners.length === 0}
+              disabled={disabled || !validFormation || runners.length === 0}
               onClick={() => setModal("run")}
             >
               Call Run Play
             </button>
             <button
-              disabled={!validFormation}
+              disabled={disabled || !validFormation}
               onClick={() => {
                 if (!canPass) setModal("routes");
                 else onAction("Pass Play", optionsWithDefense());
@@ -313,7 +315,7 @@ export function GameControls({
             >
               Call Pass Play
             </button>
-            <button onClick={() => onAction("Punt", optionsWithDefense())}>
+            <button disabled={disabled} onClick={() => onAction("Punt", optionsWithDefense())}>
               Call Punt Play
             </button>
           </div>
@@ -554,7 +556,7 @@ export function GameControls({
             ))}
           </div>
           <button
-            disabled={!validFormation}
+            disabled={disabled || !validFormation}
             onClick={() => {
               setModal(null);
               onAction("Run Play", {
@@ -582,10 +584,10 @@ export function GameControls({
                 {c}
               </button>
             ))}
-            <button onClick={() => onAction("Spike", options)}>
+            <button disabled={disabled} onClick={() => onAction("Spike", options)}>
               Spike Ball
             </button>
-            <button onClick={() => onAction("Kneel", options)}>Kneel</button>
+            <button disabled={disabled} onClick={() => onAction("Kneel", options)}>Kneel</button>
           </div>
         </ControlModal>
       )}
