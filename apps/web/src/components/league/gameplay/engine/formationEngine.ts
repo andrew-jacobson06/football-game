@@ -17,6 +17,7 @@ export function validateOffensiveFormation(
 export function saveOffensiveFormation(
   formation: Partial<Record<FormationSlot, string>>,
 ): FormationEntry[] {
+  // This is the first durable handoff point: collapse the UI's slot->player map into portable entries that later play resolution can pass to defensive setup.
   return Object.entries(formation)
     .filter(([, player]) => Boolean(player))
     .map(([position, player]) => ({ position, player: String(player) }));
@@ -26,6 +27,7 @@ export function generateDefensiveFormation(
   ctx: EngineContext,
   offense: FormationEntry[] = [],
 ): FormationEntry[] {
+  // Defensive formation starts after the offense is saved because defenders align to known offensive threats rather than guessing at empty slots.
   const defenders = teamPlayers(ctx, defenseTeam(game));
   const group = (defPos: string) =>
     defenders
@@ -42,6 +44,7 @@ export function generateDefensiveFormation(
     return player;
   };
   const out: FormationEntry[] = [];
+  // Wide receivers create the first defensive obligations: the best available DBs travel to those exact receiver slots.
   offense
     .filter((s) => s.position.startsWith("WR"))
     .forEach((slot, i) => {
@@ -53,6 +56,7 @@ export function generateDefensiveFormation(
           align: slot.position,
         });
     });
+  // Offensive linemen define the box, so each occupied line slot receives a DL/LB matchup aligned over that saved offensive position.
   offense
     .filter((s) => OL_SLOTS.has(String(s.position)))
     .forEach((slot, i) => {
@@ -64,6 +68,7 @@ export function generateDefensiveFormation(
           align: slot.position,
         });
     });
+  // After man/box assignments, leftover linebackers and a safety fill the second level/deep help so the final defense is complete enough for run and pass engines.
   [take(lbs), take(lbs), take(safeties)]
     .filter(Boolean)
     .forEach((p, i) =>

@@ -867,12 +867,11 @@ export default function GameField({
               const playerName = formation[slot];
               const player = findFormationPlayer(playerName);
               const playerImage = imgOf(player);
-              const isOpen = !playerName;
               return (
                 <button
                   key={slot}
                   type="button"
-                  className={`field-formation-slot ${slot.startsWith("WR") ? "wr" : slot.startsWith("RB") ? "rb" : slot === "QB" ? "qb" : "teol"} ${REQUIRED_FORMATION_SLOTS.has(slot) ? "required" : ""} ${playerName ? "filled" : "open"} ${selectedFormationPlayer && isOpen ? "targetable" : ""}`}
+                  className={`field-formation-slot ${slot.startsWith("WR") ? "wr" : slot.startsWith("RB") ? "rb" : slot === "QB" ? "qb" : "teol"} ${REQUIRED_FORMATION_SLOTS.has(slot) ? "required" : ""} ${playerName ? "filled" : "open"} ${selectedFormationPlayer ? "targetable" : ""}`}
                   style={{
                     left: `${LANES[lineup.lane] ?? 50}%`,
                     top: `${yardToYPct(55 + lineup.yardOffsetFromLos)}%`,
@@ -886,7 +885,7 @@ export default function GameField({
                   }
                   onClick={(event) => {
                     event.stopPropagation();
-                    if (isOpen) onFormationSlotClick?.(slot);
+                    onFormationSlotClick?.(slot);
                   }}
                 >
                   {playerName ? (

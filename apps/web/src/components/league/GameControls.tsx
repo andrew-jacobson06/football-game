@@ -13,6 +13,7 @@ const OL_SLOTS: FormationSlot[] = ["LT", "LG", "C", "RG", "RT"];
 const REQUIRED = new Set<FormationSlot>(["QB", "LG", "C", "RG"]);
 const ROUTES = ["No Route", "Screen", "Short", "Medium", "Deep", "Bomb"];
 const READS = ["1st", "2nd", "3rd", "4th", "5th"];
+const EMPTY_BENCH_SLOT = "__EMPTY_BENCH_SLOT__";
 
 type Player = Record<string, unknown>;
 type Props = {
@@ -133,6 +134,7 @@ function buildDefense(
   players: Player[],
   formation: Partial<Record<FormationSlot, string>>,
 ): DefensiveAssignment[] {
+  // The defense belongs to the team without possession; deriving it here keeps the UI preview and play-call payload in sync with the scoreboard.
   const defenseTeam = game.Possession === "Home" ? game.Away : game.Home;
   const defenders = players.filter((p) => teamOf(p) === defenseTeam);
   const by = (d: string) =>
@@ -147,6 +149,7 @@ function buildDefense(
     lbs = by("LB"),
     safeties = by("S");
   const take = (arrs: Player[][]) => arrs.find((a) => a.length)?.shift();
+  // Saved receiver slots drive coverage first, then saved offensive-line slots drive front-seven alignment.
   const wrs = WR_SLOTS.filter((s) => formation[s]);
   const ol = OL_SLOTS.filter((s) => formation[s]);
   const out: DefensiveAssignment[] = [];
@@ -164,6 +167,7 @@ function buildDefense(
       align: slot,
     }),
   );
+  // Any remaining defenders key on backfield/QB slots before the safety fallback so the final formation has support against runs and passes.
   let remaining = Math.max(0, 7 - out.length);
   (["QB", "RB1", "RB2"] as FormationSlot[])
     .slice(0, remaining)
@@ -222,9 +226,10 @@ export function GameControls({
   const bench = roster.filter(
     (p) => !Object.values(formation).includes(nameOf(p)),
   );
-  const selectedBenchPlayer = bench.some((player) => nameOf(player) === selected)
-    ? selected
-    : "";
+  const selectedBenchPlayer =
+    selected === EMPTY_BENCH_SLOT || bench.some((player) => nameOf(player) === selected)
+      ? selected
+      : "";
 
   useEffect(() => {
     onSelectedFormationPlayerChange?.(
@@ -245,17 +250,20 @@ export function GameControls({
     setOpt({ routes: nextRoutes, reads: nextReads });
   };
 
+  // Every offensive formation edit is held in `options.formation`; from that saved setup we deterministically generate the defensive alignment preview.
   const defense = useMemo(
     () => buildDefense(game, players, options.formation ?? {}),
     [game, players, options.formation],
   );
 
+  // Snapping a play should carry both the user-saved offense and the generated defense into the engine so the final resolver sees the same field shown in the UI.
   const optionsWithDefense = (): PlayCallOptions => ({
     ...options,
     defense,
   });
 
   const saveFormation = () => {
+    // Saving closes the bench but keeps `options.formation` plus the generated defensive mirror available for the next play call.
     onOptionsChange(optionsWithDefense());
     setSettingFormation(false);
     setSelected("");
@@ -308,9 +316,19 @@ export function GameControls({
         <div className="field-formation-bench" aria-label="Offensive bench">
           <div className="field-formation-bench-header">
             <h4>Bench</h4>
-            <span>Pick a player, then pick an open field slot.</span>
+            <span>Pick a player to place/swap, or pick Empty to remove a fielded player.</span>
           </div>
           <div className="bench bench-ten-wide">
+            <button
+              type="button"
+              onClick={() =>
+                setSelected(selectedBenchPlayer === EMPTY_BENCH_SLOT ? "" : EMPTY_BENCH_SLOT)
+              }
+              className={`player-item ${selectedBenchPlayer === EMPTY_BENCH_SLOT ? "selected" : ""}`}
+            >
+              <PlayerBubble />
+              <span className="player-name">Empty bench slot</span>
+            </button>
             {bench.map((p) => (
               <button
                 type="button"
