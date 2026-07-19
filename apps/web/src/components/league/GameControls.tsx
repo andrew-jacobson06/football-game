@@ -103,7 +103,7 @@ function PlayerBubble({
   const src = imgOf(player);
   return (
     <div
-      className={`${small ? "los-player" : "player-circle-static"} ${name ? "" : "empty"}`}
+      className={`${small ? "control-player-bubble" : "player-circle-static"} ${name ? "" : "empty"}`}
     >
       {name && (src ? <img src={src} alt={name} /> : <span>👤</span>)}
     </div>
@@ -203,7 +203,7 @@ export function GameControls({
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [modal, setModal] = useState<
-    "formation" | "los" | "routes" | "run" | "clock" | null
+    "formation" | "routes" | "run" | "clock" | null
   >(null);
   const [selected, setSelected] = useState<string>("");
   const [detail, setDetail] = useState<string>("");
@@ -279,10 +279,6 @@ export function GameControls({
     defense,
   });
 
-  const supplementalDefenseRows = [
-    defense.filter((d) => d.position.startsWith("S")),
-    defense.filter((d) => d.position.startsWith("LB")),
-  ].filter((row) => row.length > 0);
   return (
     <div
       className={`control-panel play-caller ${collapsed ? "collapsed" : ""}`}
@@ -299,7 +295,6 @@ export function GameControls({
           <h3>{offenseTeam} Play Caller</h3>
           <div className="game-controls">
             <button onClick={() => setModal("formation")}>Formation</button>
-            <button onClick={() => setModal("los")}>View LOS</button>
             <button onClick={() => setModal("routes")}>Routes</button>
             <button onClick={() => setModal("run")}>Run Modal</button>
             <button onClick={() => setModal("clock")}>Clock</button>
@@ -492,61 +487,6 @@ export function GameControls({
             <button disabled={!validFormation} onClick={() => setModal(null)}>
               Save
             </button>
-          </div>
-        </ControlModal>
-      )}
-      {modal === "los" && (
-        <ControlModal wide onClose={() => setModal(null)}>
-          <h3>Line of Scrimmage</h3>
-          <div className="los-field">
-            <div className="los-line" />
-            {supplementalDefenseRows.map((row, index) => (
-              <div className="los-row" key={`defense-row-${index}`}>
-                {row.map((d) => (
-                  <PlayerBubble
-                    key={d.position}
-                    small
-                    name={d.player}
-                    player={byName(d.player)}
-                  />
-                ))}
-              </div>
-            ))}
-            <div className="los-grid">
-              {LINE_SLOTS.map((slot) => (
-                <div className="los-col" key={slot}>
-                  <PlayerBubble
-                    small
-                    name={defense.find((d) => d.align === slot)?.player}
-                    player={byName(
-                      defense.find((d) => d.align === slot)?.player,
-                    )}
-                  />
-                  <PlayerBubble
-                    small
-                    name={formation[slot]}
-                    player={byName(formation[slot])}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="los-row">
-              <PlayerBubble
-                small
-                name={formation.QB}
-                player={byName(formation.QB)}
-              />
-            </div>
-            <div className="los-row">
-              {(["RB1", "RB2"] as FormationSlot[]).map((s) => (
-                <PlayerBubble
-                  key={s}
-                  small
-                  name={formation[s]}
-                  player={byName(formation[s])}
-                />
-              ))}
-            </div>
           </div>
         </ControlModal>
       )}
