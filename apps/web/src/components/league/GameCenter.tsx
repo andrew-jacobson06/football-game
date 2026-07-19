@@ -36,6 +36,8 @@ import type {
   PlayCallOptions,
 } from "./gameplay/gameEngine";
 
+const EXPECTED_PLAYERS_PER_SIDE = 8;
+
 type Play = Record<string, unknown>;
 type LineStatMatchup = {
   offensePlayer?: string;
@@ -1544,6 +1546,15 @@ export function GameCenter({
                         formationSlot !== slot && player !== selectedPlayer,
                     ),
                   ) as Partial<Record<FormationSlot, string>>;
+                  const wouldAddPlayer = !slotPlayer;
+                  const currentPlayerCount =
+                    Object.values(currentFormation).filter(Boolean).length;
+
+                  if (
+                    wouldAddPlayer &&
+                    currentPlayerCount >= EXPECTED_PLAYERS_PER_SIDE
+                  )
+                    return;
 
                   // The selected player takes the clicked spot. If the spot was occupied, its previous player naturally returns to the bench because they are omitted from the next formation map.
                   setPlayOptions({

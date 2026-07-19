@@ -9,10 +9,14 @@ export type FormationEntry = {
 };
 const REQUIRED: FormationSlot[] = ["QB", "LG", "C", "RG"];
 const OL_SLOTS = new Set<string>(["LT", "LG", "C", "RG", "RT"]);
+const EXPECTED_PLAYERS_PER_SIDE = 8;
 export function validateOffensiveFormation(
   formation: Partial<Record<FormationSlot, string>>,
 ) {
-  return REQUIRED.every((slot) => Boolean(formation[slot]));
+  return (
+    Object.values(formation).filter(Boolean).length === EXPECTED_PLAYERS_PER_SIDE &&
+    REQUIRED.every((slot) => Boolean(formation[slot]))
+  );
 }
 export function saveOffensiveFormation(
   formation: Partial<Record<FormationSlot, string>>,
@@ -69,14 +73,15 @@ export function generateDefensiveFormation(
         });
     });
   // After man/box assignments, leftover linebackers and a safety fill the second level/deep help so the final defense is complete enough for run and pass engines.
-  [take(lbs), take(lbs), take(safeties)]
-    .filter(Boolean)
-    .forEach((p, i) =>
-      out.push({
-        position: i === 2 ? "S1" : `LB${i + 1}`,
-        player: playerName(p),
-        align: i === 2 ? "deep" : "box",
-      }),
-    );
-  return out;
+  while (out.length < EXPECTED_PLAYERS_PER_SIDE) {
+    const p = take(lbs) ?? take(safeties) ?? take(dbs) ?? take(dls);
+    if (!p) break;
+    const defPos = str(p.defPos ?? p.DefPos ?? "LB").toUpperCase();
+    out.push({
+      position: `${defPos}${out.length + 1}`,
+      player: playerName(p),
+      align: defPos === "S" || defPos === "DB" ? "deep" : "box",
+    });
+  }
+  return out.slice(0, EXPECTED_PLAYERS_PER_SIDE);
 }
