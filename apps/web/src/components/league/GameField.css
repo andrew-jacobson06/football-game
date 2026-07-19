@@ -649,3 +649,9 @@ textarea {
   font-weight: 900;
   white-space: nowrap;
 }
+
+.field-formation-slot.defense {
+  border-color: #ef4444;
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.86);
+}

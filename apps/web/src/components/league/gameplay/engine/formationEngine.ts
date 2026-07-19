@@ -7,7 +7,8 @@ export type FormationEntry = {
   player: string;
   align?: string;
 };
-const REQUIRED: FormationSlot[] = ["QB", "TEOL2", "TEOL3", "TEOL4"];
+const REQUIRED: FormationSlot[] = ["QB", "LG", "C", "RG"];
+const OL_SLOTS = new Set<string>(["LT", "LG", "C", "RG", "RT"]);
 export function validateOffensiveFormation(
   formation: Partial<Record<FormationSlot, string>>,
 ) {
@@ -53,7 +54,7 @@ export function generateDefensiveFormation(
         });
     });
   offense
-    .filter((s) => s.position.startsWith("TEOL"))
+    .filter((s) => OL_SLOTS.has(String(s.position)))
     .forEach((slot, i) => {
       const p = take(i % 2 ? lbs : dls) ?? take(dls) ?? take(lbs);
       if (p)
