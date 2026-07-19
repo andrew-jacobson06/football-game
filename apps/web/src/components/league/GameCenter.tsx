@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { LeagueGame, GameTab } from "./types";
 import "./GameCenter.css";
 import {
@@ -30,7 +30,7 @@ import {
   spikeBall,
 } from "./gameplay/gameEngine";
 import { animatePlay } from "./gameplay/engine/animationAdapter";
-import type { FrontendSettings, PlayCallOptions } from "./gameplay/gameEngine";
+import type { FormationSlot, FrontendSettings, PlayCallOptions } from "./gameplay/gameEngine";
 
 type Play = Record<string, unknown>;
 type LineStatMatchup = {
@@ -1288,6 +1288,7 @@ export function GameCenter({
   const [isGameFieldCollapsed, setIsGameFieldCollapsed] = useState(false);
   const [settingFormation, setSettingFormation] = useState(false);
   const [selectedFormationPlayer, setSelectedFormationPlayer] = useState("");
+  const previousPossessionRef = useRef(currentGame.Possession);
   const ctx = useMemo(
     () => ({ players, settings, historyLength: history.length }),
     [players, settings, history.length],
@@ -1325,6 +1326,22 @@ export function GameCenter({
       active = false;
     };
   }, [game]);
+
+  useEffect(() => {
+    if (previousPossessionRef.current === currentGame.Possession) return;
+    previousPossessionRef.current = currentGame.Possession;
+    // A new possession means the old offense has left the field, so discard the saved offensive setup, routes, reads, runner, and generated defensive mirror before the next team starts choosing personnel.
+    setPlayOptions((options) => ({
+      ...options,
+      formation: {},
+      routes: {},
+      reads: {},
+      runner: undefined,
+      defense: [],
+    }));
+    setSettingFormation(false);
+    setSelectedFormationPlayer("");
+  }, [currentGame.Possession]);
   const persist = async (result: ReturnType<typeof runPlay>) => {
     const previousGame = currentGame;
     const previousBallOn = currentGame.BallOn;
@@ -1509,15 +1526,34 @@ export function GameCenter({
                 selectedFormationPlayer={selectedFormationPlayer}
                 onFormationSlotClick={(slot) => {
                   const selectedPlayer = selectedFormationPlayer;
-                  if (!selectedPlayer || playOptions.formation?.[slot]) return;
+                  if (!selectedPlayer) return;
+
+                  const currentFormation = playOptions.formation ?? {};
                   const nextFormation = Object.fromEntries(
-                    Object.entries(playOptions.formation ?? {}).filter(
-                      ([, player]) => player !== selectedPlayer,
+                    Object.entries(currentFormation).filter(
+                      ([formationSlot, player]) =>
+                        formationSlot !== slot && player !== selectedPlayer,
                     ),
-                  );
+                  ) as Partial<Record<FormationSlot, string>>;
+
+                  // Selecting an empty bench slot is a remove action: clicking a filled field spot sends that player to the bench without putting anyone back on the field.
+                  if (selectedPlayer === "__EMPTY_BENCH_SLOT__") {
+                    setPlayOptions({
+                      ...playOptions,
+                      formation: nextFormation,
+                      routes: {},
+                      reads: {},
+                    });
+                    setSelectedFormationPlayer("");
+                    return;
+                  }
+
+                  // Otherwise the selected bench player takes the clicked spot. If the spot was occupied, its previous player naturally returns to the bench because they are omitted from the next formation map.
                   setPlayOptions({
                     ...playOptions,
                     formation: { ...nextFormation, [slot]: selectedPlayer },
+                    routes: {},
+                    reads: {},
                   });
                   setSelectedFormationPlayer("");
                 }}
