@@ -16,7 +16,7 @@ type AnimationPlayer = {
   role?: string;
   lane?: string;
   x?: number;
-  yard: number;
+  yard?: number;
   headUrl?: string;
   className?: string;
   assignment?: PlayerAssignment;
@@ -77,8 +77,9 @@ type AnimationPlan = {
   players: AnimationPlayer[];
   phases: AnimationPhase[];
 };
-type RuntimePlayer = AnimationPlayer & {
+type RuntimePlayer = Omit<AnimationPlayer, "yard"> & {
   x: number;
+  yard: number;
   className: string;
   el: HTMLDivElement;
 };
@@ -89,33 +90,80 @@ const PLAY_WIDTH_PCT = 100 - PLAY_WIDTH_INSET_PCT * 2;
 const FIELD_LAYOUT = { topGoalLinePct: 2.4, bottomGoalLinePct: 91.9 };
 const squeezeFieldX = (originalX: number) =>
   PLAY_WIDTH_INSET_PCT + originalX * (PLAY_WIDTH_PCT / 100);
-const LANES: Record<string, number> = {
-  LS: squeezeFieldX(6),
-  LF: squeezeFieldX(17),
-  LT: squeezeFieldX(28),
-  LG: squeezeFieldX(39),
-  C: squeezeFieldX(50),
-  RG: squeezeFieldX(61),
-  RT: squeezeFieldX(72),
-  RF: squeezeFieldX(83),
-  RS: squeezeFieldX(94),
+const LANE_ORDER = [
+  "LSD",
+  "WR1L",
+  "WR1",
+  "SLTL",
+  "SLT2",
+  "LFLTL",
+  "LFLT",
+  "LFLTR",
+  "LTL",
+  "LT",
+  "LGL",
+  "LG",
+  "CL",
+  "C",
+  "CR",
+  "RG",
+  "RGR",
+  "RT",
+  "RTR",
+  "RFLTL",
+  "RFLT",
+  "RFLTR",
+  "SLT1",
+  "SLT1R",
+  "WR2",
+  "WR2L",
+  "RSD",
+];
+const LANES: Record<string, number> = Object.fromEntries(
+  LANE_ORDER.map((lane, index) => [
+    lane,
+    squeezeFieldX((index / (LANE_ORDER.length - 1)) * 100),
+  ]),
+);
+const DEFAULT_LINEUPS_BY_POSITION: Record<
+  string,
+  { lane: string; yardOffsetFromLos: number }
+> = {
+  WR1: { lane: "WR1", yardOffsetFromLos: -1 },
+  WR2: { lane: "WR2", yardOffsetFromLos: -1 },
+  WR3: { lane: "SLT1", yardOffsetFromLos: -1.5 },
+  WR4: { lane: "SLT2", yardOffsetFromLos: -1.5 },
+  RB1: { lane: "LG", yardOffsetFromLos: -6 },
+  RB2: { lane: "RG", yardOffsetFromLos: -6 },
+  QB: { lane: "C", yardOffsetFromLos: -3.5 },
+  LT: { lane: "LT", yardOffsetFromLos: -1 },
+  LG: { lane: "LG", yardOffsetFromLos: -0.75 },
+  C: { lane: "C", yardOffsetFromLos: -0.5 },
+  RG: { lane: "RG", yardOffsetFromLos: -0.75 },
+  RT: { lane: "RT", yardOffsetFromLos: -1 },
+  DB1: { lane: "LSD", yardOffsetFromLos: 1.25 },
+  DB2: { lane: "RSD", yardOffsetFromLos: 1.25 },
+  DB3: { lane: "RFLT", yardOffsetFromLos: 1.25 },
+  LB1: { lane: "LGL", yardOffsetFromLos: 5 },
+  LB2: { lane: "RGR", yardOffsetFromLos: 5 },
+  LB3: { lane: "C", yardOffsetFromLos: 6 },
+  DL1: { lane: "LT", yardOffsetFromLos: 1.5 },
+  DL2: { lane: "LG", yardOffsetFromLos: 1.5 },
+  DL3: { lane: "C", yardOffsetFromLos: 1.5 },
+  DL4: { lane: "RG", yardOffsetFromLos: 1.5 },
+  DL5: { lane: "RT", yardOffsetFromLos: 1.5 },
+  FS: { lane: "C", yardOffsetFromLos: 14 },
+  S1: { lane: "LG", yardOffsetFromLos: 13 },
+  S2: { lane: "RG", yardOffsetFromLos: 13 },
+  TE1: { lane: "RT", yardOffsetFromLos: -1 },
+  TE2: { lane: "LT", yardOffsetFromLos: -1 },
 };
-const LANE_ORDER = ["LS", "LF", "LT", "LG", "C", "RG", "RT", "RF", "RS"];
-const OFFENSIVE_DEFAULT_LANES: Record<string, string> = {
-  QB: "C",
-  RB1: "LG",
-  RB2: "RG",
-  WR1: "LS",
-  WR2: "RS",
-  WR3: "RF",
-  LT: "LT",
-  LG: "LG",
-  C: "C",
-  RG: "RG",
-  RT: "RT",
-  TE1: "RT",
-  TE2: "LT",
-};
+const OFFENSIVE_DEFAULT_LANES: Record<string, string> = Object.fromEntries(
+  Object.entries(DEFAULT_LINEUPS_BY_POSITION).map(([position, setup]) => [
+    position,
+    setup.lane,
+  ]),
+);
 const exampleLaneBasedPlay: AnimationPlan = {
   meta: {
     playId: "EXAMPLE_EMPTY_TEMPLATE",
@@ -205,12 +253,12 @@ export default function GameField() {
         if (player.position === "RB")
           return index === 0 ? "LG" : index === 1 ? "RG" : "C";
         return index === 0
-          ? "LS"
+          ? "WR1"
           : index === 1
-            ? "RS"
+            ? "WR2"
             : index === 2
-              ? "RF"
-              : "LS";
+              ? "SLT1"
+              : "SLT2";
       }
       if (player.position === "TE")
         return player.role && OFFENSIVE_DEFAULT_LANES[player.role]
@@ -224,10 +272,11 @@ export default function GameField() {
     (
       player: AnimationPlayer,
       allPlayers: AnimationPlayer[] = [],
-    ): AnimationPlayer & { x: number } => {
-      if (player.x !== undefined) return { ...player, x: player.x };
+    ): AnimationPlayer & { x: number; yard: number } => {
+      const yard = player.yard ?? 50;
+      if (player.x !== undefined) return { ...player, x: player.x, yard };
       const lane = player.lane || getDefaultLaneForPlayer(player, allPlayers);
-      return { ...player, lane, x: LANES[lane] ?? 50 };
+      return { ...player, lane, x: LANES[lane] ?? 50, yard };
     },
     [getDefaultLaneForPlayer],
   );
@@ -466,9 +515,22 @@ export default function GameField() {
         plan.lines.find((line) => line.id === "los")?.yard ??
         plan.meta?.startYard ??
         50;
-      const normalizedPlayers = plan.players.map((player) =>
-        normalizePlayerLane(player, plan.players),
-      );
+      const normalizedPlayers = plan.players.map((player) => {
+        const lineup = player.role
+          ? DEFAULT_LINEUPS_BY_POSITION[player.role]
+          : player.position
+            ? DEFAULT_LINEUPS_BY_POSITION[player.position]
+            : undefined;
+        return normalizePlayerLane(
+          {
+            ...player,
+            yard:
+              player.yard ??
+              (lineup ? losYard + lineup.yardOffsetFromLos : losYard),
+          },
+          plan.players,
+        );
+      });
       const byId = Object.fromEntries(
         normalizedPlayers.map((player) => [player.id, player]),
       );
