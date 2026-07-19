@@ -236,6 +236,21 @@ const resolveMoveX = (move?: PlayerMoveStep) =>
 const yardToYPct = (yard: number) =>
   91.8 - (Math.max(0, Math.min(100, yard)) / 100) * (91.8 - 8.2);
 
+const playerTeamClass = (team: string) =>
+  team
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-") || "offense";
+const animationPlayerId = (
+  prefix: string,
+  slotOrPosition: string,
+  playerName: string,
+) =>
+  `${prefix}-${slotOrPosition}-${playerName}`
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
 export default function GameField({
   formationMode = false,
   formation = {},
@@ -272,8 +287,78 @@ export default function GameField({
     leftPct: number;
     topPct: number;
   } | null>(null);
-  const findFormationPlayer = (playerName?: string) =>
-    players.find((player) => nameOf(player) === playerName);
+  const findFormationPlayer = useCallback(
+    (playerName?: string) =>
+      players.find((player) => nameOf(player) === playerName),
+    [players],
+  );
+
+  const buildFormationSetupPlan = useCallback((): AnimationPlan => {
+    const losYard = 55;
+    const offensePlayers = FORMATION_SLOTS.flatMap((slot) => {
+      const playerName = formation[slot];
+      if (!playerName) return [];
+      const player = findFormationPlayer(playerName);
+      return [
+        {
+          id: animationPlayerId("off", slot, playerName),
+          name: playerName,
+          team: playerTeamClass(
+            String(player?.team ?? player?.Team ?? "offense"),
+          ),
+          position: slot,
+          role: slot,
+          headUrl: imgOf(player),
+        },
+      ];
+    });
+    const defensePlayers = defense.map((assignment) => {
+      const player = findFormationPlayer(assignment.player);
+      return {
+        id: animationPlayerId("def", assignment.position, assignment.player),
+        name: assignment.player,
+        team: playerTeamClass(
+          String(player?.team ?? player?.Team ?? "defense"),
+        ),
+        position: assignment.position,
+        role: assignment.position,
+        lane: assignment.align
+          ? FORMATION_SLOT_LINEUP[assignment.align]?.lane
+          : undefined,
+        headUrl: imgOf(player),
+      };
+    });
+
+    return {
+      meta: {
+        playId: "FORMATION_SETUP",
+        playType: "Setup",
+        startYard: losYard,
+        endYard: losYard,
+        yardsGained: 0,
+      },
+      scoreboard: {
+        scoreText: scoreMainRef.current?.textContent || "Formation set",
+        situationText:
+          "Formation saved. Players are ready for the upcoming play.",
+      },
+      camera: { note: "Upcoming play setup" },
+      initialFootballCarrierId:
+        offensePlayers.find((player) => player.position === "QB")?.id ||
+        offensePlayers[0]?.id,
+      lines: [
+        { id: "los", label: "LOS", yard: losYard, type: "los" },
+        {
+          id: "firstDown",
+          label: "1ST",
+          yard: losYard + 10,
+          type: "firstDown",
+        },
+      ],
+      players: [...offensePlayers, ...defensePlayers],
+      phases: [],
+    };
+  }, [defense, findFormationPlayer, formation]);
 
   const showError = useCallback((message: string) => {
     if (errorBoxRef.current) {
@@ -641,7 +726,8 @@ export default function GameField({
           event.stopPropagation();
           const target = event.currentTarget as HTMLDivElement;
           const leftPct = parseFloat(target.style.left) || player.x;
-          const topPct = parseFloat(target.style.top) || yardToYPct(player.yard);
+          const topPct =
+            parseFloat(target.style.top) || yardToYPct(player.yard);
           setSelectedPlayerMenu({ player, leftPct, topPct });
         };
         el.addEventListener("click", openPlayerMenu);
@@ -828,6 +914,12 @@ export default function GameField({
     resetAnimationScene(currentPlanRef.current);
   };
   useEffect(() => {
+    if (formationMode) return;
+    if (!Object.values(formation).some(Boolean)) return;
+    resetAnimationScene(buildFormationSetupPlan());
+  }, [buildFormationSetupPlan, formation, formationMode, resetAnimationScene]);
+
+  useEffect(() => {
     loadExampleJson();
     return stopFootballFollow;
   }, [loadExampleJson, stopFootballFollow]);
@@ -908,8 +1000,8 @@ export default function GameField({
             defense.map((assignment) => {
               const lineup = assignment.align
                 ? FORMATION_SLOT_LINEUP[assignment.align]
-                : DEFAULT_LINEUPS_BY_POSITION[assignment.position] ??
-                  DEFAULT_LINEUPS_BY_POSITION.LB3;
+                : (DEFAULT_LINEUPS_BY_POSITION[assignment.position] ??
+                  DEFAULT_LINEUPS_BY_POSITION.LB3);
               const player = findFormationPlayer(assignment.player);
               const playerImage = imgOf(player);
               return (
