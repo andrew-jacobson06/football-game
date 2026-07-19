@@ -30,7 +30,7 @@ function fadeAudio(
   audio: HTMLAudioElement,
   from: number,
   to: number,
-  durationMs: number
+  durationMs: number,
 ) {
   const start = performance.now();
   audio.volume = from;
@@ -55,7 +55,7 @@ export function MainMenuScreen({ onNavigate }: MainMenuScreenProps) {
   const tickerRef = useRef<HTMLDivElement | null>(null);
 
   const [placeholderMessage, setPlaceholderMessage] = useState<string | null>(
-    null
+    null,
   );
 
   useEffect(() => {
@@ -143,12 +143,15 @@ export function MainMenuScreen({ onNavigate }: MainMenuScreenProps) {
     }
 
     setPlaceholderMessage(
-      item.placeholderMessage ?? `${item.label} has not been migrated yet.`
+      item.placeholderMessage ?? `${item.label} has not been migrated yet.`,
     );
   };
 
   return (
-    <section className="main-menu-screen" aria-label="Animal Football Main Menu">
+    <section
+      className="main-menu-screen"
+      aria-label="Animal Football Main Menu"
+    >
       <div className="corner tl" />
       <div className="corner tr" />
       <div className="corner bl" />
@@ -160,12 +163,10 @@ export function MainMenuScreen({ onNavigate }: MainMenuScreenProps) {
         <div className="panel">
           <div className="ticker">
             <div className="track" id="tickerTrack" ref={tickerRef}>
-              WEEK 1 • 8:00 PM ET • HOME vs AWAY{" "}
-              <span className="sep">|</span>
+              WEEK 1 • 8:00 PM ET • HOME vs AWAY <span className="sep">|</span>
               POWER RANKINGS UPDATE • TOP 5: ATL, DAL, DEN, SEA, CLT{" "}
               <span className="sep">|</span>
-              WEATHER: CLEAR • 62°F • 5 MPH WNW{" "}
-              <span className="sep">|</span>
+              WEATHER: CLEAR • 62°F • 5 MPH WNW <span className="sep">|</span>
               INJURY REPORT: RB QUESTIONABLE (ANKLE){" "}
               <span className="sep">|</span>
             </div>

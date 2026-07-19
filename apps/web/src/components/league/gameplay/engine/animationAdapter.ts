@@ -1,157 +1,188 @@
 type AnimationGameState = {
-    DriveStart?: string | number;
-    Previous?: string | number;
-    BallOn: string | number;
-    Possession: string;
+  DriveStart?: string | number;
+  Previous?: string | number;
+  BallOn: string | number;
+  Possession: string;
 };
 
 type AnimationPassResult = Record<string, unknown> | null;
 
-declare function buildArcWithArrow(mountEl: HTMLElement, options: Record<string, unknown>): Promise<void>;
+declare function buildArcWithArrow(
+  mountEl: HTMLElement,
+  options: Record<string, unknown>,
+): Promise<void>;
 
-export async function animatePlay(playType: string, passResult: AnimationPassResult = null, currentState: AnimationGameState){
-    // use current game state to drive the animation in the proper direction
-    const normalizedPassResult = passResult && typeof passResult === 'object'
-        ? { ...passResult, airYards: Number(passResult.airYards) || 0 }
-        : { airYards: 0 };
-    const normalizedPlayType = playType.toLowerCase() === 'run' ? 'Run' : playType;
-    await show3DDrive(currentState, currentState.DriveStart ?? currentState.Previous ?? currentState.BallOn, currentState.Previous ?? currentState.BallOn, currentState.BallOn, normalizedPlayType, normalizedPassResult); //CHANGE - dont hardcode run and pass
+export async function animatePlay(
+  playType: string,
+  passResult: AnimationPassResult = null,
+  currentState: AnimationGameState,
+) {
+  // use current game state to drive the animation in the proper direction
+  const normalizedPassResult =
+    passResult && typeof passResult === "object"
+      ? { ...passResult, airYards: Number(passResult.airYards) || 0 }
+      : { airYards: 0 };
+  const normalizedPlayType =
+    playType.toLowerCase() === "run" ? "Run" : playType;
+  await show3DDrive(
+    currentState,
+    currentState.DriveStart ?? currentState.Previous ?? currentState.BallOn,
+    currentState.Previous ?? currentState.BallOn,
+    currentState.BallOn,
+    normalizedPlayType,
+    normalizedPassResult,
+  ); //CHANGE - dont hardcode run and pass
 }
 
 //UI Functions ONLY - ANIMATIONS BELOW!
-  export function show3DDrive(state: AnimationGameState, startYard: string | number, prevYard: string | number, currentYard: string | number, playType = 'Run', passResult: Record<string, unknown>) {
-    //hid incomplete if nec.
-    const catchPoint = document.getElementById("catchPoint")!;
-    catchPoint.style.display = 'none';
+export function show3DDrive(
+  state: AnimationGameState,
+  startYard: string | number,
+  prevYard: string | number,
+  currentYard: string | number,
+  playType = "Run",
+  passResult: Record<string, unknown>,
+) {
+  //hid incomplete if nec.
+  const catchPoint = document.getElementById("catchPoint")!;
+  catchPoint.style.display = "none";
 
-    const passComplete = Boolean(passResult.completed);
-    if(playType == "Pass" && !passComplete){
-      let airYds = Number(passResult.airYards) || 0;
-      if (state.Possession === 'Away') {
-        airYds = - (Number(passResult.airYards) || 0);
-      }
-      currentYard = Number(prevYard) + airYds;
+  const passComplete = Boolean(passResult.completed);
+  if (playType == "Pass" && !passComplete) {
+    let airYds = Number(passResult.airYards) || 0;
+    if (state.Possession === "Away") {
+      airYds = -(Number(passResult.airYards) || 0);
     }
-    if(passResult.sack){
-      playType = 'Run';
-    }
-
-    const touchdown = Boolean(passResult.touchdown) || (playType === 'Run' && (Number(currentYard) <= 0 || Number(currentYard) >= 100));
-
-    // Hide previous play visuals until we know which animation to show
-    const runDiv = document.getElementById("play")!;
-    const passDiv = document.getElementById("arc-container")!;
-    runDiv.style.display = "none";
-    passDiv.style.display = "none";
-
-    return new Promise<void>(resolve => {
-      const field = document.getElementById("field3D")!;
-      const fieldWidth = field.offsetWidth;
-      const yardPx = fieldWidth / 120;
-      //const canvas = document.getElementById("arcCanvas");
-      //canvas.width = fieldWidth;
-      //canvas.height = fieldHeight;
-      const endYard = touchdown ? (state.Possession === 'Home' ? 102 : -2) : currentYard;
-      let drivePX = (Number(startYard) + 10) * yardPx;
-      let prevPX = (Number(prevYard) + 10) * yardPx;
-      let currPX = (Number(endYard) + 10) * yardPx;
-      const drive = document.getElementById("drive")!;
-      // Handle drive line based on direction
-      if (state.Possession == "Home") {
-        drive.style.left = `${drivePX}px`;
-        drive.style.right = `auto`;
-        drive.style.width = `${prevPX - drivePX}px`;
-        drive.style.setProperty('--left-pos', `-5px`);
-      } else {
-        drivePX = fieldWidth - drivePX;
-        prevPX = fieldWidth - prevPX;
-        currPX = fieldWidth - currPX;
-        drive.style.left = `auto`;
-        drive.style.right = `${drivePX}px`;
-        drive.style.width = `${prevPX - drivePX}px`;
-        drive.style.setProperty('--left-pos', `${prevPX - drivePX - 5}px`);
-      }
-
-      const lastPlay = runDiv;
-      // Fade out old marker
-      lastPlay.style.opacity = "0";// lastDot.style.opacity = arrow.style.opacity = 0;
-      setTimeout(() => {
-        // Prepare the element for the upcoming animation
-        if (playType === 'Run') {
-          runDiv.style.display = "block";
-        } else {
-          passDiv.style.display = "block";
-        }
-        lastPlay.style.transition = "none";
-        lastPlay.style.backgroundColor = playType === 'Pass' ? 'transparent' : 'black';
-        lastPlay.style.width = `0px`;
-        lastPlay.style.opacity = "1";
-        if(state.Possession == "Home"){
-          lastPlay.style.left = `${prevPX}px`;
-        } else{
-          lastPlay.style.right = `${prevPX}px`;
-        }
-
-        if (playType === 'Run') {
-          lastPlay.style.top = `50%`;
-          lastPlay.style.height = `6px`;
-          setTimeout(() => {
-            // Animate based on direction of play
-            if (state.Possession == "Home") {
-              lastPlay.style.transition = "width 1.4s ease, left 1.4s ease";
-              lastPlay.style.left = `${prevPX}px`;
-              lastPlay.style.right = `auto`;
-              lastPlay.style.width = `${currPX - prevPX}px`;
-              if(lastPlay.classList.contains("swapped")){                
-                lastPlay.classList.remove("swapped");
-              }
-            } else {
-              lastPlay.style.transition = "width 1.4s ease, right 1.4s ease";
-              lastPlay.style.left = `auto`;
-              lastPlay.style.right = `${prevPX}px`;
-              lastPlay.style.width = `${(currPX - prevPX)}px`;
-              if(!lastPlay.classList.contains("swapped")){                
-                lastPlay.classList.add("swapped");
-              }
-            }
-            const playWidth = currPX - prevPX;
-            if (playWidth <= 0) {
-              // No animation to wait for; resolve manually after short delay
-              setTimeout(() => {
-                resolve();
-              }, 300);
-            } else {
-              const onEnd = (e: TransitionEvent) => {
-                if (e.propertyName === 'width') {
-                  lastPlay.removeEventListener('transitionend', onEnd);
-                  resolve();
-                }
-              };
-              lastPlay.addEventListener('transitionend', onEnd);
-            }
-          }, 50);
-        } else {
-          //lastDot.style.opacity = arrow.style.opacity = 0;
-          buildArcWithArrow(passDiv, {
-            prevPx: prevPX,
-            currPx: currPX,
-            rise: 150,
-            direction: "up",
-            completion: passComplete,
-          }).then(resolve);
-        }
-      }, 400);
-    });
+    currentYard = Number(prevYard) + airYds;
   }
+  if (passResult.sack) {
+    playType = "Run";
+  }
+
+  const touchdown =
+    Boolean(passResult.touchdown) ||
+    (playType === "Run" &&
+      (Number(currentYard) <= 0 || Number(currentYard) >= 100));
+
+  // Hide previous play visuals until we know which animation to show
+  const runDiv = document.getElementById("play")!;
+  const passDiv = document.getElementById("arc-container")!;
+  runDiv.style.display = "none";
+  passDiv.style.display = "none";
+
+  return new Promise<void>((resolve) => {
+    const field = document.getElementById("field3D")!;
+    const fieldWidth = field.offsetWidth;
+    const yardPx = fieldWidth / 120;
+    //const canvas = document.getElementById("arcCanvas");
+    //canvas.width = fieldWidth;
+    //canvas.height = fieldHeight;
+    const endYard = touchdown
+      ? state.Possession === "Home"
+        ? 102
+        : -2
+      : currentYard;
+    let drivePX = (Number(startYard) + 10) * yardPx;
+    let prevPX = (Number(prevYard) + 10) * yardPx;
+    let currPX = (Number(endYard) + 10) * yardPx;
+    const drive = document.getElementById("drive")!;
+    // Handle drive line based on direction
+    if (state.Possession == "Home") {
+      drive.style.left = `${drivePX}px`;
+      drive.style.right = `auto`;
+      drive.style.width = `${prevPX - drivePX}px`;
+      drive.style.setProperty("--left-pos", `-5px`);
+    } else {
+      drivePX = fieldWidth - drivePX;
+      prevPX = fieldWidth - prevPX;
+      currPX = fieldWidth - currPX;
+      drive.style.left = `auto`;
+      drive.style.right = `${drivePX}px`;
+      drive.style.width = `${prevPX - drivePX}px`;
+      drive.style.setProperty("--left-pos", `${prevPX - drivePX - 5}px`);
+    }
+
+    const lastPlay = runDiv;
+    // Fade out old marker
+    lastPlay.style.opacity = "0"; // lastDot.style.opacity = arrow.style.opacity = 0;
+    setTimeout(() => {
+      // Prepare the element for the upcoming animation
+      if (playType === "Run") {
+        runDiv.style.display = "block";
+      } else {
+        passDiv.style.display = "block";
+      }
+      lastPlay.style.transition = "none";
+      lastPlay.style.backgroundColor =
+        playType === "Pass" ? "transparent" : "black";
+      lastPlay.style.width = `0px`;
+      lastPlay.style.opacity = "1";
+      if (state.Possession == "Home") {
+        lastPlay.style.left = `${prevPX}px`;
+      } else {
+        lastPlay.style.right = `${prevPX}px`;
+      }
+
+      if (playType === "Run") {
+        lastPlay.style.top = `50%`;
+        lastPlay.style.height = `6px`;
+        setTimeout(() => {
+          // Animate based on direction of play
+          if (state.Possession == "Home") {
+            lastPlay.style.transition = "width 1.4s ease, left 1.4s ease";
+            lastPlay.style.left = `${prevPX}px`;
+            lastPlay.style.right = `auto`;
+            lastPlay.style.width = `${currPX - prevPX}px`;
+            if (lastPlay.classList.contains("swapped")) {
+              lastPlay.classList.remove("swapped");
+            }
+          } else {
+            lastPlay.style.transition = "width 1.4s ease, right 1.4s ease";
+            lastPlay.style.left = `auto`;
+            lastPlay.style.right = `${prevPX}px`;
+            lastPlay.style.width = `${currPX - prevPX}px`;
+            if (!lastPlay.classList.contains("swapped")) {
+              lastPlay.classList.add("swapped");
+            }
+          }
+          const playWidth = currPX - prevPX;
+          if (playWidth <= 0) {
+            // No animation to wait for; resolve manually after short delay
+            setTimeout(() => {
+              resolve();
+            }, 300);
+          } else {
+            const onEnd = (e: TransitionEvent) => {
+              if (e.propertyName === "width") {
+                lastPlay.removeEventListener("transitionend", onEnd);
+                resolve();
+              }
+            };
+            lastPlay.addEventListener("transitionend", onEnd);
+          }
+        }, 50);
+      } else {
+        //lastDot.style.opacity = arrow.style.opacity = 0;
+        buildArcWithArrow(passDiv, {
+          prevPx: prevPX,
+          currPx: currPX,
+          rise: 150,
+          direction: "up",
+          completion: passComplete,
+        }).then(resolve);
+      }
+    }, 400);
+  });
+}
 
 //   //New UI functionality
 //   export function makeArcPath(x, y, width, rise, direction = "up", completion) {
 //     let x0 = x, y0 = y;
-//     let x1 = x + width, y1 = y;           // baseline anchors  
+//     let x1 = x + width, y1 = y;           // baseline anchors
 //     if(!completion){
 //       y1 = y-20;
 //     }
-//     let cx = x + width / 2;  
+//     let cx = x + width / 2;
 //     const cy = direction === "up" ? y - rise : y + rise;
 //     if(state.Possession == "Away"){
 //       x0 = width-1;
@@ -164,7 +195,7 @@ export async function animatePlay(playType: string, passResult: AnimationPassRes
 //       end:   { x: x1, y: y1 }
 //     };
 //   }
-  
+
 //   export function buildArcWithArrow(mountEl, { prevPx, currPx, rise, direction = "up", completion }) {
 //     return new Promise(resolve => {
 //       let width = Math.abs(currPx - prevPx);
@@ -290,4 +321,3 @@ export async function animatePlay(playType: string, passResult: AnimationPassRes
 //       }, 100);
 //     });
 //   }
-  

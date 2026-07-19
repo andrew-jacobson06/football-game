@@ -1,7 +1,26 @@
 import type { LeagueGame } from "../../types";
 
-export type PlayKind = "Run" | "Pass" | "Punt" | "Field Goal" | "Two Point" | "Timeout" | "Spike" | "Kneel";
-export type FormationSlot = "WR1" | "TEOL1" | "TEOL2" | "TEOL3" | "TEOL4" | "TEOL5" | "WR2" | "WR3" | "QB" | "RB1" | "RB2";
+export type PlayKind =
+  | "Run"
+  | "Pass"
+  | "Punt"
+  | "Field Goal"
+  | "Two Point"
+  | "Timeout"
+  | "Spike"
+  | "Kneel";
+export type FormationSlot =
+  | "WR1"
+  | "TEOL1"
+  | "TEOL2"
+  | "TEOL3"
+  | "TEOL4"
+  | "TEOL5"
+  | "WR2"
+  | "WR3"
+  | "QB"
+  | "RB1"
+  | "RB2";
 export type ClockMode = "Normal" | "Hurry Up" | "Chew Clock";
 export type DefensiveAssignment = {
   position: string;
@@ -18,12 +37,44 @@ export type PlayCallOptions = {
   defense?: DefensiveAssignment[];
 };
 export type PlayerTrait = Record<string, unknown>;
-export type RunThreshold = { label: string; minYards: number; maxYards: number; rollMin: number; rollMax: number };
-export type RunBreakawaySetting = { label: string; percentage: number; minYards: number; maxYards: number };
-export type RunAccelToLBSetting = { label: string; percentage: number; minYards: number; maxYards: number; yards?: number };
-export type RunSecondarySpeedSetting = { label: string; percentage: number; minYards: number; maxYards: number };
-export type RunSecondaryBreakawaySetting = { label: string; percentage: number; minYards: number; maxYards: number };
-export type RunNegativeYardageSetting = { label: string; percentage: number; minYards: number; maxYards: number };
+export type RunThreshold = {
+  label: string;
+  minYards: number;
+  maxYards: number;
+  rollMin: number;
+  rollMax: number;
+};
+export type RunBreakawaySetting = {
+  label: string;
+  percentage: number;
+  minYards: number;
+  maxYards: number;
+};
+export type RunAccelToLBSetting = {
+  label: string;
+  percentage: number;
+  minYards: number;
+  maxYards: number;
+  yards?: number;
+};
+export type RunSecondarySpeedSetting = {
+  label: string;
+  percentage: number;
+  minYards: number;
+  maxYards: number;
+};
+export type RunSecondaryBreakawaySetting = {
+  label: string;
+  percentage: number;
+  minYards: number;
+  maxYards: number;
+};
+export type RunNegativeYardageSetting = {
+  label: string;
+  percentage: number;
+  minYards: number;
+  maxYards: number;
+};
 export type FrontendSettings = Record<string, unknown> & {
   thresholds?: RunThreshold[];
   breakaways?: RunBreakawaySetting[];

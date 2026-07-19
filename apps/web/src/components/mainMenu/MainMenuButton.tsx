@@ -7,7 +7,11 @@ type MainMenuButtonProps = {
 
 export function MainMenuButton({ item, onSelect }: MainMenuButtonProps) {
   return (
-    <button className="menu-button" type="button" onClick={() => onSelect(item)}>
+    <button
+      className="menu-button"
+      type="button"
+      onClick={() => onSelect(item)}
+    >
       <span>{item.label}</span>
       <span className="underline" />
     </button>

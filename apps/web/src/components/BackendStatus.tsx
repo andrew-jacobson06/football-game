@@ -20,8 +20,7 @@ export function BackendStatus() {
 
   return (
     <aside className={`backend-status ${error ? "backend-status--error" : ""}`}>
-      <strong>Backend:</strong>{" "}
-      {error && <span>{error}</span>}
+      <strong>Backend:</strong> {error && <span>{error}</span>}
       {!error && !apiHealth && <span>Checking...</span>}
       {apiHealth && <span>Connected · {apiHealth.message}</span>}
     </aside>

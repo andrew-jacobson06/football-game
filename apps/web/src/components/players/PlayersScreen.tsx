@@ -30,14 +30,27 @@ export function PlayersScreen({ onBack }: PlayersScreenProps) {
   }, []);
 
   if (selectedPlayer) {
-    return <PlayerCard player={selectedPlayer} onBack={() => setSelectedPlayer(null)} />;
+    return (
+      <PlayerCard
+        player={selectedPlayer}
+        onBack={() => setSelectedPlayer(null)}
+      />
+    );
   }
 
   return (
     <>
       {isLoading && <p className="players-message">Loading players...</p>}
-      {error && <p className="players-message players-message--error">{error}</p>}
-      {!isLoading && !error && <PlayerList players={players} onSelectPlayer={setSelectedPlayer} onBack={onBack} />}
+      {error && (
+        <p className="players-message players-message--error">{error}</p>
+      )}
+      {!isLoading && !error && (
+        <PlayerList
+          players={players}
+          onSelectPlayer={setSelectedPlayer}
+          onBack={onBack}
+        />
+      )}
     </>
   );
 }
