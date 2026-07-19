@@ -1530,6 +1530,9 @@ export function GameCenter({
                 defense={playOptions.defense}
                 players={players}
                 selectedFormationPlayer={selectedFormationPlayer}
+                homeLogo={currentGame.HomeLogo}
+                homeTeam={currentGame.Home}
+                awayTeam={currentGame.Away}
                 onFormationSlotClick={(slot) => {
                   const currentFormation = playOptions.formation ?? {};
                   const selectedPlayer = selectedFormationPlayer;

@@ -67,8 +67,8 @@ type AnimationPlan = {
   meta?: {
     playId?: string;
     playType?: string;
-    offenseTeam?: string;
-    defenseTeam?: string;
+    homeTeam?: string;
+    awayTeam?: string;
     direction?: string;
     startYard?: number;
     endYard?: number;
@@ -209,15 +209,15 @@ const exampleLaneBasedPlay: AnimationPlan = {
   meta: {
     playId: "EXAMPLE_EMPTY_TEMPLATE",
     playType: "Run",
-    offenseTeam: "POR",
-    defenseTeam: "CLT",
+    homeTeam: "HOME",
+    awayTeam: "AWAY",
     direction: "upfield",
     startYard: 55,
     endYard: 55,
     yardsGained: 0,
   },
   scoreboard: {
-    scoreText: "POR 7 | CLT 3",
+    scoreText: "HOME 7 | AWAY 3",
     situationText: "Paste a full play JSON and run it.",
   },
   camera: { note: "Manual scroll field" },
@@ -236,11 +236,16 @@ const resolveMoveX = (move?: PlayerMoveStep) =>
 const yardToYPct = (yard: number) =>
   91.8 - (Math.max(0, Math.min(100, yard)) / 100) * (91.8 - 8.2);
 
-const playerTeamClass = (team: string) =>
-  team
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-") || "offense";
+const sideClassForTeam = (team: string, homeTeam?: string, awayTeam?: string) => {
+  const normalizedTeam = team.trim().toLowerCase();
+  if (homeTeam && normalizedTeam === homeTeam.trim().toLowerCase())
+    return "home";
+  if (awayTeam && normalizedTeam === awayTeam.trim().toLowerCase())
+    return "away";
+  if (normalizedTeam === "home" || normalizedTeam === "away")
+    return normalizedTeam;
+  return normalizedTeam.replace(/[^a-z0-9_-]+/g, "-") || "home";
+};
 const animationPlayerId = (
   prefix: string,
   slotOrPosition: string,
@@ -258,6 +263,9 @@ export default function GameField({
   players = [],
   selectedFormationPlayer = "",
   onFormationSlotClick,
+  homeLogo,
+  homeTeam,
+  awayTeam,
 }: {
   formationMode?: boolean;
   formation?: Partial<Record<FormationSlot, string>>;
@@ -265,6 +273,9 @@ export default function GameField({
   players?: FormationPlayer[];
   selectedFormationPlayer?: string;
   onFormationSlotClick?: (slot: FormationSlot) => void;
+  homeLogo?: string;
+  homeTeam?: string;
+  awayTeam?: string;
 }) {
   const fieldViewportRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
@@ -303,8 +314,10 @@ export default function GameField({
         {
           id: animationPlayerId("off", slot, playerName),
           name: playerName,
-          team: playerTeamClass(
-            String(player?.team ?? player?.Team ?? "offense"),
+          team: sideClassForTeam(
+            String(player?.team ?? player?.Team ?? "home"),
+            homeTeam,
+            awayTeam,
           ),
           position: slot,
           role: slot,
@@ -317,8 +330,10 @@ export default function GameField({
       return {
         id: animationPlayerId("def", assignment.position, assignment.player),
         name: assignment.player,
-        team: playerTeamClass(
-          String(player?.team ?? player?.Team ?? "defense"),
+        team: sideClassForTeam(
+          String(player?.team ?? player?.Team ?? "away"),
+          homeTeam,
+          awayTeam,
         ),
         position: assignment.position,
         role: assignment.position,
@@ -358,7 +373,7 @@ export default function GameField({
       players: [...offensePlayers, ...defensePlayers],
       phases: [],
     };
-  }, [defense, findFormationPlayer, formation]);
+  }, [awayTeam, defense, findFormationPlayer, formation, homeTeam]);
 
   const showError = useCallback((message: string) => {
     if (errorBoxRef.current) {
@@ -604,7 +619,7 @@ export default function GameField({
       footballCarrierIdRef.current = null;
       if (scoreMainRef.current)
         scoreMainRef.current.textContent =
-          plan.scoreboard?.scoreText || "POR 7 | CLT 3";
+          plan.scoreboard?.scoreText || "HOME 7 | AWAY 3";
       if (situationTextRef.current)
         situationTextRef.current.textContent =
           plan.scoreboard?.situationText || "";
@@ -628,18 +643,18 @@ export default function GameField({
         const el = document.createElement("div");
         el.className = "yard-number";
         el.dataset.yard = String(yard);
-        el.textContent = yard >= 50 ? `CLT ${100 - yard}` : `POR ${yard}`;
+        el.textContent = yard >= 50 ? `AWAY ${100 - yard}` : `HOME ${yard}`;
         el.style.top = `${yardToYPct(yard)}%`;
         field.appendChild(el);
       }
-      const offenseTeam = plan.meta?.offenseTeam;
-      const offensePlayers = plan.players.filter((player) =>
-        offenseTeam
-          ? player.team === offenseTeam
-          : player.team !== plan.meta?.defenseTeam,
+      const homeTeam = plan.meta?.homeTeam;
+      const homePlayers = plan.players.filter((player) =>
+        homeTeam
+          ? player.team === homeTeam
+          : player.team !== plan.meta?.awayTeam,
       );
       if (
-        !offensePlayers.some(
+        !homePlayers.some(
           (player) =>
             player.position === "C" ||
             player.role === "C" ||
@@ -647,7 +662,7 @@ export default function GameField({
         )
       )
         console.warn(
-          "No offensive Center found. Add an offensive player with position: 'C'.",
+          "No home Center found. Add a home player with position: 'C'.",
         );
       const losYard =
         plan.lines.find((line) => line.id === "los")?.yard ??
@@ -788,7 +803,7 @@ export default function GameField({
       lines: Array.isArray(candidate.lines) ? candidate.lines : [],
       camera: candidate.camera || { note: "Manual scroll field" },
       scoreboard: candidate.scoreboard || {
-        scoreText: "POR 7 | CLT 3",
+        scoreText: "HOME 7 | AWAY 3",
         situationText: "",
       },
     } as AnimationPlan;
@@ -914,6 +929,18 @@ export default function GameField({
     resetAnimationScene(currentPlanRef.current);
   };
   useEffect(() => {
+    if (!formationMode) return;
+    stopFootballFollow();
+    footballCarrierIdRef.current = null;
+    playersRef.current = {};
+    labelsRef.current = {};
+    if (footballRef.current) footballRef.current.style.opacity = "0";
+    fieldRef.current
+      ?.querySelectorAll(".token, .battle-label, .hash, .yard-number")
+      .forEach((el) => el.remove());
+  }, [formationMode, stopFootballFollow]);
+
+  useEffect(() => {
     if (formationMode) return;
     if (!Object.values(formation).some(Boolean)) return;
     resetAnimationScene(buildFormationSetupPlan());
@@ -934,12 +961,19 @@ export default function GameField({
           onClick={() => setSelectedPlayerMenu(null)}
         >
           <div className="field-title">Dynamic Football Animation View</div>
-          <div className="team-end team-end--top" id="cltEnd">
+          <div className="team-end team-end--top" id="awayEnd">
             WILDFIRE
           </div>
-          <div className="team-end team-end--bottom" id="porEnd">
+          <div className="team-end team-end--bottom" id="homeEnd">
             PORTLAND
           </div>
+          {homeLogo && (
+            <img
+              className="field-midfield-logo"
+              src={homeLogo}
+              alt="Home team logo at midfield"
+            />
+          )}
           <div className="field-line los-line" id="losLine" />
           <div className="field-line first-down-line" id="firstDownLine" />
           <div className="field-line end-line" id="endLine" />
@@ -996,35 +1030,6 @@ export default function GameField({
               );
             })}
 
-          {formationMode &&
-            defense.map((assignment) => {
-              const lineup = assignment.align
-                ? FORMATION_SLOT_LINEUP[assignment.align]
-                : (DEFAULT_LINEUPS_BY_POSITION[assignment.position] ??
-                  DEFAULT_LINEUPS_BY_POSITION.LB3);
-              const player = findFormationPlayer(assignment.player);
-              const playerImage = imgOf(player);
-              return (
-                <div
-                  key={`${assignment.position}-${assignment.player}`}
-                  className="field-formation-slot defense filled"
-                  style={{
-                    left: `${LANES[lineup.lane] ?? 50}%`,
-                    top: `${yardToYPct(55 + Math.abs(lineup.yardOffsetFromLos || 1.5))}%`,
-                  }}
-                  aria-label={`${assignment.position}: ${assignment.player}`}
-                >
-                  {playerImage ? (
-                    <img src={playerImage} alt={assignment.player} />
-                  ) : (
-                    <span className="field-formation-avatar">🛡️</span>
-                  )}
-                  <span className="field-formation-name">
-                    {assignment.player}
-                  </span>
-                </div>
-              );
-            })}
           {selectedPlayerMenu && (
             <div
               className="player-action-menu"
