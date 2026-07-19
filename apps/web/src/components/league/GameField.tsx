@@ -87,7 +87,6 @@ type RuntimePlayer = Omit<AnimationPlayer, "yard"> & {
 const DEFAULT_PHASE_DURATION_MS = 1100;
 const PLAY_WIDTH_INSET_PCT = 7;
 const PLAY_WIDTH_PCT = 100 - PLAY_WIDTH_INSET_PCT * 2;
-const FIELD_LAYOUT = { topGoalLinePct: 2.4, bottomGoalLinePct: 91.9 };
 const squeezeFieldX = (originalX: number) =>
   PLAY_WIDTH_INSET_PCT + originalX * (PLAY_WIDTH_PCT / 100);
 const LANE_ORDER = [
@@ -205,8 +204,6 @@ export default function GameField() {
   const cameraNoteRef = useRef<HTMLDivElement>(null);
   const jsonInputRef = useRef<HTMLTextAreaElement>(null);
   const errorBoxRef = useRef<HTMLDivElement>(null);
-  const cltEndRef = useRef<HTMLDivElement>(null);
-  const porEndRef = useRef<HTMLDivElement>(null);
   const currentPlanRef = useRef<AnimationPlan | null>(null);
   const playersRef = useRef<Record<string, RuntimePlayer>>({});
   const labelsRef = useRef<Record<string, HTMLDivElement>>({});
@@ -372,14 +369,6 @@ export default function GameField() {
         el.style.top = `${yardToYPct(yard)}%`;
         el.style.opacity = "1";
       });
-    if (cltEndRef.current) {
-      cltEndRef.current.style.top = `${FIELD_LAYOUT.topGoalLinePct}%`;
-      cltEndRef.current.style.opacity = "1";
-    }
-    if (porEndRef.current) {
-      porEndRef.current.style.top = `${FIELD_LAYOUT.bottomGoalLinePct}%`;
-      porEndRef.current.style.opacity = "1";
-    }
   }, [updateLinePositions]);
   const applyPlayerMove = useCallback(
     async (move: PlayerMove) => {
@@ -795,10 +784,10 @@ export default function GameField() {
           onClick={() => setSelectedPlayerMenu(null)}
         >
           <div className="field-title">Dynamic Football Animation View</div>
-          <div className="team-end" id="cltEnd" ref={cltEndRef}>
+          <div className="team-end team-end--top" id="cltEnd">
             WILDFIRE
           </div>
-          <div className="team-end" id="porEnd" ref={porEndRef}>
+          <div className="team-end team-end--bottom" id="porEnd">
             PORTLAND
           </div>
           <div className="field-line los-line" id="losLine" />
