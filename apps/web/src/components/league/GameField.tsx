@@ -262,6 +262,11 @@ const yardToYPct = (yard: number) =>
   91.8 - (Math.max(0, Math.min(100, yard)) / 100) * (91.8 - 8.2);
 const normalizeYard = (yard: string | number) =>
   Number.isFinite(Number(yard)) ? Number(yard) : 55;
+const normalizeDistance = (distance: string | number) =>
+  Number.isFinite(Number(distance)) ? Number(distance) : 10;
+const clampYard = (yard: number) => Math.max(0, Math.min(100, yard));
+const possessionDirection = (possession?: string) =>
+  String(possession ?? "Home").toLowerCase() === "away" ? -1 : 1;
 
 /**
  * Converts a team name into a CSS-safe side class. Known home/away names map to
@@ -329,6 +334,8 @@ export default function GameField({
   onPlayerSubstitute,
   onPlayerChangePosition,
   ballOn = 55,
+  distance = 10,
+  possession = "Home",
   homeLogo,
   homeTeam,
   awayTeam,
@@ -342,6 +349,8 @@ export default function GameField({
   onPlayerSubstitute?: (playerName: string) => void;
   onPlayerChangePosition?: (playerName: string) => void;
   ballOn?: string | number;
+  distance?: string | number;
+  possession?: string;
   homeLogo?: string;
   homeTeam?: string;
   awayTeam?: string;
@@ -374,6 +383,11 @@ export default function GameField({
   );
 
   const formationLosYard = normalizeYard(ballOn);
+  const offenseDirection = possessionDirection(possession);
+  const formationDistance = Math.max(0, normalizeDistance(distance));
+  const formationFirstDownYard = clampYard(
+    formationLosYard + offenseDirection * formationDistance,
+  );
 
   const buildFormationSetupPlan = useCallback((): AnimationPlan => {
     const losYard = formationLosYard;
@@ -421,6 +435,7 @@ export default function GameField({
       meta: {
         playId: "FORMATION_SETUP",
         playType: "Setup",
+        direction: offenseDirection === 1 ? "upfield" : "downfield",
         startYard: losYard,
         endYard: losYard,
         yardsGained: 0,
@@ -440,7 +455,7 @@ export default function GameField({
         {
           id: "firstDown",
           label: "1ST",
-          yard: losYard + 10,
+          yard: formationFirstDownYard,
           type: "firstDown",
         },
       ],
@@ -452,8 +467,10 @@ export default function GameField({
     defense,
     findFormationPlayer,
     formation,
+    formationFirstDownYard,
     formationLosYard,
     homeTeam,
+    offenseDirection,
   ]);
 
   const showError = useCallback((message: string) => {
@@ -763,7 +780,9 @@ export default function GameField({
             ...player,
             yard:
               player.yard ??
-              (lineup ? losYard + lineup.yardOffsetFromLos : losYard),
+              (lineup
+                ? losYard + offenseDirection * lineup.yardOffsetFromLos
+                : losYard),
           },
           plan.players,
         );
@@ -800,7 +819,8 @@ export default function GameField({
           ...player,
           lane,
           x: lane ? (LANES[lane] ?? target.x) : target.x,
-          yard: losYard + (player.assignment.cushionYards ?? 1.9),
+          yard:
+            losYard + offenseDirection * (player.assignment.cushionYards ?? 1.9),
         };
       });
       plan.players.forEach((rawPlayer) => {
@@ -867,6 +887,7 @@ export default function GameField({
     },
     [
       normalizePlayerLane,
+      offenseDirection,
       scrollViewportToFootball,
       startFootballCarrierFollow,
       stopFootballFollow,
@@ -1089,7 +1110,7 @@ export default function GameField({
                   className={`field-formation-slot ${slot.startsWith("WR") ? "wr" : slot.startsWith("RB") ? "rb" : slot === "QB" ? "qb" : "teol"} ${REQUIRED_FORMATION_SLOTS.has(slot) ? "required" : ""} ${playerName ? "filled" : "open"} ${selectedFormationPlayer ? "targetable" : ""} ${playerName && selectedFormationPlayer === playerName ? "selected" : ""}`}
                   style={{
                     left: `${LANES[lineup.lane] ?? 50}%`,
-                    top: `${yardToYPct(formationLosYard + lineup.yardOffsetFromLos)}%`,
+                    top: `${yardToYPct(formationLosYard + offenseDirection * lineup.yardOffsetFromLos)}%`,
                   }}
                   aria-label={
                     playerName
@@ -1133,7 +1154,7 @@ export default function GameField({
                   className="field-formation-slot defense"
                   style={{
                     left: `${LANES[lineup.lane] ?? 50}%`,
-                    top: `${yardToYPct(formationLosYard + lineup.yardOffsetFromLos)}%`,
+                    top: `${yardToYPct(formationLosYard + offenseDirection * lineup.yardOffsetFromLos)}%`,
                   }}
                   aria-hidden="true"
                 >
