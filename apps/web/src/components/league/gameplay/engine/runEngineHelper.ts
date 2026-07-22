@@ -739,14 +739,14 @@ export function getAccelToLBYards(
   const acceleration = trait(runner, "acceleration"); // TRAIT USED: Acceleration
   const vision = trait(runner, "vision"); // TRAIT USED: Vision
   const accelerationMod = (acceleration / 10) ** 2 / 12;
-  //For only the very first acceltoLB should vision be considered, otherwise:
-  const recursiveAccelerationMod = (acceleration / 10) ** 2 / 9;
   const visionMod = (vision / 10) ** 2 / 12;
+  const isRestart = type === "restart";
 
-  let adjustedRoll = Math.min(100, baseRoll + accelerationMod + visionMod);
-  if (type == "restart") {
-    adjustedRoll = Math.min(100, baseRoll + recursiveAccelerationMod);
-  }
+  // Acceleration and vision bonuses only apply to the initial burst through the hole.
+  // Recursive restarts after LB/DL interactions use the unmodified bucket roll.
+  const adjustedRoll = isRestart
+    ? baseRoll
+    : Math.min(100, baseRoll + accelerationMod + visionMod);
 
   let cumulative = 0;
   const accelToLBSettings = settingArray<RunAccelToLBSetting>(
@@ -775,7 +775,7 @@ export function getAccelToLBYards(
     if (adjustedRoll <= cumulative) {
       const yards = yardsForRange(range);
       modLog?.push(
-        `Yard +${yards} Accel to LB (${range.label}, roll ${adjustedRoll.toFixed(2)} = ${baseRoll.toFixed(2)}${type === "restart" ? ` + ${recursiveAccelerationMod.toFixed(2)} Accel` : ` + ${accelerationMod.toFixed(2)} Accel + ${visionMod.toFixed(2)} Vision`})`,
+        `Yard +${yards} Accel to LB (${range.label}, roll ${adjustedRoll.toFixed(2)} = ${baseRoll.toFixed(2)}${isRestart ? " unmodified restart" : ` + ${accelerationMod.toFixed(2)} Accel + ${visionMod.toFixed(2)} Vision`})`,
       );
       return yards;
     }
