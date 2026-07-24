@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { DefensiveAssignment, FormationSlot } from "./gameplay/gameEngine";
 
 import "./GameField.css";
@@ -343,6 +343,7 @@ export default function GameField({
   homeTeamPrimaryColor,
   awayTeam,
   onSetupTransitionChange,
+  children,
 }: {
   formationMode?: boolean;
   formation?: Partial<Record<FormationSlot, string>>;
@@ -362,6 +363,7 @@ export default function GameField({
   homeTeamPrimaryColor?: string;
   awayTeam?: string;
   onSetupTransitionChange?: (active: boolean) => void;
+  children?: ReactNode;
 }) {
   const fieldViewportRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
@@ -1170,6 +1172,7 @@ export default function GameField({
   return (
     <div className="game-shell">
       <div className="field-viewport" id="fieldViewport" ref={fieldViewportRef}>
+        {children && <div className="field-controls-overlay">{children}</div>}
         <div
           className="field-wrap"
           id="field"
