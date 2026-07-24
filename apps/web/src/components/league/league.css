@@ -1812,3 +1812,128 @@
 @media (max-width: 900px) {
   .bench-ten-wide { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
+
+.field-console-stage .radial-play-caller {
+  left: 12px;
+  right: auto;
+  top: 330px;
+  width: auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: translateY(-50%);
+  backdrop-filter: none;
+}
+
+.radial-control-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.radial-control-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.radial-control-button {
+  width: 74px;
+  height: 74px;
+  border: 3px solid rgba(248, 250, 252, 0.92);
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.48);
+  display: grid;
+  place-items: center;
+  gap: 0;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.radial-control-button.active,
+.radial-control-button:hover {
+  border-color: var(--accent-red);
+  background: #0f172a;
+}
+
+.radial-control-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.radial-control-label {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.radial-flyout {
+  position: absolute;
+  left: 86px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 310;
+  display: grid;
+  gap: 8px;
+  min-width: 176px;
+  padding: 10px;
+  border: 1px solid rgba(248, 250, 252, 0.24);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.52);
+}
+
+.radial-flyout button {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: var(--accent-red);
+  color: white;
+  font-weight: 900;
+  text-align: left;
+  cursor: pointer;
+}
+
+.radial-flyout button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.play-flyout {
+  grid-template-columns: repeat(2, minmax(104px, 1fr));
+  min-width: 260px;
+}
+
+.radial-status-card {
+  position: absolute;
+  left: 86px;
+  top: calc(100% + 12px);
+  display: grid;
+  gap: 3px;
+  min-width: 190px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.86);
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .field-console-stage .radial-play-caller {
+    top: 50%;
+  }
+
+  .radial-control-button {
+    width: 60px;
+    height: 60px;
+  }
+
+  .radial-flyout,
+  .radial-status-card {
+    left: 70px;
+  }
+}
