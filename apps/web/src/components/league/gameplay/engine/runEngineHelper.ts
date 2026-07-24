@@ -122,7 +122,7 @@ export function performLineWinLoss(
 
     // Start the trench battle at 50/50, then shift it by the defender-minus-blocker trait gap.
     const rawDlWinChance =
-      50 + (dlRunStop / 20) ** 2.8 - (olRunBlocking / 20) ** 2.8;
+      50 + (dlRunStop / 20) ** 2.5 - (olRunBlocking / 20) ** 2.5;
 
     // Clamp the chance so great players matter without making a single matchup completely deterministic.
     const dlWinChance = Math.max(5, Math.min(95, rawDlWinChance));
