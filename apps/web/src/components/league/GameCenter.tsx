@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { LeagueGame, GameTab } from "./types";
+import type { LeagueGame, GameTab, LeagueTeam } from "./types";
 import "./GameCenter.css";
 import {
   formatBallOnForPoss,
@@ -11,6 +11,7 @@ import {
 import {
   getFrontendSettings,
   getGameState,
+  getTeams,
   getPlayerTraits,
   getPlayHistory,
   savePlayAndGame,
@@ -38,6 +39,8 @@ import type {
 } from "./gameplay/gameEngine";
 
 const EXPECTED_PLAYERS_PER_SIDE = 8;
+const teamValue = (team: LeagueTeam | undefined, key: string) =>
+  String(team?.[key] ?? "").trim();
 
 type Play = Record<string, unknown>;
 type LineStatMatchup = {
@@ -1373,6 +1376,7 @@ export function GameCenter({
   const [currentGame, setCurrentGame] = useState(game);
   const [history, setHistory] = useState<Play[]>([]);
   const [players, setPlayers] = useState<Play[]>([]);
+  const [teams, setTeams] = useState<LeagueTeam[]>([]);
   const [settings, setSettings] = useState<FrontendSettings>(
     normalizeFrontendSettings({}),
   );
@@ -1398,6 +1402,14 @@ export function GameCenter({
     () => ({ players, settings, historyLength: history.length }),
     [players, settings, history.length],
   );
+  const homeTeamDetails = useMemo(() => {
+    const homeAbbrev = String(currentGame.Home || "")
+      .trim()
+      .toLowerCase();
+    return teams.find(
+      (team) => teamValue(team, "Abbrev").toLowerCase() === homeAbbrev,
+    );
+  }, [currentGame.Home, teams]);
   useEffect(() => {
     let active = true;
     Promise.all([
@@ -1405,12 +1417,14 @@ export function GameCenter({
       getPlayHistory(game.GameId),
       getPlayerTraits(),
       getFrontendSettings(),
+      getTeams(),
     ])
-      .then(([stateRes, historyRes, playerRes, settingsRes]) => {
+      .then(([stateRes, historyRes, playerRes, settingsRes, teamsRes]) => {
         if (!active) return;
         setCurrentGame(normalizeGame(game, stateRes.gameState));
         setHistory(historyRes.plays);
         setPlayers(playerRes.players);
+        setTeams(teamsRes.teams as LeagueTeam[]);
         setSettings(normalizeFrontendSettings(settingsRes));
         setLog(
           historyRes.plays.length
@@ -1637,8 +1651,20 @@ export function GameCenter({
                 distance={currentGame.Distance}
                 possession={currentGame.Possession}
                 selectedFormationPlayer={selectedFormationPlayer}
-                homeLogo={currentGame.HomeLogo}
+                homeLogo={
+                  teamValue(homeTeamDetails, "Logo") || currentGame.HomeLogo
+                }
                 homeTeam={currentGame.Home}
+                homeTeamName={
+                  teamValue(homeTeamDetails, "Name") || currentGame.Home
+                }
+                homeTeamLocation={
+                  teamValue(homeTeamDetails, "Location") || currentGame.Home
+                }
+                homeTeamPrimaryColor={teamValue(
+                  homeTeamDetails,
+                  "Primary Color",
+                )}
                 awayTeam={currentGame.Away}
                 onFormationSlotClick={(slot) => {
                   const currentFormation = playOptions.formation ?? {};

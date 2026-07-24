@@ -338,6 +338,9 @@ export default function GameField({
   possession = "Home",
   homeLogo,
   homeTeam,
+  homeTeamName,
+  homeTeamLocation,
+  homeTeamPrimaryColor,
   awayTeam,
   onSetupTransitionChange,
 }: {
@@ -354,6 +357,9 @@ export default function GameField({
   possession?: string;
   homeLogo?: string;
   homeTeam?: string;
+  homeTeamName?: string;
+  homeTeamLocation?: string;
+  homeTeamPrimaryColor?: string;
   awayTeam?: string;
   onSetupTransitionChange?: (active: boolean) => void;
 }) {
@@ -374,6 +380,12 @@ export default function GameField({
   const isSetupTransitionRef = useRef(false);
   const footballFollowRafRef = useRef<number | null>(null);
   const activePhaseDurationMsRef = useRef(DEFAULT_PHASE_DURATION_MS);
+  const teamEndStyle = homeTeamPrimaryColor
+    ? { background: homeTeamPrimaryColor }
+    : undefined;
+  const teamEndTopText = homeTeamName || homeTeam || "HOME";
+  const teamEndBottomText = homeTeamLocation || homeTeam || "HOME";
+
   const [selectedPlayerMenu, setSelectedPlayerMenu] = useState<{
     player: AnimationPlayer;
     leftPct: number;
@@ -823,7 +835,8 @@ export default function GameField({
           lane,
           x: lane ? (LANES[lane] ?? target.x) : target.x,
           yard:
-            losYard + offenseDirection * (player.assignment.cushionYards ?? 1.9),
+            losYard +
+            offenseDirection * (player.assignment.cushionYards ?? 1.9),
         };
       });
       plan.players.forEach((rawPlayer) => {
@@ -1058,7 +1071,9 @@ export default function GameField({
       return;
     }
 
-    const currentLos = currentPlan.lines.find((line) => line.id === "los")?.yard;
+    const currentLos = currentPlan.lines.find(
+      (line) => line.id === "los",
+    )?.yard;
     const nextLos = nextPlan.lines.find((line) => line.id === "los")?.yard;
     const currentFirstDown = currentPlan.lines.find(
       (line) => line.id === "firstDown",
@@ -1162,11 +1177,19 @@ export default function GameField({
           onClick={() => setSelectedPlayerMenu(null)}
         >
           <div className="field-title">Dynamic Football Animation View</div>
-          <div className="team-end team-end--top" id="awayEnd">
-            KINGSMEN
+          <div
+            className="team-end team-end--top"
+            id="awayEnd"
+            style={teamEndStyle}
+          >
+            {teamEndTopText}
           </div>
-          <div className="team-end team-end--bottom" id="homeEnd">
-            CHARLOTTE
+          <div
+            className="team-end team-end--bottom"
+            id="homeEnd"
+            style={teamEndStyle}
+          >
+            {teamEndBottomText}
           </div>
           {homeLogo && (
             <img
