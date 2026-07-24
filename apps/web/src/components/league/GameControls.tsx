@@ -174,7 +174,7 @@ export function GameControls({
   requestedFormationMode,
   disabled = false,
 }: Props) {
-  const [collapsed, setCollapsed] = useState(true);
+  const [activeMenu, setActiveMenu] = useState<"coach" | "play" | null>(null);
   const [modal, setModal] = useState<"routes" | "run" | "clock" | null>(null);
   const [settingFormation, setSettingFormation] = useState(false);
   const [selected, setSelected] = useState<string>("");
@@ -206,6 +206,17 @@ export function GameControls({
     [...REQUIRED].every((slot) => formation[slot]);
   const canPass = receivers.some(
     (r) => routes[r.player] && routes[r.player] !== "No Route",
+  );
+  const pendingPointAfter = Boolean(
+    (game as unknown as Record<string, unknown>).pendingFGTeam,
+  );
+  const canPunt = Number(game.Down) === 4;
+  const canKickoff =
+    !pendingPointAfter && Number(game.Down) === 1 && Number(game.Distance) === 10;
+  const currentTimeouts = Number(
+    (game as unknown as Record<string, unknown>)[
+      game.Possession === "Home" ? "HomeTimeouts" : "AwayTimeouts"
+    ] ?? 3,
   );
   const setOpt = (patch: Partial<PlayCallOptions>) => {
     const nextOptions = { ...options, ...patch };
@@ -271,55 +282,147 @@ export function GameControls({
   };
 
   return (
-    <div
-      className={`control-panel play-caller ${collapsed ? "collapsed" : ""}`}
-    >
-      <button
-        className="control-panel-toggle"
-        type="button"
-        onClick={() => setCollapsed(!collapsed)}
+    <div className="control-panel play-caller radial-play-caller">
+      <div
+        className="radial-control-dock"
+        aria-label={`${offenseTeam} controls`}
       >
-        {collapsed ? "Open Controls" : "Minimize Controls"}
-      </button>
-      {!collapsed && (
-        <>
-          <h3>{offenseTeam} Control Console</h3>
-          <div className="play-call-summary">
-            <span>
-              {validFormation
-                ? "Formation ready"
-                : `Set ${EXPECTED_PLAYERS_PER_SIDE}-player formation`}
+        <div className="radial-control-group">
+          <button
+            className={`radial-control-button ${activeMenu === "coach" ? "active" : ""}`}
+            type="button"
+            aria-expanded={activeMenu === "coach"}
+            onClick={() =>
+              setActiveMenu(activeMenu === "coach" ? null : "coach")
+            }
+          >
+            <span className="radial-control-icon" aria-hidden="true">
+              👤
             </span>
-            <span>
-              Players: {formationPlayerCount}/{EXPECTED_PLAYERS_PER_SIDE}
+            <span className="radial-control-label">Coach</span>
+          </button>
+          {activeMenu === "coach" && (
+            <div className="radial-flyout coach-flyout">
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => setFormationMode(!activeFormationMode)}
+              >
+                Personnel
+              </button>
+              <button type="button" onClick={() => setModal("clock")}>
+                Clock Management
+              </button>
+              <button
+                type="button"
+                disabled={disabled || currentTimeouts <= 0}
+                onClick={() => onAction("Timeout", optionsWithDefense())}
+              >
+                Call Timeout
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="radial-control-group">
+          <button
+            className={`radial-control-button ${activeMenu === "play" ? "active" : ""}`}
+            type="button"
+            aria-expanded={activeMenu === "play"}
+            onClick={() =>
+              setActiveMenu(activeMenu === "play" ? null : "play")
+            }
+          >
+            <span className="radial-control-icon" aria-hidden="true">
+              ✕○
             </span>
-            <span>Runner: {options.runner || "Auto"}</span>
-            <span>Clock: {options.clockMode || "Normal"}</span>
-          </div>
-          <div className="game-controls primary">
-            <button disabled={disabled} onClick={() => setFormationMode(!activeFormationMode)}>
-              {activeFormationMode ? "Hide Bench" : "Set Formation"}
-            </button>
-            <button
-              disabled={disabled || !validFormation || runners.length === 0}
-              onClick={() => setModal("run")}
-            >
-              Call Run Play
-            </button>
-            <button
-              disabled={disabled || !validFormation}
-              onClick={() => {
-                if (!canPass) setModal("routes");
-                else onAction("Pass Play", optionsWithDefense());
-              }}
-            >
-              Call Pass Play
-            </button>
-            <button disabled={disabled} onClick={() => onAction("Punt", optionsWithDefense())}>
-              Call Punt Play
-            </button>
-          </div>
-        </>
+            <span className="radial-control-label">Call Play</span>
+          </button>
+          {activeMenu === "play" && (
+            <div className="radial-flyout play-flyout">
+              <button
+                disabled={disabled || !validFormation || runners.length === 0}
+                onClick={() => setModal("run")}
+                type="button"
+              >
+                Run
+              </button>
+              <button
+                disabled={disabled || !validFormation}
+                onClick={() => {
+                  if (!canPass) setModal("routes");
+                  else onAction("Pass Play", optionsWithDefense());
+                }}
+                type="button"
+              >
+                Pass
+              </button>
+              <button
+                disabled={disabled}
+                onClick={() => onAction("Field Goal", optionsWithDefense())}
+                type="button"
+              >
+                Field Goal
+              </button>
+              {canPunt && (
+                <button
+                  disabled={disabled}
+                  onClick={() => onAction("Punt", optionsWithDefense())}
+                  type="button"
+                >
+                  Punt
+                </button>
+              )}
+              {canKickoff && (
+                <>
+                  <button
+                    disabled={disabled}
+                    onClick={() => onAction("Kickoff", optionsWithDefense())}
+                    type="button"
+                  >
+                    Kickoff
+                  </button>
+                  <button
+                    disabled={disabled}
+                    onClick={() => onAction("Onside", optionsWithDefense())}
+                    type="button"
+                  >
+                    Onside
+                  </button>
+                </>
+              )}
+              {pendingPointAfter && (
+                <>
+                  <button
+                    disabled={disabled}
+                    onClick={() => onAction("Field Goal", optionsWithDefense())}
+                    type="button"
+                  >
+                    XP
+                  </button>
+                  <button
+                    disabled={disabled}
+                    onClick={() => onAction("Two Point", optionsWithDefense())}
+                    type="button"
+                  >
+                    2-Pt
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+      {activeMenu && (
+        <div className="radial-status-card">
+          <strong>{offenseTeam}</strong>
+          <span>
+            {validFormation
+              ? "Formation ready"
+              : `${formationPlayerCount}/${EXPECTED_PLAYERS_PER_SIDE} players set`}
+          </span>
+          <span>Runner: {options.runner || "Auto"}</span>
+          <span>Clock: {options.clockMode || "Normal"}</span>
+        </div>
       )}
       {activeFormationMode && (
         <div className="field-formation-bench" aria-label="Offensive bench">
