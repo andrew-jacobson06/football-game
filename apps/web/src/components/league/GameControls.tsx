@@ -278,6 +278,7 @@ export function GameControls({
     // Saving closes the bench but keeps `options.formation` plus the generated defensive mirror available for the next play call.
     onOptionsChange(optionsWithDefense());
     setFormationMode(false);
+    setActiveMenu("coach");
     setSelected("");
   };
 
@@ -306,7 +307,10 @@ export function GameControls({
               <button
                 type="button"
                 disabled={disabled}
-                onClick={() => setFormationMode(!activeFormationMode)}
+                onClick={() => {
+                  setActiveMenu(null);
+                  setFormationMode(!activeFormationMode);
+                }}
               >
                 Personnel
               </button>
@@ -507,6 +511,7 @@ export function GameControls({
               type="button"
               onClick={() => {
                 setFormationMode(false);
+                setActiveMenu("coach");
                 setSelected("");
               }}
             >

@@ -1936,3 +1936,29 @@
     left: 70px;
   }
 }
+
+.field-controls-overlay {
+  position: sticky;
+  top: 50%;
+  left: 0;
+  z-index: 300;
+  height: 0;
+  width: 0;
+  overflow: visible;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.field-controls-overlay .control-panel {
+  pointer-events: auto;
+}
+
+.field-controls-overlay .play-caller,
+.field-console-stage .field-controls-overlay .play-caller,
+.field-console-stage .field-controls-overlay .radial-play-caller {
+  position: relative;
+  top: auto;
+  left: 0;
+  right: auto;
+  transform: none;
+}

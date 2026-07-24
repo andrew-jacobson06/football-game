@@ -1730,23 +1730,24 @@ export function GameCenter({
                   setSettingFormation(true);
                 }}
                 onSetupTransitionChange={setIsResettingPlay}
-              />
+              >
+                <GameControls
+                  game={currentGame}
+                  players={players}
+                  options={playOptions}
+                  onOptionsChange={setPlayOptions}
+                  onAction={action}
+                  onFormationModeChange={(active) => {
+                    setAutoCloseFormationOnSave(false);
+                    setSettingFormation(active);
+                  }}
+                  onSelectedFormationPlayerChange={setSelectedFormationPlayer}
+                  selectedFormationPlayer={selectedFormationPlayer}
+                  requestedFormationMode={settingFormation}
+                  disabled={isSavingPlay || isResettingPlay}
+                />
+              </GameField>
             </div>
-            <GameControls
-              game={currentGame}
-              players={players}
-              options={playOptions}
-              onOptionsChange={setPlayOptions}
-              onAction={action}
-              onFormationModeChange={(active) => {
-                setAutoCloseFormationOnSave(false);
-                setSettingFormation(active);
-              }}
-              onSelectedFormationPlayerChange={setSelectedFormationPlayer}
-              selectedFormationPlayer={selectedFormationPlayer}
-              requestedFormationMode={settingFormation}
-              disabled={isSavingPlay || isResettingPlay}
-            />
           </div>
           {lastPlay && (
             <div className="last-play-desc">
