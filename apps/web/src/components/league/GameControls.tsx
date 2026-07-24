@@ -412,18 +412,6 @@ export function GameControls({
           )}
         </div>
       </div>
-      {activeMenu && (
-        <div className="radial-status-card">
-          <strong>{offenseTeam}</strong>
-          <span>
-            {validFormation
-              ? "Formation ready"
-              : `${formationPlayerCount}/${EXPECTED_PLAYERS_PER_SIDE} players set`}
-          </span>
-          <span>Runner: {options.runner || "Auto"}</span>
-          <span>Clock: {options.clockMode || "Normal"}</span>
-        </div>
-      )}
       {activeFormationMode && (
         <div className="field-formation-bench" aria-label="Offensive bench">
           <div className="field-formation-bench-header">
