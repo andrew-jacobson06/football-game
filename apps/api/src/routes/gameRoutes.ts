@@ -1,9 +1,9 @@
 import { Router } from "express";
 import {
   appendSheetRow,
+  batchUpdateSheetValues,
   readSheetObjects,
   readSheetValues,
-  updateSheetCell,
 } from "../services/sheets.js";
 
 export const gameRoutes = Router();
@@ -208,18 +208,81 @@ function sheetSafe(value: unknown) {
   if (typeof value === "boolean") return value;
   return value ?? "";
 }
-async function logPlayHistory(play: Record<string, unknown>) {
-  const { headers, rows } = await sheetRows("PlayHistory");
-  const playId = String(play.playid || play.PlayId || "");
-  if (playId && rows.some((row) => String(row[headers.findIndex((h) => normHeader(h) === "playid")] ?? "") === playId)) {
-    return;
-  }
-  await appendSheetRow("PlayHistory!A:ZZ", headers.map((header) => sheetSafe(playValueForHeader(play, header))));
-}
-async function pushGameState(game: Record<string, unknown>) {
-  const { headers, rows } = await sheetRows("Games"); const rowIndex = rows.findIndex((r) => String(r[0]) === String(game.gameId)); if (rowIndex === -1) throw new Error(`No row found for gameId: ${game.gameId}`);
+function gameStateUpdates(headers: string[], rowIndex: number, game: Record<string, unknown>) {
   const updates: Record<string, unknown> = { Qtr: game.quarter, Time: game.time, Down: game.down, Distance: game.distance, BallOn: game.ballOn, HomeScore: game.homeScore, AwayScore: game.awayScore, DriveStart: game.driveStart, Previous: game.previous, Possession: game.possession, HomeTimeouts: game.homeTimeouts, AwayTimeouts: game.awayTimeouts };
-  await Promise.all(Object.entries(updates).map(([key, value]) => { const col = headers.indexOf(key); return value === undefined || col === -1 ? undefined : updateSheetCell("Games", rowIndex + 2, col + 1, value); }).filter(Boolean) as Promise<unknown>[]);
+  return Object.entries(updates).flatMap(([key, value]) => {
+    const col = headers.indexOf(key);
+    return value === undefined || col === -1 ? [] : [{
+      range: `Games!${columnToLetters(col + 1)}${rowIndex + 2}`,
+      values: [[value]],
+    }];
+  });
+}
+
+function columnToLetters(column: number) {
+  let value = column;
+  let letters = "";
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    letters = String.fromCharCode(65 + remainder) + letters;
+    value = Math.floor((value - remainder) / 26);
+  }
+  return letters;
+}
+
+function isRetryableSheetError(error: unknown) {
+  const status = Number((error as { response?: { status?: unknown }; code?: unknown })?.response?.status
+    ?? (error as { code?: unknown })?.code);
+  return status === 429 || status >= 500;
+}
+
+async function savePlayAndGame(data: Record<string, unknown>, gameId: string) {
+  const play = data.play as Record<string, unknown> | undefined;
+  const suppliedGame = data.game as Record<string, unknown> | undefined;
+  if (!play && !suppliedGame) return;
+
+  const [playSheet, gamesSheet] = await Promise.all([
+    play ? sheetRows("PlayHistory") : undefined,
+    suppliedGame ? sheetRows("Games") : undefined,
+  ]);
+  const writes: { range: string; values: unknown[][] }[] = [];
+
+  if (play && playSheet) {
+    const playIdColumn = playSheet.headers.findIndex((header) => normHeader(header) === "playid");
+    const playId = String(play.playid || play.PlayId || "");
+    const alreadySaved = Boolean(playId) && playSheet.rows.some((row) => String(row[playIdColumn] ?? "") === playId);
+    if (!alreadySaved) {
+      const lastColumn = columnToLetters(playSheet.headers.length);
+      writes.push({
+        range: `PlayHistory!A${playSheet.rows.length + 2}:${lastColumn}${playSheet.rows.length + 2}`,
+        values: [playSheet.headers.map((header) => sheetSafe(playValueForHeader(play, header)))],
+      });
+    }
+  }
+
+  if (suppliedGame && gamesSheet) {
+    const game = { ...suppliedGame, gameId: suppliedGame.gameId ?? gameId };
+    const rowIndex = gamesSheet.rows.findIndex((row) => String(row[0]) === String(game.gameId));
+    if (rowIndex === -1) throw new Error(`No row found for gameId: ${game.gameId}`);
+    writes.push(...gameStateUpdates(gamesSheet.headers, rowIndex, game));
+  }
+
+  // One Sheets API write request commits the play row and game snapshot together.
+  await batchUpdateSheetValues(writes);
+}
+
+async function savePlayAndGameWithRetry(data: Record<string, unknown>, gameId: string) {
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await savePlayAndGame(data, gameId);
+      return;
+    } catch (error) {
+      if (attempt === maxAttempts || !isRetryableSheetError(error)) throw error;
+      const backoffMs = 1000 * 2 ** (attempt - 1) + Math.floor(Math.random() * 1000);
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
 }
 
 gameRoutes.get("/health", (_req, res) => res.json({ ok: true, app: "football-game-api", message: "API is running" }));
@@ -230,7 +293,7 @@ gameRoutes.get("/games", async (_req, res, next) => { try { res.json({ games: aw
 gameRoutes.get("/games/:gameId/state", async (req, res, next) => { try { res.json({ gameState: await getGameState(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/games/:gameId/play-history", async (req, res, next) => { try { res.json({ plays: await getPlayHistory(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/frontend-settings", async (_req, res, next) => { try { res.json(await getFrontendSettingsFromSheet()); } catch (e) { next(e); } });
-gameRoutes.post("/games/:gameId/save-play-and-game", async (req, res, next) => { try { const data = req.body; if (data.play) await logPlayHistory(data.play); if (data.game) await pushGameState({ ...data.game, gameId: data.game.gameId ?? req.params.gameId }); res.json({ ok: true }); } catch (e) { next(e); } });
+gameRoutes.post("/games/:gameId/save-play-and-game", async (req, res, next) => { try { await savePlayAndGameWithRetry(req.body, req.params.gameId); res.json({ ok: true }); } catch (e) { next(e); } });
 
 // Legacy route retained for existing callers while LeagueApp uses save-play-and-game.
 gameRoutes.post("/plays", async (req, res, next) => {

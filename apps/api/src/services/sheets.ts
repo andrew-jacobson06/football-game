@@ -70,25 +70,18 @@ export async function appendSheetRow(range: string, row: unknown[]) {
   return response.data;
 }
 
-export async function updateSheetCell(sheetName: string, row: number, column: number, value: unknown) {
-  const col = columnToLetters(column);
-  const response = await sheets.spreadsheets.values.update({
+export async function batchUpdateSheetValues(
+  data: { range: string; values: unknown[][] }[]
+) {
+  if (data.length === 0) return;
+
+  const response = await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: sheetId,
-    range: `${sheetName}!${col}${row}`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values: [[value]] }
+    requestBody: {
+      valueInputOption: "USER_ENTERED",
+      data
+    }
   });
 
   return response.data;
-}
-
-function columnToLetters(column: number) {
-  let temp = column;
-  let letters = "";
-  while (temp > 0) {
-    const rem = (temp - 1) % 26;
-    letters = String.fromCharCode(65 + rem) + letters;
-    temp = Math.floor((temp - rem) / 26);
-  }
-  return letters;
 }
