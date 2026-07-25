@@ -49,7 +49,32 @@ function teamOf(p: Player) {
   return str(p.team ?? p.Team);
 }
 function imgOf(p?: Player) {
-  return str(p?.image ?? p?.Image ?? p?.photo ?? p?.Photo);
+  return str(
+    p?.image ??
+      p?.Image ??
+      p?.photo ??
+      p?.Photo ??
+      p?.["Player Image from AI"] ??
+      p?.["player image from ai"],
+  );
+}
+
+function staminaOf(player: Player) {
+  const value = Number(
+    player.fatigue ??
+      player.Fatigue ??
+      player.stamina ??
+      player.Stamina ??
+      100,
+  );
+  return Math.min(100, Math.max(0, Number.isFinite(value) ? value : 100));
+}
+
+function staminaColor(stamina: number) {
+  if (stamina < 10) return "#ef4444";
+  if (stamina < 25) return "#f97316";
+  if (stamina < 50) return "#facc15";
+  return "#22c55e";
 }
 function trait(p: Player | undefined, key: string) {
   return Number(p?.[key] ?? p?.[key[0].toUpperCase() + key.slice(1)] ?? 0);
@@ -150,9 +175,32 @@ function RosterDetails({ roster }: { roster: Player[] }) {
               <tr key={`${nameOf(player)}-${index}`}>
                 <td className="roster-position">{valueFor(player, "Position") as string}</td>
                 <td>
-                  <div className="roster-player-image">
-                    {imgOf(player) ? <img src={imgOf(player)} alt="" /> : <span>👤</span>}
-                  </div>
+                  {(() => {
+                    const stamina = staminaOf(player);
+                    return (
+                      <div
+                        className="roster-stamina-ring"
+                        style={{
+                          "--stamina": `${stamina * 3.6}deg`,
+                          "--stamina-color": staminaColor(stamina),
+                        } as React.CSSProperties}
+                        role="img"
+                        aria-label={`${nameOf(player)} stamina: ${Math.round(stamina)}%`}
+                        title={`${Math.round(stamina)}% stamina`}
+                      >
+                        <div className="roster-player-image" aria-hidden="true">
+                          {imgOf(player) ? (
+                            <img src={imgOf(player)} alt="" />
+                          ) : (
+                            <span>👤</span>
+                          )}
+                        </div>
+                        <span className="roster-stamina-value">
+                          {Math.round(stamina)}%
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </td>
                 <th scope="row">{nameOf(player)}</th>
                 {traitColumns.map((column) => (
