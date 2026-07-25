@@ -1203,7 +1203,6 @@
 .game-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.78);
   z-index: 2000;
   display: flex;
   align-items: center;
@@ -1960,6 +1959,7 @@
 }
 
 .field-controls-overlay .radial-control-button,
+.field-controls-overlay .game-modal-panel,
 .field-controls-overlay .radial-flyout,
 .field-controls-overlay .radial-status-card,
 .field-controls-overlay .field-formation-bench {
