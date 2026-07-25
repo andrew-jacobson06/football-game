@@ -1950,7 +1950,19 @@
   transform: translateY(-50%);
 }
 
-.field-controls-overlay .control-panel {
+.field-controls-overlay .control-panel,
+.field-controls-overlay .radial-control-dock,
+.field-controls-overlay .radial-control-group {
+  /* These layout wrappers are much wider than the visible controls. Let field
+     interactions pass through their transparent area instead of treating the
+     entire control panel as a click-blocking layer. */
+  pointer-events: none;
+}
+
+.field-controls-overlay .radial-control-button,
+.field-controls-overlay .radial-flyout,
+.field-controls-overlay .radial-status-card,
+.field-controls-overlay .field-formation-bench {
   pointer-events: auto;
 }
 
