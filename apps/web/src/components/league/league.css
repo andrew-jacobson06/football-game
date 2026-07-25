@@ -1228,8 +1228,12 @@
   color: var(--text-muted);
 }
 .roster-table-wrap {
-  max-height: calc(92vh - 150px);
-  overflow: auto;
+  min-height: 0;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   border: 1px solid #ffffff1f;
   border-radius: 12px;
 }
@@ -1413,11 +1417,13 @@
 
 /* Legacy-style play caller modals */
 .formation-full-panel {
-  width: 100%;
-  height: 100%;
+  display: flex;
+  width: min(96vw, 1600px);
+  height: 90vh;
   max-width: none;
-  border-radius: 0;
-  overflow: auto;
+  max-height: 90vh;
+  flex-direction: column;
+  overflow: hidden;
 }
 .formation-panel {
   background: var(--gray-light);
@@ -1754,7 +1760,6 @@
 .eligible-receiver-chip:active {
   cursor: grabbing;
 }
-.formation-full-panel { width: 100%; height: 100%; max-width: none; border-radius: 0; overflow: auto; }
 .formation-panel { background: var(--gray-light); }
 .formation-field { margin-bottom: 4vw; overflow-x: auto; min-width: 720px; }
 .formation-row { display: flex; justify-content: center; align-items: center; gap: 2vw; margin-bottom: 4vw; }

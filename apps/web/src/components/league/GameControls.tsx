@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type { LeagueGame } from "./types";
 import type {
   PlayCallOptions,
@@ -230,7 +231,7 @@ function ControlModal({
   wide?: boolean;
   full?: boolean;
 }) {
-  return (
+  const modal = (
     <div className="game-modal open">
       <div
         className={`game-modal-panel formation-panel ${wide ? "routes-panel" : ""} ${full ? "formation-full-panel" : ""}`}
@@ -242,6 +243,11 @@ function ControlModal({
       </div>
     </div>
   );
+
+  // Field controls live inside a transformed, zero-height overlay. Portaling the
+  // modal to the league root keeps viewport sizing independent of that overlay.
+  const modalRoot = document.querySelector(".league-app") ?? document.body;
+  return createPortal(modal, modalRoot);
 }
 /**
  * Determines who can receive a pass from the current formation. Wide receivers
