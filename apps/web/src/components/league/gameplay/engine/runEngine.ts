@@ -336,7 +336,7 @@ export function runPlay(
   }
   // Frontside branch: the runner found the intended lane and may face a swipe attempt.
   else {
-    // If the selected lane came from an OL win, the beaten DL can still make a last swipe at the runner's legs.
+    // If the selected lane came from an OL win, an adjacent DL who beat his blocker may swipe at the runner's legs.
     dlSwipeResult =
       runLaneTarget.selectedSide === "OL"
         ? performDlSwipeCheck(lineWinLossArray, runLaneTarget, ctx.players)
