@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import path from "path";
 import { google } from "googleapis";
+import { sheetsWriteThrottle } from "./writeRequestThrottle.js";
 
 dotenv.config();
 
@@ -57,7 +58,7 @@ export async function readSheetObjects(range: string) {
 }
 
 export async function appendSheetRow(range: string, row: unknown[]) {
-  const response = await sheets.spreadsheets.values.append({
+  const response = await sheetsWriteThrottle.run(() => sheets.spreadsheets.values.append({
     spreadsheetId: sheetId,
     range,
     valueInputOption: "USER_ENTERED",
@@ -65,7 +66,7 @@ export async function appendSheetRow(range: string, row: unknown[]) {
     requestBody: {
       values: [row]
     }
-  });
+  }));
 
   return response.data;
 }
@@ -75,13 +76,13 @@ export async function batchUpdateSheetValues(
 ) {
   if (data.length === 0) return;
 
-  const response = await sheets.spreadsheets.values.batchUpdate({
+  const response = await sheetsWriteThrottle.run(() => sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: sheetId,
     requestBody: {
       valueInputOption: "USER_ENTERED",
       data
     }
-  });
+  }));
 
   return response.data;
 }
