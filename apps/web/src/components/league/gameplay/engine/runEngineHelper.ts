@@ -537,7 +537,7 @@ export function performDlSwipeCheck(
 
   const dlTackling = trait(defensivePlayer, "tackling"); // TRAIT USED: Tackling
 
-  const swipeScore = (dlTackling / 17) ** 2 / 2;
+  const swipeScore = (dlTackling / 15) ** 2 / 2;
 
   const roll = Math.random() * 100;
 
