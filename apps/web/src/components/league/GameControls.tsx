@@ -14,6 +14,11 @@ const REQUIRED = new Set<FormationSlot>(["QB", "LG", "C", "RG"]);
 const EXPECTED_PLAYERS_PER_SIDE = 8;
 const ROUTES = ["No Route", "Screen", "Short", "Medium", "Deep", "Bomb"];
 const READS = ["1st", "2nd", "3rd", "4th", "5th"];
+const PLAYER_IDENTITY_FIELDS = new Set([
+  "team", "name", "position", "pos", "defpos", "image", "photo",
+  "player image from ai", "translatex", "translatey", "scale", "jersey",
+  "jersey image",
+]);
 
 type Player = Record<string, unknown>;
 type Props = {
@@ -48,6 +53,118 @@ function imgOf(p?: Player) {
 }
 function trait(p: Player | undefined, key: string) {
   return Number(p?.[key] ?? p?.[key[0].toUpperCase() + key.slice(1)] ?? 0);
+}
+
+function playerFieldLabel(key: string) {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/\bqb\b/gi, "QB")
+    .replace(/\bdef\b/gi, "Def")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function RosterDetails({ roster }: { roster: Player[] }) {
+  const traitColumns = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          roster.flatMap((player) =>
+            Object.keys(player).filter(
+              (key) => !PLAYER_IDENTITY_FIELDS.has(key.toLowerCase()),
+            ),
+          ),
+        ),
+      ),
+    [roster],
+  );
+  const columns = ["Position", "Image", "Name", ...traitColumns];
+  const [sort, setSort] = useState<{ key: string; direction: "asc" | "desc" }>({
+    key: "Position",
+    direction: "asc",
+  });
+  const valueFor = (player: Player, key: string): unknown => {
+    if (key === "Position")
+      return [posOf(player), str(player.defPos ?? player.DefPos)]
+        .filter(Boolean)
+        .join(" / ");
+    if (key === "Name") return nameOf(player);
+    return player[key];
+  };
+  const sortedRoster = useMemo(
+    () =>
+      [...roster].sort((a, b) => {
+        const aValue = valueFor(a, sort.key);
+        const bValue = valueFor(b, sort.key);
+        const aNumber = Number(aValue);
+        const bNumber = Number(bValue);
+        const result =
+          aValue !== "" && bValue !== "" && Number.isFinite(aNumber) && Number.isFinite(bNumber)
+            ? aNumber - bNumber
+            : str(aValue).localeCompare(str(bValue), undefined, {
+                numeric: true,
+                sensitivity: "base",
+              });
+        return sort.direction === "asc" ? result : -result;
+      }),
+    [roster, sort],
+  );
+  const changeSort = (key: string) =>
+    setSort((current) => ({
+      key,
+      direction:
+        current.key === key && current.direction === "asc" ? "desc" : "asc",
+    }));
+
+  return (
+    <>
+      <div className="roster-details-heading">
+        <div>
+          <h3>Roster Details</h3>
+          <p>{roster.length} players · Select any column to sort</p>
+        </div>
+      </div>
+      <div className="roster-table-wrap">
+        <table className="roster-details-table">
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th key={column} scope="col">
+                  {column === "Image" ? (
+                    "Image"
+                  ) : (
+                    <button type="button" onClick={() => changeSort(column)}>
+                      {playerFieldLabel(column)}
+                      <span aria-hidden="true">
+                        {sort.key === column
+                          ? sort.direction === "asc" ? " ▲" : " ▼"
+                          : " ↕"}
+                      </span>
+                    </button>
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sortedRoster.map((player, index) => (
+              <tr key={`${nameOf(player)}-${index}`}>
+                <td className="roster-position">{valueFor(player, "Position") as string}</td>
+                <td>
+                  <div className="roster-player-image">
+                    {imgOf(player) ? <img src={imgOf(player)} alt="" /> : <span>👤</span>}
+                  </div>
+                </td>
+                <th scope="row">{nameOf(player)}</th>
+                {traitColumns.map((column) => (
+                  <td key={column}>{str(valueFor(player, column)) || "—"}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
 }
 /**
  * Reusable modal shell for routes, run selection, and clock management. It
@@ -175,7 +292,7 @@ export function GameControls({
   disabled = false,
 }: Props) {
   const [activeMenu, setActiveMenu] = useState<"coach" | "play" | null>(null);
-  const [modal, setModal] = useState<"routes" | "run" | "clock" | null>(null);
+  const [modal, setModal] = useState<"routes" | "run" | "clock" | "roster" | null>(null);
   const [settingFormation, setSettingFormation] = useState(false);
   const [selected, setSelected] = useState<string>("");
   const [detail, setDetail] = useState<string>("");
@@ -316,6 +433,9 @@ export function GameControls({
               </button>
               <button type="button" onClick={() => setModal("clock")}>
                 Clock Management
+              </button>
+              <button type="button" onClick={() => setModal("roster")}>
+                Roster Details
               </button>
               <button
                 type="button"
@@ -631,6 +751,11 @@ export function GameControls({
             </button>
             <button onClick={() => setModal(null)}>Save</button>
           </div>
+        </ControlModal>
+      )}
+      {modal === "roster" && (
+        <ControlModal full onClose={() => setModal(null)}>
+          <RosterDetails roster={roster} />
         </ControlModal>
       )}
       {modal === "run" && (
