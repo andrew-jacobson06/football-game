@@ -487,23 +487,53 @@ export type DlSwipeResult = {
   tackled: boolean;
 };
 
-/** Gives a beaten defensive lineman a chance to swipe the runner at the line. `runPlay` uses it on clean frontside lanes before the runner accelerates to linebackers. */
+/** Gives an adjacent defensive lineman who won his matchup a chance to swipe the runner at the line. `runPlay` uses it on clean frontside lanes before the runner accelerates to linebackers. */
 export function performDlSwipeCheck(
   lineWinLossArray: LineWinLossResult[],
   runLaneTarget: RunLaneTargetResult,
   players: PlayerTrait[],
-): DlSwipeResult {
-  const matchup = lineWinLossArray.find(
-    (battle) => battle.slot === runLaneTarget.selectedSlot,
+): DlSwipeResult | null {
+  const laneIndex = OL_SLOTS.indexOf(runLaneTarget.selectedSlot);
+  if (laneIndex === -1) return null;
+
+  const adjacentSlots = new Set(
+    [OL_SLOTS[laneIndex - 1], OL_SLOTS[laneIndex + 1]].filter(
+      (slot): slot is FormationSlot => slot !== undefined,
+    ),
   );
 
-  if (!matchup) {
-    throw new Error(
-      `No OL/DL matchup found for slot ${runLaneTarget.selectedSlot}.`,
+  const candidates = lineWinLossArray
+    .filter(
+      (battle) =>
+        adjacentSlots.has(battle.slot) &&
+        battle.winner === "DL" &&
+        Boolean(battle.defensePlayer),
+    )
+    .map((matchup) => ({
+      matchup,
+      defensivePlayer: findPlayerByName(players, matchup.defensePlayer),
+    }));
+
+  if (candidates.length === 0) return null;
+
+  let selectedCandidate = candidates[0];
+  if (candidates.length > 1) {
+    const totalTackling = candidates.reduce(
+      (sum, candidate) =>
+        sum + trait(candidate.defensivePlayer, "tackling"),
+      0,
     );
+    const selectionRoll = Math.random() * totalTackling;
+    let cumulativeTackling = 0;
+
+    selectedCandidate =
+      candidates.find((candidate) => {
+        cumulativeTackling += trait(candidate.defensivePlayer, "tackling");
+        return selectionRoll <= cumulativeTackling;
+      }) ?? candidates[candidates.length - 1];
   }
 
-  const defensivePlayer = findPlayerByName(players, matchup.defensePlayer);
+  const { matchup, defensivePlayer } = selectedCandidate;
 
   const dlTackling = trait(defensivePlayer, "tackling"); // TRAIT USED: Tackling
 
