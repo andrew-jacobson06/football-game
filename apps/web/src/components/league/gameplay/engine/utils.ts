@@ -1,6 +1,7 @@
 import type { LeagueGame } from "../../types";
 import { parseTimeToSeconds } from "../../leagueMappers";
 import type { ClockMode, EngineContext, PlayerTrait } from "./types";
+import { applyFatigueToTrait } from "./fatigueEngine";
 
 export const n = (v: unknown) => Number(v) || 0;
 export const str = (v: unknown) => String(v ?? "");
@@ -29,9 +30,9 @@ export function playerName(p: PlayerTrait | undefined, fallback = "") {
   return str(p?.name ?? p?.Name ?? fallback);
 }
 export function trait(p: PlayerTrait | undefined, key: string, fallback = 50) {
-  return (
-    Number(p?.[key] ?? p?.[key[0].toUpperCase() + key.slice(1)]) || fallback
-  );
+  const value =
+    Number(p?.[key] ?? p?.[key[0].toUpperCase() + key.slice(1)]) || fallback;
+  return applyFatigueToTrait(p, key, value);
 }
 export function teamPlayers(ctx: EngineContext, team: string) {
   return ctx.players.filter((p) => str(p.team ?? p.Team) === team);
