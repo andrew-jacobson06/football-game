@@ -39,6 +39,7 @@ import {
   performBruiserCheck,
   performCarryDefenderChecks,
 } from "./runEngineHelper";
+import { applyFatigue } from "./fatigueEngine";
 
 /** Chooses the most plausible tackler after a run or pass play has ended, weighting nearby defender groups by tackling ability. It is used by `runPlay` and pass-play fumble/tackle resolution when no specific tackler was already recorded. */
 export function determineTackler(
@@ -522,7 +523,7 @@ export function runPlay(
     winner: battle.winner,
   }));
 
-  return buildResult(
+  const playResult = buildResult(
     game,
     updated,
     "Run",
@@ -546,4 +547,10 @@ export function runPlay(
       jukes: successfulJukes,
     },
   );
+
+  // Charge the rush after resolving the play so this snap uses the stamina the
+  // runner brought into it and every subsequent snap sees the updated score.
+  applyFatigue(ctx, runnerName, "Run");
+
+  return playResult;
 }

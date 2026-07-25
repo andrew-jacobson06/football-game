@@ -9,6 +9,7 @@ import type {
   FrontendSettings,
   RunPlayState,
 } from "./types";
+import { applyFatigueToTrait } from "./fatigueEngine";
 
 const OL_SLOTS: FormationSlot[] = [
   "LT",
@@ -72,7 +73,7 @@ export function trait(player: PlayerTrait | undefined, key: string): number {
     player[camelKey] ??
     player[pascalKey];
 
-  return Number(value ?? 0);
+  return applyFatigueToTrait(player, key, Number(value ?? 0));
 }
 
 /** Looks up a player object by the display/name fields used across roster data. It is used anywhere the run engine has a player name but needs trait values. */
