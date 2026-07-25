@@ -68,6 +68,39 @@ export function applyFatigue(
   // below-zero tier deliberately carries the largest skill penalty.
   player.fatigue = currentStamina - drain;
 }
-export function applyFatigueFromPlayHistory() {
-  return undefined;
+
+type HistoricalPlay = Record<string, unknown>;
+
+function historicalField(play: HistoricalPlay, fieldName: string) {
+  const normalizedFieldName = fieldName.replace(/[^a-z0-9]/gi, "").toLowerCase();
+  const entry = Object.entries(play).find(
+    ([key]) =>
+      key.replace(/[^a-z0-9]/gi, "").toLowerCase() === normalizedFieldName,
+  );
+  return entry?.[1];
+}
+
+/**
+ * Rebuilds in-game stamina from persisted plays.
+ *
+ * Player fatigue is intentionally not stored with the game, so loading a game
+ * must replay each recorded action using the same drain settings as a live
+ * play. Resetting every player first makes this safe to call again if game data
+ * is refreshed, rather than charging the history more than once.
+ */
+export function applyFatigueFromPlayHistory(
+  ctx: EngineContext,
+  playHistory: HistoricalPlay[],
+) {
+  ctx.players.forEach((player) => {
+    player.fatigue = number(player.stamina ?? player.Stamina, 100);
+  });
+
+  playHistory.forEach((play) => {
+    const playerName = String(historicalField(play, "player") ?? "").trim();
+    const actionType = String(historicalField(play, "playtype") ?? "").trim();
+    if (playerName && actionType) applyFatigue(ctx, playerName, actionType);
+  });
+
+  return ctx.players;
 }
