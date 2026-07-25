@@ -32,6 +32,7 @@ import {
   spikeBall,
 } from "./gameplay/gameEngine";
 import { animatePlay } from "./gameplay/engine/animationAdapter";
+import { applyFatigueFromPlayHistory } from "./gameplay/engine/fatigueEngine";
 import type {
   FormationSlot,
   FrontendSettings,
@@ -1421,11 +1422,21 @@ export function GameCenter({
     ])
       .then(([stateRes, historyRes, playerRes, settingsRes, teamsRes]) => {
         if (!active) return;
+        const loadedSettings = normalizeFrontendSettings(settingsRes);
+        const loadedPlayers = playerRes.players.map((player) => ({ ...player }));
+        applyFatigueFromPlayHistory(
+          {
+            players: loadedPlayers,
+            settings: loadedSettings,
+            historyLength: historyRes.plays.length,
+          },
+          historyRes.plays,
+        );
         setCurrentGame(normalizeGame(game, stateRes.gameState));
         setHistory(historyRes.plays);
-        setPlayers(playerRes.players);
+        setPlayers(loadedPlayers);
         setTeams(teamsRes.teams as LeagueTeam[]);
-        setSettings(normalizeFrontendSettings(settingsRes));
+        setSettings(loadedSettings);
         setLog(
           historyRes.plays.length
             ? historyRes.plays
