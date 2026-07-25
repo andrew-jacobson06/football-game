@@ -1766,8 +1766,8 @@
 
 .field-formation-bench {
   position: absolute;
-  left: 50%;
-  top: -300%;
+  left: 75%;
+  top: 90%;
   z-index: 360;
   width: min(980px, calc(100% - 32px));
   transform: translateX(-50%);
@@ -1921,6 +1921,7 @@
   font-size: 12px;
 }
 
+
 @media (max-width: 720px) {
   .field-console-stage .radial-play-caller {
     top: 50%;
@@ -1940,10 +1941,10 @@
 .field-controls-overlay {
   position: sticky;
   top: 50%;
+  width: 100%;
   left: 0;
   z-index: 300;
   height: 0;
-  width: 0;
   overflow: visible;
   pointer-events: none;
   transform: translateY(-50%);
