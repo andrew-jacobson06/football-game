@@ -24,6 +24,7 @@ type AnimationPlayer = {
   headUrl?: string;
   className?: string;
   unit?: "offense" | "defense";
+  alignmentSlot?: FormationSlot;
   assignment?: PlayerAssignment;
 };
 type PlayerMoveStep = {
@@ -441,9 +442,7 @@ export default function GameField({
         position: assignment.position,
         role: assignment.position,
         unit: "defense" as const,
-        lane: assignment.align
-          ? FORMATION_SLOT_LINEUP[assignment.align as FormationSlot]?.lane
-          : undefined,
+        alignmentSlot: assignment.align as FormationSlot | undefined,
         headUrl: imgOf(player),
       };
     });
@@ -505,6 +504,11 @@ export default function GameField({
   const getDefaultLaneForPlayer = useCallback(
     (player: AnimationPlayer, allPlayers: AnimationPlayer[]) => {
       if (player.lane && LANES[player.lane] !== undefined) return player.lane;
+      if (
+        player.alignmentSlot &&
+        FORMATION_SLOT_LINEUP[player.alignmentSlot]?.lane
+      )
+        return FORMATION_SLOT_LINEUP[player.alignmentSlot].lane;
       if (player.role && OFFENSIVE_DEFAULT_LANES[player.role])
         return OFFENSIVE_DEFAULT_LANES[player.role];
       if (player.position && LANES[player.position] !== undefined)
