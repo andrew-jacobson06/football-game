@@ -65,7 +65,7 @@ type AnimationPhase = {
     turnoverFlash?: boolean;
   };
 };
-type AnimationPlan = {
+export type AnimationPlan = {
   meta?: {
     playId?: string;
     playType?: string;
@@ -344,6 +344,8 @@ export default function GameField({
   homeTeamPrimaryColor,
   awayTeam,
   onSetupTransitionChange,
+  animationRequest,
+  onAnimationComplete,
   children,
 }: {
   formationMode?: boolean;
@@ -364,6 +366,8 @@ export default function GameField({
   homeTeamPrimaryColor?: string;
   awayTeam?: string;
   onSetupTransitionChange?: (active: boolean) => void;
+  animationRequest?: { id: number; plan: unknown } | null;
+  onAnimationComplete?: (id: number) => void;
   children?: ReactNode;
 }) {
   const fieldViewportRef = useRef<HTMLDivElement>(null);
@@ -380,6 +384,7 @@ export default function GameField({
   const labelsRef = useRef<Record<string, HTMLDivElement>>({});
   const footballCarrierIdRef = useRef<string | null>(null);
   const isRunningRef = useRef(false);
+  const lastAnimationRequestRef = useRef<number | null>(null);
   const isSetupTransitionRef = useRef(false);
   const footballFollowRafRef = useRef<number | null>(null);
   const activePhaseDurationMsRef = useRef(DEFAULT_PHASE_DURATION_MS);
@@ -1024,6 +1029,23 @@ export default function GameField({
       updateScreenPositionsWithoutFootball,
     ],
   );
+  useEffect(() => {
+    if (!animationRequest) return;
+    if (lastAnimationRequestRef.current === animationRequest.id) return;
+    lastAnimationRequestRef.current = animationRequest.id;
+
+    const executeRequestedAnimation = async () => {
+      try {
+        await runAnimationPlan(validatePlan(animationRequest.plan));
+      } catch (error) {
+        console.error(error);
+        showError(error instanceof Error ? error.message : String(error));
+      } finally {
+        onAnimationComplete?.(animationRequest.id);
+      }
+    };
+    void executeRequestedAnimation();
+  }, [animationRequest, onAnimationComplete, runAnimationPlan, showError]);
   const loadExampleJson = useCallback(() => {
     if (jsonInputRef.current)
       jsonInputRef.current.value = JSON.stringify(

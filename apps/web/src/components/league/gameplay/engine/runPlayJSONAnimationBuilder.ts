@@ -43,8 +43,8 @@ export type RunAnimationPlan = {
 };
 
 /**
- * Builds the animation data only after the run simulation has resolved. For
- * now it deliberately stops after the snap and handoff/line-battle phases.
+ * Builds the animation data only after the run simulation has resolved. The
+ * final phase carries the result to its ending yard before the next setup.
  */
 export function runPlayJSONAnimationBuilder(
   previousGame: LeagueGame,
@@ -225,6 +225,31 @@ export function runPlayJSONAnimationBuilder(
         players: phaseTwoPlayers,
         labels,
         football: { mode: "carrier", carrierId: runnerId },
+      },
+      {
+        id: "run-result",
+        caption: `${runnerName} runs for ${yardsGained} yard${Math.abs(yardsGained) === 1 ? "" : "s"}.`,
+        durationMs: 900,
+        holdMs: 250,
+        players: runnerId
+          ? [
+              {
+                playerId: runnerId,
+                lane: handoffLane,
+                yard: Number(updatedGame.BallOn),
+                className: "ball-carrier",
+              },
+            ]
+          : [],
+        labels: labels.map((label) => ({ ...label, visible: false })),
+        football: { mode: "carrier", carrierId: runnerId },
+        fieldEffects: {
+          touchdownFlash:
+            Number(updatedGame.BallOn) === 0 ||
+            Number(updatedGame.BallOn) === 100,
+          firstDownFlash:
+            Number(previousGame.Distance) <= Math.max(0, yardsGained),
+        },
       },
     ],
   };

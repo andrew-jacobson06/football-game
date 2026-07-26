@@ -17,7 +17,7 @@ import {
   savePlayAndGame,
 } from "../../api/client";
 import { GameScoreboard } from "./GameScoreboard";
-import GameField from "./GameField";
+import GameField, { type AnimationPlan } from "./GameField";
 import { GameControls } from "./GameControls";
 import { buildDefense } from "./formationDefense";
 import { GameLog } from "./GameLog";
@@ -31,7 +31,6 @@ import {
   runPlay,
   spikeBall,
 } from "./gameplay/gameEngine";
-import { animatePlay } from "./gameplay/engine/animationAdapter";
 import { applyFatigueFromPlayHistory } from "./gameplay/engine/fatigueEngine";
 import type {
   FormationSlot,
@@ -1397,6 +1396,15 @@ export function GameCenter({
   const [autoCloseFormationOnSave, setAutoCloseFormationOnSave] =
     useState(false);
   const [selectedFormationPlayer, setSelectedFormationPlayer] = useState("");
+  const [animationRequest, setAnimationRequest] = useState<{
+    id: number;
+    plan: AnimationPlan;
+  } | null>(null);
+  const animationSequenceRef = useRef(0);
+  const animationResolverRef = useRef<{
+    id: number;
+    resolve: () => void;
+  } | null>(null);
   const previousPossessionRef = useRef(currentGame.Possession);
   const playInFlightRef = useRef(false);
   const ctx = useMemo(
@@ -1476,11 +1484,7 @@ export function GameCenter({
     if (playInFlightRef.current) return;
     playInFlightRef.current = true;
     const previousGame = currentGame;
-    const previousBallOn = currentGame.BallOn;
     setIsSavingPlay(true);
-    setCurrentGame(result.game);
-    setHistory((h) => [...h, result.play]);
-    setLog((l) => [result.text, ...l]);
     const gamePayload = {
       gameId: result.game.GameId,
       quarter: result.game.Qtr,
@@ -1504,25 +1508,24 @@ export function GameCenter({
         play: result.play,
         game: gamePayload,
       });
-      if (result.play.playtype === "Run") {
-        try {
-          await animatePlay("Run", null, {
-            ...result.game,
-            Previous: previousBallOn,
-          });
-        } catch (error: unknown) {
-          setLog((l) => [
-            `Play animation skipped: ${error instanceof Error ? error.message : String(error)}`,
-            ...l,
-          ]);
-        }
+      const animation = (result.play as Record<string, unknown>).animation;
+      if (animation && typeof animation === "object") {
+        const id = ++animationSequenceRef.current;
+        await new Promise<void>((resolve) => {
+          animationResolverRef.current = { id, resolve };
+          setAnimationRequest({ id, plan: animation as AnimationPlan });
+        });
       }
+      // Preserve the pre-snap situation while the play runs. This state change
+      // advances the markers and resets the formation only after animation.
+      setCurrentGame(result.game);
+      setHistory((h) => [...h, result.play]);
+      setLog((l) => [result.text, ...l]);
     } catch (error) {
       setCurrentGame(previousGame);
-      setHistory((h) => h.filter((play) => play !== result.play));
       setLog((l) => [
-        `Save failed and optimistic play was rolled back: ${error instanceof Error ? error.message : String(error)}`,
-        ...l.filter((entry) => entry !== result.text),
+        `Save failed: ${error instanceof Error ? error.message : String(error)}`,
+        ...l,
       ]);
     } finally {
       setIsSavingPlay(false);
@@ -1677,6 +1680,14 @@ export function GameCenter({
                   "Primary Color",
                 )}
                 awayTeam={currentGame.Away}
+                animationRequest={animationRequest}
+                onAnimationComplete={(id) => {
+                  const pending = animationResolverRef.current;
+                  if (!pending || pending.id !== id) return;
+                  animationResolverRef.current = null;
+                  setAnimationRequest(null);
+                  pending.resolve();
+                }}
                 onFormationSlotClick={(slot) => {
                   const currentFormation = playOptions.formation ?? {};
                   const selectedPlayer = selectedFormationPlayer;
