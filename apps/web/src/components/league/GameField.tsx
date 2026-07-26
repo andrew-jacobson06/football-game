@@ -853,7 +853,7 @@ export default function GameField({
       plan.players.forEach((rawPlayer) => {
         const player = normalizePlayerLane(rawPlayer, plan.players);
         const el = document.createElement("div");
-        el.className = `token ${player.team.toLowerCase()} ${unitClassForPlayer(player)} ${player.className || ""}`;
+        el.className = `token ${player.team.toLowerCase()} ${unitClassForPlayer(player)} reset`;
         el.id = `player-${player.id}`;
         el.style.left = `${player.x}%`;
         el.style.top = `${yardToYPct(player.yard)}%`;
@@ -883,7 +883,7 @@ export default function GameField({
         field.appendChild(el);
         playersRef.current[player.id] = {
           ...player,
-          className: player.className || "",
+          className: "reset",
           el,
         };
       });
@@ -1120,6 +1120,19 @@ export default function GameField({
       onSetupTransitionChange?.(true);
       try {
         currentPlanRef.current = nextPlan;
+        Object.values(playersRef.current).forEach((player) => {
+          player.className = "reset";
+          player.el.className = `token ${player.team.toLowerCase()} ${unitClassForPlayer(player)} reset`;
+        });
+        fieldRef.current
+          ?.querySelectorAll(".battle-label")
+          .forEach((label) => label.remove());
+        labelsRef.current = {};
+        fieldRef.current?.classList.remove(
+          "first-down-flash",
+          "touchdown-flash",
+          "turnover-flash",
+        );
         updateLinePositions();
         await wait(350);
         if (cancelled) return;
