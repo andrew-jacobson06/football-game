@@ -583,6 +583,7 @@ export function runPlay(
       runChallenges,
       tackler,
       runState.log.some((entry) => /\bBreakaway\b/.test(entry) && !/skipped/i.test(entry)),
+      runState.pursuitEvents,
     ),
   });
 

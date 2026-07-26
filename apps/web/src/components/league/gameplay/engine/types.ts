@@ -118,6 +118,13 @@ export type RunPlayState = {
   stopped: boolean;
   stopReason?: string;
   log: string[];
+  pursuitEvents: Array<{
+    stage: "secondary" | "breakaway";
+    chaser: string;
+    startYards: number;
+    endYards: number;
+    escaped: boolean;
+  }>;
 };
 export type LineStatMatchup = {
   slot: FormationSlot;

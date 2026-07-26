@@ -345,6 +345,7 @@ export function createRunPlayState(runner: string): RunPlayState {
     runner,
     stopped: false,
     log: [],
+    pursuitEvents: [],
   };
 }
 
@@ -883,6 +884,7 @@ function addSecondarySpeedYards(
   settings: FrontendSettings | undefined,
   defenseFormation: DefensiveAssignment[] = [],
 ) {
+  const pursuitStart = runState.yards;
   const secondarySpeedYards = getSecondarySpeedYards(
     findPlayerByName(players, runState.runner),
     settings,
@@ -901,9 +903,18 @@ function addSecondarySpeedYards(
     defenseFormation,
     players,
   );
+  if (pursuitResult?.chaser) {
+    runState.pursuitEvents.push({
+      stage: "secondary",
+      chaser: pursuitResult.chaser,
+      startYards: pursuitStart,
+      endYards: runState.yards,
+      escaped: pursuitResult.escaped,
+    });
+  }
   if (pursuitResult?.escaped) {
     addSecondaryBreakawayYards(runState, players, settings);
-    tackleByFastestSecondaryDefender(runState, defenseFormation, players);
+    resolveBreakawayPursuit(runState, defenseFormation, players, pursuitResult.chaser);
   }
 }
 
@@ -985,10 +996,11 @@ function addSecondaryBreakawayYards(
   }
 }
 
-function tackleByFastestSecondaryDefender(
+function resolveBreakawayPursuit(
   runState: RunPlayState,
   defenseFormation: DefensiveAssignment[],
   players: PlayerTrait[],
+  initialChaser?: string,
 ) {
   if (runState.stopped) return;
 
@@ -1008,15 +1020,32 @@ function tackleByFastestSecondaryDefender(
 
   if (!fastestDefender) return;
 
-  handleRunnerTackle(
-    runState,
-    fastestDefender.assignment.player,
-    "Breakaway End Fastest Secondary Defender",
-    players,
+  const startYards = runState.yards;
+  const chaser = fastestDefender.assignment.player;
+  const runnerSpeed = trait(findPlayerByName(players, runState.runner), "speed");
+  // A defender already beaten in the first chase has less leverage on a second
+  // attempt; a new pursuit angle gets a small positioning advantage.
+  const catchChance = Math.max(
+    8,
+    Math.min(82, 48 + fastestDefender.speed - runnerSpeed + (chaser === initialChaser ? -12 : 6)),
   );
-  runState.log.push(
-    `${fastestDefender.assignment.player} makes the automatic tackle after the breakaway as the fastest DB/LB/S on the field.`,
-  );
+  const caught = Math.random() * 100 < catchChance;
+  if (caught) {
+    handleRunnerTackle(runState, chaser, "Breakaway Pursuit", players);
+    runState.log.push(`${chaser} stays in hot pursuit and tracks down ${runState.runner} after the breakaway.`);
+  } else {
+    // Crossing the goal line is clamped to the actual remaining field distance
+    // by runPlay's scoreboard resolution.
+    addYards(runState, 100, `${runState.runner} pulls away from ${chaser} and races to the end zone`);
+    runState.log.push(`${chaser} cannot close the gap; ${runState.runner} finishes the escape in the end zone.`);
+  }
+  runState.pursuitEvents.push({
+    stage: "breakaway",
+    chaser,
+    startYards,
+    endYards: runState.yards,
+    escaped: !caught,
+  });
 }
 
 export type SecondaryPursuitResult = {
