@@ -7,23 +7,6 @@ import type {
 } from "./types";
 import { defenseTeam, offenseTeam, playerName } from "./utils";
 
-const OFFENSE_SETUP: Partial<
-  Record<FormationSlot, { lane: string; offset: number }>
-> = {
-  WR1: { lane: "WR1", offset: -1 },
-  WR2: { lane: "WR2", offset: -1 },
-  WR3: { lane: "SLT1", offset: -1.5 },
-  WR4: { lane: "SLT2", offset: -1.5 },
-  RB1: { lane: "LG", offset: -6 },
-  RB2: { lane: "RG", offset: -6 },
-  QB: { lane: "C", offset: -3.5 },
-  LT: { lane: "LT", offset: -1 },
-  LG: { lane: "LG", offset: -0.75 },
-  C: { lane: "C", offset: -0.5 },
-  RG: { lane: "RG", offset: -0.75 },
-  RT: { lane: "RT", offset: -1 },
-};
-
 const domId = (prefix: string, position: string, name: string) =>
   `${prefix}-${position}-${name}`
     .toLowerCase()
@@ -84,17 +67,14 @@ export function runPlayJSONAnimationBuilder(
   );
   const offenseIds = new Map<string, string>();
   const defenseIds = new Map<string, string>();
-  const initialYards = new Map<string, number>();
-
   const players: Array<Record<string, unknown>> = [];
+  // GameField owns the canonical pre-snap lane and depth setup. The animation
+  // plan describes personnel and assignments, then only supplies coordinates
+  // once a phase actually moves a player.
   for (const [slot, name] of Object.entries(formation)) {
     if (!name) continue;
-    const setup = OFFENSE_SETUP[slot as FormationSlot];
-    if (!setup) continue;
     const id = domId("off", slot, name);
-    const yard = los + direction * setup.offset;
     offenseIds.set(name, id);
-    initialYards.set(id, yard);
     players.push({
       id,
       name,
@@ -102,26 +82,13 @@ export function runPlayJSONAnimationBuilder(
       position: slot,
       role: slot,
       unit: "offense",
-      lane: setup.lane,
-      yard,
       headUrl: imageOf(rosterByName.get(name)),
     });
   }
 
   for (const assignment of defense) {
     const id = domId("def", assignment.position, assignment.player);
-    const isLineDefender = assignment.position.startsWith("DL");
-    const lane =
-      assignment.align && OFFENSE_SETUP[assignment.align as FormationSlot]
-        ? OFFENSE_SETUP[assignment.align as FormationSlot]!.lane
-        : assignment.position.startsWith("S")
-          ? "C"
-          : assignment.position.startsWith("LB")
-            ? "C"
-            : undefined;
-    const yard = los + direction * (isLineDefender ? 1.5 : 6);
     defenseIds.set(assignment.player, id);
-    initialYards.set(id, yard);
     players.push({
       id,
       name: assignment.player,
@@ -129,8 +96,7 @@ export function runPlayJSONAnimationBuilder(
       position: assignment.position,
       role: assignment.position,
       unit: "defense",
-      lane,
-      yard,
+      alignmentSlot: assignment.align as FormationSlot | undefined,
       headUrl: imageOf(rosterByName.get(assignment.player)),
     });
   }
@@ -151,8 +117,8 @@ export function runPlayJSONAnimationBuilder(
     const olId = offenseIds.get(matchup.offensePlayer);
     const dlId = defenseIds.get(matchup.defensePlayer);
     if (!olId || !dlId) continue;
-    const olStart = initialYards.get(olId) ?? los;
-    const dlStart = initialYards.get(dlId) ?? los;
+    const olStart = los;
+    const dlStart = los + direction * 1.5;
     const olWon = matchup.winner === "OL";
     const olMove = olWon
       ? randomYards(1, 2.5, random)
@@ -163,13 +129,13 @@ export function runPlayJSONAnimationBuilder(
     battlePlayers.push(
       {
         playerId: olId,
-        lane: OFFENSE_SETUP[matchup.slot]?.lane ?? matchup.slot,
+        lane: matchup.slot,
         yard: Number((olStart + direction * olMove).toFixed(2)),
         className: olWon ? "ol-win" : "ol-lost",
       },
       {
         playerId: dlId,
-        lane: OFFENSE_SETUP[matchup.slot]?.lane ?? matchup.slot,
+        lane: matchup.slot,
         yard: Number((dlStart + direction * dlMove).toFixed(2)),
         className: olWon ? "dl-lost" : "dl-win",
       },
@@ -177,7 +143,7 @@ export function runPlayJSONAnimationBuilder(
     labels.push({
       id: `${olId}-${dlId}`,
       text: `${olWon ? matchup.offensePlayer : matchup.defensePlayer} wins`,
-      lane: OFFENSE_SETUP[matchup.slot]?.lane ?? matchup.slot,
+      lane: matchup.slot,
       yard: Number(((olStart + dlStart) / 2).toFixed(2)),
       className: olWon ? "win" : "loss",
       visible: true,
@@ -190,7 +156,7 @@ export function runPlayJSONAnimationBuilder(
           playerId: quarterbackId,
           lane: "C",
           yard: Number(
-            ((initialYards.get(quarterbackId) ?? los) - direction * 0.5).toFixed(
+            ((los - direction * 3.5) - direction * 0.5).toFixed(
               2,
             ),
           ),
@@ -211,9 +177,8 @@ export function runPlayJSONAnimationBuilder(
   if (runnerId)
     phaseTwoPlayers.push({
       playerId: runnerId,
-      lane: OFFENSE_SETUP[runnerSlot]?.lane,
       yard: Number(
-        ((initialYards.get(runnerId) ?? los) + direction).toFixed(2),
+        (los - direction * 5).toFixed(2),
       ),
       className: "handoff-target",
     });
