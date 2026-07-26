@@ -1351,6 +1351,18 @@ export type LbSecondLevelResult = {
   truckAccelerationResult?: TruckOrJukeAccelerationResult;
   nextLevelPressure?: LbNextLevelPressureResult;
   stopped: boolean;
+  /** Every contact in order, including contacts reached after a successful move. */
+  challenges: LbSecondLevelChallenge[];
+};
+
+export type LbSecondLevelChallenge = {
+  linebacker: DefensiveAssignment;
+  challengeYards: number;
+  wrapResult: DefenderWrapResult;
+  jukeResult?: LbJukeResult;
+  carryDefenderResult?: CarryDefenderResult;
+  secondChanceAttempt?: RunnerDefenderSecondChanceAttempt;
+  truckResult?: TruckAttemptResult;
 };
 
 export type LbNextLevelPressureResult = {
@@ -1439,7 +1451,7 @@ export function resolveLinebackerSecondLevel(
       `${runState.runner} reaches the second level with no linebacker in position and breaks into the secondary.`,
     );
     addSecondarySpeedYards(runState, players, settings, defenseFormation);
-    return { stopped: false };
+    return { stopped: false, challenges: [] };
   }
 
   const restartSecondLevelCycle = (
@@ -1531,6 +1543,7 @@ export function resolveLinebackerSecondLevel(
   );
 
   const wrapResult = performDefenderWrapCheck(linebacker.player, players);
+  const challengeYards = runState.yards;
   let carryDefenderResult: CarryDefenderResult | undefined;
   let fallForwardResult: FallForwardResult | undefined;
   let jukeResult: LbJukeResult | undefined;
@@ -1586,6 +1599,18 @@ export function resolveLinebackerSecondLevel(
             secondChanceAttempt,
             truckResult,
             stopped: runState.stopped,
+            challenges: [
+              {
+                linebacker,
+                challengeYards,
+                wrapResult,
+                jukeResult,
+                carryDefenderResult,
+                secondChanceAttempt,
+                truckResult,
+              },
+              ...recursiveResult.challenges,
+            ],
           };
         }
       } else {
@@ -1633,6 +1658,18 @@ export function resolveLinebackerSecondLevel(
             secondChanceAttempt,
             truckResult,
             stopped: runState.stopped,
+            challenges: [
+              {
+                linebacker,
+                challengeYards,
+                wrapResult,
+                jukeResult,
+                carryDefenderResult,
+                secondChanceAttempt,
+                truckResult,
+              },
+              ...recursiveResult.challenges,
+            ],
           };
         }
       }
@@ -1648,6 +1685,15 @@ export function resolveLinebackerSecondLevel(
     secondChanceAttempt,
     truckResult,
     stopped: runState.stopped,
+    challenges: [{
+      linebacker,
+      challengeYards,
+      wrapResult,
+      jukeResult,
+      carryDefenderResult,
+      secondChanceAttempt,
+      truckResult,
+    }],
   };
 }
 

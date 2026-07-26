@@ -79,7 +79,7 @@ export function runPlayJSONAnimationBuilder(
   visionCheck?: VisionCheckResult,
   runLaneTarget?: RunLaneTargetResult,
   dlSwipeResult?: DlSwipeResult | null,
-  firstChallenge?: FirstRunChallenge,
+  runChallenges: FirstRunChallenge[] = [],
   tacklerName = "NA",
   isBreakaway = false,
   random: () => number = Math.random,
@@ -236,6 +236,7 @@ export function runPlayJSONAnimationBuilder(
   const swipeBlockerLane = dlSwipeResult?.slot;
   const chosenHoleLane = runLaneTarget?.selectedSlot ?? handoffLane;
   const hiddenLabels = labels.map((label) => ({ ...label, visible: false }));
+  const firstChallenge = runChallenges[0];
   const challengeDefenderId = firstChallenge
     ? defenseIds.get(firstChallenge.defender)
     : undefined;
@@ -321,11 +322,11 @@ export function runPlayJSONAnimationBuilder(
                         path: jukeMove === "spin"
                           ? [
                               { lane: chosenHoleLane, yard: challengeYard, className: "spinning", durationMs: 400 },
-                              { lane: chosenHoleLane, yard: firstChallenge.moveSucceeded && !isBreakaway ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 300 },
+                              { lane: chosenHoleLane, yard: challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 300 },
                             ]
                           : [
                               { lane: fakeLane, yard: challengeYard, className: "juking", durationMs: 250 },
-                              { lane: cutLane, yard: firstChallenge.moveSucceeded && !isBreakaway ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 450 },
+                              { lane: cutLane, yard: challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 450 },
                             ],
                       }]
                     : []),
@@ -364,7 +365,7 @@ export function runPlayJSONAnimationBuilder(
                   durationMs: 600,
                   holdMs: firstChallenge.moveSucceeded ? 150 : 350,
                   players: [
-                    ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: firstChallenge.moveSucceeded && isBreakaway ? challengeYard : firstChallenge.moveSucceeded || firstChallenge.carryYards ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? powerMove === "truck" ? "trucking" : "stiff-arming" : "tackled" }] : []),
+                    ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: firstChallenge.moveSucceeded ? challengeYard : firstChallenge.carryYards ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? powerMove === "truck" ? "trucking" : "stiff-arming" : "tackled" }] : []),
                     ...(challengeDefenderId ? [{ playerId: challengeDefenderId, lane: firstChallenge.moveSucceeded && powerMove === "stiff-arm" ? stiffArmLane : chosenHoleLane, yard: firstChallenge.carryYards ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? powerMove === "truck" ? "trucked" : "stiff-armed" : "tackling" }] : []),
                   ],
                   football: { mode: "carrier", carrierId: runnerId },
@@ -373,6 +374,53 @@ export function runPlayJSONAnimationBuilder(
       ]
         .flat()
     : [];
+
+  // A runner can beat several defenders. Preserve every simulation contact in
+  // the animation instead of jumping from the first move to the final spot.
+  // Each pursuit phase brings the *next* challenger to the contact point while
+  // the runner accelerates there, so the defender is established before the
+  // tackle, juke, or truck begins.
+  const followingChallengePhases: Array<Record<string, unknown>> = runChallenges
+    .slice(1)
+    .flatMap((challenge, index) => {
+      const defenderId = defenseIds.get(challenge.defender);
+      const assignment = defense.find(({ player }) => player === challenge.defender);
+      const lane = assignment?.align ?? chosenHoleLane;
+      const yard = Number((los + direction * challenge.accelerationYards).toFixed(2));
+      const succeeded = Boolean(challenge.moveSucceeded);
+      const move = challenge.attempt?.toLowerCase() ?? "wrap";
+      const stopped = challenge.wrapped || (challenge.attempt && !succeeded);
+      return [
+        {
+          id: `pursuit-to-challenge-${index + 2}`,
+          caption: `${runnerName} tries to accelerate away, but ${challenge.defender} closes at the next challenge point.`,
+          durationMs: 650,
+          players: [
+            ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard, className: "ball-carrier accelerating" }] : []),
+            ...(defenderId ? [{ playerId: defenderId, lane, yard, className: "chasing" }] : []),
+          ],
+          labels: hiddenLabels,
+          football: { mode: "carrier", carrierId: runnerId },
+        },
+        {
+          id: `challenge-${index + 2}-${stopped ? "tackle" : move}`,
+          caption: challenge.wrapped
+            ? `${challenge.defender} gets into position and wraps up ${runnerName}.`
+            : succeeded
+              ? `${runnerName} ${move === "juke" ? "jukes" : "trucks through"} ${challenge.defender} and looks to accelerate again.`
+              : `${challenge.defender} defeats ${runnerName}'s ${move} attempt and makes the tackle.`,
+          durationMs: 600,
+          holdMs: stopped ? 350 : 150,
+          players: [
+            ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard, className: stopped ? "tackled" : move === "juke" ? "juking" : "trucking" }] : []),
+            ...(defenderId ? [{ playerId: defenderId, lane: chosenHoleLane, yard, className: stopped ? "tackling" : move === "juke" ? "juked" : "trucked" }] : []),
+          ],
+          football: { mode: "carrier", carrierId: runnerId },
+        },
+      ];
+    });
+
+  const challengePhases = [...firstChallengePhases, ...followingChallengePhases];
 
   // The resolved play selects either the line swipe or first-challenge
   // choreography; animation randomness only selects the juke fake side and
@@ -455,8 +503,8 @@ export function runPlayJSONAnimationBuilder(
           football: { mode: "carrier", carrierId: runnerId },
         },
       ]
-    : firstChallengePhases.length > 0
-      ? firstChallengePhases
+    : challengePhases.length > 0
+      ? challengePhases
       : [
         {
           id: "run-result",
@@ -483,10 +531,11 @@ export function runPlayJSONAnimationBuilder(
         },
       ];
 
+  const lastChallenge = runChallenges.at(-1);
   const firstChallengeShowsTackle = Boolean(
-    firstChallenge &&
-      (firstChallenge.wrapped ||
-        (!firstChallenge.moveSucceeded && firstChallenge.attempt)),
+    lastChallenge &&
+      (lastChallenge.wrapped ||
+        (!lastChallenge.moveSucceeded && lastChallenge.attempt)),
   );
   const needsFinalTackle = Boolean(
     tacklerName &&
@@ -497,6 +546,16 @@ export function runPlayJSONAnimationBuilder(
   );
   const finalTacklePhase: Array<Record<string, unknown>> = needsFinalTackle
     ? [
+        {
+          id: "final-tackle-pursuit",
+          caption: `${tacklerName} tracks ${runnerName} into position for the final challenge.`,
+          durationMs: 550,
+          players: [
+            ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: resultYard, className: "ball-carrier accelerating" }] : []),
+            { playerId: tacklerId, lane: chosenHoleLane, yard: resultYard, className: "chasing" },
+          ],
+          football: { mode: "carrier", carrierId: runnerId },
+        },
         {
           id: "final-tackle",
           caption: `${tacklerName} closes on ${runnerName} and makes the tackle.`,
