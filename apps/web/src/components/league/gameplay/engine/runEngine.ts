@@ -584,6 +584,7 @@ export function runPlay(
       dlSwipeResult,
       firstChallenge,
       tackler,
+      runState.log.some((entry) => /\bBreakaway\b/.test(entry) && !/skipped/i.test(entry)),
     ),
   });
 

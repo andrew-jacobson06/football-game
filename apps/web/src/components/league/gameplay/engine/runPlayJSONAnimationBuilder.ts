@@ -57,6 +57,13 @@ export type FirstRunChallenge = {
   carryYards?: number;
 };
 
+/** Converts runner speed into an open-field animation pace of 6-9 yards/sec. */
+export const breakawayDurationMs = (yards: number, speed: number) => {
+  const normalizedSpeed = Math.max(0, Math.min(100, speed));
+  const yardsPerSecond = 6 + (normalizedSpeed / 100) * 3;
+  return Math.max(1, Math.round((Math.abs(yards) / yardsPerSecond) * 1000));
+};
+
 /**
  * Builds the animation data only after the run simulation has resolved. The
  * final phase carries the result to its ending yard before the next setup.
@@ -74,6 +81,7 @@ export function runPlayJSONAnimationBuilder(
   dlSwipeResult?: DlSwipeResult | null,
   firstChallenge?: FirstRunChallenge,
   tacklerName = "NA",
+  isBreakaway = false,
   random: () => number = Math.random,
 ): RunAnimationPlan {
   const formation = options.formation ?? {};
@@ -203,7 +211,20 @@ export function runPlayJSONAnimationBuilder(
       className: "handoff-target",
     });
 
-  const resultYard = Number(updatedGame.BallOn);
+  const scoringYard = los + direction * yardsGained;
+  const isTouchdown =
+    tacklerName === "NA" &&
+    (direction === 1 ? scoringYard >= 100 : scoringYard <= 0);
+  // The updated game is already set for the ensuing possession after a score,
+  // so keep the animation on the scoring goal line instead of the kickoff spot.
+  const resultYard = isTouchdown
+    ? (direction === 1 ? 100 : 0)
+    : Number(updatedGame.BallOn);
+  const runnerSpeed = Number(rosterByName.get(runnerName)?.speed) || 0;
+  const openFieldDurationMs = breakawayDurationMs(yardsGained, runnerSpeed);
+  const breakawayStartYard = Number(
+    (los + direction * Math.min(Math.abs(yardsGained), 8)).toFixed(2),
+  );
   const successfulHoleSwipe = Boolean(
     visionCheck?.getsPastDL &&
       runLaneTarget?.selectedSide === "OL" &&
@@ -279,7 +300,7 @@ export function runPlayJSONAnimationBuilder(
                         playerId: runnerId,
                         path: [
                           { lane: fakeLane, yard: challengeYard, className: "juking", durationMs: 250 },
-                          { lane: cutLane, yard: firstChallenge.moveSucceeded ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 450 },
+                          { lane: cutLane, yard: firstChallenge.moveSucceeded && !isBreakaway ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 450 },
                         ],
                       }]
                     : []),
@@ -314,7 +335,7 @@ export function runPlayJSONAnimationBuilder(
                   durationMs: 600,
                   holdMs: firstChallenge.moveSucceeded ? 150 : 350,
                   players: [
-                    ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: firstChallenge.moveSucceeded || firstChallenge.carryYards ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "trucking" : "tackled" }] : []),
+                    ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: firstChallenge.moveSucceeded && isBreakaway ? challengeYard : firstChallenge.moveSucceeded || firstChallenge.carryYards ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "trucking" : "tackled" }] : []),
                     ...(challengeDefenderId ? [{ playerId: challengeDefenderId, lane: chosenHoleLane, yard: firstChallenge.carryYards ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "trucked" : "tackling" }] : []),
                   ],
                   football: { mode: "carrier", carrierId: runnerId },
@@ -337,7 +358,7 @@ export function runPlayJSONAnimationBuilder(
                 {
                   playerId: runnerId,
                   lane: chosenHoleLane,
-                  yard: resultYard,
+                  yard: isBreakaway ? breakawayStartYard : resultYard,
                   className: "ball-carrier accelerating",
                 },
               ]
@@ -417,7 +438,7 @@ export function runPlayJSONAnimationBuilder(
                 {
                   playerId: runnerId,
                   lane: chosenHoleLane,
-                  yard: resultYard,
+                  yard: isBreakaway ? breakawayStartYard : resultYard,
                   className: "ball-carrier",
                 },
               ]
@@ -472,6 +493,35 @@ export function runPlayJSONAnimationBuilder(
           football: { mode: "carrier", carrierId: runnerId },
         },
       ]
+    : [];
+
+  const breakawayPhase: Array<Record<string, unknown>> = isBreakaway
+    ? [{
+        id: "breakaway-run",
+        caption: isTouchdown
+          ? `${runnerName} breaks free and races into the end zone!`
+          : `${runnerName} breaks free into the open field!`,
+        durationMs: openFieldDurationMs,
+        players: runnerId
+          ? [{ playerId: runnerId, lane: chosenHoleLane, yard: resultYard, className: "ball-carrier accelerating" }]
+          : [],
+        labels: hiddenLabels,
+        football: { mode: "carrier", carrierId: runnerId },
+        fieldEffects: { touchdownFlash: isTouchdown },
+      }]
+    : [];
+
+  const touchdownCelebrationPhase: Array<Record<string, unknown>> = isTouchdown
+    ? [{
+        id: "touchdown-celebration",
+        caption: `Touchdown! ${runnerName} celebrates in the end zone!`,
+        durationMs: Math.round(4000 + random() * 2000),
+        players: runnerId
+          ? [{ playerId: runnerId, lane: chosenHoleLane, yard: resultYard, className: "celebrating" }]
+          : [],
+        football: { mode: "carrier", carrierId: runnerId },
+        fieldEffects: { touchdownFlash: true },
+      }]
     : [];
 
   // On successful reads, make the backfield cut its own phase. This prevents
@@ -545,7 +595,9 @@ export function runPlayJSONAnimationBuilder(
       },
       ...chooseLanePhases,
       ...resultPhases,
+      ...breakawayPhase,
       ...finalTacklePhase,
+      ...touchdownCelebrationPhase,
     ],
   };
 }
