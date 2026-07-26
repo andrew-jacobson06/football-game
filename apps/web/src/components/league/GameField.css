@@ -345,6 +345,14 @@ body {
     0 8px 18px rgba(0, 0, 0, 0.5);
 }
 
+.token.lowering-shoulder img {
+  transform: translateY(5px) rotate(8deg) scale(1.04);
+  box-shadow:
+    0 0 0 4px rgba(249, 115, 22, 0.9),
+    0 0 28px rgba(249, 115, 22, 0.8),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
 .token.chasing img {
   box-shadow:
     0 0 0 4px rgba(251, 113, 133, 0.75),
