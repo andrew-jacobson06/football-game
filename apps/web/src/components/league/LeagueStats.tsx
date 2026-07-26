@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getPlayers,
+  getPlayerRushingGames,
   getPlayerStats,
+  type PlayerRushingGame,
   type PlayerStats,
 } from "../../api/client";
 import type { Player } from "../players/types";
@@ -47,6 +49,7 @@ function LeaderTable({
   isLoading = false,
   error,
   onComplete,
+  onPlayerSelect,
 }: {
   title: string;
   stat: string;
@@ -55,6 +58,7 @@ function LeaderTable({
   isLoading?: boolean;
   error?: string | null;
   onComplete?: () => void;
+  onPlayerSelect?: (name: string) => void;
 }) {
   const placeholderLeaders = Array.from({ length: 5 }, (_, i) => ({
     name: `${kind} Name`,
@@ -87,7 +91,9 @@ function LeaderTable({
                 <td className="team-cell">
                   <span className="rank">{i + 1}</span>
                   <img className="player-stats-image" src={leader.image} alt="" />
-                  <span className="team-link">{leader.name}</span>
+                  <button className="team-link player-name-button" type="button" onClick={() => onPlayerSelect?.(leader.name)}>
+                    {leader.name}
+                  </button>
                 </td>
                 <td className="stat-value">{leader.value}</td>
               </tr>
@@ -114,6 +120,9 @@ export function LeagueStats() {
   const [error, setError] = useState<string | null>(null);
   const [showAllRushers, setShowAllRushers] = useState(false);
   const [rusherFilter, setRusherFilter] = useState("");
+  const [selectedPlayerName, setSelectedPlayerName] = useState<string | null>(null);
+  const [playerGames, setPlayerGames] = useState<PlayerRushingGame[]>([]);
+  const [isGameLogLoading, setIsGameLogLoading] = useState(false);
   const hasRequestedPlayerStats = useRef(false);
 
   useEffect(() => {
@@ -132,6 +141,20 @@ export function LeagueStats() {
       )
       .finally(() => setIsLoading(false));
   }, [activeView]);
+
+  useEffect(() => {
+    if (!selectedPlayerName) return;
+    getPlayerRushingGames(selectedPlayerName)
+      .then((result) => setPlayerGames(result.games))
+      .catch(() => setPlayerGames([]))
+      .finally(() => setIsGameLogLoading(false));
+  }, [selectedPlayerName]);
+
+  const selectPlayer = (name: string) => {
+    setPlayerGames([]);
+    setIsGameLogLoading(true);
+    setSelectedPlayerName(name);
+  };
 
   const rushingLeaders = useMemo(() => {
     const playersByName = new Map(
@@ -168,6 +191,61 @@ export function LeagueStats() {
           a.row.Player.localeCompare(b.row.Player),
       );
   }, [players, rusherFilter, stats]);
+
+  const selectedPlayer = players.find(
+    (player) => player.Name?.trim().toLowerCase() === selectedPlayerName?.toLowerCase(),
+  );
+  const selectedTotals = stats.find(
+    (row) => row.Player?.trim().toLowerCase() === selectedPlayerName?.toLowerCase(),
+  );
+
+  if (selectedPlayerName && selectedTotals) {
+    const average = Number(selectedTotals.Carries)
+      ? (Number(selectedTotals.Yards) / Number(selectedTotals.Carries)).toFixed(1)
+      : "0.0";
+    return (
+      <section className="player-rushing-profile">
+        <button className="profile-back" type="button" onClick={() => setSelectedPlayerName(null)}>← Back to rushing leaders</button>
+        <header className="player-profile-summary">
+          <div className="player-profile-image-wrap">
+            <img src={playerImage(selectedPlayer)} alt={selectedPlayerName} />
+          </div>
+          <div>
+            <p className="player-profile-kicker">{selectedPlayer?.Pos || "PLAYER"}</p>
+            <h2>{selectedPlayerName}</h2>
+            <p className="player-profile-team">{selectedPlayer?.Team || "Free Agent"}</p>
+            <dl className="player-profile-facts">
+              <div><dt>Position</dt><dd>{selectedPlayer?.Pos || "—"}</dd></div>
+              <div><dt>Offense</dt><dd>{selectedPlayer?.["Off Stars"] || "—"} stars</dd></div>
+              <div><dt>Speed</dt><dd>{selectedPlayer?.Speed || "—"}</dd></div>
+              <div><dt>Stamina</dt><dd>{selectedPlayer?.Stamina || "—"}</dd></div>
+            </dl>
+          </div>
+        </header>
+        <section className="season-totals-card">
+          <h3>Season 1 Rushing Totals</h3>
+          <div className="season-total-grid">
+            {[["CAR", selectedTotals.Carries], ["YDS", selectedTotals.Yards], ["TD", selectedTotals.TD || "0"], ["AVG", average], ["LONG", selectedTotals.Long || "0"]].map(([label, value]) => (
+              <div key={label}><span>{label}</span><strong>{value}</strong></div>
+            ))}
+          </div>
+        </section>
+        <section className="player-game-log">
+          <h3>Game Log</h3>
+          <div className="complete-leaders-table-scroll">
+            <table>
+              <thead><tr><th>Game</th><th>Opponent</th><th>Result</th><th>CAR</th><th>YDS</th><th>AVG</th><th>TD</th><th>LNG</th></tr></thead>
+              <tbody>
+                {isGameLogLoading ? <tr><td colSpan={8}>Loading game log…</td></tr> : playerGames.length === 0 ? <tr><td colSpan={8}>No game-by-game rushing stats available.</td></tr> : playerGames.map((game, index) => (
+                  <tr key={game.gameId}><td>{game.date || `Game ${index + 1}`}</td><td>{game.location} {game.opponent}</td><td><span className={`game-result ${game.result.startsWith("W") ? "win" : "loss"}`}>{game.result}</span></td><td>{game.carries}</td><td>{game.yards}</td><td>{game.carries ? (game.yards / game.carries).toFixed(1) : "0.0"}</td><td>{game.touchdowns}</td><td>{game.long}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    );
+  }
 
   return (
     <>
@@ -229,7 +307,7 @@ export function LeagueStats() {
                           <tr key={row.Player}>
                             <td className="complete-leader-player">
                               <img className="player-stats-image" src={image} alt="" />
-                              <span>{row.Player}</span>
+                              <button className="player-name-button" type="button" onClick={() => selectPlayer(row.Player)}>{row.Player}</button>
                             </td>
                             {RUSHING_COLUMNS.map((column) => (
                               <td key={column}>{row[column] || "0"}</td>
@@ -250,6 +328,7 @@ export function LeagueStats() {
                 isLoading={isLoading}
                 error={error}
                 onComplete={() => setShowAllRushers(true)}
+                onPlayerSelect={selectPlayer}
               />
             )}
           </div>

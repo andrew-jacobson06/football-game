@@ -37,6 +37,25 @@ export async function getPlayerStats(): Promise<{
 }> {
   return getJson("/player-stats", "Failed to load player stats");
 }
+export type PlayerRushingGame = {
+  gameId: string;
+  opponent: string;
+  location: "vs" | "@";
+  result: string;
+  carries: number;
+  yards: number;
+  touchdowns: number;
+  long: number;
+  date: string;
+};
+export async function getPlayerRushingGames(
+  playerName: string,
+): Promise<{ games: PlayerRushingGame[] }> {
+  return getJson(
+    `/players/${encodeURIComponent(playerName)}/rushing-games`,
+    "Failed to load player game log",
+  );
+}
 export async function getTeams(): Promise<{
   teams: Record<string, unknown>[];
 }> {

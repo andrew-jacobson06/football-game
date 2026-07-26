@@ -288,6 +288,53 @@ async function savePlayAndGameWithRetry(data: Record<string, unknown>, gameId: s
 gameRoutes.get("/health", (_req, res) => res.json({ ok: true, app: "football-game-api", message: "API is running" }));
 gameRoutes.get("/players", async (_req, res, next) => { try { res.json({ players: await readSheetObjects("Players!A1:AM") }); } catch (e) { next(e); } });
 gameRoutes.get("/player-stats", async (_req, res, next) => { try { res.json({ playerStats: await readSheetObjects("PlayerStats!A1:AI") }); } catch (e) { next(e); } });
+gameRoutes.get("/players/:playerName/rushing-games", async (req, res, next) => {
+  try {
+    const [gamesSheet, historySheet] = await Promise.all([sheetRows("Games"), sheetRows("PlayHistory")]);
+    const playerName = req.params.playerName.trim().toLowerCase();
+    const index = (headers: string[], ...names: string[]) =>
+      headers.findIndex((header) => names.includes(normHeader(header)));
+    const playGame = index(historySheet.headers, "gameid");
+    const playPlayer = index(historySheet.headers, "player", "rusher");
+    const playType = index(historySheet.headers, "playtype");
+    const playYards = index(historySheet.headers, "yards", "yardsgained");
+    const playResult = index(historySheet.headers, "result", "description");
+    const rushes = historySheet.rows.filter((row) =>
+      String(cell(row, playPlayer)).trim().toLowerCase() === playerName &&
+      (!cell(row, playType) || /run|rush/i.test(String(cell(row, playType)))),
+    );
+    const byGame = new Map<string, Row[]>();
+    rushes.forEach((row) => {
+      const id = String(cell(row, playGame));
+      byGame.set(id, [...(byGame.get(id) ?? []), row]);
+    });
+    const gameId = index(gamesSheet.headers, "id", "gameid");
+    const home = index(gamesSheet.headers, "home");
+    const away = index(gamesSheet.headers, "away");
+    const homeScore = index(gamesSheet.headers, "homescore");
+    const awayScore = index(gamesSheet.headers, "awayscore");
+    const date = index(gamesSheet.headers, "date", "gamedate");
+    const possession = index(historySheet.headers, "possession", "team");
+    const games = gamesSheet.rows.flatMap((game) => {
+      const id = String(cell(game, gameId));
+      const plays = byGame.get(id);
+      if (!plays?.length) return [];
+      const homeTeam = String(cell(game, home));
+      const awayTeam = String(cell(game, away));
+      const playerTeam = String(cell(plays[0], possession));
+      const isHome = playerTeam.toLowerCase() === "home" || playerTeam === homeTeam;
+      const teamScore = asNumber(cell(game, isHome ? homeScore : awayScore));
+      const opponentScore = asNumber(cell(game, isHome ? awayScore : homeScore));
+      const yards = plays.map((play) => asNumber(cell(play, playYards)));
+      const touchdowns = plays.filter((play) => /touchdown|\btd\b/i.test(String(cell(play, playResult)))).length;
+      return [{ gameId: id, opponent: isHome ? awayTeam : homeTeam, location: isHome ? "vs" : "@",
+        result: `${teamScore > opponentScore ? "W" : teamScore < opponentScore ? "L" : "T"} ${teamScore}-${opponentScore}`,
+        carries: plays.length, yards: yards.reduce((sum, value) => sum + value, 0), touchdowns,
+        long: Math.max(0, ...yards), date: String(cell(game, date)) }];
+    });
+    res.json({ games });
+  } catch (e) { next(e); }
+});
 gameRoutes.get("/player-traits", async (_req, res, next) => { try { res.json({ players: await getPlayerTraitsFromSheet() }); } catch (e) { next(e); } });
 gameRoutes.get("/teams", async (_req, res, next) => { try { res.json({ teams: await getTeamsFromSheet() }); } catch (e) { next(e); } });
 gameRoutes.get("/games", async (_req, res, next) => { try { res.json({ games: await getGamesList() }); } catch (e) { next(e); } });
