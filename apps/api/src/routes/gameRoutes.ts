@@ -287,6 +287,7 @@ async function savePlayAndGameWithRetry(data: Record<string, unknown>, gameId: s
 
 gameRoutes.get("/health", (_req, res) => res.json({ ok: true, app: "football-game-api", message: "API is running" }));
 gameRoutes.get("/players", async (_req, res, next) => { try { res.json({ players: await readSheetObjects("Players!A1:AM") }); } catch (e) { next(e); } });
+gameRoutes.get("/player-stats", async (_req, res, next) => { try { res.json({ playerStats: await readSheetObjects("PlayerStats!A1:AI") }); } catch (e) { next(e); } });
 gameRoutes.get("/player-traits", async (_req, res, next) => { try { res.json({ players: await getPlayerTraitsFromSheet() }); } catch (e) { next(e); } });
 gameRoutes.get("/teams", async (_req, res, next) => { try { res.json({ teams: await getTeamsFromSheet() }); } catch (e) { next(e); } });
 gameRoutes.get("/games", async (_req, res, next) => { try { res.json({ games: await getGamesList() }); } catch (e) { next(e); } });

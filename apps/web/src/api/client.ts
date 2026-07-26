@@ -27,6 +27,16 @@ export async function getApiHealth(): Promise<ApiHealth> {
 export async function getPlayers(): Promise<{ players: Player[] }> {
   return getJson("/players", "Failed to load players from backend API");
 }
+export type PlayerStats = Record<string, string> & {
+  Player: string;
+  Carries: string;
+  Yards: string;
+};
+export async function getPlayerStats(): Promise<{
+  playerStats: PlayerStats[];
+}> {
+  return getJson("/player-stats", "Failed to load player stats");
+}
 export async function getTeams(): Promise<{
   teams: Record<string, unknown>[];
 }> {
