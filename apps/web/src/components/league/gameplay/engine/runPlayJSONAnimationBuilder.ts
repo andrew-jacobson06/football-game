@@ -47,6 +47,15 @@ export type RunAnimationPlan = {
   phases: Array<Record<string, unknown>>;
 };
 
+export type FirstRunChallenge = {
+  defender: string;
+  position: string;
+  accelerationYards: number;
+  wrapped: boolean;
+  attempt?: "Juke" | "Truck";
+  moveSucceeded?: boolean;
+};
+
 /**
  * Builds the animation data only after the run simulation has resolved. The
  * final phase carries the result to its ending yard before the next setup.
@@ -62,6 +71,7 @@ export function runPlayJSONAnimationBuilder(
   visionCheck?: VisionCheckResult,
   runLaneTarget?: RunLaneTargetResult,
   dlSwipeResult?: DlSwipeResult | null,
+  firstChallenge?: FirstRunChallenge,
   random: () => number = Math.random,
 ): RunAnimationPlan {
   const formation = options.formation ?? {};
@@ -203,10 +213,97 @@ export function runPlayJSONAnimationBuilder(
   const swipeBlockerLane = dlSwipeResult?.slot;
   const chosenHoleLane = runLaneTarget?.selectedSlot ?? handoffLane;
   const hiddenLabels = labels.map((label) => ({ ...label, visible: false }));
+  const challengeDefenderId = firstChallenge
+    ? defenseIds.get(firstChallenge.defender)
+    : undefined;
+  const challengeYard = Number(
+    (los + direction * (firstChallenge?.accelerationYards ?? 0)).toFixed(2),
+  );
+  const challengeAssignment = firstChallenge
+    ? defense.find((assignment) => assignment.player === firstChallenge.defender)
+    : undefined;
+  const challengeLane = challengeAssignment?.align ?? chosenHoleLane;
+  const cutLanes = ["LTL", "LT", "LG", "CL", "C", "CR", "RG", "RT", "RTR"];
+  const holeIndex = Math.max(0, cutLanes.indexOf(chosenHoleLane));
+  const fakeLeft = random() < 0.5;
+  const fakeLane = cutLanes[
+    Math.max(0, Math.min(cutLanes.length - 1, holeIndex + (fakeLeft ? -1 : 1)))
+  ];
+  const cutLane = cutLanes[
+    Math.max(0, Math.min(cutLanes.length - 1, holeIndex + (fakeLeft ? 1 : -1)))
+  ];
 
-  // Phase three currently specializes only the completed "hit hole + swipe"
-  // branch. Other outcomes retain the existing result animation until their
-  // first-challenge choreography is implemented.
+  const firstChallengePhases: Array<Record<string, unknown>> = firstChallenge
+    ? [
+        {
+          id: "accelerate-to-first-challenge",
+          caption: `${runnerName} accelerates through the hole and meets ${firstChallenge.defender}.`,
+          durationMs: 650,
+          players: [
+            ...(runnerId
+              ? [{ playerId: runnerId, lane: chosenHoleLane, yard: challengeYard, className: "ball-carrier accelerating" }]
+              : []),
+            ...(challengeDefenderId
+              ? [{ playerId: challengeDefenderId, lane: challengeLane, yard: challengeYard, className: "chasing" }]
+              : []),
+          ],
+          labels: hiddenLabels,
+          football: { mode: "carrier", carrierId: runnerId },
+        },
+        firstChallenge.wrapped
+          ? {
+              id: "first-challenge-wrap-tackle",
+              caption: `${firstChallenge.defender} wraps up ${runnerName} at the point of contact.`,
+              durationMs: 450,
+              holdMs: 350,
+              players: [
+                ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: challengeYard, className: "tackled" }] : []),
+                ...(challengeDefenderId ? [{ playerId: challengeDefenderId, lane: chosenHoleLane, yard: challengeYard, className: "tackling" }] : []),
+              ],
+              football: { mode: "carrier", carrierId: runnerId },
+            }
+          : firstChallenge.attempt === "Juke"
+            ? {
+                id: firstChallenge.moveSucceeded ? "first-challenge-juke" : "first-challenge-failed-juke",
+                caption: firstChallenge.moveSucceeded
+                  ? `${runnerName} steps ${fakeLeft ? "left" : "right"}, cuts back hard, and jukes ${firstChallenge.defender}.`
+                  : `${runnerName} cuts back, but ${firstChallenge.defender} delivers an immediate tackle.`,
+                durationMs: 700,
+                holdMs: firstChallenge.moveSucceeded ? 150 : 350,
+                players: [
+                  ...(runnerId
+                    ? [{
+                        playerId: runnerId,
+                        path: [
+                          { lane: fakeLane, yard: challengeYard, className: "juking", durationMs: 250 },
+                          { lane: cutLane, yard: firstChallenge.moveSucceeded ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 450 },
+                        ],
+                      }]
+                    : []),
+                  ...(challengeDefenderId
+                    ? [{ playerId: challengeDefenderId, lane: cutLane, yard: challengeYard, className: firstChallenge.moveSucceeded ? "juked" : "tackling" }]
+                    : []),
+                ],
+                football: { mode: "carrier", carrierId: runnerId },
+              }
+            : {
+                id: "first-challenge-truck",
+                caption: firstChallenge.moveSucceeded
+                  ? `${runnerName} trucks through ${firstChallenge.defender}.`
+                  : `${firstChallenge.defender} stands up ${runnerName}'s truck attempt.`,
+                durationMs: 600,
+                holdMs: firstChallenge.moveSucceeded ? 150 : 350,
+                players: [
+                  ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: firstChallenge.moveSucceeded ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "trucking" : "tackled" }] : []),
+                  ...(challengeDefenderId ? [{ playerId: challengeDefenderId, lane: chosenHoleLane, yard: challengeYard, className: firstChallenge.moveSucceeded ? "trucked" : "tackling" }] : []),
+                ],
+                football: { mode: "carrier", carrierId: runnerId },
+              },
+      ]
+    : [];
+
+  // The resolved play selects either the line swipe or first-challenge
+  // choreography; animation randomness is limited to the juke's fake side.
   const resultPhases: Array<Record<string, unknown>> = successfulHoleSwipe
     ? [
         {
@@ -285,7 +382,9 @@ export function runPlayJSONAnimationBuilder(
           football: { mode: "carrier", carrierId: runnerId },
         },
       ]
-    : [
+    : firstChallengePhases.length > 0
+      ? firstChallengePhases
+      : [
         {
           id: "run-result",
           caption: `${runnerName} runs for ${yardsGained} yard${Math.abs(yardsGained) === 1 ? "" : "s"}.`,
