@@ -256,6 +256,22 @@ export function runPlayJSONAnimationBuilder(
   const cutLane = cutLanes[
     Math.max(0, Math.min(cutLanes.length - 1, holeIndex + (fakeLeft ? 1 : -1)))
   ];
+  const jukeMove =
+    firstChallenge?.attempt === "Juke" && random() >= 0.7 ? "spin" : "juke";
+  const defenderIsInFront = challengeLane === chosenHoleLane;
+  const powerMove = defenderIsInFront ? "truck" : "stiff-arm";
+  const challengeLaneIndex = cutLanes.includes(challengeLane)
+    ? cutLanes.indexOf(challengeLane)
+    : holeIndex;
+  const stiffArmLane = cutLanes[
+    Math.max(
+      0,
+      Math.min(
+        cutLanes.length - 1,
+        challengeLaneIndex + (challengeLaneIndex < holeIndex ? -1 : 1),
+      ),
+    )
+  ];
 
   const firstChallengePhases: Array<Record<string, unknown>> = firstChallenge
     ? [
@@ -288,20 +304,29 @@ export function runPlayJSONAnimationBuilder(
             }
           : firstChallenge.attempt === "Juke"
             ? {
-                id: firstChallenge.moveSucceeded ? "first-challenge-juke" : "first-challenge-failed-juke",
+                id: `first-challenge-${firstChallenge.moveSucceeded ? "" : "failed-"}${jukeMove}`,
                 caption: firstChallenge.moveSucceeded
-                  ? `${runnerName} steps ${fakeLeft ? "left" : "right"}, cuts back hard, and jukes ${firstChallenge.defender}.`
-                  : `${runnerName} cuts back, but ${firstChallenge.defender} delivers an immediate tackle.`,
+                  ? jukeMove === "spin"
+                    ? `${runnerName} spins away from ${firstChallenge.defender}.`
+                    : `${runnerName} steps ${fakeLeft ? "left" : "right"}, cuts back hard, and jukes ${firstChallenge.defender}.`
+                  : jukeMove === "spin"
+                    ? `${runnerName} tries to spin away, but ${firstChallenge.defender} delivers an immediate tackle.`
+                    : `${runnerName} cuts back, but ${firstChallenge.defender} delivers an immediate tackle.`,
                 durationMs: 700,
                 holdMs: firstChallenge.moveSucceeded ? 150 : 350,
                 players: [
                   ...(runnerId
                     ? [{
                         playerId: runnerId,
-                        path: [
-                          { lane: fakeLane, yard: challengeYard, className: "juking", durationMs: 250 },
-                          { lane: cutLane, yard: firstChallenge.moveSucceeded && !isBreakaway ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 450 },
-                        ],
+                        path: jukeMove === "spin"
+                          ? [
+                              { lane: chosenHoleLane, yard: challengeYard, className: "spinning", durationMs: 400 },
+                              { lane: chosenHoleLane, yard: firstChallenge.moveSucceeded && !isBreakaway ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 300 },
+                            ]
+                          : [
+                              { lane: fakeLane, yard: challengeYard, className: "juking", durationMs: 250 },
+                              { lane: cutLane, yard: firstChallenge.moveSucceeded && !isBreakaway ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 450 },
+                            ],
                       }]
                     : []),
                   ...(challengeDefenderId
@@ -312,31 +337,35 @@ export function runPlayJSONAnimationBuilder(
               }
             : [
                 {
-                  id: "first-challenge-truck-attempt",
-                  caption: `${runnerName} lowers his shoulder and tries to power through ${firstChallenge.defender}.`,
+                  id: `first-challenge-${powerMove}-attempt`,
+                  caption: powerMove === "truck"
+                    ? `${runnerName} lowers his shoulder and tries to power through ${firstChallenge.defender}.`
+                    : `${runnerName} extends a stiff arm toward ${firstChallenge.defender}.`,
                   durationMs: 350,
                   players: [
-                    ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: challengeYard, className: "lowering-shoulder" }] : []),
-                    ...(challengeDefenderId ? [{ playerId: challengeDefenderId, lane: chosenHoleLane, yard: challengeYard, className: "tackling" }] : []),
+                    ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: challengeYard, className: powerMove === "truck" ? "lowering-shoulder" : "stiff-arming" }] : []),
+                    ...(challengeDefenderId ? [{ playerId: challengeDefenderId, lane: challengeLane, yard: challengeYard, className: "tackling" }] : []),
                   ],
                   football: { mode: "carrier", carrierId: runnerId },
                 },
                 {
                   id: firstChallenge.moveSucceeded
-                    ? "first-challenge-truck"
+                    ? `first-challenge-${powerMove}`
                     : firstChallenge.carryYards
                       ? "first-challenge-truck-drag"
                       : "first-challenge-failed-truck",
                   caption: firstChallenge.moveSucceeded
-                    ? `${runnerName} trucks through ${firstChallenge.defender}.`
+                    ? powerMove === "truck"
+                      ? `${runnerName} trucks through ${firstChallenge.defender}.`
+                      : `${runnerName} stiff-arms ${firstChallenge.defender} away.`
                     : firstChallenge.carryYards
                       ? `${firstChallenge.defender} stops the truck, but ${runnerName} drags him for ${firstChallenge.carryYards} ${firstChallenge.carryYards === 1 ? "yard" : "yards"}.`
                       : `${firstChallenge.defender} stands up ${runnerName}'s truck attempt and tackles him at contact.`,
                   durationMs: 600,
                   holdMs: firstChallenge.moveSucceeded ? 150 : 350,
                   players: [
-                    ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: firstChallenge.moveSucceeded && isBreakaway ? challengeYard : firstChallenge.moveSucceeded || firstChallenge.carryYards ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "trucking" : "tackled" }] : []),
-                    ...(challengeDefenderId ? [{ playerId: challengeDefenderId, lane: chosenHoleLane, yard: firstChallenge.carryYards ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "trucked" : "tackling" }] : []),
+                    ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: firstChallenge.moveSucceeded && isBreakaway ? challengeYard : firstChallenge.moveSucceeded || firstChallenge.carryYards ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? powerMove === "truck" ? "trucking" : "stiff-arming" : "tackled" }] : []),
+                    ...(challengeDefenderId ? [{ playerId: challengeDefenderId, lane: firstChallenge.moveSucceeded && powerMove === "stiff-arm" ? stiffArmLane : chosenHoleLane, yard: firstChallenge.carryYards ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? powerMove === "truck" ? "trucked" : "stiff-armed" : "tackling" }] : []),
                   ],
                   football: { mode: "carrier", carrierId: runnerId },
                 },
@@ -346,7 +375,8 @@ export function runPlayJSONAnimationBuilder(
     : [];
 
   // The resolved play selects either the line swipe or first-challenge
-  // choreography; animation randomness is limited to the juke's fake side.
+  // choreography; animation randomness only selects the juke fake side and
+  // whether a successful or failed Juke attempt is shown as a juke or spin.
   const resultPhases: Array<Record<string, unknown>> = successfulHoleSwipe
     ? [
         {
