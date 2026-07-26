@@ -6,6 +6,11 @@ import type {
   PlayCallOptions,
 } from "./types";
 import { defenseTeam, offenseTeam, playerName } from "./utils";
+import type {
+  DlSwipeResult,
+  RunLaneTargetResult,
+  VisionCheckResult,
+} from "./runEngineHelper";
 
 const domId = (prefix: string, position: string, name: string) =>
   `${prefix}-${position}-${name}`
@@ -54,6 +59,9 @@ export function runPlayJSONAnimationBuilder(
   runnerName: string,
   yardsGained: number,
   lineMatchups: LineStatMatchup[],
+  visionCheck?: VisionCheckResult,
+  runLaneTarget?: RunLaneTargetResult,
+  dlSwipeResult?: DlSwipeResult | null,
   random: () => number = Math.random,
 ): RunAnimationPlan {
   const formation = options.formation ?? {};
@@ -183,6 +191,126 @@ export function runPlayJSONAnimationBuilder(
       className: "handoff-target",
     });
 
+  const resultYard = Number(updatedGame.BallOn);
+  const successfulHoleSwipe = Boolean(
+    visionCheck?.getsPastDL &&
+      runLaneTarget?.selectedSide === "OL" &&
+      dlSwipeResult?.tackled,
+  );
+  const swipeDefenderId = dlSwipeResult
+    ? defenseIds.get(dlSwipeResult.defender)
+    : undefined;
+  const swipeBlockerLane = dlSwipeResult?.slot;
+  const chosenHoleLane = runLaneTarget?.selectedSlot ?? handoffLane;
+  const hiddenLabels = labels.map((label) => ({ ...label, visible: false }));
+
+  // Phase three currently specializes only the completed "hit hole + swipe"
+  // branch. Other outcomes retain the existing result animation until their
+  // first-challenge choreography is implemented.
+  const resultPhases: Array<Record<string, unknown>> = successfulHoleSwipe
+    ? [
+        {
+          id: "accelerate-to-swipe",
+          caption: `${runnerName} hits the hole behind ${runLaneTarget!.selectedPlayer}.`,
+          durationMs: 650,
+          players: runnerId
+            ? [
+                {
+                  playerId: runnerId,
+                  lane: chosenHoleLane,
+                  yard: resultYard,
+                  className: "ball-carrier accelerating",
+                },
+              ]
+            : [],
+          labels: hiddenLabels,
+          football: { mode: "carrier", carrierId: runnerId },
+        },
+        {
+          id: "dl-swipe-tackle",
+          caption: `${dlSwipeResult!.defender} swipes across ${dlSwipeResult!.blocker} and tackles ${runnerName}.`,
+          durationMs: 450,
+          players: [
+            ...(runnerId
+              ? [
+                  {
+                    playerId: runnerId,
+                    lane: chosenHoleLane,
+                    yard: resultYard,
+                    className: "tackled",
+                  },
+                ]
+              : []),
+            ...(swipeDefenderId
+              ? [
+                  {
+                    playerId: swipeDefenderId,
+                    path: [
+                      {
+                        lane: swipeBlockerLane,
+                        yard: resultYard,
+                        className: "chasing",
+                      },
+                      {
+                        lane: chosenHoleLane,
+                        yard: resultYard,
+                        className: "tackling",
+                      },
+                    ],
+                  },
+                ]
+              : []),
+          ],
+          football: { mode: "carrier", carrierId: runnerId },
+          fieldEffects: {
+            firstDownFlash:
+              Number(previousGame.Distance) <= Math.max(0, yardsGained),
+          },
+        },
+        {
+          id: "dl-swipe-celebration",
+          caption: `${dlSwipeResult!.defender} celebrates the stop.`,
+          durationMs: 500,
+          holdMs: 500,
+          players: swipeDefenderId
+            ? [
+                {
+                  playerId: swipeDefenderId,
+                  lane: chosenHoleLane,
+                  yard: resultYard,
+                  className: "celebrating",
+                },
+              ]
+            : [],
+          football: { mode: "carrier", carrierId: runnerId },
+        },
+      ]
+    : [
+        {
+          id: "run-result",
+          caption: `${runnerName} runs for ${yardsGained} yard${Math.abs(yardsGained) === 1 ? "" : "s"}.`,
+          durationMs: 900,
+          holdMs: 250,
+          players: runnerId
+            ? [
+                {
+                  playerId: runnerId,
+                  lane: handoffLane,
+                  yard: resultYard,
+                  className: "ball-carrier",
+                },
+              ]
+            : [],
+          labels: hiddenLabels,
+          football: { mode: "carrier", carrierId: runnerId },
+          fieldEffects: {
+            touchdownFlash: resultYard === 0 || resultYard === 100,
+            firstDownFlash:
+              Number(previousGame.Distance) <= Math.max(0, yardsGained),
+          },
+        },
+      ];
+
   return {
     meta: {
       playId: String((updatedGame as unknown as Record<string, unknown>).PlayId ?? `RUN-${Date.now()}`),
@@ -226,31 +354,7 @@ export function runPlayJSONAnimationBuilder(
         labels,
         football: { mode: "carrier", carrierId: runnerId },
       },
-      {
-        id: "run-result",
-        caption: `${runnerName} runs for ${yardsGained} yard${Math.abs(yardsGained) === 1 ? "" : "s"}.`,
-        durationMs: 900,
-        holdMs: 250,
-        players: runnerId
-          ? [
-              {
-                playerId: runnerId,
-                lane: handoffLane,
-                yard: Number(updatedGame.BallOn),
-                className: "ball-carrier",
-              },
-            ]
-          : [],
-        labels: labels.map((label) => ({ ...label, visible: false })),
-        football: { mode: "carrier", carrierId: runnerId },
-        fieldEffects: {
-          touchdownFlash:
-            Number(updatedGame.BallOn) === 0 ||
-            Number(updatedGame.BallOn) === 100,
-          firstDownFlash:
-            Number(previousGame.Distance) <= Math.max(0, yardsGained),
-        },
-      },
+      ...resultPhases,
     ],
   };
 }

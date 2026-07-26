@@ -560,6 +560,9 @@ export function runPlay(
       runnerName,
       yards,
       lineMatchups,
+      visionCheck,
+      runLaneTarget,
+      dlSwipeResult,
     ),
   });
 
