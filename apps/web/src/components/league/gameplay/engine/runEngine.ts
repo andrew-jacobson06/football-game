@@ -583,6 +583,7 @@ export function runPlay(
       runLaneTarget,
       dlSwipeResult,
       firstChallenge,
+      tackler,
     ),
   });
 
