@@ -246,6 +246,22 @@ body {
   z-index: 65;
 }
 
+/* Stacking is semantic rather than team-based once a play is in motion. A
+   beaten lineman stays underneath the winner and runner even if he is an
+   offensive player, while the runner stays above every non-celebrating player. */
+.token.ol-lost,
+.token.dl-lost {
+  z-index: 50;
+}
+
+.token.runner {
+  z-index: 110;
+}
+
+.token.celebrating {
+  z-index: 120;
+}
+
 .token img {
   width: 54px;
   height: 54px;

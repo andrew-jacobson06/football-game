@@ -87,6 +87,7 @@ type RuntimePlayer = Omit<AnimationPlayer, "yard"> & {
   x: number;
   yard: number;
   className: string;
+  isRunner: boolean;
   el: HTMLDivElement;
 };
 
@@ -259,8 +260,13 @@ const wait = (ms: number) =>
   new Promise((resolve) => window.setTimeout(resolve, ms));
 const resolveMoveX = (move?: PlayerMoveStep) =>
   move?.x !== undefined ? move.x : move?.lane ? LANES[move.lane] : undefined;
-const yardToYPct = (yard: number) =>
-  91.8 - (Math.max(0, Math.min(100, yard)) / 100) * (91.8 - 8.2);
+// The painted field includes ten-yard end zones beyond both goal lines. Keep
+// player offsets in that space instead of pinning every formation player whose
+// alignment crosses a goal line directly on top of the goal line.
+const yardToYPct = (yard: number) => {
+  const fieldYard = Math.max(-10, Math.min(110, yard));
+  return 91.8 - (fieldYard / 100) * (91.8 - 8.2);
+};
 const normalizeYard = (yard: string | number) =>
   Number.isFinite(Number(yard)) ? Number(yard) : 55;
 const normalizeDistance = (distance: string | number) =>
@@ -668,7 +674,7 @@ export default function GameField({
         if (step.yard !== undefined) player.yard = step.yard;
         player.el.style.left = `${player.x}%`;
         player.el.style.top = `${yardToYPct(player.yard)}%`;
-        player.el.className = `token ${player.team.toLowerCase()} ${unitClassForPlayer(player)} ${player.className || ""}`;
+        player.el.className = `token ${player.team.toLowerCase()} ${unitClassForPlayer(player)} ${player.isRunner ? "runner" : ""} ${player.className || ""}`;
         updateScreenPositionsWithoutFootball();
         await wait(durationMs);
       };
@@ -816,6 +822,20 @@ export default function GameField({
       const byId = Object.fromEntries(
         normalizedPlayers.map((player) => [player.id, player]),
       );
+      const runnerIds = new Set(
+        plan.phases.flatMap((phase) =>
+          (phase.players || []).flatMap((move) => {
+            const steps = [move, ...(move.path || [])];
+            return steps.some((step) =>
+              /(?:^|\s)(?:active-runner|handoff-target|ball-carrier)(?:\s|$)/.test(
+                step.className || "",
+              ),
+            )
+              ? [move.playerId]
+              : [];
+          }),
+        ),
+      );
       plan.players = normalizedPlayers.map((player) => {
         if (player.assignment?.type !== "manCoverage") return player;
         const target = player.assignment.targetId
@@ -853,7 +873,8 @@ export default function GameField({
       plan.players.forEach((rawPlayer) => {
         const player = normalizePlayerLane(rawPlayer, plan.players);
         const el = document.createElement("div");
-        el.className = `token ${player.team.toLowerCase()} ${unitClassForPlayer(player)} reset`;
+        const isRunner = runnerIds.has(player.id);
+        el.className = `token ${player.team.toLowerCase()} ${unitClassForPlayer(player)} ${isRunner ? "runner" : ""} reset`;
         el.id = `player-${player.id}`;
         el.style.left = `${player.x}%`;
         el.style.top = `${yardToYPct(player.yard)}%`;
@@ -884,6 +905,7 @@ export default function GameField({
         playersRef.current[player.id] = {
           ...player,
           className: "reset",
+          isRunner,
           el,
         };
       });
