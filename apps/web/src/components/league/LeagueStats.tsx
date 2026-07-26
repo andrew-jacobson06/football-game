@@ -10,6 +10,25 @@ import { PLACEHOLDER_LOGOS } from "./leagueConstants";
 type StatsView = "Player" | "Team";
 type Leader = { name: string; image: string; value: number };
 
+const RUSHING_COLUMNS = [
+  "Carries",
+  "Yards",
+  "TD",
+  "Fum",
+  "Fum Lost",
+  "First Down",
+  "Juke",
+  "BrokenTackle",
+  "Avg",
+  "Loss",
+  "5+",
+  "10+",
+  "20+",
+  "30+",
+  "50+",
+  "Long",
+] as const;
+
 function playerImage(player: Player | undefined) {
   return (
     player?.Image ||
@@ -27,6 +46,7 @@ function LeaderTable({
   leaders,
   isLoading = false,
   error,
+  onComplete,
 }: {
   title: string;
   stat: string;
@@ -34,6 +54,7 @@ function LeaderTable({
   leaders?: Leader[];
   isLoading?: boolean;
   error?: string | null;
+  onComplete?: () => void;
 }) {
   const placeholderLeaders = Array.from({ length: 5 }, (_, i) => ({
     name: `${kind} Name`,
@@ -65,7 +86,7 @@ function LeaderTable({
               <tr key={`${leader.name}-${i}`}>
                 <td className="team-cell">
                   <span className="rank">{i + 1}</span>
-                  <img className="team-logo" src={leader.image} alt="" />
+                  <img className="player-stats-image" src={leader.image} alt="" />
                   <span className="team-link">{leader.name}</span>
                 </td>
                 <td className="stat-value">{leader.value}</td>
@@ -74,9 +95,11 @@ function LeaderTable({
           )}
         </tbody>
       </table>
-      {!isLoading && !error && rows.length > 0 && (
+      {!isLoading && !error && rows.length > 0 && onComplete && (
         <div className="complete-link">
-          <a href="#">Complete Leaders</a>
+          <button type="button" onClick={onComplete}>
+            Complete Leaders
+          </button>
         </div>
       )}
     </div>
@@ -89,6 +112,8 @@ export function LeagueStats() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAllRushers, setShowAllRushers] = useState(false);
+  const [rusherFilter, setRusherFilter] = useState("");
   const hasRequestedPlayerStats = useRef(false);
 
   useEffect(() => {
@@ -124,6 +149,26 @@ export function LeagueStats() {
       .slice(0, 5);
   }, [players, stats]);
 
+  const allRushers = useMemo(() => {
+    const query = rusherFilter.trim().toLowerCase();
+    const playersByName = new Map(
+      players.map((player) => [player.Name?.trim().toLowerCase(), player]),
+    );
+
+    return stats
+      .filter((row) => Number(row.Carries) >= 1)
+      .filter((row) => !query || row.Player?.toLowerCase().includes(query))
+      .map((row) => ({
+        row,
+        image: playerImage(playersByName.get(row.Player.trim().toLowerCase())),
+      }))
+      .sort(
+        (a, b) =>
+          Number(b.row.Yards) - Number(a.row.Yards) ||
+          a.row.Player.localeCompare(b.row.Player),
+      );
+  }, [players, rusherFilter, stats]);
+
   return (
     <>
       <div className="stats-tabs">
@@ -146,14 +191,67 @@ export function LeagueStats() {
         {activeView === "Player" ? (
           <div className="stats-section">
             <div className="stats-section-title">Offensive Leaders</div>
-            <LeaderTable
-              title="RUSHING"
-              stat="YDS"
-              kind="Player"
-              leaders={rushingLeaders}
-              isLoading={isLoading}
-              error={error}
-            />
+            {showAllRushers ? (
+              <div className="complete-rushing-leaders">
+                <div className="complete-leaders-tools">
+                  <button type="button" onClick={() => setShowAllRushers(false)}>
+                    Back to Leaders
+                  </button>
+                  <label>
+                    <span>Filter rushers</span>
+                    <input
+                      type="search"
+                      value={rusherFilter}
+                      onChange={(event) => setRusherFilter(event.target.value)}
+                      placeholder="Player name"
+                    />
+                  </label>
+                </div>
+                <div className="complete-leaders-table-scroll">
+                  <table className="complete-leaders-table">
+                    <thead>
+                      <tr>
+                        <th>Player</th>
+                        {RUSHING_COLUMNS.map((column) => (
+                          <th key={column}>{column}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allRushers.length === 0 ? (
+                        <tr>
+                          <td colSpan={RUSHING_COLUMNS.length + 1} className="leader-message">
+                            No rushers match this filter.
+                          </td>
+                        </tr>
+                      ) : (
+                        allRushers.map(({ row, image }) => (
+                          <tr key={row.Player}>
+                            <td className="complete-leader-player">
+                              <img className="player-stats-image" src={image} alt="" />
+                              <span>{row.Player}</span>
+                            </td>
+                            {RUSHING_COLUMNS.map((column) => (
+                              <td key={column}>{row[column] || "0"}</td>
+                            ))}
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <LeaderTable
+                title="RUSHING"
+                stat="YDS"
+                kind="Player"
+                leaders={rushingLeaders}
+                isLoading={isLoading}
+                error={error}
+                onComplete={() => setShowAllRushers(true)}
+              />
+            )}
           </div>
         ) : (
           <>
