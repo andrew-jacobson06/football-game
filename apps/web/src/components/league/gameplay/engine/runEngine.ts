@@ -181,7 +181,7 @@ export function runPlay(
   let bruiserCarryDefenderResult: ReturnType<
     typeof performCarryDefenderChecks
   > | null = null;
-  let firstChallenge: FirstRunChallenge | undefined;
+  let runChallenges: FirstRunChallenge[] = [];
 
   // Backfield branch: the runner missed the hole and must beat the winning DL.
   if (!visionCheck.getsPastDL) {
@@ -438,20 +438,18 @@ export function runPlay(
       jukedBackfieldDefenders,
     );
 
-    if (lbSecondLevelResult?.linebacker && lbSecondLevelResult.wrapResult) {
-      firstChallenge = {
-        defender: lbSecondLevelResult.linebacker.player,
-        position: lbSecondLevelResult.linebacker.position,
-        accelerationYards: accelToSecondLevelYards,
-        wrapped: lbSecondLevelResult.wrapResult.wrapped,
-        attempt: lbSecondLevelResult.secondChanceAttempt?.attempt,
-        moveSucceeded:
-          lbSecondLevelResult.secondChanceAttempt?.attempt === "Juke"
-            ? lbSecondLevelResult.jukeResult?.juked
-            : lbSecondLevelResult.truckResult?.trucked,
-        carryYards: lbSecondLevelResult.carryDefenderResult?.yardsAdded,
-      };
-    }
+    runChallenges = (lbSecondLevelResult?.challenges ?? []).map((challenge) => ({
+      defender: challenge.linebacker.player,
+      position: challenge.linebacker.position,
+      accelerationYards: challenge.challengeYards,
+      wrapped: challenge.wrapResult.wrapped,
+      attempt: challenge.secondChanceAttempt?.attempt,
+      moveSucceeded:
+        challenge.secondChanceAttempt?.attempt === "Juke"
+          ? challenge.jukeResult?.juked
+          : challenge.truckResult?.trucked,
+      carryYards: challenge.carryDefenderResult?.yardsAdded,
+    }));
 
     console.log("LB second level result:", lbSecondLevelResult);
   }
@@ -582,7 +580,7 @@ export function runPlay(
       visionCheck,
       runLaneTarget,
       dlSwipeResult,
-      firstChallenge,
+      runChallenges,
       tackler,
       runState.log.some((entry) => /\bBreakaway\b/.test(entry) && !/skipped/i.test(entry)),
     ),
