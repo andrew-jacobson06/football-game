@@ -449,6 +449,7 @@ export function runPlay(
           lbSecondLevelResult.secondChanceAttempt?.attempt === "Juke"
             ? lbSecondLevelResult.jukeResult?.juked
             : lbSecondLevelResult.truckResult?.trucked,
+        carryYards: lbSecondLevelResult.carryDefenderResult?.yardsAdded,
       };
     }
 

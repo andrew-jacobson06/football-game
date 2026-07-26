@@ -54,6 +54,7 @@ export type FirstRunChallenge = {
   wrapped: boolean;
   attempt?: "Juke" | "Truck";
   moveSucceeded?: boolean;
+  carryYards?: number;
 };
 
 /**
@@ -286,20 +287,39 @@ export function runPlayJSONAnimationBuilder(
                 ],
                 football: { mode: "carrier", carrierId: runnerId },
               }
-            : {
-                id: "first-challenge-truck",
-                caption: firstChallenge.moveSucceeded
-                  ? `${runnerName} trucks through ${firstChallenge.defender}.`
-                  : `${firstChallenge.defender} stands up ${runnerName}'s truck attempt.`,
-                durationMs: 600,
-                holdMs: firstChallenge.moveSucceeded ? 150 : 350,
-                players: [
-                  ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: firstChallenge.moveSucceeded ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "trucking" : "tackled" }] : []),
-                  ...(challengeDefenderId ? [{ playerId: challengeDefenderId, lane: chosenHoleLane, yard: challengeYard, className: firstChallenge.moveSucceeded ? "trucked" : "tackling" }] : []),
-                ],
-                football: { mode: "carrier", carrierId: runnerId },
-              },
+            : [
+                {
+                  id: "first-challenge-truck-attempt",
+                  caption: `${runnerName} lowers his shoulder and tries to power through ${firstChallenge.defender}.`,
+                  durationMs: 350,
+                  players: [
+                    ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: challengeYard, className: "lowering-shoulder" }] : []),
+                    ...(challengeDefenderId ? [{ playerId: challengeDefenderId, lane: chosenHoleLane, yard: challengeYard, className: "tackling" }] : []),
+                  ],
+                  football: { mode: "carrier", carrierId: runnerId },
+                },
+                {
+                  id: firstChallenge.moveSucceeded
+                    ? "first-challenge-truck"
+                    : firstChallenge.carryYards
+                      ? "first-challenge-truck-drag"
+                      : "first-challenge-failed-truck",
+                  caption: firstChallenge.moveSucceeded
+                    ? `${runnerName} trucks through ${firstChallenge.defender}.`
+                    : firstChallenge.carryYards
+                      ? `${firstChallenge.defender} stops the truck, but ${runnerName} drags him for ${firstChallenge.carryYards} ${firstChallenge.carryYards === 1 ? "yard" : "yards"}.`
+                      : `${firstChallenge.defender} stands up ${runnerName}'s truck attempt and tackles him at contact.`,
+                  durationMs: 600,
+                  holdMs: firstChallenge.moveSucceeded ? 150 : 350,
+                  players: [
+                    ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard: firstChallenge.moveSucceeded || firstChallenge.carryYards ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "trucking" : "tackled" }] : []),
+                    ...(challengeDefenderId ? [{ playerId: challengeDefenderId, lane: chosenHoleLane, yard: firstChallenge.carryYards ? resultYard : challengeYard, className: firstChallenge.moveSucceeded ? "trucked" : "tackling" }] : []),
+                  ],
+                  football: { mode: "carrier", carrierId: runnerId },
+                },
+              ],
       ]
+        .flat()
     : [];
 
   // The resolved play selects either the line swipe or first-challenge
