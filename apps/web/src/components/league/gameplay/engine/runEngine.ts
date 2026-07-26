@@ -40,7 +40,10 @@ import {
   performCarryDefenderChecks,
 } from "./runEngineHelper";
 import { applyFatigue } from "./fatigueEngine";
-import { runPlayJSONAnimationBuilder } from "./runPlayJSONAnimationBuilder";
+import {
+  runPlayJSONAnimationBuilder,
+  type FirstRunChallenge,
+} from "./runPlayJSONAnimationBuilder";
 
 /** Chooses the most plausible tackler after a run or pass play has ended, weighting nearby defender groups by tackling ability. It is used by `runPlay` and pass-play fumble/tackle resolution when no specific tackler was already recorded. */
 export function determineTackler(
@@ -178,6 +181,7 @@ export function runPlay(
   let bruiserCarryDefenderResult: ReturnType<
     typeof performCarryDefenderChecks
   > | null = null;
+  let firstChallenge: FirstRunChallenge | undefined;
 
   // Backfield branch: the runner missed the hole and must beat the winning DL.
   if (!visionCheck.getsPastDL) {
@@ -434,6 +438,20 @@ export function runPlay(
       jukedBackfieldDefenders,
     );
 
+    if (lbSecondLevelResult?.linebacker && lbSecondLevelResult.wrapResult) {
+      firstChallenge = {
+        defender: lbSecondLevelResult.linebacker.player,
+        position: lbSecondLevelResult.linebacker.position,
+        accelerationYards: accelToSecondLevelYards,
+        wrapped: lbSecondLevelResult.wrapResult.wrapped,
+        attempt: lbSecondLevelResult.secondChanceAttempt?.attempt,
+        moveSucceeded:
+          lbSecondLevelResult.secondChanceAttempt?.attempt === "Juke"
+            ? lbSecondLevelResult.jukeResult?.juked
+            : lbSecondLevelResult.truckResult?.trucked,
+      };
+    }
+
     console.log("LB second level result:", lbSecondLevelResult);
   }
 
@@ -563,6 +581,7 @@ export function runPlay(
       visionCheck,
       runLaneTarget,
       dlSwipeResult,
+      firstChallenge,
     ),
   });
 

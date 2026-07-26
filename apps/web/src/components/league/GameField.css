@@ -368,6 +368,19 @@ body {
     0 8px 18px rgba(0, 0, 0, 0.5);
 }
 
+.token.juked img {
+  filter: grayscale(0.75) brightness(0.8);
+  transform: rotate(-18deg) scale(0.92);
+  box-shadow:
+    0 0 0 4px rgba(168, 85, 247, 0.7),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.token.trucked img {
+  filter: brightness(0.75);
+  transform: rotate(18deg) scale(0.9);
+}
+
 .token.celebrating img {
   animation: celebrate-bounce 650ms ease-in-out infinite alternate;
   box-shadow:
