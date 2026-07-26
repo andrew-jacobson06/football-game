@@ -384,6 +384,11 @@
 .stat-value {
   text-align: right !important;
 }
+.leader-message {
+  color: var(--text-muted);
+  padding: 2vw !important;
+  text-align: center !important;
+}
 .complete-link {
   padding: 1vw 2vw;
 }
