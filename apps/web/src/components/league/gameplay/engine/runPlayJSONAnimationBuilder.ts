@@ -57,6 +57,14 @@ export type FirstRunChallenge = {
   carryYards?: number;
 };
 
+export type RunPursuitEvent = {
+  stage: "secondary" | "breakaway";
+  chaser: string;
+  startYards: number;
+  endYards: number;
+  escaped: boolean;
+};
+
 /** Converts runner speed into an open-field animation pace of 6-9 yards/sec. */
 export const breakawayDurationMs = (yards: number, speed: number) => {
   const normalizedSpeed = Math.max(0, Math.min(100, speed));
@@ -82,6 +90,7 @@ export function runPlayJSONAnimationBuilder(
   runChallenges: FirstRunChallenge[] = [],
   tacklerName = "NA",
   isBreakaway = false,
+  pursuitEvents: RunPursuitEvent[] = [],
   random: () => number = Math.random,
 ): RunAnimationPlan {
   const formation = options.formation ?? {};
@@ -600,6 +609,45 @@ export function runPlayJSONAnimationBuilder(
       }]
     : [];
 
+  const pursuitPhases: Array<Record<string, unknown>> = pursuitEvents.flatMap((event, index) => {
+    const chaserId = defenseIds.get(event.chaser);
+    if (!runnerId || !chaserId) return [];
+    const endYard = event.escaped && event.stage === "breakaway"
+      ? (direction === 1 ? 100 : 0)
+      : Number((los + direction * event.endYards).toFixed(2));
+    const chaseYard = Number((los + direction * event.startYards).toFixed(2));
+    const prefix = `${event.stage}-pursuit-${index + 1}`;
+    return [
+      {
+        id: `${prefix}-chase`,
+        caption: `${event.chaser} is in hot pursuit of ${runnerName}.`,
+        durationMs: 800,
+        players: [
+          { playerId: runnerId, lane: chosenHoleLane, yard: chaseYard, className: "ball-carrier accelerating" },
+          { playerId: chaserId, lane: chosenHoleLane, yard: Number((chaseYard - direction * 2).toFixed(2)), className: "chasing" },
+        ],
+        labels: hiddenLabels,
+        football: { mode: "carrier", carrierId: runnerId },
+      },
+      {
+        id: `${prefix}-${event.escaped ? "escape" : "tackle"}`,
+        caption: event.escaped
+          ? event.stage === "breakaway"
+            ? `${runnerName} pulls away from ${event.chaser} and reaches the end zone!`
+            : `${runnerName} escapes ${event.chaser}, but the defense keeps chasing.`
+          : `${event.chaser} catches ${runnerName} from behind and makes the tackle.`,
+        durationMs: event.stage === "breakaway" ? openFieldDurationMs : 700,
+        holdMs: event.escaped ? 150 : 400,
+        players: [
+          { playerId: runnerId, lane: chosenHoleLane, yard: endYard, className: event.escaped ? "ball-carrier accelerating" : "tackled" },
+          { playerId: chaserId, lane: chosenHoleLane, yard: event.escaped ? Number((endYard - direction * 3).toFixed(2)) : endYard, className: event.escaped ? "chasing" : "tackling" },
+        ],
+        football: { mode: "carrier", carrierId: runnerId },
+        fieldEffects: { touchdownFlash: event.escaped && event.stage === "breakaway" },
+      },
+    ];
+  });
+
   const touchdownCelebrationPhase: Array<Record<string, unknown>> = isTouchdown
     ? [{
         id: "touchdown-celebration",
@@ -684,8 +732,8 @@ export function runPlayJSONAnimationBuilder(
       },
       ...chooseLanePhases,
       ...resultPhases,
-      ...breakawayPhase,
-      ...finalTacklePhase,
+      ...(pursuitPhases.length ? pursuitPhases : breakawayPhase),
+      ...(pursuitPhases.length ? [] : finalTacklePhase),
       ...touchdownCelebrationPhase,
     ],
   };
