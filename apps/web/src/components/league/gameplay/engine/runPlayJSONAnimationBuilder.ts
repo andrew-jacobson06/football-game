@@ -73,6 +73,7 @@ export function runPlayJSONAnimationBuilder(
   runLaneTarget?: RunLaneTargetResult,
   dlSwipeResult?: DlSwipeResult | null,
   firstChallenge?: FirstRunChallenge,
+  tacklerName = "NA",
   random: () => number = Math.random,
 ): RunAnimationPlan {
   const formation = options.formation ?? {};
@@ -224,6 +225,7 @@ export function runPlayJSONAnimationBuilder(
     ? defense.find((assignment) => assignment.player === firstChallenge.defender)
     : undefined;
   const challengeLane = challengeAssignment?.align ?? chosenHoleLane;
+  const tacklerId = defenseIds.get(tacklerName);
   const cutLanes = ["LTL", "LT", "LG", "CL", "C", "CR", "RG", "RT", "RTR"];
   const holeIndex = Math.max(0, cutLanes.indexOf(chosenHoleLane));
   const fakeLeft = random() < 0.5;
@@ -414,7 +416,7 @@ export function runPlayJSONAnimationBuilder(
             ? [
                 {
                   playerId: runnerId,
-                  lane: handoffLane,
+                  lane: chosenHoleLane,
                   yard: resultYard,
                   className: "ball-carrier",
                 },
@@ -429,6 +431,74 @@ export function runPlayJSONAnimationBuilder(
           },
         },
       ];
+
+  const firstChallengeShowsTackle = Boolean(
+    firstChallenge &&
+      (firstChallenge.wrapped ||
+        (!firstChallenge.moveSucceeded && firstChallenge.attempt)),
+  );
+  const needsFinalTackle = Boolean(
+    tacklerName &&
+      tacklerName !== "NA" &&
+      tacklerId &&
+      !successfulHoleSwipe &&
+      !firstChallengeShowsTackle,
+  );
+  const finalTacklePhase: Array<Record<string, unknown>> = needsFinalTackle
+    ? [
+        {
+          id: "final-tackle",
+          caption: `${tacklerName} closes on ${runnerName} and makes the tackle.`,
+          durationMs: 500,
+          holdMs: 400,
+          players: [
+            ...(runnerId
+              ? [
+                  {
+                    playerId: runnerId,
+                    lane: chosenHoleLane,
+                    yard: resultYard,
+                    className: "tackled",
+                  },
+                ]
+              : []),
+            {
+              playerId: tacklerId,
+              lane: chosenHoleLane,
+              yard: resultYard,
+              className: "tackling",
+            },
+          ],
+          football: { mode: "carrier", carrierId: runnerId },
+        },
+      ]
+    : [];
+
+  // On successful reads, make the backfield cut its own phase. This prevents
+  // the carrier from appearing to run straight through a winning lineman and
+  // establishes the blocker-created gap before any upfield acceleration.
+  const chooseLanePhases: Array<Record<string, unknown>> =
+    visionCheck?.getsPastDL && runLaneTarget?.selectedSide === "OL"
+      ? [
+          {
+            id: "choose-run-lane",
+            caption: `${runnerName} presses the backfield, then cuts behind ${runLaneTarget.selectedPlayer}.`,
+            durationMs: 450,
+            players: runnerId
+              ? [
+                  {
+                    playerId: runnerId,
+                    lane: chosenHoleLane,
+                    yard: Number((los - direction * 2.25).toFixed(2)),
+                    className: "ball-carrier choosing-lane",
+                  },
+                ]
+              : [],
+            labels: hiddenLabels,
+            football: { mode: "carrier", carrierId: runnerId },
+          },
+        ]
+      : [];
 
   return {
     meta: {
@@ -473,7 +543,9 @@ export function runPlayJSONAnimationBuilder(
         labels,
         football: { mode: "carrier", carrierId: runnerId },
       },
+      ...chooseLanePhases,
       ...resultPhases,
+      ...finalTacklePhase,
     ],
   };
 }
