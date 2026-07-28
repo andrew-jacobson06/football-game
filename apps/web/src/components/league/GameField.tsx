@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { DefensiveAssignment, FormationSlot } from "./gameplay/gameEngine";
+import { PlayerImage } from "../players/PlayerImage";
+import { playerImageUrl, playerJerseyUrl } from "../players/playerImageUrls";
 
 import "./GameField.css";
 
@@ -22,6 +24,7 @@ type AnimationPlayer = {
   x?: number;
   yard?: number;
   headUrl?: string;
+  jerseyUrl?: string;
   className?: string;
   unit?: "offense" | "defense";
   alignmentSlot?: FormationSlot;
@@ -223,8 +226,7 @@ const REQUIRED_FORMATION_SLOTS = new Set<FormationSlot>([
   "RG",
 ]);
 const nameOf = (p?: FormationPlayer) => String(p?.name ?? p?.Name ?? "");
-const imgOf = (p?: FormationPlayer) =>
-  String(p?.image ?? p?.Image ?? p?.photo ?? p?.Photo ?? "");
+const imgOf = (p?: FormationPlayer) => playerImageUrl(p);
 
 const OFFENSIVE_DEFAULT_LANES: Record<string, string> = Object.fromEntries(
   Object.entries(DEFAULT_LINEUPS_BY_POSITION).map(([position, setup]) => [
@@ -437,6 +439,7 @@ export default function GameField({
           role: slot,
           unit: "offense" as const,
           headUrl: imgOf(player),
+          jerseyUrl: playerJerseyUrl(player),
         },
       ];
     });
@@ -455,6 +458,7 @@ export default function GameField({
         unit: "defense" as const,
         alignmentSlot: assignment.align as FormationSlot | undefined,
         headUrl: imgOf(player),
+        jerseyUrl: playerJerseyUrl(player),
       };
     });
 
@@ -878,13 +882,24 @@ export default function GameField({
         el.id = `player-${player.id}`;
         el.style.left = `${player.x}%`;
         el.style.top = `${yardToYPct(player.yard)}%`;
+        const portrait = document.createElement("span");
+        portrait.className = "player-image-layers";
+        if (player.jerseyUrl) {
+          const jersey = document.createElement("img");
+          jersey.className = "player-image-layer player-image-layer--jersey";
+          jersey.src = player.jerseyUrl;
+          jersey.alt = "";
+          portrait.appendChild(jersey);
+        }
         const img = document.createElement("img");
+        img.className = "player-image-layer player-image-layer--player";
         img.src = player.headUrl || "";
         img.alt = player.name;
+        portrait.appendChild(img);
         const label = document.createElement("div");
         label.className = "name";
         label.textContent = player.name;
-        el.appendChild(img);
+        el.appendChild(portrait);
         el.appendChild(label);
         el.tabIndex = 0;
         el.setAttribute("role", "button");
@@ -1304,7 +1319,7 @@ export default function GameField({
                 >
                   {playerName ? (
                     playerImage ? (
-                      <img src={playerImage} alt={playerName} />
+                      <PlayerImage player={player} alt={playerName} />
                     ) : (
                       <span className="field-formation-avatar">👤</span>
                     )
@@ -1337,7 +1352,7 @@ export default function GameField({
                   aria-hidden="true"
                 >
                   {playerImage ? (
-                    <img src={playerImage} alt="" />
+                    <PlayerImage player={player} />
                   ) : (
                     <span className="field-formation-avatar">👤</span>
                   )}

@@ -6,3 +6,22 @@ button,
 table {
   font: inherit;
 }
+/* Team jerseys and transparent player portraits share a 1024px canvas. */
+.player-image-layers {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.player-image-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: inherit;
+  object-position: inherit;
+}
+
+.player-image-layer--jersey { z-index: 1; }
+.player-image-layer--player { z-index: 2; }

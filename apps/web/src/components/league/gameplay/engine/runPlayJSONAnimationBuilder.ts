@@ -27,6 +27,8 @@ const imageOf = (player?: Record<string, unknown>) =>
       player?.headUrl ??
       "",
   );
+const jerseyOf = (player?: Record<string, unknown>) =>
+  String(player?.jersey ?? player?.Jersey ?? player?.["Jersey Image"] ?? "");
 
 const randomYards = (min: number, max: number, random: () => number) =>
   Number((min + random() * (max - min)).toFixed(2));
@@ -120,6 +122,7 @@ export function runPlayJSONAnimationBuilder(
       role: slot,
       unit: "offense",
       headUrl: imageOf(rosterByName.get(name)),
+      jerseyUrl: jerseyOf(rosterByName.get(name)),
     });
   }
 
@@ -135,6 +138,7 @@ export function runPlayJSONAnimationBuilder(
       unit: "defense",
       alignmentSlot: assignment.align as FormationSlot | undefined,
       headUrl: imageOf(rosterByName.get(assignment.player)),
+      jerseyUrl: jerseyOf(rosterByName.get(assignment.player)),
     });
   }
 

@@ -6,6 +6,8 @@ import type {
   FormationSlot,
 } from "./gameplay/gameEngine";
 import { buildDefense } from "./formationDefense";
+import { PlayerImage } from "../players/PlayerImage";
+import { playerImageUrl } from "../players/playerImageUrls";
 
 const str = (v: unknown) => String(v ?? "");
 const WR_SLOTS: FormationSlot[] = ["WR1", "WR2", "WR3", "WR4"];
@@ -50,14 +52,7 @@ function teamOf(p: Player) {
   return str(p.team ?? p.Team);
 }
 function imgOf(p?: Player) {
-  return str(
-    p?.image ??
-      p?.Image ??
-      p?.photo ??
-      p?.Photo ??
-      p?.["Player Image from AI"] ??
-      p?.["player image from ai"],
-  );
+  return playerImageUrl(p);
 }
 
 function staminaOf(player: Player) {
@@ -190,11 +185,7 @@ function RosterDetails({ roster }: { roster: Player[] }) {
                         title={`${Math.round(stamina)}% stamina`}
                       >
                         <div className="roster-player-image" aria-hidden="true">
-                          {imgOf(player) ? (
-                            <img src={imgOf(player)} alt="" />
-                          ) : (
-                            <span>👤</span>
-                          )}
+                          <PlayerImage player={player} fallback={<span>👤</span>} />
                         </div>
                         <span className="roster-stamina-value">
                           {Math.round(stamina)}%

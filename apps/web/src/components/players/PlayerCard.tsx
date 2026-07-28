@@ -1,5 +1,6 @@
 import type { Player } from "./types";
 import { Stars } from "./Stars";
+import { PlayerImage } from "./PlayerImage";
 
 const FALLBACK_PLAYER_IMAGE =
   "https://andrew-jacobson06.github.io/public-audio/baby.png";
@@ -70,10 +71,6 @@ function getPlayerImage(player: Player) {
   );
 }
 
-function getJerseyImage(player: Player) {
-  return firstNonEmpty(player.jersey, player.Jersey, player["Jersey Image"]);
-}
-
 type PlayerCardProps = {
   player: Player;
   onBack: () => void;
@@ -81,7 +78,6 @@ type PlayerCardProps = {
 
 export function PlayerCard({ player, onBack }: PlayerCardProps) {
   const playerImage = getPlayerImage(player);
-  const jerseyImage = getJerseyImage(player);
 
   return (
     <div id="playerCardView">
@@ -95,19 +91,14 @@ export function PlayerCard({ player, onBack }: PlayerCardProps) {
       </button>
       <div className="player-card-layout">
         <div id="playerImageContainer" className="player-image-container">
-          <img
-            id="player-card-image"
-            src={playerImage}
-            alt="Player"
+          <PlayerImage
+            player={{ ...player, Image: playerImage }}
+            alt={player.Name || "Player"}
+            className="player-card-image"
             style={{
               transform: `translate(${numberValue(player.translateX)}px, ${numberValue(player.translateY)}px) scale(${numberValue(player.scale, 1)})`,
             }}
           />
-          <div id="jersey-wrapper">
-            {jerseyImage && (
-              <img id="jersey" src={jerseyImage} alt="Jersey Overlay" />
-            )}
-          </div>
         </div>
         <div id="playerDetails" className="player-details">
           <div>

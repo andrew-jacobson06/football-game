@@ -262,7 +262,7 @@ body {
   z-index: 120;
 }
 
-.token img {
+.token > .player-image-layers {
   width: 54px;
   height: 54px;
   display: block;
@@ -275,11 +275,17 @@ body {
     0 0 0 3px rgba(15, 23, 42, 0.65);
 }
 
-.token.home img {
+.token .player-image-layer {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.token.home > .player-image-layers {
   border-color: #38bdf8;
 }
 
-.token.away img {
+.token.away > .player-image-layers {
   border-color: #fb7185;
 }
 
@@ -723,7 +729,7 @@ textarea {
   background: transparent;
 }
 
-.field-formation-slot img,
+.field-formation-slot > .player-image-layers,
 .field-formation-avatar {
   width: 100%;
   height: 100%;
@@ -734,6 +740,11 @@ textarea {
   border-radius: 50%;
   background: #fff;
   object-fit: cover;
+}
+
+.field-formation-slot .player-image-layer {
+  border: 0;
+  background: transparent;
 }
 
 .field-formation-slot.qb { border-color: #64b5f6; color: #64b5f6; }

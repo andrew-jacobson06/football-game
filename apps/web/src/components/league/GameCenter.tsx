@@ -21,6 +21,7 @@ import GameField, { type AnimationPlan } from "./GameField";
 import { GameControls } from "./GameControls";
 import { buildDefense } from "./formationDefense";
 import { GameLog } from "./GameLog";
+import { PlayerImage } from "../players/PlayerImage";
 import {
   goForTwo,
   handleTimeout,
@@ -1217,12 +1218,10 @@ function LeaderCard({
       .filter((s) => s.team === team)
       .sort((a, b) => num(b[field]) - num(a[field]))[0];
   const img = (s?: Stat) => {
-    const src = s
-      ? str(trait(s.playername)?.image ?? trait(s.playername)?.Image)
-      : "";
+    const player = s ? trait(s.playername) : undefined;
     return (
       <div className="player-placeholder">
-        {src ? <img src={src} alt="" /> : <span>👤</span>}
+        <PlayerImage player={player} fallback={<span>👤</span>} />
       </div>
     );
   };
