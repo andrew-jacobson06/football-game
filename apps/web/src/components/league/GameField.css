@@ -460,7 +460,10 @@ body {
   background: #8b4513;
   border: 2px solid #f4d3a1;
   transform: translate(-50%, -50%) rotate(-20deg);
-  z-index: 90;
+  /* Keep the ball visible on top of the carrier. Runner/celebration tokens use
+     elevated stacking levels during a play and otherwise cover the football
+     even though its position is synchronized to the carrier. */
+  z-index: 130;
   transition:
     left 700ms ease,
     top 700ms ease,
