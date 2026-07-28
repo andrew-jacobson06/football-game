@@ -375,8 +375,8 @@
   gap: 1vw;
 }
 .player-stats-image {
-  width: 24px;
-  height: 24px;
+  width: 64px;
+  height: 64px;
   flex: 0 0 auto;
 }
 .statCol1 {
@@ -500,7 +500,7 @@
 .game-result.win { color: #58d68d; }
 .game-result.loss { color: #ff7373; }
 @media (max-width: 640px) {
-  .player-profile-summary { grid-template-columns: 1fr; }
+  .player-profile-summary { grid-template-columns: 1fr; padding:2%;}
   .player-profile-image-wrap { min-height: 210px; }
   .player-profile-facts { grid-template-columns: 1fr; }
   .season-total-grid { grid-template-columns: repeat(2, 1fr); }
