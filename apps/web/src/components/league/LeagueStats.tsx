@@ -8,9 +8,10 @@ import {
 } from "../../api/client";
 import type { Player } from "../players/types";
 import { PLACEHOLDER_LOGOS } from "./leagueConstants";
+import { PlayerImage } from "../players/PlayerImage";
 
 type StatsView = "Player" | "Team";
-type Leader = { name: string; image: string; value: number };
+type Leader = { name: string; image: string; player?: Player; value: number };
 
 const RUSHING_COLUMNS = [
   "Carries",
@@ -60,7 +61,7 @@ function LeaderTable({
   onComplete?: () => void;
   onPlayerSelect?: (name: string) => void;
 }) {
-  const placeholderLeaders = Array.from({ length: 5 }, (_, i) => ({
+  const placeholderLeaders: Leader[] = Array.from({ length: 5 }, (_, i) => ({
     name: `${kind} Name`,
     image: PLACEHOLDER_LOGOS.team,
     value: [308.5, 298.7, 296.4, 294.0, 291.7][i],
@@ -90,7 +91,7 @@ function LeaderTable({
               <tr key={`${leader.name}-${i}`}>
                 <td className="team-cell">
                   <span className="rank">{i + 1}</span>
-                  <img className="player-stats-image" src={leader.image} alt="" />
+                  <PlayerImage player={leader.player ? { ...leader.player } : { Image: leader.image }} className="player-stats-image" />
                   <button className="team-link player-name-button" type="button" onClick={() => onPlayerSelect?.(leader.name)}>
                     {leader.name}
                   </button>
@@ -166,7 +167,7 @@ export function LeagueStats() {
       .map((row) => {
         const name = row.Player.trim();
         const player = playersByName.get(name.toLowerCase());
-        return { name, image: playerImage(player), value: Number(row.Yards) || 0 };
+        return { name, image: playerImage(player), player, value: Number(row.Yards) || 0 };
       })
       .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name))
       .slice(0, 5);
@@ -184,6 +185,7 @@ export function LeagueStats() {
       .map((row) => ({
         row,
         image: playerImage(playersByName.get(row.Player.trim().toLowerCase())),
+        player: playersByName.get(row.Player.trim().toLowerCase()),
       }))
       .sort(
         (a, b) =>
@@ -208,7 +210,7 @@ export function LeagueStats() {
         <button className="profile-back" type="button" onClick={() => setSelectedPlayerName(null)}>← Back to rushing leaders</button>
         <header className="player-profile-summary">
           <div className="player-profile-image-wrap">
-            <img src={playerImage(selectedPlayer)} alt={selectedPlayerName} />
+            <PlayerImage player={selectedPlayer ? { ...selectedPlayer } : { Image: playerImage(selectedPlayer) }} alt={selectedPlayerName} />
           </div>
           <div>
             <p className="player-profile-kicker">{selectedPlayer?.Pos || "PLAYER"}</p>
@@ -303,10 +305,10 @@ export function LeagueStats() {
                           </td>
                         </tr>
                       ) : (
-                        allRushers.map(({ row, image }) => (
+                        allRushers.map(({ row, image, player }) => (
                           <tr key={row.Player}>
                             <td className="complete-leader-player">
-                              <img className="player-stats-image" src={image} alt="" />
+                              <PlayerImage player={player ? { ...player } : { Image: image }} className="player-stats-image" />
                               <button className="player-name-button" type="button" onClick={() => selectPlayer(row.Player)}>{row.Player}</button>
                             </td>
                             {RUSHING_COLUMNS.map((column) => (

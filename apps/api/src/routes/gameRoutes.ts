@@ -43,6 +43,31 @@ async function getTeamsFromSheet() {
   const { headers, rows } = await sheetRows("Teams");
   return rows.filter((r) => r?.[0] !== "" && r?.[0] != null).slice(0, 10).map((r) => objectFrom(headers, r));
 }
+async function getTeamJerseys() {
+  const teams = await getTeamsFromSheet();
+  const jerseys = new Map<string, unknown>();
+  const add = (key: unknown, jersey: unknown) => {
+    const normalized = String(key ?? "").trim().toLowerCase();
+    if (normalized && jersey) jerseys.set(normalized, jersey);
+  };
+  teams.forEach((team) => {
+    const jersey = team.Jersey;
+    add(team.Team, jersey);
+    add(team.Name, jersey);
+    add(team.Abbrev, jersey);
+  });
+  return jerseys;
+}
+async function getPlayersWithTeamJerseys() {
+  const [players, jerseys] = await Promise.all([
+    readSheetObjects("Players!A1:AM"),
+    getTeamJerseys(),
+  ]);
+  return players.map((player) => ({
+    ...player,
+    Jersey: jerseys.get(String(player.Team ?? "").trim().toLowerCase()) ?? "",
+  }));
+}
 function normalizeSettingLabel(label: unknown) {
   return String(label || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -125,11 +150,12 @@ async function getFrontendSettingsFromSheet() {
   };
 }
 async function getPlayerTraitsFromSheet() {
+  const jerseys = await getTeamJerseys();
   const { headers, rows } = await sheetRows("Players"); const headerIndex: Record<string, number> = {};
   headers.forEach((h, i) => { const k = normHeader(h); if (k) headerIndex[k] = i; });
   const val = (row: Row, ...hs: string[]) => { for (const h of hs) { const i = headerIndex[normHeader(h)]; if (i !== undefined) return row[i] ?? ""; } return ""; };
   return rows.filter((r) => val(r, "Team") !== "" && val(r, "Team") != null).map((r) => { const stamina = val(r, "Stamina"); return {
-    team: val(r,"Team"), name: val(r,"Name"), position: val(r,"Pos"), offStars: val(r,"Off Stars"), defStars: val(r,"Def Stars"), size: val(r,"Size"), strength: val(r,"Strength"), speed: val(r,"Speed"), stamina, poise: val(r,"Poise"), accuracy: val(r,"Accuracy"), armStrength: val(r,"Arm-Strength","Arm Strength"), readDefense: val(r,"Read Defense"), juke: val(r,"Juke"), vision: val(r,"Vision"), acceleration: val(r,"Acceleration"), routeRunning: val(r,"Route Running"), jump: val(r,"Jump"), hands: val(r,"Hands"), ballsecurity: val(r,"Ball Security"), qbFavorite: val(r,"QB Favorite"), runBlocking: val(r,"Run Blocking"), passProtect: val(r,"Pass Protect"), runStop: val(r,"RunStop","Run Stop"), tackling: val(r,"Tackling"), runDef: val(r,"Run Def"), tackleChance: val(r,"Tackle Chance"), strip: val(r,"Strip"), passRush: val(r,"PassRush","Pass Rush"), sackChance: val(r,"Sack Chance"), ballHawk: val(r,"Ball Hawk"), readQB: val(r,"Read QB"), coverage: val(r,"Coverage"), defPos: val(r,"DefPos","Def Pos"), image: val(r,"Image","Player Image from AI"), translateX: val(r,"translateX"), translateY: val(r,"translateY"), scale: val(r,"scale"), jersey: val(r,"jersey","Jersey","Jersey Image"), carries: 0, fatigue: stamina } });
+    team: val(r,"Team"), name: val(r,"Name"), position: val(r,"Pos"), offStars: val(r,"Off Stars"), defStars: val(r,"Def Stars"), size: val(r,"Size"), strength: val(r,"Strength"), speed: val(r,"Speed"), stamina, poise: val(r,"Poise"), accuracy: val(r,"Accuracy"), armStrength: val(r,"Arm-Strength","Arm Strength"), readDefense: val(r,"Read Defense"), juke: val(r,"Juke"), vision: val(r,"Vision"), acceleration: val(r,"Acceleration"), routeRunning: val(r,"Route Running"), jump: val(r,"Jump"), hands: val(r,"Hands"), ballsecurity: val(r,"Ball Security"), qbFavorite: val(r,"QB Favorite"), runBlocking: val(r,"Run Blocking"), passProtect: val(r,"Pass Protect"), runStop: val(r,"RunStop","Run Stop"), tackling: val(r,"Tackling"), runDef: val(r,"Run Def"), tackleChance: val(r,"Tackle Chance"), strip: val(r,"Strip"), passRush: val(r,"PassRush","Pass Rush"), sackChance: val(r,"Sack Chance"), ballHawk: val(r,"Ball Hawk"), readQB: val(r,"Read QB"), coverage: val(r,"Coverage"), defPos: val(r,"DefPos","Def Pos"), image: val(r,"Image","Player Image from AI"), translateX: val(r,"translateX"), translateY: val(r,"translateY"), scale: val(r,"scale"), jersey: jerseys.get(String(val(r,"Team")).trim().toLowerCase()) ?? "", carries: 0, fatigue: stamina } });
 }
 async function getPlayHistory(gameId: string) {
   const { headers, rows } = await sheetRows("PlayHistory");
@@ -286,7 +312,7 @@ async function savePlayAndGameWithRetry(data: Record<string, unknown>, gameId: s
 }
 
 gameRoutes.get("/health", (_req, res) => res.json({ ok: true, app: "football-game-api", message: "API is running" }));
-gameRoutes.get("/players", async (_req, res, next) => { try { res.json({ players: await readSheetObjects("Players!A1:AM") }); } catch (e) { next(e); } });
+gameRoutes.get("/players", async (_req, res, next) => { try { res.json({ players: await getPlayersWithTeamJerseys() }); } catch (e) { next(e); } });
 gameRoutes.get("/player-stats", async (_req, res, next) => { try { res.json({ playerStats: await readSheetObjects("PlayerStats!A1:AI") }); } catch (e) { next(e); } });
 gameRoutes.get("/players/:playerName/rushing-games", async (req, res, next) => {
   try {

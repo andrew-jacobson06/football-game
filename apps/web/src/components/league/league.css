@@ -376,7 +376,7 @@
 }
 .player-stats-image {
   width: 24px;
-  height: auto;
+  height: 24px;
   flex: 0 0 auto;
 }
 .statCol1 {
@@ -479,7 +479,7 @@
   border: 1px solid #3b3b3b;
 }
 .player-profile-image-wrap { align-self: stretch; min-height: 260px; background: radial-gradient(circle at 50% 60%, #444, #181818 70%); }
-.player-profile-image-wrap img { width: 100%; height: 100%; max-height: 340px; object-fit: contain; object-position: bottom; }
+.player-profile-image-wrap > .player-image-layers { min-height: 260px; max-height: 340px; object-fit: contain; object-position: bottom; }
 .player-profile-kicker { margin: 0 0 .25rem; color: var(--accent-red); font-weight: 700; letter-spacing: .12em; }
 .player-profile-summary h2 { margin: 0; font-size: clamp(2rem, 5vw, 4rem); text-transform: uppercase; }
 .player-profile-team { margin: .35rem 0 1.25rem; color: var(--text-muted); font-size: 1.15rem; }
