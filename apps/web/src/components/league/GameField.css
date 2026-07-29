@@ -775,3 +775,118 @@ textarea {
   opacity: 0.38;
   pointer-events: none;
 }
+
+/* Full-body player presentation shared by formation setup and live plays. */
+.token {
+  --player-size: clamp(68px, 8vw, 96px);
+  width: var(--player-size);
+  height: calc(var(--player-size) * 1.28);
+  border-radius: 0;
+  transform: translate(-50%, -72%);
+  transform-origin: 50% 82%;
+}
+
+.token .player-sprite,
+.field-formation-slot .player-sprite {
+  --facing: 1;
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: scaleX(var(--facing));
+  transform-origin: 50% 82%;
+}
+
+.token .player-sprite::after { content: none; }
+.token[data-facing="left"] .player-sprite { --facing: -1; }
+
+.token .player-character,
+.token .player-jersey,
+.field-formation-slot .player-image-layers,
+.field-formation-slot .player-image-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  object-fit: contain;
+  object-position: center bottom;
+  background: transparent;
+}
+
+.token .player-character { z-index: 2; filter: drop-shadow(0 7px 5px #001b); }
+.token .player-jersey { z-index: 1; transform: scale(1.05); filter: drop-shadow(0 2px 1px #0008) saturate(1.12) contrast(1.05); }
+
+.player-shadow {
+  position: absolute;
+  z-index: -2;
+  left: 14%;
+  right: 14%;
+  bottom: 3%;
+  height: 13%;
+  border-radius: 50%;
+  background: #00140dbb;
+  filter: blur(5px);
+}
+
+.player-marker, .player-aura {
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  bottom: -4%;
+  translate: -50% 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.player-marker { width: 76%; height: 20%; border: 3px solid #ffffff4d; transform: rotate(-3deg); }
+.player-aura { width: 96%; height: 25%; opacity: 0; background: radial-gradient(ellipse, #5cecff80, #5cecff22 45%, transparent 72%); filter: blur(2px); }
+.token.active-runner .player-marker, .token.ball-carrier .player-marker, .field-formation-slot.selected .player-marker { border-color: #5cecff; box-shadow: 0 0 8px #5cecff, inset 0 0 8px #5cecff; animation: marker-pulse 1.2s ease-in-out infinite; }
+.token.active-runner .player-aura, .token.ball-carrier .player-aura, .field-formation-slot.selected .player-aura { opacity: 1; }
+.token.defense .player-marker, .field-formation-slot.defense .player-marker { border-color: #ff5555b8; }
+
+.token .name, .field-formation-name {
+  top: auto;
+  bottom: -20px;
+  display: flex;
+  align-items: center;
+  min-width: 92%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #ffffff2e;
+  border-radius: 7px;
+  background: #07100de8;
+  box-shadow: 0 5px 12px #0008;
+  font-size: 9px;
+  letter-spacing: .04em;
+}
+.player-number { padding: 5px 6px; color: #12100a; background: #ffd45a; font-size: 1.05em; }
+.player-name { padding: 5px 7px; }
+.token.defense .player-number, .field-formation-slot.defense .player-number { color: white; background: #c62828; }
+.possession-dot { width: 7px; height: 7px; margin: 0 6px 0 auto; border-radius: 50%; opacity: 0; background: #ffd45a; box-shadow: 0 0 8px #ffd45a; }
+.token.active-runner .possession-dot, .token.ball-carrier .possession-dot { opacity: 1; }
+.token.active-runner > .player-sprite::before, .token.ball-carrier > .player-sprite::before { content: none; }
+
+.motion-swipe, .action-burst { position: absolute; opacity: 0; pointer-events: none; }
+.motion-swipe { z-index: 0; inset: 15% -34% 18%; border: 7px solid transparent; border-top-color: #5cecff; border-radius: 50%; filter: drop-shadow(0 0 6px #5cecff); }
+.action-burst { z-index: 8; left: 50%; top: 22%; width: 46%; aspect-ratio: 1; background: repeating-conic-gradient(from 8deg, #ffd45a 0 8deg, transparent 8deg 22deg); clip-path: polygon(50% 0,61% 35%,85% 15%,68% 42%,100% 50%,68% 58%,85% 85%,59% 66%,50% 100%,41% 66%,15% 85%,32% 58%,0 50%,32% 42%,15% 15%,41% 35%); transform: translate(-50%,-50%) scale(.15); }
+.token[data-action="spin"] .motion-swipe { animation: spin-swipe 780ms ease-out; }
+.token[data-action="stiff-arm"] .action-burst { animation: action-burst 420ms 210ms ease-out; }
+.token[data-action="celebration"] .player-aura { opacity: 1; animation: celebration-aura 900ms ease-in-out infinite; }
+
+.field-formation-slot { width: clamp(68px, 8vw, 96px); height: calc(clamp(68px, 8vw, 96px) * 1.28); border-radius: 0; border: 0; background: transparent; transform: translate(-50%, -72%); }
+.field-formation-slot.filled { border: 0; }
+.field-formation-slot.open { width: 58px; height: 58px; border: 2px dashed currentColor; border-radius: 50%; background: #0f172ad1; transform: translate(-50%, -50%); }
+.field-formation-slot.targetable:not(.open) .player-marker { border-color: #facc15; box-shadow: 0 0 10px #facc15; }
+.field-formation-slot.defense { background: transparent; opacity: .72; }
+
+@keyframes marker-pulse { 50% { opacity: .65; transform: rotate(-3deg) scale(1.1); } }
+@keyframes spin-swipe { 0% { opacity:0; transform:rotate(0) scale(.5); } 25% { opacity:.9; } 100% { opacity:0; transform:rotate(calc(360deg * var(--facing))) scale(1.15); } }
+@keyframes action-burst { 0% { opacity:0; transform:translate(-50%,-50%) scale(.15); } 40% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-50%) scale(1.45) rotate(38deg); } }
+@keyframes celebration-aura { 50% { opacity:.5; transform:scale(1.35); filter:hue-rotate(85deg) blur(2px); } }

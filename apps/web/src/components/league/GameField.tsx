@@ -947,9 +947,30 @@ export default function GameField({
         impactFlash.className = "impact-flash";
         impactFlash.setAttribute("aria-hidden", "true");
         portrait.appendChild(impactFlash);
+        for (const effectClass of ["motion-swipe", "action-burst"]) {
+          const effect = document.createElement("span");
+          effect.className = effectClass;
+          effect.setAttribute("aria-hidden", "true");
+          portrait.appendChild(effect);
+        }
+        for (const indicatorClass of ["player-shadow", "player-marker", "player-aura"]) {
+          const indicator = document.createElement("span");
+          indicator.className = indicatorClass;
+          indicator.setAttribute("aria-hidden", "true");
+          el.appendChild(indicator);
+        }
         const label = document.createElement("div");
         label.className = "name";
-        label.textContent = player.name;
+        const number = document.createElement("span");
+        number.className = "player-number";
+        number.textContent = player.role || player.position || "--";
+        const labelName = document.createElement("span");
+        labelName.className = "player-name";
+        labelName.textContent = player.name;
+        const possessionDot = document.createElement("span");
+        possessionDot.className = "possession-dot";
+        possessionDot.setAttribute("aria-hidden", "true");
+        label.append(number, labelName, possessionDot);
         el.appendChild(portrait);
         el.appendChild(label);
         el.dataset.action = playerActionForStep(player);
@@ -1379,16 +1400,19 @@ export default function GameField({
                   }}
                 >
                   {playerName ? (
-                    playerImage ? (
-                      <PlayerImage player={player} alt={playerName} />
-                    ) : (
-                      <span className="field-formation-avatar">👤</span>
-                    )
+                    <>
+                      <span className="player-shadow" aria-hidden="true" />
+                      <span className="player-marker" aria-hidden="true" />
+                      <span className="player-aura" aria-hidden="true" />
+                      <span className="player-sprite">
+                        {playerImage ? <PlayerImage player={player} alt={playerName} /> : <span className="field-formation-avatar">👤</span>}
+                      </span>
+                    </>
                   ) : (
                     <span className="field-formation-label">{slot}</span>
                   )}
                   {playerName && (
-                    <span className="field-formation-name">{playerName}</span>
+                    <span className="field-formation-name"><span className="player-number">{slot}</span><span className="player-name">{playerName}</span></span>
                   )}
                 </button>
               );
@@ -1413,13 +1437,11 @@ export default function GameField({
                   aria-hidden="true"
                 >
                   {playerImage ? (
-                    <PlayerImage player={player} />
+                    <><span className="player-shadow" aria-hidden="true" /><span className="player-marker" aria-hidden="true" /><span className="player-sprite"><PlayerImage player={player} /></span></>
                   ) : (
                     <span className="field-formation-avatar">👤</span>
                   )}
-                  <span className="field-formation-name">
-                    {assignment.player}
-                  </span>
+                  <span className="field-formation-name"><span className="player-number">{assignment.position}</span><span className="player-name">{assignment.player}</span></span>
                 </div>
               );
             })}
