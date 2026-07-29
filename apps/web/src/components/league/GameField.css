@@ -778,11 +778,12 @@ textarea {
 
 /* Full-body player presentation shared by formation setup and live plays. */
 .token {
-  --player-size: clamp(68px, 8vw, 96px);
+  --player-size: clamp(46px, 5.5vw, 64px);
   width: var(--player-size);
   height: calc(var(--player-size) * 1.28);
   border-radius: 0;
-  transform: translate(-50%, -72%);
+  /* The yard coordinate represents the player's feet, not their center. */
+  transform: translate(-50%, -92%);
   transform-origin: 50% 82%;
 }
 
@@ -850,6 +851,12 @@ textarea {
 .token.active-runner .player-aura, .token.ball-carrier .player-aura, .field-formation-slot.selected .player-aura { opacity: 1; }
 .token.defense .player-marker, .field-formation-slot.defense .player-marker { border-color: #ff5555b8; }
 
+/* Live players use clean character art without selection/highlight rings. */
+.token .player-marker,
+.token .player-aura {
+  display: none;
+}
+
 .token .name, .field-formation-name {
   top: auto;
   bottom: -20px;
@@ -880,7 +887,7 @@ textarea {
 .token[data-action="stiff-arm"] .action-burst { animation: action-burst 420ms 210ms ease-out; }
 .token[data-action="celebration"] .player-aura { opacity: 1; animation: celebration-aura 900ms ease-in-out infinite; }
 
-.field-formation-slot { width: clamp(68px, 8vw, 96px); height: calc(clamp(68px, 8vw, 96px) * 1.28); border-radius: 0; border: 0; background: transparent; transform: translate(-50%, -72%); }
+.field-formation-slot { width: clamp(46px, 5.5vw, 64px); height: calc(clamp(46px, 5.5vw, 64px) * 1.28); border-radius: 0; border: 0; background: transparent; transform: translate(-50%, -92%); }
 .field-formation-slot.filled { border: 0; }
 .field-formation-slot.open { width: 58px; height: 58px; border: 2px dashed currentColor; border-radius: 50%; background: #0f172ad1; transform: translate(-50%, -50%); }
 .field-formation-slot.targetable:not(.open) .player-marker { border-color: #facc15; box-shadow: 0 0 10px #facc15; }

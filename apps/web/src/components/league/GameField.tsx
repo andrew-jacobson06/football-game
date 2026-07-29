@@ -145,18 +145,18 @@ const DEFAULT_LINEUPS_BY_POSITION: Record<
   string,
   { lane: string; yardOffsetFromLos: number }
 > = {
-  WR1: { lane: "WR1", yardOffsetFromLos: -1 },
-  WR2: { lane: "WR2", yardOffsetFromLos: -1 },
-  WR3: { lane: "SLT1", yardOffsetFromLos: -1.5 },
-  WR4: { lane: "SLT2", yardOffsetFromLos: -1.5 },
-  RB1: { lane: "LG", yardOffsetFromLos: -6 },
-  RB2: { lane: "RG", yardOffsetFromLos: -6 },
-  QB: { lane: "C", yardOffsetFromLos: -3.5 },
-  LT: { lane: "LT", yardOffsetFromLos: -1 },
-  LG: { lane: "LG", yardOffsetFromLos: -0.75 },
-  C: { lane: "C", yardOffsetFromLos: -0.5 },
-  RG: { lane: "RG", yardOffsetFromLos: -0.75 },
-  RT: { lane: "RT", yardOffsetFromLos: -1 },
+  WR1: { lane: "WR1", yardOffsetFromLos: -4 },
+  WR2: { lane: "WR2", yardOffsetFromLos: -4 },
+  WR3: { lane: "SLT1", yardOffsetFromLos: -4.5 },
+  WR4: { lane: "SLT2", yardOffsetFromLos: -4.5 },
+  RB1: { lane: "LG", yardOffsetFromLos: -11 },
+  RB2: { lane: "RG", yardOffsetFromLos: -11 },
+  QB: { lane: "C", yardOffsetFromLos: -7.5 },
+  LT: { lane: "LT", yardOffsetFromLos: -4 },
+  LG: { lane: "LG", yardOffsetFromLos: -4 },
+  C: { lane: "C", yardOffsetFromLos: -4 },
+  RG: { lane: "RG", yardOffsetFromLos: -4 },
+  RT: { lane: "RT", yardOffsetFromLos: -4 },
   DB1: { lane: "LSD", yardOffsetFromLos: 1.25 },
   DB2: { lane: "RSD", yardOffsetFromLos: 1.25 },
   DB3: { lane: "RFLT", yardOffsetFromLos: 1.25 },
@@ -171,8 +171,8 @@ const DEFAULT_LINEUPS_BY_POSITION: Record<
   FS: { lane: "C", yardOffsetFromLos: 14 },
   S1: { lane: "LG", yardOffsetFromLos: 13 },
   S2: { lane: "RG", yardOffsetFromLos: 13 },
-  TE1: { lane: "RT", yardOffsetFromLos: -1 },
-  TE2: { lane: "LT", yardOffsetFromLos: -1 },
+  TE1: { lane: "RT", yardOffsetFromLos: -4 },
+  TE2: { lane: "LT", yardOffsetFromLos: -4 },
 };
 
 /**
@@ -276,6 +276,11 @@ const yardToYPct = (yard: number) => {
   const fieldYard = Math.max(-10, Math.min(110, yard));
   return 91.8 - (fieldYard / 100) * (91.8 - 8.2);
 };
+// Players nearer the bottom of the vertical field must paint over players
+// farther upfield. Deriving the layer from the same ground point used for
+// positioning keeps contact pairs correct regardless of team or play state.
+const playerDepthZIndex = (yard: number) =>
+  100 + Math.round(yardToYPct(yard) * 10);
 const normalizeYard = (yard: string | number) =>
   Number.isFinite(Number(yard)) ? Number(yard) : 55;
 const normalizeDistance = (distance: string | number) =>
@@ -676,6 +681,7 @@ export default function GameField({
   const updateScreenPositionsWithoutFootball = useCallback(() => {
     Object.values(playersRef.current).forEach((player) => {
       player.el.style.top = `${yardToYPct(player.yard)}%`;
+      player.el.style.zIndex = String(playerDepthZIndex(player.yard));
     });
     Object.values(labelsRef.current).forEach((labelEl) => {
       const yard = Number(labelEl.dataset.yard);
@@ -717,6 +723,7 @@ export default function GameField({
         if (step.yard !== undefined) player.yard = step.yard;
         player.el.style.left = `${player.x}%`;
         player.el.style.top = `${yardToYPct(player.yard)}%`;
+        player.el.style.zIndex = String(playerDepthZIndex(player.yard));
         player.el.className = `token ${player.team.toLowerCase()} ${unitClassForPlayer(player)} ${player.isRunner ? "runner" : ""} ${player.className || ""}`;
         updateScreenPositionsWithoutFootball();
         await wait(durationMs);
@@ -923,6 +930,7 @@ export default function GameField({
         el.id = `player-${player.id}`;
         el.style.left = `${player.x}%`;
         el.style.top = `${yardToYPct(player.yard)}%`;
+        el.style.zIndex = String(playerDepthZIndex(player.yard));
         const portrait = document.createElement("span");
         portrait.className = "player-sprite";
         if (player.jerseyUrl) {
@@ -1386,6 +1394,9 @@ export default function GameField({
                   style={{
                     left: `${LANES[lineup.lane] ?? 50}%`,
                     top: `${yardToYPct(formationLosYard + offenseDirection * lineup.yardOffsetFromLos)}%`,
+                    zIndex: playerDepthZIndex(
+                      formationLosYard + offenseDirection * lineup.yardOffsetFromLos,
+                    ),
                   }}
                   aria-label={
                     playerName
@@ -1433,6 +1444,9 @@ export default function GameField({
                   style={{
                     left: `${LANES[lineup.lane] ?? 50}%`,
                     top: `${yardToYPct(formationLosYard + offenseDirection * lineup.yardOffsetFromLos)}%`,
+                    zIndex: playerDepthZIndex(
+                      formationLosYard + offenseDirection * lineup.yardOffsetFromLos,
+                    ),
                   }}
                   aria-hidden="true"
                 >
