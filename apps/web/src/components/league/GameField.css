@@ -324,12 +324,6 @@ body {
   outline: none;
 }
 
-.token:focus-visible > .player-sprite {
-  box-shadow:
-    0 0 0 3px #facc15,
-    0 7px 14px rgba(0, 0, 0, 0.5);
-}
-
 .token.active-runner > .player-sprite::before,
 .token.ball-carrier > .player-sprite::before {
   content: "";
@@ -430,6 +424,7 @@ body {
 .token[data-action="juked"] .player-sprite { animation: player-juked 560ms ease-out forwards; }
 .token[data-action="trucked"] .player-sprite { animation: player-trucked 580ms ease-out forwards; }
 .token[data-action="stiff-armed"] .player-sprite { animation: player-stiff-armed 540ms ease-out forwards; }
+.token[data-action="tackled"] .player-sprite { animation: player-tackled 620ms cubic-bezier(.2,.8,.25,1) forwards; }
 .token[data-action="dl-win"] .player-sprite { animation: player-dl-win 500ms ease-out; }
 .token[data-action="dl-loss"] .player-sprite { animation: player-dl-loss 560ms ease-out forwards; }
 .token[data-action="celebration"] .player-sprite { animation: player-celebrate 620ms ease-in-out infinite; }
@@ -449,6 +444,7 @@ body {
 @keyframes player-juked { 0%{transform:scaleX(var(--facing))} 45%{transform:scaleX(var(--facing)) translateX(-8px) rotate(-16deg)} 100%{transform:scaleX(var(--facing)) translate(-11px,4px) rotate(-22deg) scale(.92)} }
 @keyframes player-trucked { 0%{transform:scaleX(var(--facing))} 45%{transform:scaleX(var(--facing)) translateX(-8px) rotate(-14deg)} 100%{transform:scaleX(var(--facing)) translate(-14px,8px) rotate(-35deg) scale(.86)} }
 @keyframes player-stiff-armed { 0%{transform:scaleX(var(--facing))} 45%{transform:scaleX(var(--facing)) translateX(-7px) rotate(-15deg)} 100%{transform:scaleX(var(--facing)) translate(-11px,4px) rotate(-25deg) scale(.9)} }
+@keyframes player-tackled { 0%{transform:scaleX(var(--facing));filter:none} 28%{transform:scaleX(var(--facing)) translateY(3px) rotate(-7deg) scale(.98)} 68%{transform:scaleX(var(--facing)) translate(-8px,14px) rotate(-72deg) scale(.94)} 100%{transform:scaleX(var(--facing)) translate(-10px,18px) rotate(-88deg) scale(.9);filter:brightness(.82)} }
 @keyframes player-dl-win { 0%,100%{transform:scaleX(var(--facing))} 30%{transform:scaleX(var(--facing)) translate(-3px,4px) scale(.96)} 75%{transform:scaleX(var(--facing)) translate(10px,-1px) rotate(7deg) scale(1.06)} }
 @keyframes player-dl-loss { 0%{transform:scaleX(var(--facing))} 50%{transform:scaleX(var(--facing)) translateX(-7px) rotate(-10deg)} 100%{transform:scaleX(var(--facing)) translate(-12px,5px) rotate(-18deg) scale(.92)} }
 @keyframes player-celebrate { 0%,100%{transform:scaleX(var(--facing)) translateY(0)} 48%{transform:scaleX(var(--facing)) translateY(-10px) scale(1.05)} 70%{transform:scaleX(var(--facing)) translateY(-7px) rotate(5deg)} }
@@ -640,11 +636,6 @@ textarea {
   pointer-events: auto;
 }
 
-.token:focus-visible img {
-  outline: 3px solid #facc15;
-  outline-offset: 4px;
-}
-
 .player-action-menu {
   position: absolute;
   z-index: 180;
@@ -782,8 +773,8 @@ textarea {
   width: var(--player-size);
   height: calc(var(--player-size) * 1.28);
   border-radius: 0;
-  /* The yard coordinate represents the player's feet, not their center. */
-  transform: translate(-50%, -92%);
+  /* The yard coordinate passes through the center of the player artwork. */
+  transform: translate(-50%, -50%);
   transform-origin: 50% 82%;
 }
 
@@ -823,6 +814,7 @@ textarea {
 
 .token .player-character { z-index: 2; filter: drop-shadow(0 7px 5px #001b); }
 .token .player-jersey { z-index: 1; filter: drop-shadow(0 2px 1px #0008) saturate(1.12) contrast(1.05); }
+.token img { outline: none; }
 
 .player-shadow {
   position: absolute;
@@ -887,7 +879,7 @@ textarea {
 .token[data-action="stiff-arm"] .action-burst { animation: action-burst 420ms 210ms ease-out; }
 .token[data-action="celebration"] .player-aura { opacity: 1; animation: celebration-aura 900ms ease-in-out infinite; }
 
-.field-formation-slot { width: clamp(46px, 5.5vw, 64px); height: calc(clamp(46px, 5.5vw, 64px) * 1.28); border-radius: 0; border: 0; background: transparent; transform: translate(-50%, -92%); }
+.field-formation-slot { width: clamp(46px, 5.5vw, 64px); height: calc(clamp(46px, 5.5vw, 64px) * 1.28); border-radius: 0; border: 0; background: transparent; transform: translate(-50%, -50%); }
 .field-formation-slot.filled { border: 0; }
 .field-formation-slot.open { width: 58px; height: 58px; border: 2px dashed currentColor; border-radius: 50%; background: #0f172ad1; transform: translate(-50%, -50%); }
 .field-formation-slot.targetable:not(.open) .player-marker { border-color: #facc15; box-shadow: 0 0 10px #facc15; }

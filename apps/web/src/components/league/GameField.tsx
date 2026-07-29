@@ -342,7 +342,7 @@ const unitClassForPlayer = (
 
 const PLAYER_ACTIONS = new Set([
   "idle", "juke", "truck", "spin", "stiff-arm", "tackle", "juked",
-  "trucked", "stiff-armed", "dl-win", "dl-loss", "celebration",
+  "trucked", "stiff-armed", "tackled", "dl-win", "dl-loss", "celebration",
 ]);
 
 /** Keeps older class-based play JSON visually compatible with action states. */
@@ -355,7 +355,8 @@ const playerActionForStep = (step: PlayerMoveStep) => {
     [/\sstiff-armed\s/, "stiff-armed"], [/\slowering-shoulder\s|\strucking\s/, "truck"],
     [/\strucked\s/, "trucked"], [/\sspinning\s/, "spin"],
     [/\sjuking\s/, "juke"], [/\sjuked\s|\smissed\s/, "juked"],
-    [/\stackling\s/, "tackle"], [/\sdl-win\s|\spenetrating\s/, "dl-win"],
+    [/\stackling\s/, "tackle"], [/\stackled\s/, "tackled"],
+    [/\sdl-win\s|\spenetrating\s/, "dl-win"],
     [/\sdl-loss\s|\sdl-lost\s/, "dl-loss"],
   ];
   return legacyActions.find(([pattern]) => pattern.test(classes))?.[1] || "idle";
@@ -727,7 +728,7 @@ export default function GameField({
         player.el.className = `token ${player.team.toLowerCase()} ${unitClassForPlayer(player)} ${player.isRunner ? "runner" : ""} ${player.className || ""}`;
         updateScreenPositionsWithoutFootball();
         await wait(durationMs);
-        if (action !== "idle" && action !== "celebration" && player.el.dataset.action === action)
+        if (action !== "idle" && action !== "celebration" && action !== "tackled" && player.el.dataset.action === action)
           player.el.dataset.action = "idle";
       };
       if (Array.isArray(move.path) && move.path.length > 0) {
@@ -987,7 +988,11 @@ export default function GameField({
         // orientation; JSON may opt into a mirror for a lateral interaction.
         el.dataset.facing = player.facing === "left" ? "left" : "right";
         portrait.addEventListener("animationend", (event) => {
-          if (event.target !== portrait || el.dataset.action === "celebration") return;
+          if (
+            event.target !== portrait ||
+            el.dataset.action === "celebration" ||
+            el.dataset.action === "tackled"
+          ) return;
           el.dataset.action = "idle";
         });
         el.tabIndex = 0;
