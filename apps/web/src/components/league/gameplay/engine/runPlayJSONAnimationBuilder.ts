@@ -289,6 +289,13 @@ export function runPlayJSONAnimationBuilder(
 
   const firstChallengePhases: Array<Record<string, unknown>> = firstChallenge
     ? [
+        /*
+         * Phase: accelerate-to-first-challenge
+         * What: advances the runner and the first unblocked defender to the
+         * same simulated contact yard.
+         * How: both player records receive that yard while their CSS classes
+         * show acceleration/pursuit; the football remains attached to runnerId.
+         */
         {
           id: "accelerate-to-first-challenge",
           caption: `${runnerName} accelerates through the hole and meets ${firstChallenge.defender}.`,
@@ -304,8 +311,17 @@ export function runPlayJSONAnimationBuilder(
           labels: hiddenLabels,
           football: { mode: "carrier", carrierId: runnerId },
         },
+        // Pick exactly one contact sequence from the simulation result so the
+        // animation illustrates the resolved outcome rather than rerolling it.
         firstChallenge.wrapped
           ? {
+              /*
+               * Phase: first-challenge-wrap-tackle
+               * What: shows an immediate form tackle with no attempted move.
+               * How: co-locates runner and defender in the chosen lane and
+               * applies the tackled/tackling CSS action classes, then holds the
+               * pose long enough for the contact to read clearly.
+               */
               id: "first-challenge-wrap-tackle",
               caption: `${firstChallenge.defender} wraps up ${runnerName} at the point of contact.`,
               durationMs: 450,
@@ -318,6 +334,13 @@ export function runPlayJSONAnimationBuilder(
             }
           : firstChallenge.attempt === "Juke"
             ? {
+                /*
+                 * Phase: first-challenge-(failed-)?(juke|spin)
+                 * What: shows a runner's evasive move and whether it succeeds.
+                 * How: a two-step path first fakes/spins at the contact yard,
+                 * then cuts away or ends tackled; the defender's action class
+                 * changes to juked or tackling to match the resolved check.
+                 */
                 id: `first-challenge-${firstChallenge.moveSucceeded ? "" : "failed-"}${jukeMove}`,
                 caption: firstChallenge.moveSucceeded
                   ? jukeMove === "spin"
@@ -350,6 +373,12 @@ export function runPlayJSONAnimationBuilder(
                 football: { mode: "carrier", carrierId: runnerId },
               }
             : [
+                /*
+                 * Phase: first-challenge-(truck|stiff-arm)-attempt
+                 * What: stages the initial power-move collision.
+                 * How: brings both players to the contact yard and adds the
+                 * lowering-shoulder or stiff-arming pose before the result.
+                 */
                 {
                   id: `first-challenge-${powerMove}-attempt`,
                   caption: powerMove === "truck"
@@ -362,6 +391,13 @@ export function runPlayJSONAnimationBuilder(
                   ],
                   football: { mode: "carrier", carrierId: runnerId },
                 },
+                /*
+                 * Phase: first-challenge power-move result
+                 * What: resolves the truck/stiff-arm as a win, tackle, or drag.
+                 * How: action classes show who won, lateral lane displacement
+                 * sells a stiff-arm, and carryYards moves a stopped runner and
+                 * tackler together to the simulation's final yard.
+                 */
                 {
                   id: firstChallenge.moveSucceeded
                     ? `first-challenge-${powerMove}`
@@ -404,6 +440,12 @@ export function runPlayJSONAnimationBuilder(
       const move = challenge.attempt?.toLowerCase() ?? "wrap";
       const stopped = challenge.wrapped || (challenge.attempt && !succeeded);
       return [
+        /*
+         * Phase: pursuit-to-challenge-N
+         * What: connects one successful escape to the next defender encounter.
+         * How: moves runner and the next defender to this challenge's resolved
+         * yard with accelerating/chasing classes and keeps the ball on runner.
+         */
         {
           id: `pursuit-to-challenge-${index + 2}`,
           caption: `${runnerName} tries to accelerate away, but ${challenge.defender} closes at the next challenge point.`,
@@ -415,6 +457,12 @@ export function runPlayJSONAnimationBuilder(
           labels: hiddenLabels,
           football: { mode: "carrier", carrierId: runnerId },
         },
+        /*
+         * Phase: challenge-N-(tackle|juke|truck)
+         * What: displays the outcome of every later challenge in order.
+         * How: both players meet in one lane and outcome-specific CSS classes
+         * plus holdMs distinguish a quick escape from a play-ending tackle.
+         */
         {
           id: `challenge-${index + 2}-${stopped ? "tackle" : move}`,
           caption: challenge.wrapped
@@ -440,6 +488,12 @@ export function runPlayJSONAnimationBuilder(
   // whether a successful or failed Juke attempt is shown as a juke or spin.
   const resultPhases: Array<Record<string, unknown>> = successfulHoleSwipe
     ? [
+        /*
+         * Phase: accelerate-to-swipe
+         * What: sends the runner through the selected blocker-created hole.
+         * How: moves the carrier up the chosen lane toward the final result (or
+         * the eight-yard breakaway staging point) while hiding matchup labels.
+         */
         {
           id: "accelerate-to-swipe",
           caption: `${runnerName} hits the hole behind ${runLaneTarget!.selectedPlayer}.`,
@@ -457,6 +511,12 @@ export function runPlayJSONAnimationBuilder(
           labels: hiddenLabels,
           football: { mode: "carrier", carrierId: runnerId },
         },
+        /*
+         * Phase: dl-swipe-tackle
+         * What: shows the defensive lineman crossing the block for the tackle.
+         * How: the defender follows a two-point path from the blocker's lane to
+         * the runner's lane, where tackle action classes and field flashes fire.
+         */
         {
           id: "dl-swipe-tackle",
           caption: `${dlSwipeResult!.defender} swipes across ${dlSwipeResult!.blocker} and tackles ${runnerName}.`,
@@ -498,6 +558,12 @@ export function runPlayJSONAnimationBuilder(
               Number(previousGame.Distance) <= Math.max(0, yardsGained),
           },
         },
+        /*
+         * Phase: dl-swipe-celebration
+         * What: gives the lineman a readable post-tackle reaction.
+         * How: leaves him at the result yard with the celebrating CSS class and
+         * holds the frame before the field resets.
+         */
         {
           id: "dl-swipe-celebration",
           caption: `${dlSwipeResult!.defender} celebrates the stop.`,
@@ -519,6 +585,12 @@ export function runPlayJSONAnimationBuilder(
     : challengePhases.length > 0
       ? challengePhases
       : [
+        /*
+         * Phase: run-result
+         * What: handles runs that have no separately animated defender event.
+         * How: moves the carrier directly to the resolved yard (or breakaway
+         * staging point), then triggers first-down/touchdown field feedback.
+         */
         {
           id: "run-result",
           caption: `${runnerName} runs for ${yardsGained} yard${Math.abs(yardsGained) === 1 ? "" : "s"}.`,
@@ -559,6 +631,12 @@ export function runPlayJSONAnimationBuilder(
   );
   const finalTacklePhase: Array<Record<string, unknown>> = needsFinalTackle
     ? [
+        /*
+         * Phase: final-tackle-pursuit
+         * What: establishes the recorded tackler before the finishing contact.
+         * How: moves tackler and carrier together at resultYard with chase and
+         * acceleration classes, avoiding a defender suddenly appearing there.
+         */
         {
           id: "final-tackle-pursuit",
           caption: `${tacklerName} tracks ${runnerName} into position for the final challenge.`,
@@ -569,6 +647,12 @@ export function runPlayJSONAnimationBuilder(
           ],
           football: { mode: "carrier", carrierId: runnerId },
         },
+        /*
+         * Phase: final-tackle
+         * What: ends the run with the recorded tackler making contact.
+         * How: co-locates both sprites, applies tackled/tackling classes, and
+         * holds the finished pose while the ball stays attached to the runner.
+         */
         {
           id: "final-tackle",
           caption: `${tacklerName} closes on ${runnerName} and makes the tackle.`,
@@ -599,6 +683,12 @@ export function runPlayJSONAnimationBuilder(
 
   const breakawayPhase: Array<Record<string, unknown>> = isBreakaway
     ? [{
+        /*
+         * Phase: breakaway-run
+         * What: carries an uncontested runner through the open field.
+         * How: duration is derived from yards and player speed, the carrier is
+         * moved to resultYard, and a scoring run activates touchdown feedback.
+         */
         id: "breakaway-run",
         caption: isTouchdown
           ? `${runnerName} breaks free and races into the end zone!`
@@ -622,6 +712,12 @@ export function runPlayJSONAnimationBuilder(
     const chaseYard = Number((los + direction * event.startYards).toFixed(2));
     const prefix = `${event.stage}-pursuit-${index + 1}`;
     return [
+      /*
+       * Phase: (secondary|breakaway)-pursuit-N-chase
+       * What: visually establishes a pursuit defender two yards behind.
+       * How: advances both sprites to the simulation's pursuit start distance
+       * while acceleration/chasing classes communicate their relative motion.
+       */
       {
         id: `${prefix}-chase`,
         caption: `${event.chaser} is in hot pursuit of ${runnerName}.`,
@@ -633,6 +729,12 @@ export function runPlayJSONAnimationBuilder(
         labels: hiddenLabels,
         football: { mode: "carrier", carrierId: runnerId },
       },
+      /*
+       * Phase: (secondary|breakaway)-pursuit-N-(escape|tackle)
+       * What: resolves whether the chaser catches the runner.
+       * How: an escape preserves a three-yard gap; a tackle co-locates both
+       * players. Duration scales for breakaways and scoring triggers a flash.
+       */
       {
         id: `${prefix}-${event.escaped ? "escape" : "tackle"}`,
         caption: event.escaped
@@ -654,6 +756,12 @@ export function runPlayJSONAnimationBuilder(
 
   const touchdownCelebrationPhase: Array<Record<string, unknown>> = isTouchdown
     ? [{
+        /*
+         * Phase: touchdown-celebration
+         * What: finishes a scoring run with an end-zone celebration.
+         * How: keeps the carrier and football on the goal line, applies the
+         * celebrating loop, and varies its duration from four to six seconds.
+         */
         id: "touchdown-celebration",
         caption: `Touchdown! ${runnerName} celebrates in the end zone!`,
         durationMs: Math.round(4000 + random() * 2000),
@@ -671,6 +779,14 @@ export function runPlayJSONAnimationBuilder(
   const chooseLanePhases: Array<Record<string, unknown>> =
     visionCheck?.getsPastDL && runLaneTarget?.selectedSide === "OL"
       ? [
+          /*
+           * Phase: choose-run-lane
+           * What: makes the back's successful vision read visible before he
+           * reaches the line of scrimmage.
+           * How: cuts the carrier laterally behind the selected winning blocker
+           * at backfield depth and hides line-result labels for a clean handoff
+           * into the next phase.
+           */
           {
             id: "choose-run-lane",
             caption: `${runnerName} presses the backfield, then cuts behind ${runLaneTarget.selectedPlayer}.`,
@@ -719,6 +835,11 @@ export function runPlayJSONAnimationBuilder(
     ],
     players,
     phases: [
+      /*
+       * Phase: snap
+       * What: starts the play by transferring the ball from center to QB.
+       * How: moves the QB to his exchange depth and changes carrierId to the QB.
+       */
       {
         id: "snap",
         caption: `${quarterbackName} takes the snap.`,
@@ -726,6 +847,13 @@ export function runPlayJSONAnimationBuilder(
         players: snapPlayers,
         football: { mode: "carrier", carrierId: quarterbackId },
       },
+      /*
+       * Phase: handoff-line-battles
+       * What: runs the handoff at the same time as every OL/DL matchup.
+       * How: moves the QB and back toward the exchange, shifts each lineman by
+       * its resolved win/loss distance, displays winner labels, and attaches
+       * the football to the runner for all subsequent phases.
+       */
       {
         id: "handoff-line-battles",
         caption: `${quarterbackName} hands off to ${runnerName} as the lines battle.`,
@@ -734,6 +862,9 @@ export function runPlayJSONAnimationBuilder(
         labels,
         football: { mode: "carrier", carrierId: runnerId },
       },
+      // Optional phases are appended in football order: backfield lane choice,
+      // contact result, pursuit or uncontested breakaway, any final tackle, and
+      // touchdown celebration. Each collection is empty when it does not apply.
       ...chooseLanePhases,
       ...resultPhases,
       ...(pursuitPhases.length ? pursuitPhases : breakawayPhase),
