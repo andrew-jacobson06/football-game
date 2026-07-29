@@ -969,16 +969,16 @@ export default function GameField({
         }
         const label = document.createElement("div");
         label.className = "name";
-        const number = document.createElement("span");
-        number.className = "player-number";
-        number.textContent = player.role || player.position || "--";
+        // const number = document.createElement("span");
+        // number.className = "player-number";
+        // number.textContent = player.role || player.position || "--";
         const labelName = document.createElement("span");
         labelName.className = "player-name";
         labelName.textContent = player.name;
         const possessionDot = document.createElement("span");
         possessionDot.className = "possession-dot";
         possessionDot.setAttribute("aria-hidden", "true");
-        label.append(number, labelName, possessionDot);
+        label.append(labelName, possessionDot);
         el.appendChild(portrait);
         el.appendChild(label);
         el.dataset.action = playerActionForStep(player);
