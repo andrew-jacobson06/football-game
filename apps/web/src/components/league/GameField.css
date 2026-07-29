@@ -822,7 +822,7 @@ textarea {
 }
 
 .token .player-character { z-index: 2; filter: drop-shadow(0 7px 5px #001b); }
-.token .player-jersey { z-index: 1; transform: scale(1.05); filter: drop-shadow(0 2px 1px #0008) saturate(1.12) contrast(1.05); }
+.token .player-jersey { z-index: 1; filter: drop-shadow(0 2px 1px #0008) saturate(1.12) contrast(1.05); }
 
 .player-shadow {
   position: absolute;
