@@ -277,10 +277,12 @@ const yardToYPct = (yard: number) => {
   return 91.8 - (fieldYard / 100) * (91.8 - 8.2);
 };
 // Players nearer the bottom of the vertical field must paint over players
-// farther upfield. Deriving the layer from the same ground point used for
-// positioning keeps contact pairs correct regardless of team or play state.
+// farther upfield. Keep that depth ordering inside the field-content range;
+// GUI overlays begin at z-index 300 and must always remain above the players.
+// A one-point step per vertical percentage still gives every contact pair a
+// stable ordering without allowing a player's field position to outrank UI.
 const playerDepthZIndex = (yard: number) =>
-  100 + Math.round(yardToYPct(yard) * 10);
+  100 + Math.round(yardToYPct(yard));
 const normalizeYard = (yard: string | number) =>
   Number.isFinite(Number(yard)) ? Number(yard) : 55;
 const normalizeDistance = (distance: string | number) =>
@@ -1434,36 +1436,8 @@ export default function GameField({
               );
             })}
 
-          {formationMode &&
-            defense.map((assignment) => {
-              const lineup = assignment.align
-                ? FORMATION_SLOT_LINEUP[assignment.align as FormationSlot]
-                : defensiveLineupForPosition(assignment.position);
-              if (!lineup) return null;
-              const player = findFormationPlayer(assignment.player);
-              const playerImage = imgOf(player);
-              return (
-                <div
-                  key={`${assignment.position}-${assignment.player}`}
-                  className="field-formation-slot defense"
-                  style={{
-                    left: `${LANES[lineup.lane] ?? 50}%`,
-                    top: `${yardToYPct(formationLosYard + offenseDirection * lineup.yardOffsetFromLos)}%`,
-                    zIndex: playerDepthZIndex(
-                      formationLosYard + offenseDirection * lineup.yardOffsetFromLos,
-                    ),
-                  }}
-                  aria-hidden="true"
-                >
-                  {playerImage ? (
-                    <><span className="player-shadow" aria-hidden="true" /><span className="player-marker" aria-hidden="true" /><span className="player-sprite"><PlayerImage player={player} /></span></>
-                  ) : (
-                    <span className="field-formation-avatar">👤</span>
-                  )}
-                  <span className="field-formation-name"><span className="player-number">{assignment.position}</span><span className="player-name">{assignment.player}</span></span>
-                </div>
-              );
-            })}
+          {/* The generated defense remains in the pending play data, but is
+              deliberately not previewed while the offense is being placed. */}
 
           {selectedPlayerMenu && (
             <div
