@@ -7,6 +7,7 @@ import "./GameField.css";
 
 type FormationPlayer = Record<string, unknown>;
 type FormationSlotSetup = { lane: string; yardOffsetFromLos: number };
+type SpriteFacing = "left" | "right";
 
 type PlayerAssignment = {
   type?: string;
@@ -26,6 +27,9 @@ type AnimationPlayer = {
   headUrl?: string;
   jerseyUrl?: string;
   className?: string;
+  action?: string;
+  /** Optional horizontal art direction; it is not the player's field direction. */
+  facing?: SpriteFacing;
   unit?: "offense" | "defense";
   alignmentSlot?: FormationSlot;
   assignment?: PlayerAssignment;
@@ -35,6 +39,9 @@ type PlayerMoveStep = {
   x?: number;
   yard?: number;
   className?: string;
+  action?: string;
+  /** Mirrors only the sprite for explicitly lateral choreography. */
+  facing?: SpriteFacing;
   durationMs?: number;
 };
 type PlayerMove = PlayerMoveStep & {
@@ -326,6 +333,27 @@ const unitClassForPlayer = (
     String(player.id).startsWith("def-")
     ? "defense"
     : "offense";
+};
+
+const PLAYER_ACTIONS = new Set([
+  "idle", "juke", "truck", "spin", "stiff-arm", "tackle", "juked",
+  "trucked", "stiff-armed", "dl-win", "dl-loss", "celebration",
+]);
+
+/** Keeps older class-based play JSON visually compatible with action states. */
+const playerActionForStep = (step: PlayerMoveStep) => {
+  const requested = String(step.action || "").trim().toLowerCase();
+  if (PLAYER_ACTIONS.has(requested)) return requested;
+  const classes = ` ${step.className || ""} `;
+  const legacyActions: Array<[RegExp, string]> = [
+    [/\scelebrating\s/, "celebration"], [/\sstiff-arming\s/, "stiff-arm"],
+    [/\sstiff-armed\s/, "stiff-armed"], [/\slowering-shoulder\s|\strucking\s/, "truck"],
+    [/\strucked\s/, "trucked"], [/\sspinning\s/, "spin"],
+    [/\sjuking\s/, "juke"], [/\sjuked\s|\smissed\s/, "juked"],
+    [/\stackling\s/, "tackle"], [/\sdl-win\s|\spenetrating\s/, "dl-win"],
+    [/\sdl-loss\s|\sdl-lost\s/, "dl-loss"],
+  ];
+  return legacyActions.find(([pattern]) => pattern.test(classes))?.[1] || "idle";
 };
 
 /**
@@ -672,6 +700,17 @@ export default function GameField({
       const applyStep = async (step: PlayerMoveStep, durationMs: number) => {
         player.el.style.transition = `left ${durationMs}ms linear, top ${durationMs}ms linear, transform 280ms ease, filter 280ms ease, opacity 280ms ease`;
         if (step.className !== undefined) player.className = step.className;
+        const action = playerActionForStep(step);
+        const sprite = player.el.querySelector<HTMLElement>(".player-sprite");
+        if (sprite) {
+          // Removing and restoring the attribute forces consecutive one-shots
+          // with the same value to start a fresh CSS animation.
+          delete player.el.dataset.action;
+          void sprite.offsetWidth;
+          player.el.dataset.action = action;
+          if (step.facing === "left" || step.facing === "right")
+            player.el.dataset.facing = step.facing;
+        }
         const resolvedX = resolveMoveX(step);
         if (resolvedX !== undefined) player.x = resolvedX;
         if (step.lane !== undefined) player.lane = step.lane;
@@ -681,6 +720,8 @@ export default function GameField({
         player.el.className = `token ${player.team.toLowerCase()} ${unitClassForPlayer(player)} ${player.isRunner ? "runner" : ""} ${player.className || ""}`;
         updateScreenPositionsWithoutFootball();
         await wait(durationMs);
+        if (action !== "idle" && action !== "celebration" && player.el.dataset.action === action)
+          player.el.dataset.action = "idle";
       };
       if (Array.isArray(move.path) && move.path.length > 0) {
         const phaseDuration = activePhaseDurationMsRef.current;
@@ -883,24 +924,43 @@ export default function GameField({
         el.style.left = `${player.x}%`;
         el.style.top = `${yardToYPct(player.yard)}%`;
         const portrait = document.createElement("span");
-        portrait.className = "player-image-layers";
+        portrait.className = "player-sprite";
         if (player.jerseyUrl) {
           const jersey = document.createElement("img");
-          jersey.className = "player-image-layer player-image-layer--jersey";
+          jersey.className = "player-jersey";
           jersey.src = player.jerseyUrl;
           jersey.alt = "";
+          jersey.draggable = false;
           portrait.appendChild(jersey);
         }
         const img = document.createElement("img");
-        img.className = "player-image-layer player-image-layer--player";
+        img.className = "player-character";
         img.src = player.headUrl || "";
         img.alt = player.name;
+        img.draggable = false;
         portrait.appendChild(img);
+        const carrierBall = document.createElement("span");
+        carrierBall.className = "football";
+        carrierBall.setAttribute("aria-hidden", "true");
+        portrait.appendChild(carrierBall);
+        const impactFlash = document.createElement("span");
+        impactFlash.className = "impact-flash";
+        impactFlash.setAttribute("aria-hidden", "true");
+        portrait.appendChild(impactFlash);
         const label = document.createElement("div");
         label.className = "name";
         label.textContent = player.name;
         el.appendChild(portrait);
         el.appendChild(label);
+        el.dataset.action = playerActionForStep(player);
+        // The field runs vertically, so team/possession must not imply a
+        // horizontal facing. Unspecified sprites keep their source artwork's
+        // orientation; JSON may opt into a mirror for a lateral interaction.
+        el.dataset.facing = player.facing === "left" ? "left" : "right";
+        portrait.addEventListener("animationend", (event) => {
+          if (event.target !== portrait || el.dataset.action === "celebration") return;
+          el.dataset.action = "idle";
+        });
         el.tabIndex = 0;
         el.setAttribute("role", "button");
         el.setAttribute("aria-label", `Open ${player.name} player actions`);
@@ -1160,6 +1220,7 @@ export default function GameField({
         Object.values(playersRef.current).forEach((player) => {
           player.className = "reset";
           player.el.className = `token ${player.team.toLowerCase()} ${unitClassForPlayer(player)} reset`;
+          player.el.dataset.action = "idle";
         });
         fieldRef.current
           ?.querySelectorAll(".battle-label")

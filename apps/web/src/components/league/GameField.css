@@ -262,31 +262,87 @@ body {
   z-index: 120;
 }
 
-.token > .player-image-layers {
+.player-sprite {
+  --facing: 1;
+  position: relative;
   width: 54px;
   height: 54px;
   display: block;
   border-radius: 50%;
-  object-fit: cover;
   border: 3px solid #f8fafc;
   background: #fff;
   box-shadow:
     0 7px 14px rgba(0, 0, 0, 0.45),
     0 0 0 3px rgba(15, 23, 42, 0.65);
+  transform: scaleX(var(--facing));
+  transform-origin: 50% 78%;
 }
 
-.token .player-image-layer {
-  border: 0;
-  background: transparent;
-  box-shadow: none;
+.player-sprite::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 12%;
+  right: 12%;
+  bottom: -8px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(2, 6, 23, 0.5);
+  filter: blur(2px);
+  transform: scaleX(var(--facing));
 }
 
-.token.home > .player-image-layers {
+.player-jersey,
+.player-character {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 50%;
+  pointer-events: none;
+  user-select: none;
+}
+
+.player-jersey { z-index: 1; }
+.player-character { z-index: 2; }
+
+/* Facing is an opt-in horizontal mirror for lateral fakes/contact artwork. It
+   does not represent upfield/downfield travel on this vertical field. */
+.token[data-facing="left"] .player-sprite { --facing: -1; }
+
+.token.home > .player-sprite {
   border-color: #38bdf8;
 }
 
-.token.away > .player-image-layers {
+.token.away > .player-sprite {
   border-color: #fb7185;
+}
+
+.token:focus-visible {
+  outline: none;
+}
+
+.token:focus-visible > .player-sprite {
+  box-shadow:
+    0 0 0 3px #facc15,
+    0 7px 14px rgba(0, 0, 0, 0.5);
+}
+
+.token.active-runner > .player-sprite::before,
+.token.ball-carrier > .player-sprite::before {
+  content: "";
+  position: absolute;
+  z-index: 6;
+  top: -8px;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #facc15;
+  transform: translateX(-50%) scaleX(var(--facing));
 }
 
 .token .name {
@@ -312,153 +368,97 @@ body {
   margin-bottom: 3px;
 }
 
-.token.active-runner img {
+.token.active-runner .player-sprite,
+.token.ball-carrier .player-sprite {
   box-shadow:
-    0 0 0 4px rgba(250, 204, 21, 0.88),
-    0 0 26px rgba(250, 204, 21, 0.82),
+    0 0 0 3px rgba(250, 204, 21, 0.88),
     0 8px 18px rgba(0, 0, 0, 0.5);
 }
 
-.token.handoff-qb img,
-.token.handoff-target img {
+.token.active-runner .player-sprite > .football,
+.token.ball-carrier .player-sprite > .football,
+.token.handoff-target .player-sprite > .football {
+  opacity: 1;
+}
+
+.player-sprite > .football {
+  position: absolute;
+  right: -4px;
+  top: 53%;
+  z-index: 4;
+  width: 13px;
+  height: 8px;
+  border: 1px solid #f4d3a1;
+  border-radius: 50%;
+  background: #713b1d;
+  opacity: 0;
+  transform: rotate(-24deg);
+  pointer-events: none;
+}
+
+.impact-flash {
+  position: absolute;
+  z-index: 7;
+  top: 30%;
+  right: -10px;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 18%, #fde047 25%, rgba(249,115,22,.5) 48%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.token.handoff-qb .player-sprite,
+.token.handoff-target .player-sprite {
   box-shadow:
-    0 0 0 4px rgba(56, 189, 248, 0.75),
-    0 0 24px rgba(56, 189, 248, 0.65),
+    0 0 0 3px rgba(56, 189, 248, 0.75),
     0 8px 18px rgba(0, 0, 0, 0.5);
 }
 
-.token.ol-win img {
+.token.ol-win .player-sprite {
   box-shadow:
-    0 0 0 4px rgba(34, 197, 94, 0.82),
-    0 0 24px rgba(34, 197, 94, 0.7),
+    0 0 0 3px rgba(34, 197, 94, 0.82),
     0 8px 18px rgba(0, 0, 0, 0.5);
 }
 
-.token.dl-lost img,
-.token.missed img,
-.token.trucked img {
-  filter: grayscale(0.35) brightness(0.75);
-  transform: rotate(-12deg) scale(0.92);
-  box-shadow:
-    0 0 0 4px rgba(148, 163, 184, 0.7),
-    0 8px 18px rgba(0, 0, 0, 0.5);
+.token[data-action="juke"] .player-sprite { animation: player-juke 480ms ease-out; }
+.token[data-action="truck"] .player-sprite { animation: player-truck 520ms ease-out; }
+.token[data-action="spin"] .player-sprite { animation: player-spin 560ms ease-in-out; }
+.token[data-action="stiff-arm"] .player-sprite { animation: player-stiff-arm 480ms ease-out; }
+.token[data-action="tackle"] .player-sprite { animation: player-tackle 440ms ease-out; }
+.token[data-action="juked"] .player-sprite { animation: player-juked 560ms ease-out forwards; }
+.token[data-action="trucked"] .player-sprite { animation: player-trucked 580ms ease-out forwards; }
+.token[data-action="stiff-armed"] .player-sprite { animation: player-stiff-armed 540ms ease-out forwards; }
+.token[data-action="dl-win"] .player-sprite { animation: player-dl-win 500ms ease-out; }
+.token[data-action="dl-loss"] .player-sprite { animation: player-dl-loss 560ms ease-out forwards; }
+.token[data-action="celebration"] .player-sprite { animation: player-celebrate 620ms ease-in-out infinite; }
+
+.token[data-action="truck"] .impact-flash,
+.token[data-action="stiff-arm"] .impact-flash,
+.token[data-action="tackle"] .impact-flash,
+.token[data-action="trucked"] .impact-flash,
+.token[data-action="stiff-armed"] .impact-flash,
+.token[data-action="dl-win"] .impact-flash { animation: contact-flash 260ms ease-out 170ms; }
+
+@keyframes player-juke { 0%,100%{transform:scaleX(var(--facing))} 35%{transform:scaleX(var(--facing)) translateX(-9px) rotate(-8deg)} 70%{transform:scaleX(var(--facing)) translateX(6px) rotate(5deg)} }
+@keyframes player-truck { 0%,100%{transform:scaleX(var(--facing))} 32%{transform:scaleX(var(--facing)) translateY(4px) rotate(7deg) scale(.96)} 72%{transform:scaleX(var(--facing)) translate(8px,1px) rotate(4deg) scale(1.1)} }
+@keyframes player-spin { from{transform:scaleX(var(--facing)) rotate(0)} to{transform:scaleX(var(--facing)) rotate(360deg)} }
+@keyframes player-stiff-arm { 0%,100%{transform:scaleX(var(--facing))} 45%{transform:scaleX(var(--facing)) translateX(9px) rotate(-10deg) scale(1.04)} 72%{transform:scaleX(var(--facing)) translateX(12px) rotate(-5deg)} }
+@keyframes player-tackle { 0%,100%{transform:scaleX(var(--facing))} 35%{transform:scaleX(var(--facing)) translate(-3px,3px) rotate(7deg)} 75%{transform:scaleX(var(--facing)) translateX(11px) rotate(9deg) scale(1.06)} }
+@keyframes player-juked { 0%{transform:scaleX(var(--facing))} 45%{transform:scaleX(var(--facing)) translateX(-8px) rotate(-16deg)} 100%{transform:scaleX(var(--facing)) translate(-11px,4px) rotate(-22deg) scale(.92)} }
+@keyframes player-trucked { 0%{transform:scaleX(var(--facing))} 45%{transform:scaleX(var(--facing)) translateX(-8px) rotate(-14deg)} 100%{transform:scaleX(var(--facing)) translate(-14px,8px) rotate(-35deg) scale(.86)} }
+@keyframes player-stiff-armed { 0%{transform:scaleX(var(--facing))} 45%{transform:scaleX(var(--facing)) translateX(-7px) rotate(-15deg)} 100%{transform:scaleX(var(--facing)) translate(-11px,4px) rotate(-25deg) scale(.9)} }
+@keyframes player-dl-win { 0%,100%{transform:scaleX(var(--facing))} 30%{transform:scaleX(var(--facing)) translate(-3px,4px) scale(.96)} 75%{transform:scaleX(var(--facing)) translate(10px,-1px) rotate(7deg) scale(1.06)} }
+@keyframes player-dl-loss { 0%{transform:scaleX(var(--facing))} 50%{transform:scaleX(var(--facing)) translateX(-7px) rotate(-10deg)} 100%{transform:scaleX(var(--facing)) translate(-12px,5px) rotate(-18deg) scale(.92)} }
+@keyframes player-celebrate { 0%,100%{transform:scaleX(var(--facing)) translateY(0)} 48%{transform:scaleX(var(--facing)) translateY(-10px) scale(1.05)} 70%{transform:scaleX(var(--facing)) translateY(-7px) rotate(5deg)} }
+@keyframes contact-flash { 0%{opacity:0;transform:scale(.25)} 35%{opacity:.9;transform:scale(1)} 100%{opacity:0;transform:scale(1.35)} }
+
+@media (prefers-reduced-motion: reduce) {
+  .player-sprite, .impact-flash { animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
 }
 
-.token.dl-win img,
-.token.ol-lost img,
-.token.penetrating img {
-  box-shadow:
-    0 0 0 4px rgba(239, 68, 68, 0.85),
-    0 0 24px rgba(239, 68, 68, 0.7),
-    0 8px 18px rgba(0, 0, 0, 0.5);
-}
-
-.token.juking img {
-  box-shadow:
-    0 0 0 4px rgba(168, 85, 247, 0.85),
-    0 0 24px rgba(168, 85, 247, 0.75),
-    0 8px 18px rgba(0, 0, 0, 0.5);
-}
-
-.token.spinning img {
-  animation: spin-move 400ms ease-in-out;
-  box-shadow:
-    0 0 0 4px rgba(168, 85, 247, 0.85),
-    0 0 28px rgba(168, 85, 247, 0.8),
-    0 8px 18px rgba(0, 0, 0, 0.5);
-}
-
-@keyframes spin-move {
-  from { transform: rotate(0deg) scale(1); }
-  to { transform: rotate(360deg) scale(1.06); }
-}
-
-.token.trucking img {
-  box-shadow:
-    0 0 0 4px rgba(249, 115, 22, 0.85),
-    0 0 24px rgba(249, 115, 22, 0.75),
-    0 8px 18px rgba(0, 0, 0, 0.5);
-}
-
-.token.lowering-shoulder img {
-  transform: translateY(5px) rotate(8deg) scale(1.04);
-  box-shadow:
-    0 0 0 4px rgba(249, 115, 22, 0.9),
-    0 0 28px rgba(249, 115, 22, 0.8),
-    0 8px 18px rgba(0, 0, 0, 0.5);
-}
-
-.token.stiff-arming img {
-  transform: translateX(8px) rotate(-8deg) scale(1.05);
-  box-shadow:
-    0 0 0 4px rgba(249, 115, 22, 0.9),
-    0 0 28px rgba(249, 115, 22, 0.8),
-    0 8px 18px rgba(0, 0, 0, 0.5);
-}
-
-.token.stiff-armed img {
-  filter: brightness(0.75);
-  transform: translateX(10px) rotate(24deg) scale(0.9);
-  box-shadow:
-    0 0 0 4px rgba(148, 163, 184, 0.7),
-    0 8px 18px rgba(0, 0, 0, 0.5);
-}
-
-.token.chasing img {
-  box-shadow:
-    0 0 0 4px rgba(251, 113, 133, 0.75),
-    0 0 22px rgba(251, 113, 133, 0.6),
-    0 8px 18px rgba(0, 0, 0, 0.5);
-}
-
-.token.tackling img {
-  transform: scale(1.06);
-  box-shadow:
-    0 0 0 4px rgba(248, 113, 113, 0.9),
-    0 0 26px rgba(248, 113, 113, 0.82),
-    0 8px 18px rgba(0, 0, 0, 0.5);
-}
-
-.token.tackled img {
-  filter: brightness(0.8);
-  transform: rotate(14deg) scale(0.92);
-  box-shadow:
-    0 0 0 4px rgba(148, 163, 184, 0.8),
-    0 8px 18px rgba(0, 0, 0, 0.5);
-}
-
-.token.juked img {
-  filter: grayscale(0.75) brightness(0.8);
-  transform: rotate(-18deg) scale(0.92);
-  box-shadow:
-    0 0 0 4px rgba(168, 85, 247, 0.7),
-    0 8px 18px rgba(0, 0, 0, 0.5);
-}
-
-.token.trucked img {
-  filter: brightness(0.75);
-  transform: rotate(18deg) scale(0.9);
-}
-
-.token.celebrating img {
-  animation: celebrate-bounce 650ms ease-in-out infinite alternate;
-  box-shadow:
-    0 0 0 4px rgba(250, 204, 21, 0.9),
-    0 0 28px rgba(250, 204, 21, 0.8),
-    0 8px 18px rgba(0, 0, 0, 0.5);
-}
-
-@keyframes celebrate-bounce {
-  from {
-    transform: translateY(0) scale(1);
-  }
-
-  to {
-    transform: translateY(-7px) scale(1.06);
-  }
-}
-
-.football {
+.field-wrap > .football {
   position: absolute;
   width: 24px;
   height: 15px;
