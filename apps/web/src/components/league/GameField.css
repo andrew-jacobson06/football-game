@@ -45,8 +45,6 @@ body {
 
 .field-viewport {
   position: relative;
-  /* Contain all field depth layers so they can never escape above sibling GUI
-     such as the sticky scoreboard, regardless of a player's inline z-index. */
   isolation: isolate;
   z-index: 0;
   width: 100%;
@@ -68,12 +66,10 @@ body {
   overflow: hidden;
   border-radius: 0;
   border: 0;
-
   background-image: url("https://andrew-jacobson06.github.io/public-audio/fieldbg.png");
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
-
   box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.38);
 }
 
@@ -165,7 +161,6 @@ body {
   pointer-events: none;
 }
 
-
 .field-midfield-logo {
   position: absolute;
   left: 50%;
@@ -232,7 +227,7 @@ body {
   width: 54px;
   height: 54px;
   z-index: 70;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -100%);
   border-radius: 50%;
   transition:
     left 700ms linear,
@@ -250,9 +245,6 @@ body {
   z-index: 65;
 }
 
-/* Stacking is semantic rather than team-based once a play is in motion. A
-   beaten lineman stays underneath the winner and runner even if he is an
-   offensive player, while the runner stays above every non-celebrating player. */
 .token.ol-lost,
 .token.dl-lost {
   z-index: 50;
@@ -312,8 +304,6 @@ body {
 .player-jersey { z-index: 1; }
 .player-character { z-index: 2; }
 
-/* Facing is an opt-in horizontal mirror for lateral fakes/contact artwork. It
-   does not represent upfield/downfield travel on this vertical field. */
 .token[data-facing="left"] .player-sprite { --facing: -1; }
 
 .token.home > .player-sprite {
@@ -343,32 +333,26 @@ body {
   transform: translateX(-50%) scaleX(var(--facing));
 }
 
-.token.active-runner .player-sprite,
-.token.ball-carrier .player-sprite {
-  box-shadow:
-    0 0 0 3px rgba(250, 204, 21, 0.88),
-    0 8px 18px rgba(0, 0, 0, 0.5);
-}
-
-.token.active-runner .player-sprite > .football,
-.token.ball-carrier .player-sprite > .football,
-.token.handoff-target .player-sprite > .football {
-  opacity: 1;
-}
-
-.player-sprite > .football {
+.token .name {
   position: absolute;
-  right: -4px;
-  top: 53%;
-  z-index: 4;
-  width: 13px;
-  height: 8px;
-  border: 1px solid #f4d3a1;
-  border-radius: 50%;
-  background: #713b1d;
-  opacity: 0;
-  transform: rotate(-24deg);
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  margin-top: 3px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.84);
+  color: #f8fafc;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
   pointer-events: none;
+}
+
+.token.defense .name {
+  top: auto;
+  margin-top: 0;
+  margin-bottom: 3px;
 }
 
 .impact-flash {
@@ -379,60 +363,152 @@ body {
   width: 23px;
   height: 23px;
   border-radius: 50%;
-  background: radial-gradient(circle, #fff 0 18%, #fde047 25%, rgba(249,115,22,.5) 48%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    #fff 0 18%,
+    #fde047 25%,
+    rgba(249, 115, 22, 0.5) 48%,
+    transparent 70%
+  );
   opacity: 0;
   pointer-events: none;
 }
 
-.token.handoff-qb .player-sprite,
-.token.handoff-target .player-sprite {
-  box-shadow:
-    0 0 0 3px rgba(56, 189, 248, 0.75),
-    0 8px 18px rgba(0, 0, 0, 0.5);
+.token[data-action="juke"] .player-sprite {
+  animation: player-juke 480ms ease-out;
 }
 
-.token.ol-win .player-sprite {
-  box-shadow:
-    0 0 0 3px rgba(34, 197, 94, 0.82),
-    0 8px 18px rgba(0, 0, 0, 0.5);
+.token[data-action="truck"] .player-sprite {
+  animation: player-truck 520ms ease-out;
 }
 
-.token[data-action="juke"] .player-sprite { animation: player-juke 480ms ease-out; }
-.token[data-action="truck"] .player-sprite { animation: player-truck 520ms ease-out; }
-.token[data-action="spin"] .player-sprite { animation: player-spin 560ms ease-in-out; }
-.token[data-action="stiff-arm"] .player-sprite { animation: player-stiff-arm 480ms ease-out; }
-.token[data-action="tackle"] .player-sprite { animation: player-tackle 440ms ease-out; }
-.token[data-action="juked"] .player-sprite { animation: player-juked 560ms ease-out forwards; }
-.token[data-action="trucked"] .player-sprite { animation: player-trucked 580ms ease-out forwards; }
-.token[data-action="stiff-armed"] .player-sprite { animation: player-stiff-armed 540ms ease-out forwards; }
-.token[data-action="tackled"] .player-sprite { animation: player-tackled 620ms cubic-bezier(.2,.8,.25,1) forwards; }
-.token[data-action="dl-win"] .player-sprite { animation: player-dl-win 500ms ease-out; }
-.token[data-action="dl-loss"] .player-sprite { animation: player-dl-loss 560ms ease-out forwards; }
-.token[data-action="celebration"] .player-sprite { animation: player-celebrate 620ms ease-in-out infinite; }
+.token[data-action="spin"] .player-sprite {
+  animation: player-spin 560ms ease-in-out;
+}
+
+.token[data-action="stiff-arm"] .player-sprite {
+  animation: player-stiff-arm 480ms ease-out;
+}
+
+.token[data-action="tackle"] .player-sprite {
+  animation: player-tackle 440ms ease-out;
+}
+
+.token[data-action="juked"] .player-sprite {
+  animation: player-juked 560ms ease-out forwards;
+}
+
+.token[data-action="trucked"] .player-sprite {
+  animation: player-trucked 580ms ease-out forwards;
+}
+
+.token[data-action="stiff-armed"] .player-sprite {
+  animation: player-stiff-armed 540ms ease-out forwards;
+}
+
+.token[data-action="tackled"] .player-sprite {
+  animation: player-tackled 620ms cubic-bezier(.2, .8, .25, 1) forwards;
+}
+
+.token[data-action="dl-win"] .player-sprite {
+  animation: player-dl-win 500ms ease-out;
+}
+
+.token[data-action="dl-loss"] .player-sprite {
+  animation: player-lineman-loss 680ms cubic-bezier(.2, .75, .25, 1) forwards;
+}
+
+.token[data-action="celebration"] .player-sprite {
+  animation: player-celebrate 620ms ease-in-out infinite;
+}
 
 .token[data-action="truck"] .impact-flash,
 .token[data-action="stiff-arm"] .impact-flash,
 .token[data-action="tackle"] .impact-flash,
 .token[data-action="trucked"] .impact-flash,
 .token[data-action="stiff-armed"] .impact-flash,
-.token[data-action="dl-win"] .impact-flash { animation: contact-flash 260ms ease-out 170ms; }
+.token[data-action="dl-win"] .impact-flash {
+  animation: contact-flash 260ms ease-out 170ms;
+}
 
-@keyframes player-juke { 0%,100%{transform:scaleX(var(--facing))} 35%{transform:scaleX(var(--facing)) translateX(-9px) rotate(-8deg)} 70%{transform:scaleX(var(--facing)) translateX(6px) rotate(5deg)} }
-@keyframes player-truck { 0%,100%{transform:scaleX(var(--facing))} 32%{transform:scaleX(var(--facing)) translateY(4px) rotate(7deg) scale(.96)} 72%{transform:scaleX(var(--facing)) translate(8px,1px) rotate(4deg) scale(1.1)} }
-@keyframes player-spin { from{transform:scaleX(var(--facing)) rotate(0)} to{transform:scaleX(var(--facing)) rotate(360deg)} }
-@keyframes player-stiff-arm { 0%,100%{transform:scaleX(var(--facing))} 45%{transform:scaleX(var(--facing)) translateX(9px) rotate(-10deg) scale(1.04)} 72%{transform:scaleX(var(--facing)) translateX(12px) rotate(-5deg)} }
-@keyframes player-tackle { 0%,100%{transform:scaleX(var(--facing))} 35%{transform:scaleX(var(--facing)) translate(-3px,3px) rotate(7deg)} 75%{transform:scaleX(var(--facing)) translateX(11px) rotate(9deg) scale(1.06)} }
-@keyframes player-juked { 0%{transform:scaleX(var(--facing))} 45%{transform:scaleX(var(--facing)) translateX(-8px) rotate(-16deg)} 100%{transform:scaleX(var(--facing)) translate(-11px,4px) rotate(-22deg) scale(.92)} }
-@keyframes player-trucked { 0%{transform:scaleX(var(--facing))} 45%{transform:scaleX(var(--facing)) translateX(-8px) rotate(-14deg)} 100%{transform:scaleX(var(--facing)) translate(-14px,8px) rotate(-35deg) scale(.86)} }
-@keyframes player-stiff-armed { 0%{transform:scaleX(var(--facing))} 45%{transform:scaleX(var(--facing)) translateX(-7px) rotate(-15deg)} 100%{transform:scaleX(var(--facing)) translate(-11px,4px) rotate(-25deg) scale(.9)} }
-@keyframes player-tackled { 0%{transform:scaleX(var(--facing));filter:none} 28%{transform:scaleX(var(--facing)) translateY(3px) rotate(-7deg) scale(.98)} 68%{transform:scaleX(var(--facing)) translate(-8px,14px) rotate(-72deg) scale(.94)} 100%{transform:scaleX(var(--facing)) translate(-10px,18px) rotate(-88deg) scale(.9);filter:brightness(.82)} }
-@keyframes player-dl-win { 0%,100%{transform:scaleX(var(--facing))} 30%{transform:scaleX(var(--facing)) translate(-3px,4px) scale(.96)} 75%{transform:scaleX(var(--facing)) translate(10px,-1px) rotate(7deg) scale(1.06)} }
-@keyframes player-dl-loss { 0%{transform:scaleX(var(--facing))} 50%{transform:scaleX(var(--facing)) translateX(-7px) rotate(-10deg)} 100%{transform:scaleX(var(--facing)) translate(-12px,5px) rotate(-18deg) scale(.92)} }
-@keyframes player-celebrate { 0%,100%{transform:scaleX(var(--facing)) translateY(0)} 48%{transform:scaleX(var(--facing)) translateY(-10px) scale(1.05)} 70%{transform:scaleX(var(--facing)) translateY(-7px) rotate(5deg)} }
-@keyframes contact-flash { 0%{opacity:0;transform:scale(.25)} 35%{opacity:.9;transform:scale(1)} 100%{opacity:0;transform:scale(1.35)} }
+@keyframes player-juke {
+  0%, 100% { transform: scaleX(var(--facing)); }
+  35% { transform: scaleX(var(--facing)) translateX(-9px) rotate(-8deg); }
+  70% { transform: scaleX(var(--facing)) translateX(6px) rotate(5deg); }
+}
+
+@keyframes player-truck {
+  0%, 100% { transform: scaleX(var(--facing)); }
+  32% { transform: scaleX(var(--facing)) translateY(4px) rotate(7deg) scale(.96); }
+  72% { transform: scaleX(var(--facing)) translate(8px, 1px) rotate(4deg) scale(1.1); }
+}
+
+@keyframes player-spin {
+  from { transform: scaleX(var(--facing)) rotate(0); }
+  to { transform: scaleX(var(--facing)) rotate(360deg); }
+}
+
+@keyframes player-stiff-arm {
+  0%, 100% { transform: scaleX(var(--facing)); }
+  45% { transform: scaleX(var(--facing)) translateX(9px) rotate(-10deg) scale(1.04); }
+  72% { transform: scaleX(var(--facing)) translateX(12px) rotate(-5deg); }
+}
+
+@keyframes player-tackle {
+  0%, 100% { transform: scaleX(var(--facing)); }
+  35% { transform: scaleX(var(--facing)) translate(-3px, 3px) rotate(7deg); }
+  75% { transform: scaleX(var(--facing)) translateX(11px) rotate(9deg) scale(1.06); }
+}
+
+@keyframes player-juked {
+  0% { transform: scaleX(var(--facing)); }
+  45% { transform: scaleX(var(--facing)) translateX(-8px) rotate(-16deg); }
+  100% { transform: scaleX(var(--facing)) translate(-11px, 4px) rotate(-22deg) scale(.92); }
+}
+
+@keyframes player-trucked {
+  0% { transform: scaleX(var(--facing)); }
+  45% { transform: scaleX(var(--facing)) translateX(-8px) rotate(-14deg); }
+  100% { transform: scaleX(var(--facing)) translate(-14px, 8px) rotate(-35deg) scale(.86); }
+}
+
+@keyframes player-stiff-armed {
+  0% { transform: scaleX(var(--facing)); }
+  45% { transform: scaleX(var(--facing)) translateX(-7px) rotate(-15deg); }
+  100% { transform: scaleX(var(--facing)) translate(-11px, 4px) rotate(-25deg) scale(.9); }
+}
+
+@keyframes player-tackled {
+  0% { transform: scaleX(var(--facing)); filter: none; }
+  28% { transform: scaleX(var(--facing)) translateY(3px) rotate(-7deg) scale(.98); }
+  68% { transform: scaleX(var(--facing)) translate(-8px, 14px) rotate(-72deg) scale(.94); }
+  100% { transform: scaleX(var(--facing)) translate(-10px, 18px) rotate(-88deg) scale(.9); filter: brightness(.82); }
+}
+
+@keyframes player-dl-win {
+  0%, 100% { transform: scaleX(var(--facing)); }
+  30% { transform: scaleX(var(--facing)) translate(-3px, 4px) scale(.96); }
+  75% { transform: scaleX(var(--facing)) translate(10px, -1px) rotate(7deg) scale(1.06); }
+}
+
+@keyframes player-celebrate {
+  0%, 100% { transform: scaleX(var(--facing)) translateY(0); }
+  48% { transform: scaleX(var(--facing)) translateY(-10px) scale(1.05); }
+  70% { transform: scaleX(var(--facing)) translateY(-7px) rotate(5deg); }
+}
+
+@keyframes contact-flash {
+  0% { opacity: 0; transform: scale(.25); }
+  35% { opacity: .9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.35); }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .player-sprite, .impact-flash { animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+  .player-sprite,
+  .impact-flash {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 .field-wrap > .football {
@@ -443,9 +519,6 @@ body {
   background: #8b4513;
   border: 2px solid #f4d3a1;
   transform: translate(-50%, -50%) rotate(-20deg);
-  /* Keep the ball visible on top of the carrier. Runner/celebration tokens use
-     elevated stacking levels during a play and otherwise cover the football
-     even though its position is synchronized to the carrier. */
   z-index: 130;
   transition:
     left 700ms ease,
@@ -568,8 +641,7 @@ textarea {
 }
 
 @keyframes first-down-flash {
-  0%,
-  100% {
+  0%, 100% {
     box-shadow:
       inset 0 0 80px rgba(0, 0, 0, 0.38),
       0 22px 44px rgba(0, 0, 0, 0.45);
@@ -583,8 +655,7 @@ textarea {
 }
 
 @keyframes touchdown-flash {
-  0%,
-  100% {
+  0%, 100% {
     box-shadow:
       inset 0 0 80px rgba(0, 0, 0, 0.38),
       0 22px 44px rgba(0, 0, 0, 0.45);
@@ -598,8 +669,7 @@ textarea {
 }
 
 @keyframes turnover-flash {
-  0%,
-  100% {
+  0%, 100% {
     box-shadow:
       inset 0 0 80px rgba(0, 0, 0, 0.38),
       0 22px 44px rgba(0, 0, 0, 0.45);
@@ -754,8 +824,7 @@ textarea {
   width: var(--player-size);
   height: calc(var(--player-size) * 1.28);
   border-radius: 0;
-  /* The yard coordinate passes through the center of the player artwork. */
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -100%);
   transform-origin: 50% 82%;
 }
 
@@ -775,8 +844,13 @@ textarea {
   transform-origin: 50% 82%;
 }
 
-.token .player-sprite::after { content: none; }
-.token[data-facing="left"] .player-sprite { --facing: -1; }
+.token .player-sprite::after {
+  content: none;
+}
+
+.token[data-facing="left"] .player-sprite {
+  --facing: -1;
+}
 
 .token .player-character,
 .token .player-jersey,
@@ -793,9 +867,22 @@ textarea {
   background: transparent;
 }
 
-.token .player-character { z-index: 2; filter: drop-shadow(0 7px 5px #001b); }
-.token .player-jersey { z-index: 1; filter: drop-shadow(0 2px 1px #0008) saturate(1.12) contrast(1.05); }
-.token img { outline: none; }
+.token .player-character {
+  z-index: 2;
+  filter: drop-shadow(0 7px 5px #001b);
+}
+
+.token .player-jersey {
+  z-index: 1;
+  filter:
+    drop-shadow(0 2px 1px #0008)
+    saturate(1.12)
+    contrast(1.05);
+}
+
+.token img {
+  outline: none;
+}
 
 .player-shadow {
   position: absolute;
@@ -809,7 +896,8 @@ textarea {
   filter: blur(5px);
 }
 
-.player-marker, .player-aura {
+.player-marker,
+.player-aura {
   position: absolute;
   z-index: -1;
   left: 50%;
@@ -818,18 +906,30 @@ textarea {
   border-radius: 50%;
   pointer-events: none;
 }
-.player-marker { width: 76%; height: 20%; border: 3px solid #ffffff4d; transform: rotate(-3deg); }
-.player-aura { width: 96%; height: 25%; opacity: 0; background: radial-gradient(ellipse, #5cecff80, #5cecff22 45%, transparent 72%); filter: blur(2px); }
-.token.active-runner .player-marker, .token.ball-carrier .player-marker, .field-formation-slot.selected .player-marker { border-color: #5cecff; box-shadow: 0 0 8px #5cecff, inset 0 0 8px #5cecff; animation: marker-pulse 1.2s ease-in-out infinite; }
-.token.active-runner .player-aura, .token.ball-carrier .player-aura, .field-formation-slot.selected .player-aura { opacity: 1; }
-.token.defense .player-marker, .field-formation-slot.defense .player-marker { border-color: #ff5555b8; }
 
-/* Live players use clean character art without selection/highlight rings. */
-.token .player-marker,
-.token .player-aura {
+.player-marker {
   display: none;
 }
 
+.player-aura {
+  display: block;
+  width: 120%;
+  height: 58%;
+  bottom: 12%;
+  opacity: 0;
+  background:
+    radial-gradient(
+      ellipse,
+      rgba(255, 255, 255, 0.42) 0%,
+      rgba(92, 236, 255, 0.24) 34%,
+      rgba(92, 236, 255, 0.08) 52%,
+      transparent 75%
+    );
+  filter: blur(7px);
+  transform: scale(.72);
+}
+
+.token .name,
 .field-formation-name {
   top: auto;
   bottom: -20px;
@@ -846,25 +946,368 @@ textarea {
   font-size: 9px;
   letter-spacing: .04em;
 }
-.player-number { padding: 5px 6px; color: #12100a; background: #ffd45a; font-size: 1.05em; }
-.player-name { padding: 5px 7px; }
-.token.defense .player-number, .field-formation-slot.defense .player-number { color: white; background: #c62828; }
-.token.active-runner > .player-sprite::before, .token.ball-carrier > .player-sprite::before { content: none; }
 
-.motion-swipe, .action-burst { position: absolute; opacity: 0; pointer-events: none; }
-.motion-swipe { z-index: 0; inset: 15% -34% 18%; border: 7px solid transparent; border-top-color: #5cecff; border-radius: 50%; filter: drop-shadow(0 0 6px #5cecff); }
-.action-burst { z-index: 8; left: 50%; top: 22%; width: 46%; aspect-ratio: 1; background: repeating-conic-gradient(from 8deg, #ffd45a 0 8deg, transparent 8deg 22deg); clip-path: polygon(50% 0,61% 35%,85% 15%,68% 42%,100% 50%,68% 58%,85% 85%,59% 66%,50% 100%,41% 66%,15% 85%,32% 58%,0 50%,32% 42%,15% 15%,41% 35%); transform: translate(-50%,-50%) scale(.15); }
-.token[data-action="spin"] .motion-swipe { animation: spin-swipe 780ms ease-out; }
-.token[data-action="stiff-arm"] .action-burst { animation: action-burst 420ms 210ms ease-out; }
-.token[data-action="celebration"] .player-aura { opacity: 1; animation: celebration-aura 900ms ease-in-out infinite; }
+.player-number {
+  padding: 5px 6px;
+  color: #12100a;
+  background: #ffd45a;
+  font-size: 1.05em;
+}
 
-.field-formation-slot { width: clamp(46px, 5.5vw, 64px); height: calc(clamp(46px, 5.5vw, 64px) * 1.28); border-radius: 0; border: 0; background: transparent; transform: translate(-50%, -50%); }
-.field-formation-slot.filled { border: 0; }
-.field-formation-slot.open { width: 58px; height: 58px; border: 2px dashed currentColor; border-radius: 50%; background: #0f172ad1; transform: translate(-50%, -50%); }
-.field-formation-slot.targetable:not(.open) .player-marker { border-color: #facc15; box-shadow: 0 0 10px #facc15; }
-.field-formation-slot.defense { background: transparent; opacity: .72; }
+.player-name {
+  padding: 5px 7px;
+}
 
-@keyframes marker-pulse { 50% { opacity: .65; transform: rotate(-3deg) scale(1.1); } }
-@keyframes spin-swipe { 0% { opacity:0; transform:rotate(0) scale(.5); } 25% { opacity:.9; } 100% { opacity:0; transform:rotate(calc(360deg * var(--facing))) scale(1.15); } }
-@keyframes action-burst { 0% { opacity:0; transform:translate(-50%,-50%) scale(.15); } 40% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-50%) scale(1.45) rotate(38deg); } }
-@keyframes celebration-aura { 50% { opacity:.5; transform:scale(1.35); filter:hue-rotate(85deg) blur(2px); } }
+.token.defense .player-number,
+.field-formation-slot.defense .player-number {
+  color: white;
+  background: #c62828;
+}
+
+.possession-dot {
+  width: 7px;
+  height: 7px;
+  margin: 0 6px 0 auto;
+  border-radius: 50%;
+  opacity: 0;
+  background: #ffd45a;
+  box-shadow: 0 0 8px #ffd45a;
+}
+
+.token.active-runner .possession-dot,
+.token.ball-carrier .possession-dot {
+  opacity: 1;
+}
+
+.token.active-runner > .player-sprite::before,
+.token.ball-carrier > .player-sprite::before {
+  content: none;
+}
+
+.motion-swipe,
+.action-burst {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.motion-swipe {
+  z-index: 0;
+  inset: 15% -34% 18%;
+  border: 7px solid transparent;
+  border-top-color: #5cecff;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 6px #5cecff);
+}
+
+.action-burst {
+  z-index: 8;
+  left: 50%;
+  top: 32%;
+  width: 90%;
+  aspect-ratio: 1;
+  background:
+    repeating-conic-gradient(
+      from 8deg,
+      rgba(255, 255, 255, 0.86) 0 4deg,
+      transparent 4deg 15deg,
+      rgba(255, 212, 90, 0.82) 15deg 19deg,
+      transparent 19deg 34deg
+    );
+  mask-image:
+    radial-gradient(
+      circle,
+      transparent 0 24%,
+      black 32% 55%,
+      transparent 72%
+    );
+  transform: translate(-50%, -50%) scale(.15);
+}
+
+.token[data-action="spin"] .motion-swipe {
+  animation: spin-swipe 780ms ease-out;
+}
+
+.token[data-action="stiff-arm"] .action-burst,
+.token[data-action="truck"] .action-burst,
+.token[data-action="dl-win"] .action-burst {
+  animation: action-burst 420ms 150ms ease-out;
+}
+
+.token[data-action="juke"] .player-aura,
+.token[data-action="truck"] .player-aura,
+.token[data-action="spin"] .player-aura,
+.token[data-action="stiff-arm"] .player-aura,
+.token[data-action="dl-win"] .player-aura,
+.token[data-action="celebration"] .player-aura {
+  animation: player-aura-pop 620ms ease-out;
+}
+
+.token[data-action="celebration"] .player-aura {
+  opacity: 1;
+  animation: celebration-aura 900ms ease-in-out infinite;
+}
+
+/* Outline-following highlights. These use transparent-image drop shadows,
+   so the effect follows the player silhouette instead of drawing a box. */
+.token.active-runner .player-character,
+.token.ball-carrier .player-character {
+  filter:
+    drop-shadow(0 7px 5px #001b)
+    drop-shadow(0 0 4px rgba(255, 255, 255, .9))
+    drop-shadow(0 0 9px rgba(92, 236, 255, .7));
+}
+
+.token.active-runner .player-jersey,
+.token.ball-carrier .player-jersey {
+  filter:
+    drop-shadow(0 2px 1px #0008)
+    drop-shadow(0 0 7px rgba(92, 236, 255, .68))
+    saturate(1.16)
+    contrast(1.06);
+}
+
+.token.handoff-qb .player-character,
+.token.handoff-target .player-character {
+  filter:
+    drop-shadow(0 7px 5px #001b)
+    drop-shadow(0 0 5px rgba(255, 255, 255, .9))
+    drop-shadow(0 0 10px rgba(56, 189, 248, .72));
+}
+
+.token.ol-win .player-character,
+.token[data-action="dl-win"] .player-character {
+  filter:
+    drop-shadow(0 7px 5px #001b)
+    drop-shadow(0 0 4px rgba(255, 255, 255, .9))
+    drop-shadow(0 0 11px rgba(34, 197, 94, .82));
+}
+
+.token[data-action="juke"] .player-character,
+.token[data-action="juke"] .player-jersey {
+  filter:
+    drop-shadow(-5px 0 5px rgba(92, 236, 255, .78))
+    drop-shadow(5px 0 5px rgba(255, 212, 90, .82));
+}
+
+.token[data-action="truck"] .player-character,
+.token[data-action="truck"] .player-jersey {
+  filter:
+    drop-shadow(0 3px 4px rgba(255, 255, 255, .78))
+    drop-shadow(0 7px 11px rgba(255, 90, 25, .82));
+}
+
+.token[data-action="stiff-arm"] .player-character,
+.token[data-action="stiff-arm"] .player-jersey {
+  filter:
+    drop-shadow(5px 0 5px rgba(255, 255, 255, .8))
+    drop-shadow(9px 0 10px rgba(255, 190, 45, .76));
+}
+
+.token[data-action="tackle"] .player-character,
+.token[data-action="dl-win"] .player-character {
+  filter:
+    drop-shadow(0 0 4px rgba(255, 255, 255, .86))
+    drop-shadow(0 0 11px rgba(255, 70, 45, .82));
+}
+
+.token[data-action="tackled"] .player-character,
+.token[data-action="tackled"] .player-jersey {
+  filter:
+    grayscale(.25)
+    brightness(.84)
+    drop-shadow(0 2px 5px rgba(20, 20, 20, .68));
+}
+
+/* Losing line player: pushed down and aside, then partially fades so the
+   winning lineman and newly opened lane remain easy to read. */
+.token.offense.ol-lost,
+.token.offense[data-action="dl-loss"] {
+  --loss-x: -18px;
+}
+
+.token.defense.dl-lost,
+.token.defense[data-action="dl-loss"] {
+  --loss-x: 18px;
+}
+
+.token.ol-lost .player-sprite,
+.token.dl-lost .player-sprite,
+.token[data-action="dl-loss"] .player-sprite {
+  animation: player-lineman-loss 680ms cubic-bezier(.2, .75, .25, 1) forwards;
+}
+
+.token.ol-lost .name,
+.token.dl-lost .name,
+.token[data-action="dl-loss"] .name {
+  animation: lineman-label-fade 680ms ease-out forwards;
+}
+
+.token.ol-lost .player-shadow,
+.token.dl-lost .player-shadow,
+.token[data-action="dl-loss"] .player-shadow {
+  animation: lineman-shadow-fade 680ms ease-out forwards;
+}
+
+.field-formation-slot {
+  width: clamp(46px, 5.5vw, 64px);
+  height: calc(clamp(46px, 5.5vw, 64px) * 1.28);
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+  transform: translate(-50%, -50%);
+}
+
+.field-formation-slot.filled {
+  border: 0;
+}
+
+.field-formation-slot.open {
+  width: 58px;
+  height: 58px;
+  border: 2px dashed currentColor;
+  border-radius: 50%;
+  background: #0f172ad1;
+  transform: translate(-50%, -50%);
+}
+
+.field-formation-slot.targetable:not(.open) .player-marker {
+  border-color: #facc15;
+  box-shadow: 0 0 10px #facc15;
+}
+
+.field-formation-slot.defense {
+  background: transparent;
+  opacity: .72;
+}
+
+@keyframes player-aura-pop {
+  0% {
+    opacity: 0;
+    transform: scale(.45);
+  }
+
+  32% {
+    opacity: .88;
+    transform: scale(1.04);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.42);
+  }
+}
+
+@keyframes player-lineman-loss {
+  0% {
+    opacity: 1;
+    transform:
+      scaleX(var(--facing))
+      translate(0, 0)
+      rotate(0)
+      scale(1);
+    filter: none;
+  }
+
+  24% {
+    opacity: 1;
+    transform:
+      scaleX(var(--facing))
+      translate(calc(var(--loss-x) * .2), 3px)
+      rotate(calc(var(--loss-x) * .22deg))
+      scale(.98);
+  }
+
+  58% {
+    opacity: .72;
+    transform:
+      scaleX(var(--facing))
+      translate(calc(var(--loss-x) * .62), 12px)
+      rotate(calc(var(--loss-x) * .58deg))
+      scale(.92);
+    filter: saturate(.78) brightness(.88);
+  }
+
+  100% {
+    opacity: .32;
+    transform:
+      scaleX(var(--facing))
+      translate(var(--loss-x), 22px)
+      rotate(calc(var(--loss-x) * .9deg))
+      scale(.84);
+    filter:
+      saturate(.55)
+      brightness(.68)
+      blur(.25px);
+  }
+}
+
+@keyframes lineman-label-fade {
+  0%, 35% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: .18;
+    transform: translateX(-50%) translateY(9px);
+  }
+}
+
+@keyframes lineman-shadow-fade {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: .18;
+    transform: translateX(var(--loss-x)) scale(.72);
+  }
+}
+
+@keyframes marker-pulse {
+  50% {
+    opacity: .65;
+    transform: rotate(-3deg) scale(1.1);
+  }
+}
+
+@keyframes spin-swipe {
+  0% {
+    opacity: 0;
+    transform: rotate(0) scale(.5);
+  }
+
+  25% {
+    opacity: .9;
+  }
+
+  100% {
+    opacity: 0;
+    transform: rotate(calc(360deg * var(--facing))) scale(1.15);
+  }
+}
+
+@keyframes action-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.15) rotate(-12deg);
+  }
+
+  38% {
+    opacity: .95;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.4) rotate(24deg);
+  }
+}
+
+@keyframes celebration-aura {
+  50% {
+    opacity: .55;
+    transform: scale(1.35);
+    filter: hue-rotate(85deg) blur(8px);
+  }
+}

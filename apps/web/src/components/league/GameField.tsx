@@ -697,6 +697,47 @@ export default function GameField({
     if (footballRef.current)
       footballRef.current.style.transition = `left ${durationMs}ms linear, top ${durationMs}ms linear, opacity 200ms ease, transform 300ms ease`;
   };
+
+  const centerIdForPlan = useCallback((plan?: AnimationPlan | null) => {
+    if (!plan) return null;
+    return (
+      plan.players.find(
+        (player) =>
+          unitClassForPlayer(player) === "offense" &&
+          (player.position === "C" || player.role === "C"),
+      )?.id || null
+    );
+  }, []);
+
+  const resetFootballToCenter = useCallback(
+    (plan?: AnimationPlan | null) => {
+      const centerId = centerIdForPlan(plan);
+      const footballEl = footballRef.current;
+
+      stopFootballFollow();
+      footballCarrierIdRef.current = centerId;
+
+      if (!footballEl) return;
+
+      setFootballTransition(0);
+
+      if (!centerId || !playersRef.current[centerId]) {
+        footballEl.style.opacity = "0";
+        return;
+      }
+
+      syncFootballToCarrierDom();
+      scrollViewportToFootball();
+      startFootballCarrierFollow();
+    },
+    [
+      centerIdForPlan,
+      scrollViewportToFootball,
+      startFootballCarrierFollow,
+      stopFootballFollow,
+      syncFootballToCarrierDom,
+    ],
+  );
   const updateLinePositions = useCallback(() => {
     ["los", "firstDown", "end"].forEach((id) => {
       const lineEl = document.getElementById(`${id}Line`);
@@ -978,10 +1019,6 @@ export default function GameField({
         img.alt = player.name;
         img.draggable = false;
         portrait.appendChild(img);
-        const carrierBall = document.createElement("span");
-        carrierBall.className = "football";
-        carrierBall.setAttribute("aria-hidden", "true");
-        portrait.appendChild(carrierBall);
         const impactFlash = document.createElement("span");
         impactFlash.className = "impact-flash";
         impactFlash.setAttribute("aria-hidden", "true");
@@ -1036,6 +1073,7 @@ export default function GameField({
         };
       });
       footballCarrierIdRef.current =
+        centerIdForPlan(plan) ||
         plan.initialFootballCarrierId ||
         plan.players.find((player) => player.position === "QB")?.id ||
         plan.players[0]?.id ||
@@ -1061,6 +1099,7 @@ export default function GameField({
       );
     },
     [
+      centerIdForPlan,
       normalizePlayerLane,
       offenseDirection,
       scrollViewportToFootball,
@@ -1161,8 +1200,8 @@ export default function GameField({
         console.error(error);
         showError(error instanceof Error ? error.message : String(error));
       } finally {
-        stopFootballFollow();
         activePhaseDurationMsRef.current = DEFAULT_PHASE_DURATION_MS;
+        resetFootballToCenter(plan);
         isRunningRef.current = false;
       }
     },
@@ -1171,6 +1210,7 @@ export default function GameField({
       applyPlayerMove,
       clearError,
       resetAnimationScene,
+      resetFootballToCenter,
       showError,
       stopFootballFollow,
       updateLinePositions,

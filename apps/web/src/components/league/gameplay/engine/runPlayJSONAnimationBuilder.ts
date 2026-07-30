@@ -51,18 +51,18 @@ const INITIAL_COORDINATES_BY_POSITION: Record<
   string,
   InitialPlayerCoordinate
 > = {
-  WR1: { lane: "WR1", yardOffsetFromLos: -4 },
-  WR2: { lane: "WR2", yardOffsetFromLos: -4 },
-  WR3: { lane: "SLT1", yardOffsetFromLos: -4.5 },
-  WR4: { lane: "SLT2", yardOffsetFromLos: -4.5 },
-  RB1: { lane: "LG", yardOffsetFromLos: -11 },
-  RB2: { lane: "RG", yardOffsetFromLos: -11 },
-  QB: { lane: "C", yardOffsetFromLos: -7.5 },
-  LT: { lane: "LT", yardOffsetFromLos: -4 },
-  LG: { lane: "LG", yardOffsetFromLos: -4 },
-  C: { lane: "C", yardOffsetFromLos: -4 },
-  RG: { lane: "RG", yardOffsetFromLos: -4 },
-  RT: { lane: "RT", yardOffsetFromLos: -4 },
+  WR1: { lane: "WR1", yardOffsetFromLos: -1 },
+  WR2: { lane: "WR2", yardOffsetFromLos: -1 },
+  WR3: { lane: "SLT1", yardOffsetFromLos: -1.5 },
+  WR4: { lane: "SLT2", yardOffsetFromLos: -1.5 },
+  RB1: { lane: "LG", yardOffsetFromLos: -6 },
+  RB2: { lane: "RG", yardOffsetFromLos: -6 },
+  QB: { lane: "C", yardOffsetFromLos: -3.5 },
+  LT: { lane: "LT", yardOffsetFromLos: -1 },
+  LG: { lane: "LG", yardOffsetFromLos: -0.75 },
+  C: { lane: "C", yardOffsetFromLos: -0.5 },
+  RG: { lane: "RG", yardOffsetFromLos: -0.75 },
+  RT: { lane: "RT", yardOffsetFromLos: -1 },
   DB1: { lane: "LSD", yardOffsetFromLos: 1.25 },
   DB2: { lane: "RSD", yardOffsetFromLos: 1.25 },
   DB3: { lane: "RFLT", yardOffsetFromLos: 1.25 },
@@ -233,76 +233,230 @@ export function runPlayJSONAnimationBuilder(
   )?.[0] ?? "RB1") as "RB1" | "RB2";
   const handoffLane = runnerSlot === "RB2" ? "CR" : "CL";
 
-  const battlePlayers: Array<Record<string, unknown>> = [];
+  const lineClashPlayers: Array<Record<string, unknown>> = [];
+  const lineStrugglePlayers: Array<Record<string, unknown>> = [];
+  const lineResolutionPlayers: Array<Record<string, unknown>> = [];
   const labels: Array<Record<string, unknown>> = [];
+
   for (const matchup of lineMatchups) {
     const olId = offenseIds.get(matchup.offensePlayer);
     const dlId = defenseIds.get(matchup.defensePlayer);
     if (!olId || !dlId) continue;
+
     const olStart = los;
     const dlStart = los + direction * 1.5;
+    const contactYard = Number((los + direction * 0.75).toFixed(2));
     const olWon = matchup.winner === "OL";
-    const olMove = olWon
-      ? randomYards(1, 2.5, random)
-      : -randomYards(0.5, 1.5, random);
-    const dlMove = olWon
-      ? randomYards(1, 2, random)
-      : -randomYards(1.5, 2, random);
-    battlePlayers.push(
+
+    const struggleAmount = randomYards(0.15, 0.4, random);
+    const winnerPush = randomYards(1.25, 2.5, random);
+    const loserGive = randomYards(0.65, 1.35, random);
+
+    lineClashPlayers.push(
       {
         playerId: olId,
         lane: matchup.slot,
-        yard: Number((olStart + direction * olMove).toFixed(2)),
+        yard: Number((contactYard - direction * 0.12).toFixed(2)),
+        className: "line-clash",
+      },
+      {
+        playerId: dlId,
+        lane: matchup.slot,
+        yard: Number((contactYard + direction * 0.12).toFixed(2)),
+        className: "line-clash",
+      },
+    );
+
+    lineStrugglePlayers.push(
+      {
+        playerId: olId,
+        path: [
+          {
+            lane: matchup.slot,
+            yard: Number((contactYard + direction * struggleAmount).toFixed(2)),
+            className: "line-battle",
+            durationMs: 180,
+          },
+          {
+            lane: matchup.slot,
+            yard: Number((contactYard - direction * struggleAmount).toFixed(2)),
+            className: "line-battle",
+            durationMs: 180,
+          },
+          {
+            lane: matchup.slot,
+            yard: Number((contactYard + direction * 0.08).toFixed(2)),
+            className: "line-battle",
+            durationMs: 180,
+          },
+        ],
+      },
+      {
+        playerId: dlId,
+        path: [
+          {
+            lane: matchup.slot,
+            yard: Number((contactYard - direction * struggleAmount).toFixed(2)),
+            className: "line-battle",
+            durationMs: 180,
+          },
+          {
+            lane: matchup.slot,
+            yard: Number((contactYard + direction * struggleAmount).toFixed(2)),
+            className: "line-battle",
+            durationMs: 180,
+          },
+          {
+            lane: matchup.slot,
+            yard: Number((contactYard - direction * 0.08).toFixed(2)),
+            className: "line-battle",
+            durationMs: 180,
+          },
+        ],
+      },
+    );
+
+    const olResultYard = olWon
+      ? Number((olStart + direction * winnerPush).toFixed(2))
+      : Number((olStart - direction * loserGive).toFixed(2));
+    const dlResultYard = olWon
+      ? Number((dlStart + direction * winnerPush).toFixed(2))
+      : Number((dlStart - direction * winnerPush).toFixed(2));
+
+    lineResolutionPlayers.push(
+      {
+        playerId: olId,
+        lane: matchup.slot,
+        yard: olResultYard,
         className: olWon ? "ol-win" : "ol-lost",
       },
       {
         playerId: dlId,
         lane: matchup.slot,
-        yard: Number((dlStart + direction * dlMove).toFixed(2)),
+        yard: dlResultYard,
         className: olWon ? "dl-lost" : "dl-win",
       },
     );
+
     labels.push({
       id: `${olId}-${dlId}`,
       text: `${olWon ? matchup.offensePlayer : matchup.defensePlayer} wins`,
       lane: matchup.slot,
-      yard: Number(((olStart + dlStart) / 2).toFixed(2)),
+      yard: Number(((olResultYard + dlResultYard) / 2).toFixed(2)),
       className: olWon ? "win" : "loss",
       visible: true,
     });
   }
 
-  const snapPlayers = quarterbackId
+  const quarterbackStartYard = Number(
+    (
+      los +
+      direction * INITIAL_COORDINATES_BY_POSITION.QB.yardOffsetFromLos
+    ).toFixed(2),
+  );
+  const centerStartYard = Number(
+    (
+      los +
+      direction * INITIAL_COORDINATES_BY_POSITION.C.yardOffsetFromLos
+    ).toFixed(2),
+  );
+  const snapReceptionYard = Number(
+    (quarterbackStartYard + direction * 0.35).toFixed(2),
+  );
+  const quarterbackExchangeYard = Number(
+    (quarterbackStartYard - direction * 0.5).toFixed(2),
+  );
+  const handoffMeshYard = Number((los - direction * 4.75).toFixed(2));
+  const runnerHandoffYard = Number((handoffMeshYard - direction * 0.1).toFixed(2));
+
+  const snapReceptionPlayers: Array<Record<string, unknown>> = [];
+  if (centerId)
+    snapReceptionPlayers.push({
+      playerId: centerId,
+      lane: "C",
+      yard: centerStartYard,
+      className: "snapping",
+      action: "idle",
+    });
+  if (quarterbackId)
+    snapReceptionPlayers.push({
+      playerId: quarterbackId,
+      lane: "C",
+      yard: snapReceptionYard,
+      className: "receiving-snap",
+      action: "idle",
+    });
+
+  const secureSnapPlayers: Array<Record<string, unknown>> = quarterbackId
     ? [
         {
           playerId: quarterbackId,
           lane: "C",
-          yard: Number(
-            ((los - direction * 3.5) - direction * 0.5).toFixed(
-              2,
-            ),
-          ),
+          yard: quarterbackExchangeYard,
           className: "handoff-qb",
+          action: "idle",
         },
       ]
     : [];
-  const phaseTwoPlayers = [...battlePlayers];
+
+  const meshApproachPlayers: Array<Record<string, unknown>> = [
+    ...lineClashPlayers,
+  ];
   if (quarterbackId)
-    phaseTwoPlayers.push({
+    meshApproachPlayers.push({
       playerId: quarterbackId,
       lane: handoffLane,
-      yard: Number(
-        ((snapPlayers[0]?.yard ?? los) - direction * 0.25).toFixed(2),
-      ),
+      yard: handoffMeshYard,
       className: "handoff-qb",
+      action: "idle",
     });
   if (runnerId)
-    phaseTwoPlayers.push({
+    meshApproachPlayers.push({
       playerId: runnerId,
-      yard: Number(
-        (los - direction * 5).toFixed(2),
-      ),
+      lane: handoffLane,
+      yard: runnerHandoffYard,
       className: "handoff-target",
+      action: "idle",
+    });
+
+  const handoffTransferPlayers: Array<Record<string, unknown>> = [
+    ...lineStrugglePlayers,
+  ];
+  if (quarterbackId)
+    handoffTransferPlayers.push({
+      playerId: quarterbackId,
+      lane: handoffLane,
+      yard: handoffMeshYard,
+      className: "handoff-giving",
+      action: "idle",
+    });
+  if (runnerId)
+    handoffTransferPlayers.push({
+      playerId: runnerId,
+      lane: handoffLane,
+      yard: runnerHandoffYard,
+      className: "handoff-receiving",
+      action: "idle",
+    });
+
+  const handoffSecurePlayers: Array<Record<string, unknown>> = [
+    ...lineResolutionPlayers,
+  ];
+  if (quarterbackId)
+    handoffSecurePlayers.push({
+      playerId: quarterbackId,
+      lane: handoffLane,
+      yard: Number((handoffMeshYard - direction * 0.35).toFixed(2)),
+      className: "handoff-finish",
+      action: "idle",
+    });
+  if (runnerId)
+    handoffSecurePlayers.push({
+      playerId: runnerId,
+      lane: handoffLane,
+      yard: Number((runnerHandoffYard + direction * 0.35).toFixed(2)),
+      className: "ball-carrier",
+      action: "idle",
     });
 
   const scoringYard = los + direction * yardsGained;
@@ -345,12 +499,6 @@ export function runPlayJSONAnimationBuilder(
   const cutLanes = ["LTL", "LT", "LG", "CL", "C", "CR", "RG", "RT", "RTR"];
   const holeIndex = Math.max(0, cutLanes.indexOf(chosenHoleLane));
   const fakeLeft = random() < 0.5;
-  const fakeLane = cutLanes[
-    Math.max(0, Math.min(cutLanes.length - 1, holeIndex + (fakeLeft ? -1 : 1)))
-  ];
-  const cutLane = cutLanes[
-    Math.max(0, Math.min(cutLanes.length - 1, holeIndex + (fakeLeft ? 1 : -1)))
-  ];
   const jukeMove =
     firstChallenge?.attempt === "Juke" && random() >= 0.7 ? "spin" : "juke";
   const defenderIsInFront = challengeLane === chosenHoleLane;
@@ -417,19 +565,20 @@ export function runPlayJSONAnimationBuilder(
             ? {
                 /*
                  * Phase: first-challenge-(failed-)?(juke|spin)
-                 * What: shows a runner's evasive move and whether it succeeds.
-                 * How: a two-step path first fakes/spins at the contact yard,
-                 * then cuts away or ends tackled; the defender's action class
-                 * changes to juked or tackling to match the resolved check.
+                 * What: shows a runner's evasive move without changing lanes.
+                 * How: a juke swivels the sprite one direction and then the
+                 * other at the contact point. A successful runner then bursts
+                 * slightly past the defender in the same lane; a failed move
+                 * ends at the contact yard.
                  */
                 id: `first-challenge-${firstChallenge.moveSucceeded ? "" : "failed-"}${jukeMove}`,
                 caption: firstChallenge.moveSucceeded
                   ? jukeMove === "spin"
                     ? `${runnerName} spins away from ${firstChallenge.defender}.`
-                    : `${runnerName} steps ${fakeLeft ? "left" : "right"}, cuts back hard, and jukes ${firstChallenge.defender}.`
+                    : `${runnerName} freezes ${firstChallenge.defender} with a sharp body fake and bursts past.`
                   : jukeMove === "spin"
                     ? `${runnerName} tries to spin away, but ${firstChallenge.defender} delivers an immediate tackle.`
-                    : `${runnerName} cuts back, but ${firstChallenge.defender} delivers an immediate tackle.`,
+                    : `${runnerName} gives a sharp body fake, but ${firstChallenge.defender} stays square and makes the tackle.`,
                 durationMs: 700,
                 holdMs: firstChallenge.moveSucceeded ? 150 : 350,
                 players: [
@@ -439,16 +588,17 @@ export function runPlayJSONAnimationBuilder(
                         path: jukeMove === "spin"
                           ? [
                               { lane: chosenHoleLane, yard: challengeYard, className: "spinning", durationMs: 400 },
-                              { lane: chosenHoleLane, yard: challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 300 },
+                              { lane: chosenHoleLane, yard: firstChallenge.moveSucceeded ? Number((challengeYard + direction * 0.75).toFixed(2)) : challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 300 },
                             ]
                           : [
-                              { lane: fakeLane, yard: challengeYard, className: "juking", durationMs: 250 },
-                              { lane: cutLane, yard: challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 450 },
+                              { lane: chosenHoleLane, yard: challengeYard, facing: fakeLeft ? "left" : "right", className: "juking", durationMs: 220 },
+                              { lane: chosenHoleLane, yard: challengeYard, facing: fakeLeft ? "right" : "left", className: "juking", durationMs: 220 },
+                              { lane: chosenHoleLane, yard: firstChallenge.moveSucceeded ? Number((challengeYard + direction * 0.75).toFixed(2)) : challengeYard, className: firstChallenge.moveSucceeded ? "ball-carrier accelerating" : "tackled", durationMs: 260 },
                             ],
                       }]
                     : []),
                   ...(challengeDefenderId
-                    ? [{ playerId: challengeDefenderId, lane: cutLane, yard: challengeYard, className: firstChallenge.moveSucceeded ? "juked" : "tackling" }]
+                    ? [{ playerId: challengeDefenderId, lane: chosenHoleLane, yard: challengeYard, className: firstChallenge.moveSucceeded ? "juked" : "tackling" }]
                     : []),
                 ],
                 football: { mode: "carrier", carrierId: runnerId },
@@ -520,6 +670,7 @@ export function runPlayJSONAnimationBuilder(
       const succeeded = Boolean(challenge.moveSucceeded);
       const move = challenge.attempt?.toLowerCase() ?? "wrap";
       const stopped = challenge.wrapped || (challenge.attempt && !succeeded);
+      const challengeFakeLeft = random() < 0.5;
       return [
         /*
          * Phase: pursuit-to-challenge-N
@@ -551,10 +702,21 @@ export function runPlayJSONAnimationBuilder(
             : succeeded
               ? `${runnerName} ${move === "juke" ? "jukes" : "trucks through"} ${challenge.defender} and looks to accelerate again.`
               : `${challenge.defender} defeats ${runnerName}'s ${move} attempt and makes the tackle.`,
-          durationMs: 600,
+          durationMs: move === "juke" ? 700 : 600,
           holdMs: stopped ? 350 : 150,
           players: [
-            ...(runnerId ? [{ playerId: runnerId, lane: chosenHoleLane, yard, className: stopped ? "tackled" : move === "juke" ? "juking" : "trucking" }] : []),
+            ...(runnerId
+              ? move === "juke"
+                ? [{
+                    playerId: runnerId,
+                    path: [
+                      { lane: chosenHoleLane, yard, facing: challengeFakeLeft ? "left" : "right", className: "juking", durationMs: 220 },
+                      { lane: chosenHoleLane, yard, facing: challengeFakeLeft ? "right" : "left", className: "juking", durationMs: 220 },
+                      { lane: chosenHoleLane, yard: succeeded ? Number((yard + direction * 0.75).toFixed(2)) : yard, className: stopped ? "tackled" : "ball-carrier accelerating", durationMs: 260 },
+                    ],
+                  }]
+                : [{ playerId: runnerId, lane: chosenHoleLane, yard, className: stopped ? "tackled" : "trucking" }]
+              : []),
             ...(defenderId ? [{ playerId: defenderId, lane: chosenHoleLane, yard, className: stopped ? "tackling" : move === "juke" ? "juked" : "trucked" }] : []),
           ],
           football: { mode: "carrier", carrierId: runnerId },
@@ -904,6 +1066,9 @@ export function runPlayJSONAnimationBuilder(
       situationText: situationText(previousGame),
     },
     camera: { note: "Manual scroll field" },
+    // The single field-level football begins every play attached to the center.
+    // During snap-travel this same ball is released and moved to the QB, then
+    // secure-snap attaches it to the quarterback.
     initialFootballCarrierId: centerId,
     lines: [
       { id: "los", label: "LOS", yard: los, type: "los" },
@@ -917,29 +1082,79 @@ export function runPlayJSONAnimationBuilder(
     players,
     phases: [
       /*
-       * Phase: snap
-       * What: starts the play by transferring the ball from center to QB.
-       * How: moves the QB to his exchange depth and changes carrierId to the QB.
+       * Phase: snap-travel
+       * What: visibly moves the football from the center toward the quarterback.
+       * How: the ball becomes free and travels along the center lane while the
+       * center snaps and the quarterback reaches forward to receive it.
        */
       {
-        id: "snap",
-        caption: `${quarterbackName} takes the snap.`,
-        durationMs: 200,
-        players: snapPlayers,
+        id: "snap-travel",
+        caption: `${centerName} snaps the ball to ${quarterbackName}.`,
+        durationMs: 250,
+        players: snapReceptionPlayers,
+        football: {
+          mode: "free",
+          lane: "C",
+          yard: snapReceptionYard,
+          durationMs: 250,
+        },
+      },
+      /*
+       * Phase: secure-snap
+       * What: transfers possession to the quarterback after the ball arrives.
+       * How: attaches the football to the QB and moves him back toward the
+       * handoff exchange depth before the line-battle phase begins.
+       */
+      {
+        id: "secure-snap",
+        caption: `${quarterbackName} secures the snap.`,
+        durationMs: 350,
+        holdMs: 30,
+        players: secureSnapPlayers,
         football: { mode: "carrier", carrierId: quarterbackId },
       },
       /*
-       * Phase: handoff-line-battles
-       * What: runs the handoff at the same time as every OL/DL matchup.
-       * How: moves the QB and back toward the exchange, shifts each lineman by
-       * its resolved win/loss distance, displays winner labels, and attaches
-       * the football to the runner for all subsequent phases.
+       * Phase: mesh-approach-line-clash
+       * The QB and runner converge while the lines make first contact. The ball
+       * remains attached to the QB, so it cannot jump ahead to the runner.
        */
       {
-        id: "handoff-line-battles",
-        caption: `${quarterbackName} hands off to ${runnerName} as the lines battle.`,
-        durationMs: 800,
-        players: phaseTwoPlayers,
+        id: "mesh-approach-line-clash",
+        caption: `${quarterbackName} and ${runnerName} meet at the mesh as the lines collide.`,
+        durationMs: 420,
+        players: meshApproachPlayers,
+        labels: labels.map((label) => ({ ...label, visible: false })),
+        football: { mode: "carrier", carrierId: quarterbackId },
+      },
+      /*
+       * Phase: handoff-transfer-line-struggle
+       * The existing field football is released from the QB and visibly travels
+       * into the runner's belly while each line matchup rocks back and forth.
+       */
+      {
+        id: "handoff-transfer-line-struggle",
+        caption: `${quarterbackName} places the ball into ${runnerName}'s arms while the blocks hang in the balance.`,
+        durationMs: 540,
+        players: handoffTransferPlayers,
+        labels: labels.map((label) => ({ ...label, visible: false })),
+        football: {
+          mode: "free",
+          lane: handoffLane,
+          yard: runnerHandoffYard,
+          durationMs: 360,
+        },
+      },
+      /*
+       * Phase: handoff-secured-line-resolution
+       * The runner secures the same football only after it reaches the mesh.
+       * Matchup winners then drive their opponent backward and reveal the result.
+       */
+      {
+        id: "handoff-secured-line-resolution",
+        caption: `${runnerName} secures the handoff as the line battles finally break.`,
+        durationMs: 520,
+        holdMs: 120,
+        players: handoffSecurePlayers,
         labels,
         football: { mode: "carrier", carrierId: runnerId },
       },
@@ -951,6 +1166,16 @@ export function runPlayJSONAnimationBuilder(
       ...(pursuitPhases.length ? pursuitPhases : breakawayPhase),
       ...(pursuitPhases.length ? [] : finalTacklePhase),
       ...touchdownCelebrationPhase,
+      /*
+       * Phase: reset-football-to-center
+       * Returns the same field-level football to the center after the play.
+       */
+      {
+        id: "reset-football-to-center",
+        caption: "The ball is reset for the next play.",
+        durationMs: 1,
+        football: { mode: "carrier", carrierId: centerId },
+      },
     ],
   };
 }
