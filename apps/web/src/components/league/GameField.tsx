@@ -145,34 +145,41 @@ const DEFAULT_LINEUPS_BY_POSITION: Record<
   string,
   { lane: string; yardOffsetFromLos: number }
 > = {
-  WR1: { lane: "WR1", yardOffsetFromLos: -4 },
-  WR2: { lane: "WR2", yardOffsetFromLos: -4 },
-  WR3: { lane: "SLT1", yardOffsetFromLos: -4.5 },
-  WR4: { lane: "SLT2", yardOffsetFromLos: -4.5 },
-  RB1: { lane: "LG", yardOffsetFromLos: -11 },
-  RB2: { lane: "RG", yardOffsetFromLos: -11 },
-  QB: { lane: "C", yardOffsetFromLos: -7.5 },
-  LT: { lane: "LT", yardOffsetFromLos: -4 },
-  LG: { lane: "LG", yardOffsetFromLos: -4 },
-  C: { lane: "C", yardOffsetFromLos: -4 },
-  RG: { lane: "RG", yardOffsetFromLos: -4 },
-  RT: { lane: "RT", yardOffsetFromLos: -4 },
+  WR1: { lane: "WR1", yardOffsetFromLos: -1 },
+  WR2: { lane: "WR2", yardOffsetFromLos: -1 },
+  WR3: { lane: "SLT1", yardOffsetFromLos: -1.5 },
+  WR4: { lane: "SLT2", yardOffsetFromLos: -1.5 },
+
+  RB1: { lane: "LG", yardOffsetFromLos: -6 },
+  RB2: { lane: "RG", yardOffsetFromLos: -6 },
+  QB: { lane: "C", yardOffsetFromLos: -3.5 },
+
+  LT: { lane: "LT", yardOffsetFromLos: -1 },
+  LG: { lane: "LG", yardOffsetFromLos: -0.75 },
+  C: { lane: "C", yardOffsetFromLos: -0.5 },
+  RG: { lane: "RG", yardOffsetFromLos: -0.75 },
+  RT: { lane: "RT", yardOffsetFromLos: -1 },
+
   DB1: { lane: "LSD", yardOffsetFromLos: 1.25 },
   DB2: { lane: "RSD", yardOffsetFromLos: 1.25 },
   DB3: { lane: "RFLT", yardOffsetFromLos: 1.25 },
+
   LB1: { lane: "LGL", yardOffsetFromLos: 5 },
   LB2: { lane: "RGR", yardOffsetFromLos: 5 },
   LB3: { lane: "C", yardOffsetFromLos: 6 },
+
   DL1: { lane: "LT", yardOffsetFromLos: 1.5 },
   DL2: { lane: "LG", yardOffsetFromLos: 1.5 },
   DL3: { lane: "C", yardOffsetFromLos: 1.5 },
   DL4: { lane: "RG", yardOffsetFromLos: 1.5 },
   DL5: { lane: "RT", yardOffsetFromLos: 1.5 },
+
   FS: { lane: "C", yardOffsetFromLos: 14 },
   S1: { lane: "LG", yardOffsetFromLos: 13 },
   S2: { lane: "RG", yardOffsetFromLos: 13 },
-  TE1: { lane: "RT", yardOffsetFromLos: -4 },
-  TE2: { lane: "LT", yardOffsetFromLos: -4 },
+
+  TE1: { lane: "RT", yardOffsetFromLos: -1 },
+  TE2: { lane: "LT", yardOffsetFromLos: -1 },
 };
 
 /**
