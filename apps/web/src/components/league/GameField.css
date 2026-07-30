@@ -165,6 +165,62 @@ body {
   pointer-events: none;
 }
 
+/* A permanent coordinate grid stays visible while editing a formation, while
+   waiting at the line, and while the play camera follows an animation. */
+.yard-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 19;
+  pointer-events: none;
+}
+
+.yard-guide {
+  position: absolute;
+  left: 7%;
+  width: 86%;
+  height: 1px;
+  border-top: 1px solid rgba(255, 255, 255, 0.34);
+  transform: translateY(-50%);
+}
+
+.yard-guide.major {
+  height: 2px;
+  border-top: 2px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 1px 0 rgba(2, 6, 23, 0.5);
+}
+
+.yard-guide.midfield {
+  border-top-color: rgba(255, 255, 255, 0.95);
+}
+
+.yard-guide-label {
+  position: absolute;
+  top: 50%;
+  min-width: 58px;
+  padding: 3px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 5px;
+  background: rgba(2, 6, 23, 0.82);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 1000;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  transform: translateY(-50%);
+}
+
+.yard-guide-label--left { right: calc(100% + 4px); }
+.yard-guide-label--right { left: calc(100% + 4px); }
+
+.yard-guide.minor .yard-guide-label {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(2, 6, 23, 0.68);
+  color: #e2e8f0;
+  font-size: 9px;
+}
+
 
 .field-midfield-logo {
   position: absolute;
@@ -357,6 +413,17 @@ body {
   font-weight: 900;
   white-space: nowrap;
   pointer-events: none;
+}
+
+.player-yard {
+  display: block;
+  margin-top: 2px;
+  color: #fde047;
+  font-size: 8px;
+  font-weight: 1000;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-align: center;
 }
 
 .token.defense .name {
