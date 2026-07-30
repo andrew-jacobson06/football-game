@@ -198,6 +198,32 @@ const defensiveLineupForPosition = (position?: string) => {
   return undefined;
 };
 
+/**
+ * Resolves the complete starting alignment for every supported position label.
+ * Animation payloads are not required to use formation-slot names (for
+ * example, they may identify a halfback as RB or a receiver as WR), so keep
+ * those aliases from falling back to the line of scrimmage. Numbered reserve
+ * labels use the last defined alignment in their position group.
+ */
+const startingLineupForPlayer = (
+  player: Pick<AnimationPlayer, "unit" | "id" | "role" | "position">,
+) => {
+  const position = String(player.role || player.position || "").toUpperCase();
+  if (player.unit === "defense" || unitClassForPlayer(player) === "defense")
+    return defensiveLineupForPosition(position);
+  if (DEFAULT_LINEUPS_BY_POSITION[position])
+    return DEFAULT_LINEUPS_BY_POSITION[position];
+  const [, group, rawIndex] = position.match(/^(WR|RB|TE)(\d+)?$/) || [];
+  const index = Number(rawIndex || 1);
+  if (group === "WR")
+    return DEFAULT_LINEUPS_BY_POSITION[`WR${Math.min(Math.max(index, 1), 4)}`];
+  if (group === "RB")
+    return DEFAULT_LINEUPS_BY_POSITION[`RB${Math.min(Math.max(index, 1), 2)}`];
+  if (group === "TE")
+    return DEFAULT_LINEUPS_BY_POSITION[`TE${Math.min(Math.max(index, 1), 2)}`];
+  return undefined;
+};
+
 const FORMATION_SLOT_LINEUP: Record<FormationSlot, FormationSlotSetup> = {
   WR1: DEFAULT_LINEUPS_BY_POSITION.WR1,
   WR2: DEFAULT_LINEUPS_BY_POSITION.WR2,
@@ -854,14 +880,7 @@ export default function GameField({
         plan.meta?.startYard ??
         50;
       const normalizedPlayers = plan.players.map((player) => {
-        const lineup =
-          player.unit === "defense"
-            ? defensiveLineupForPosition(player.role || player.position)
-            : player.role
-              ? DEFAULT_LINEUPS_BY_POSITION[player.role]
-              : player.position
-                ? DEFAULT_LINEUPS_BY_POSITION[player.position]
-                : undefined;
+        const lineup = startingLineupForPlayer(player);
         return normalizePlayerLane(
           {
             ...player,
@@ -1273,16 +1292,7 @@ export default function GameField({
         activePhaseDurationMsRef.current = 700;
         const moves = nextPlan.players.flatMap((targetPlayer) => {
           if (!playersRef.current[targetPlayer.id]) return [];
-          const lineup =
-            targetPlayer.unit === "defense"
-              ? defensiveLineupForPosition(
-                  targetPlayer.role || targetPlayer.position,
-                )
-              : targetPlayer.role
-                ? DEFAULT_LINEUPS_BY_POSITION[targetPlayer.role]
-                : targetPlayer.position
-                  ? DEFAULT_LINEUPS_BY_POSITION[targetPlayer.position]
-                  : undefined;
+          const lineup = startingLineupForPlayer(targetPlayer);
           const normalized = normalizePlayerLane(
             {
               ...targetPlayer,
