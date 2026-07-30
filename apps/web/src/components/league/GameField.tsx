@@ -476,6 +476,8 @@ export default function GameField({
     leftPct: number;
     topPct: number;
   } | null>(null);
+  const [revealedFormationSlot, setRevealedFormationSlot] =
+    useState<FormationSlot | null>(null);
   const findFormationPlayer = useCallback(
     (playerName?: string) =>
       players.find((player) => nameOf(player) === playerName),
@@ -996,20 +998,7 @@ export default function GameField({
           indicator.setAttribute("aria-hidden", "true");
           el.appendChild(indicator);
         }
-        const label = document.createElement("div");
-        label.className = "name";
-        // const number = document.createElement("span");
-        // number.className = "player-number";
-        // number.textContent = player.role || player.position || "--";
-        const labelName = document.createElement("span");
-        labelName.className = "player-name";
-        labelName.textContent = player.name;
-        const possessionDot = document.createElement("span");
-        possessionDot.className = "possession-dot";
-        possessionDot.setAttribute("aria-hidden", "true");
-        label.append(labelName, possessionDot);
         el.appendChild(portrait);
-        el.appendChild(label);
         el.dataset.action = playerActionForStep(player);
         // The field runs vertically, so team/possession must not imply a
         // horizontal facing. Unspecified sprites keep their source artwork's
@@ -1367,7 +1356,10 @@ export default function GameField({
           className="field-wrap"
           id="field"
           ref={fieldRef}
-          onClick={() => setSelectedPlayerMenu(null)}
+          onClick={() => {
+            setSelectedPlayerMenu(null);
+            setRevealedFormationSlot(null);
+          }}
         >
           <div className="field-title">Dynamic Football Animation View</div>
           <div
@@ -1431,6 +1423,9 @@ export default function GameField({
                   }
                   onClick={(event) => {
                     event.stopPropagation();
+                    setRevealedFormationSlot((current) =>
+                      playerName && current !== slot ? slot : null,
+                    );
                     onFormationSlotClick?.(slot);
                   }}
                 >
@@ -1446,8 +1441,11 @@ export default function GameField({
                   ) : (
                     <span className="field-formation-label">{slot}</span>
                   )}
-                  {playerName && (
-                    <span className="field-formation-name"><span className="player-number">{slot}</span><span className="player-name">{playerName}</span></span>
+                  {playerName && revealedFormationSlot === slot && (
+                    <span className="field-formation-name">
+                      <span className="player-number">{slot}</span>
+                      <span className="player-name">{playerName}</span>
+                    </span>
                   )}
                 </button>
               );

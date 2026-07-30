@@ -343,28 +343,6 @@ body {
   transform: translateX(-50%) scaleX(var(--facing));
 }
 
-.token .name {
-  position: absolute;
-  left: 50%;
-  top: 100%;
-  transform: translateX(-50%);
-  margin-top: 3px;
-  padding: 2px 5px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.84);
-  color: #f8fafc;
-  font-size: 10px;
-  font-weight: 900;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.token.defense .name {
-  top: auto;
-  margin-top: 0;
-  margin-bottom: 3px;
-}
-
 .token.active-runner .player-sprite,
 .token.ball-carrier .player-sprite {
   box-shadow:
@@ -852,7 +830,7 @@ textarea {
   display: none;
 }
 
-.token .name, .field-formation-name {
+.field-formation-name {
   top: auto;
   bottom: -20px;
   display: flex;
@@ -871,8 +849,6 @@ textarea {
 .player-number { padding: 5px 6px; color: #12100a; background: #ffd45a; font-size: 1.05em; }
 .player-name { padding: 5px 7px; }
 .token.defense .player-number, .field-formation-slot.defense .player-number { color: white; background: #c62828; }
-.possession-dot { width: 7px; height: 7px; margin: 0 6px 0 auto; border-radius: 50%; opacity: 0; background: #ffd45a; box-shadow: 0 0 8px #ffd45a; }
-.token.active-runner .possession-dot, .token.ball-carrier .possession-dot { opacity: 1; }
 .token.active-runner > .player-sprite::before, .token.ball-carrier > .player-sprite::before { content: none; }
 
 .motion-swipe, .action-burst { position: absolute; opacity: 0; pointer-events: none; }
