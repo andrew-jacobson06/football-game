@@ -33,6 +33,67 @@ const jerseyOf = (player?: Record<string, unknown>) =>
 const randomYards = (min: number, max: number, random: () => number) =>
   Number((min + random() * (max - min)).toFixed(2));
 
+type InitialPlayerCoordinate = { lane: string; yardOffsetFromLos: number };
+
+/**
+ * Pre-snap coordinates intentionally live in the animation builder as well as
+ * the renderer. A phase is allowed to move any member of either unit, so its
+ * author must not have to reconstruct (or guess) where a player was before
+ * that phase began. Offsets are expressed from the offense's perspective and
+ * are multiplied by `direction` below, which makes the same setup work for
+ * possessions moving toward either goal line.
+ *
+ * Keep these values in sync with GameField's visual formation templates. The
+ * explicit entries are preferable to deriving lanes from position text: WR3
+ * and WR4 use slot lanes, for example, while RBs line up behind the guards.
+ */
+const INITIAL_COORDINATES_BY_POSITION: Record<
+  string,
+  InitialPlayerCoordinate
+> = {
+  WR1: { lane: "WR1", yardOffsetFromLos: -4 },
+  WR2: { lane: "WR2", yardOffsetFromLos: -4 },
+  WR3: { lane: "SLT1", yardOffsetFromLos: -4.5 },
+  WR4: { lane: "SLT2", yardOffsetFromLos: -4.5 },
+  RB1: { lane: "LG", yardOffsetFromLos: -11 },
+  RB2: { lane: "RG", yardOffsetFromLos: -11 },
+  QB: { lane: "C", yardOffsetFromLos: -7.5 },
+  LT: { lane: "LT", yardOffsetFromLos: -4 },
+  LG: { lane: "LG", yardOffsetFromLos: -4 },
+  C: { lane: "C", yardOffsetFromLos: -4 },
+  RG: { lane: "RG", yardOffsetFromLos: -4 },
+  RT: { lane: "RT", yardOffsetFromLos: -4 },
+  DB1: { lane: "LSD", yardOffsetFromLos: 1.25 },
+  DB2: { lane: "RSD", yardOffsetFromLos: 1.25 },
+  DB3: { lane: "RFLT", yardOffsetFromLos: 1.25 },
+  LB1: { lane: "LGL", yardOffsetFromLos: 5 },
+  LB2: { lane: "RGR", yardOffsetFromLos: 5 },
+  LB3: { lane: "C", yardOffsetFromLos: 6 },
+  DL1: { lane: "LT", yardOffsetFromLos: 1.5 },
+  DL2: { lane: "LG", yardOffsetFromLos: 1.5 },
+  DL3: { lane: "C", yardOffsetFromLos: 1.5 },
+  DL4: { lane: "RG", yardOffsetFromLos: 1.5 },
+  DL5: { lane: "RT", yardOffsetFromLos: 1.5 },
+  FS: { lane: "C", yardOffsetFromLos: 14 },
+  S1: { lane: "LG", yardOffsetFromLos: 13 },
+  S2: { lane: "RG", yardOffsetFromLos: 13 },
+};
+
+/** Returns a stable template even when generated role numbering exceeds it. */
+const defensiveInitialCoordinate = (position: string) => {
+  const normalized = position.toUpperCase();
+  if (INITIAL_COORDINATES_BY_POSITION[normalized])
+    return INITIAL_COORDINATES_BY_POSITION[normalized];
+  const [, group, rawIndex] = normalized.match(/^(DB|LB|DL|S)(\d+)?$/) ?? [];
+  const index = Number(rawIndex || 1);
+  const lastTemplate = group === "DL" ? 5 : group === "S" ? 2 : 3;
+  return group
+    ? INITIAL_COORDINATES_BY_POSITION[
+        `${group}${Math.min(Math.max(index, 1), lastTemplate)}`
+      ]
+    : undefined;
+};
+
 const scoreText = (game: LeagueGame) =>
   `${String(game.Home ?? "HOME")} ${Number(game.HomeScore) || 0} | ${String(game.Away ?? "AWAY")} ${Number(game.AwayScore) || 0}`;
 
@@ -107,12 +168,16 @@ export function runPlayJSONAnimationBuilder(
   const offenseIds = new Map<string, string>();
   const defenseIds = new Map<string, string>();
   const players: Array<Record<string, unknown>> = [];
-  // GameField owns the canonical pre-snap lane and depth setup. The animation
-  // plan describes personnel and assignments, then only supplies coordinates
-  // once a phase actually moves a player.
+  // Register every dressed player in the plan with concrete coordinates. A
+  // later phase can consequently add pursuit, backside blocking, or any other
+  // simultaneous movement without relying on GameField's fallback placement.
   for (const [slot, name] of Object.entries(formation)) {
     if (!name) continue;
     const id = domId("off", slot, name);
+    const initialCoordinate = INITIAL_COORDINATES_BY_POSITION[slot] ?? {
+      lane: "C",
+      yardOffsetFromLos: 0,
+    };
     offenseIds.set(name, id);
     players.push({
       id,
@@ -121,6 +186,10 @@ export function runPlayJSONAnimationBuilder(
       position: slot,
       role: slot,
       unit: "offense",
+      lane: initialCoordinate.lane,
+      yard: Number(
+        (los + direction * initialCoordinate.yardOffsetFromLos).toFixed(2),
+      ),
       headUrl: imageOf(rosterByName.get(name)),
       jerseyUrl: jerseyOf(rosterByName.get(name)),
     });
@@ -128,6 +197,16 @@ export function runPlayJSONAnimationBuilder(
 
   for (const assignment of defense) {
     const id = domId("def", assignment.position, assignment.player);
+    const positionCoordinate = defensiveInitialCoordinate(assignment.position);
+    const alignmentCoordinate = assignment.align
+      ? INITIAL_COORDINATES_BY_POSITION[assignment.align]
+      : undefined;
+    // Coverage and front assignments determine the horizontal lane, while the
+    // defender's own position determines depth (DL at the line, LB at level
+    // two, DB/S over the top). Unknown labels still receive LOS/C coordinates,
+    // preserving the invariant that lane and yard are never absent.
+    const lane = alignmentCoordinate?.lane ?? positionCoordinate?.lane ?? "C";
+    const yardOffsetFromLos = positionCoordinate?.yardOffsetFromLos ?? 0;
     defenseIds.set(assignment.player, id);
     players.push({
       id,
@@ -137,6 +216,8 @@ export function runPlayJSONAnimationBuilder(
       role: assignment.position,
       unit: "defense",
       alignmentSlot: assignment.align as FormationSlot | undefined,
+      lane,
+      yard: Number((los + direction * yardOffsetFromLos).toFixed(2)),
       headUrl: imageOf(rosterByName.get(assignment.player)),
       jerseyUrl: jerseyOf(rosterByName.get(assignment.player)),
     });
