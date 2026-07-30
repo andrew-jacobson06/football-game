@@ -288,6 +288,13 @@ const normalizeYard = (yard: string | number) =>
 const normalizeDistance = (distance: string | number) =>
   Number.isFinite(Number(distance)) ? Number(distance) : 10;
 const clampYard = (yard: number) => Math.max(0, Math.min(100, yard));
+const formatFieldPosition = (yard: number) => {
+  const roundedYard = Math.round(clampYard(yard));
+  if (roundedYard === 50) return "50";
+  return roundedYard < 50
+    ? `HOME ${roundedYard}`
+    : `AWAY ${100 - roundedYard}`;
+};
 const possessionDirection = (possession?: string) =>
   String(possession ?? "Home").toLowerCase() === "away" ? -1 : 1;
 
@@ -685,6 +692,8 @@ export default function GameField({
     Object.values(playersRef.current).forEach((player) => {
       player.el.style.top = `${yardToYPct(player.yard)}%`;
       player.el.style.zIndex = String(playerDepthZIndex(player.yard));
+      const yardLabel = player.el.querySelector<HTMLElement>(".player-yard");
+      if (yardLabel) yardLabel.textContent = formatFieldPosition(player.yard);
     });
     Object.values(labelsRef.current).forEach((labelEl) => {
       const yard = Number(labelEl.dataset.yard);
@@ -824,14 +833,6 @@ export default function GameField({
           hash.style.top = `${yardToYPct(yard)}%`;
           field.appendChild(hash);
         });
-      for (let yard = 10; yard <= 90; yard += 5) {
-        const el = document.createElement("div");
-        el.className = "yard-number";
-        el.dataset.yard = String(yard);
-        el.textContent = yard >= 50 ? `AWAY ${100 - yard}` : `HOME ${yard}`;
-        el.style.top = `${yardToYPct(yard)}%`;
-        field.appendChild(el);
-      }
       const homeTeam = plan.meta?.homeTeam;
       const homePlayers = plan.players.filter((player) =>
         homeTeam
@@ -978,10 +979,13 @@ export default function GameField({
         const labelName = document.createElement("span");
         labelName.className = "player-name";
         labelName.textContent = player.name;
+        const yardLabel = document.createElement("span");
+        yardLabel.className = "player-yard";
+        yardLabel.textContent = formatFieldPosition(player.yard);
         const possessionDot = document.createElement("span");
         possessionDot.className = "possession-dot";
         possessionDot.setAttribute("aria-hidden", "true");
-        label.append(labelName, possessionDot);
+        label.append(labelName, yardLabel, possessionDot);
         el.appendChild(portrait);
         el.appendChild(label);
         el.dataset.action = playerActionForStep(player);
@@ -1374,6 +1378,24 @@ export default function GameField({
               alt="Home team logo at midfield"
             />
           )}
+          <div className="yard-grid" aria-hidden="true">
+            {Array.from({ length: 21 }, (_, index) => index * 5).map(
+              (yard) => (
+                <div
+                  key={yard}
+                  className={`yard-guide ${yard % 10 === 0 ? "major" : "minor"} ${yard === 50 ? "midfield" : ""}`}
+                  style={{ top: `${yardToYPct(yard)}%` }}
+                >
+                  <span className="yard-guide-label yard-guide-label--left">
+                    {formatFieldPosition(yard)}
+                  </span>
+                  <span className="yard-guide-label yard-guide-label--right">
+                    {formatFieldPosition(yard)}
+                  </span>
+                </div>
+              ),
+            )}
+          </div>
           <div className="field-line los-line" id="losLine" />
           <div className="field-line first-down-line" id="firstDownLine" />
           <div className="field-line end-line" id="endLine" />
@@ -1430,7 +1452,7 @@ export default function GameField({
                     <span className="field-formation-label">{slot}</span>
                   )}
                   {playerName && (
-                    <span className="field-formation-name"><span className="player-number">{slot}</span><span className="player-name">{playerName}</span></span>
+                    <span className="field-formation-name"><span className="player-number">{slot}</span><span className="player-name">{playerName}</span><span className="player-yard">{formatFieldPosition(formationLosYard + offenseDirection * lineup.yardOffsetFromLos)}</span></span>
                   )}
                 </button>
               );
