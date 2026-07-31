@@ -284,7 +284,9 @@
   text-align: center;
 }
 .standings-wrapper {
-  padding: 2.5vw;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: clamp(20px, 2.5vw, 40px);
 }
 .standings-header {
   display: flex;
@@ -311,6 +313,18 @@
   gap: 1vw;
   margin-bottom: 2vw;
 }
+.standings-tabs {
+  width: fit-content;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 8px;
+  background: var(--gray-medium);
+}
+.standings-tab {
+  min-width: 120px;
+  cursor: pointer;
+  font-weight: 700;
+}
 .standings-tab.active,
 .stats-tab.active {
   background: var(--accent-red);
@@ -318,10 +332,13 @@
 .standings-panel {
   background: var(--gray-medium);
   border: 1px solid var(--gray-light);
+  border-radius: 8px;
+  overflow: hidden;
 }
 .standings-panel-header {
-  padding: 1.5vw;
+  padding: clamp(16px, 1.5vw, 24px);
   font-weight: 700;
+  font-size: clamp(18px, 2vw, 26px);
 }
 .standings-table-scroll {
   overflow: auto;
@@ -339,8 +356,63 @@
   border-top: 1px solid var(--gray-light);
   text-align: center;
 }
+.standings-table th {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.standings-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.025);
+}
+.standings-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
 .standings-table .team-col {
   text-align: left;
+  min-width: 250px;
+}
+.standings-table .pct-col {
+  background: rgba(100, 155, 215, 0.12);
+}
+.standings-team {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.standings-team-logo,
+.standings-team-logo-fallback {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+}
+.standings-team-logo {
+  object-fit: contain;
+}
+.standings-team-logo-fallback {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gray-light);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.standings-team-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.standings-team-name {
+  font-weight: 700;
+}
+.standings-team-nickname {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.standings-division-list {
+  display: grid;
+  gap: 24px;
 }
 .team-rank,
 .rank {

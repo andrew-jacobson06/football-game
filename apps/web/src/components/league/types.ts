@@ -20,12 +20,21 @@ export type LeagueGame = {
 export type LeagueTeam = Record<string, string | number | undefined> & {
   Team?: string;
   Name?: string;
+  City?: string;
+  Nickname?: string;
   Division?: string;
   Logo?: string;
+  Abbrev?: string;
   Wins?: string | number;
   Losses?: string | number;
   Ties?: string | number;
   PF?: string | number;
   PA?: string | number;
   Streak?: string;
+  "Home W"?: string | number;
+  "Home L"?: string | number;
+  "Away W"?: string | number;
+  "Away L"?: string | number;
+  "Div W"?: string | number;
+  "Div L"?: string | number;
 };

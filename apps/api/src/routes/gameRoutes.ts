@@ -43,6 +43,25 @@ async function getTeamsFromSheet() {
   const { headers, rows } = await sheetRows("Teams");
   return rows.filter((r) => r?.[0] !== "" && r?.[0] != null).slice(0, 10).map((r) => objectFrom(headers, r));
 }
+async function getStandingsFromSheet() {
+  const [standings, teams] = await Promise.all([
+    readSheetObjects("standings!A1:Z"),
+    getTeamsFromSheet(),
+  ]);
+  const teamsByAbbrev = new Map(
+    teams.map((team) => [String(team.Abbrev ?? "").trim().toUpperCase(), team]),
+  );
+
+  const standingsAbbrev = (row: Record<string, string>) =>
+    String(row.Abbrev ?? row.Team ?? row[""] ?? "").trim().toUpperCase();
+
+  return standings
+    .filter((row) => standingsAbbrev(row) !== "")
+    .map((row) => {
+      const abbrev = standingsAbbrev(row);
+      return { ...teamsByAbbrev.get(abbrev), ...row, Abbrev: abbrev };
+    });
+}
 async function getTeamJerseys() {
   const teams = await getTeamsFromSheet();
   const jerseys = new Map<string, unknown>();
@@ -363,6 +382,7 @@ gameRoutes.get("/players/:playerName/rushing-games", async (req, res, next) => {
 });
 gameRoutes.get("/player-traits", async (_req, res, next) => { try { res.json({ players: await getPlayerTraitsFromSheet() }); } catch (e) { next(e); } });
 gameRoutes.get("/teams", async (_req, res, next) => { try { res.json({ teams: await getTeamsFromSheet() }); } catch (e) { next(e); } });
+gameRoutes.get("/standings", async (_req, res, next) => { try { res.json({ standings: await getStandingsFromSheet() }); } catch (e) { next(e); } });
 gameRoutes.get("/games", async (_req, res, next) => { try { res.json({ games: await getGamesList() }); } catch (e) { next(e); } });
 gameRoutes.get("/games/:gameId/state", async (req, res, next) => { try { res.json({ gameState: await getGameState(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/games/:gameId/play-history", async (req, res, next) => { try { res.json({ plays: await getPlayHistory(req.params.gameId) }); } catch (e) { next(e); } });
