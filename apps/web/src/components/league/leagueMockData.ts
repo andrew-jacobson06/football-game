@@ -14,6 +14,9 @@ export const mockGames: LeagueGame[] = [
     Distance: 7,
     BallOn: 64,
     Possession: "Home",
+    Week: 1,
+    Date: "Sun, Sep 7",
+    StartTime: "1:00 PM",
   },
   {
     GameId: 2,
@@ -27,7 +30,14 @@ export const mockGames: LeagueGame[] = [
     Distance: 10,
     BallOn: 50,
     Possession: "Away",
+    Week: 1,
+    Date: "Sun, Sep 7",
+    StartTime: "4:25 PM",
   },
+  { GameId: 3, Home: "MIA", Away: "BUF", HomeScore: 0, AwayScore: 0, Qtr: 1, Time: "15:00", Down: 1, Distance: 10, BallOn: 25, Possession: "Away", Week: 2, Date: "Sun, Sep 14", StartTime: "1:00 PM" },
+  { GameId: 4, Home: "DAL", Away: "NYG", HomeScore: 0, AwayScore: 0, Qtr: 1, Time: "15:00", Down: 1, Distance: 10, BallOn: 25, Possession: "Away", Week: 2, Date: "Sun, Sep 14", StartTime: "8:20 PM" },
+  { GameId: 5, Home: "SF", Away: "SEA", HomeScore: 0, AwayScore: 0, Qtr: 1, Time: "15:00", Down: 1, Distance: 10, BallOn: 25, Possession: "Away", Week: 3, Date: "Sun, Sep 21", StartTime: "4:05 PM" },
+  { GameId: 6, Home: "KC", Away: "LAC", HomeScore: 0, AwayScore: 0, Qtr: 1, Time: "15:00", Down: 1, Distance: 10, BallOn: 25, Possession: "Away", Week: 4, Date: "Mon, Sep 29", StartTime: "8:15 PM" },
 ];
 
 // TODO: Replace fallback standings with the Teams sheet through /api/teams in production-like local runs.

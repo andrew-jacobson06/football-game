@@ -15,6 +15,9 @@ export type LeagueGame = {
   Possession: "Home" | "Away" | string;
   HomeLogo?: string;
   AwayLogo?: string;
+  Week?: string | number;
+  Date?: string;
+  StartTime?: string;
 };
 
 export type LeagueTeam = Record<string, string | number | undefined> & {

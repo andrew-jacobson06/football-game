@@ -1,81 +1,45 @@
 import type { LeagueGame } from "./types";
-import {
-  formatBallOnForPoss,
-  formatClock,
-  formatDownDistance,
-  formatQuarter,
-  parseInteger,
-} from "./leagueMappers";
-
 export function LeagueSchedule({
   games,
+  weeks,
+  selectedWeek,
+  onWeekChange,
   onSelectGame,
 }: {
   games: LeagueGame[];
+  weeks: number[];
+  selectedWeek: number;
+  onWeekChange: (week: number) => void;
   onSelectGame: (game: LeagueGame) => void;
 }) {
+  const weekGames = games.filter((game) => Number(game.Week ?? 1) === selectedWeek);
+
   return (
-    <div className="game-list">
-      {games.map((g) => {
-        const final = String(g.Qtr).toUpperCase() === "FINAL";
-        const hs = parseInteger(g.HomeScore);
-        const as = parseInteger(g.AwayScore);
-        const rowClass = (score: number, other: number) =>
-          `team-row ${score > other ? "winner" : score < other ? "loser" : ""}`;
-        return (
+    <div className="scores-page">
+      <header className="scores-heading">
+        <div><span className="eyebrow">Regular season</span><h1>League Scores</h1></div>
+        <span className="scores-heading__week">Week {selectedWeek}</span>
+      </header>
+      <div className="week-tabs" role="tablist" aria-label="Score weeks">
+        {weeks.map((week) => <button key={week} type="button" role="tab" aria-selected={week === selectedWeek} className={week === selectedWeek ? "active" : ""} onClick={() => onWeekChange(week)}>Week {week}</button>)}
+      </div>
+      <div className="game-list">
+      {weekGames.map((g) => (
           <button
             key={String(g.GameId)}
             type="button"
-            className={`game-card ${final ? "final" : ""}`}
+            className="game-card game-card--scheduled"
             onClick={() => onSelectGame(g)}
           >
-            <div className={rowClass(hs, as)}>
-              <img
-                className="team-logo"
-                src={g.HomeLogo || "https://via.placeholder.com/24"}
-                alt="Home Logo"
-              />
-              <div className="team-name-wrap">
-                <span className="team-name">{g.Home}</span>
-                <span className="poss-indicator">
-                  {g.Possession === "Home" ? "🏈" : ""}
-                </span>
-              </div>
-              <span className="team-score">{g.HomeScore}</span>
-              {!final && (
-                <>
-                  <span className="team-time">{formatClock(g.Time)}</span>
-                  <span className="team-down">
-                    {formatDownDistance(g.Down, g.Distance)}
-                  </span>
-                </>
-              )}
-            </div>
-            <div className={rowClass(as, hs)}>
-              <img
-                className="team-logo"
-                src={g.AwayLogo || "https://via.placeholder.com/24"}
-                alt="Away Logo"
-              />
-              <div className="team-name-wrap">
-                <span className="team-name">{g.Away}</span>
-                <span className="poss-indicator">
-                  {g.Possession === "Away" ? "🏈" : ""}
-                </span>
-              </div>
-              <span className="team-score">{g.AwayScore}</span>
-              {!final && (
-                <>
-                  <span className="team-qtr">{formatQuarter(g.Qtr)}</span>
-                  <span className="team-ball">
-                    {formatBallOnForPoss(g.BallOn, g.Possession)}
-                  </span>
-                </>
-              )}
+            <div className="game-card__topline"><span>{g.Date || `Week ${selectedWeek}`}</span><span>Scheduled</span></div>
+            <div className="scheduled-matchup">
+              <div className="scheduled-team"><span className="team-mark-fallback">{g.Away.slice(0, 3)}</span><strong>{g.Away}</strong><span className="record">0-0</span></div>
+              <div className="scheduled-kickoff"><strong>{g.StartTime || "TBD"}</strong><span>Kickoff</span><small>Game preview →</small></div>
+              <div className="scheduled-team"><span className="team-mark-fallback">{g.Home.slice(0, 3)}</span><strong>{g.Home}</strong><span className="record">0-0</span></div>
             </div>
           </button>
-        );
-      })}
+      ))}
+      </div>
     </div>
   );
 }
