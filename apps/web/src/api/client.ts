@@ -61,6 +61,11 @@ export async function getTeams(): Promise<{
 }> {
   return getJson("/teams", "Failed to load teams from backend API");
 }
+export async function getStandings(): Promise<{
+  standings: Record<string, unknown>[];
+}> {
+  return getJson("/standings", "Failed to load standings from backend API");
+}
 export async function getGames(): Promise<{
   games: Record<string, unknown>[];
 }> {

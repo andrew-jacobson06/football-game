@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { getGames, getTeams } from "../../api/client";
+import { getGames, getStandings } from "../../api/client";
 import type { LeagueGame, LeagueTab, LeagueTeam } from "./types";
 import { mockGames, mockTeams } from "./leagueMockData";
 import { normalizeGames } from "./leagueMappers";
@@ -27,8 +27,8 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
     getGames()
       .then(({ games }) => setGames(normalizeGames(games)))
       .catch(() => setGames(mockGames));
-    getTeams()
-      .then(({ teams }) => setTeams(teams as LeagueTeam[]))
+    getStandings()
+      .then(({ standings }) => setTeams(standings as LeagueTeam[]))
       .catch(() => setTeams(mockTeams));
   }, []);
 
