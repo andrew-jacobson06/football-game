@@ -4,6 +4,10 @@ import type { LeagueGame, LeagueTeam } from "./types";
 export const mockGames: LeagueGame[] = [
   {
     GameId: 1,
+    Week: 1,
+    Date: "Sunday, September 6",
+    Kickoff: "1:00 PM",
+    Network: "AFL Network",
     Home: "LV",
     Away: "DEN",
     HomeScore: 14,
@@ -17,6 +21,10 @@ export const mockGames: LeagueGame[] = [
   },
   {
     GameId: 2,
+    Week: 2,
+    Date: "Sunday, September 13",
+    Kickoff: "4:25 PM",
+    Network: "AFL Network",
     Home: "CHI",
     Away: "GB",
     HomeScore: 24,
