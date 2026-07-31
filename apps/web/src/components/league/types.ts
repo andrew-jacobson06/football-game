@@ -13,6 +13,10 @@ export type LeagueGame = {
   Distance: string | number;
   BallOn: string | number;
   Possession: "Home" | "Away" | string;
+  Week?: string | number;
+  Date?: string;
+  Kickoff?: string;
+  Network?: string;
   HomeLogo?: string;
   AwayLogo?: string;
 };

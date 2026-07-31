@@ -1,81 +1,44 @@
+import { useMemo, useState } from "react";
 import type { LeagueGame } from "./types";
-import {
-  formatBallOnForPoss,
-  formatClock,
-  formatDownDistance,
-  formatQuarter,
-  parseInteger,
-} from "./leagueMappers";
 
-export function LeagueSchedule({
-  games,
-  onSelectGame,
-}: {
-  games: LeagueGame[];
-  onSelectGame: (game: LeagueGame) => void;
-}) {
+const WEEKS = [1, 2, 3, 4, 5];
+
+const gameWeek = (game: LeagueGame, index: number) =>
+  Number(game.Week ?? (index % WEEKS.length) + 1);
+
+export function LeagueSchedule({ games, onSelectGame }: { games: LeagueGame[]; onSelectGame: (game: LeagueGame) => void }) {
+  const [activeWeek, setActiveWeek] = useState(1);
+  const weekGames = useMemo(
+    () => games.filter((game, index) => gameWeek(game, index) === activeWeek),
+    [activeWeek, games],
+  );
+
   return (
-    <div className="game-list">
-      {games.map((g) => {
-        const final = String(g.Qtr).toUpperCase() === "FINAL";
-        const hs = parseInteger(g.HomeScore);
-        const as = parseInteger(g.AwayScore);
-        const rowClass = (score: number, other: number) =>
-          `team-row ${score > other ? "winner" : score < other ? "loser" : ""}`;
-        return (
-          <button
-            key={String(g.GameId)}
-            type="button"
-            className={`game-card ${final ? "final" : ""}`}
-            onClick={() => onSelectGame(g)}
-          >
-            <div className={rowClass(hs, as)}>
-              <img
-                className="team-logo"
-                src={g.HomeLogo || "https://via.placeholder.com/24"}
-                alt="Home Logo"
-              />
-              <div className="team-name-wrap">
-                <span className="team-name">{g.Home}</span>
-                <span className="poss-indicator">
-                  {g.Possession === "Home" ? "🏈" : ""}
-                </span>
-              </div>
-              <span className="team-score">{g.HomeScore}</span>
-              {!final && (
-                <>
-                  <span className="team-time">{formatClock(g.Time)}</span>
-                  <span className="team-down">
-                    {formatDownDistance(g.Down, g.Distance)}
-                  </span>
-                </>
-              )}
-            </div>
-            <div className={rowClass(as, hs)}>
-              <img
-                className="team-logo"
-                src={g.AwayLogo || "https://via.placeholder.com/24"}
-                alt="Away Logo"
-              />
-              <div className="team-name-wrap">
-                <span className="team-name">{g.Away}</span>
-                <span className="poss-indicator">
-                  {g.Possession === "Away" ? "🏈" : ""}
-                </span>
-              </div>
-              <span className="team-score">{g.AwayScore}</span>
-              {!final && (
-                <>
-                  <span className="team-qtr">{formatQuarter(g.Qtr)}</span>
-                  <span className="team-ball">
-                    {formatBallOnForPoss(g.BallOn, g.Possession)}
-                  </span>
-                </>
-              )}
-            </div>
+    <div className="scores-screen">
+      <header className="scores-heading">
+        <div><span className="scores-heading__eyebrow">2026 SEASON</span><h1>AFL Scoreboard</h1></div>
+        <div className="scores-heading__status"><i /> Games have not started</div>
+      </header>
+      <nav className="week-tabs" aria-label="Scoreboard weeks">
+        {WEEKS.map((week) => (
+          <button key={week} type="button" className={activeWeek === week ? "active" : ""} onClick={() => setActiveWeek(week)}>
+            <span>WEEK {week}</span><small>{week === 1 ? "SEP 6" : `WEEK ${week}`}</small>
           </button>
-        );
-      })}
+        ))}
+      </nav>
+      <section className="week-scoreboard">
+        <div className="week-scoreboard__title"><div><span>WEEK {activeWeek}</span><h2>Upcoming Games</h2></div><span>{weekGames.length} {weekGames.length === 1 ? "GAME" : "GAMES"}</span></div>
+        {weekGames.length ? weekGames.map((game) => (
+          <article className="schedule-game" key={String(game.GameId)}>
+            <div className="schedule-game__date"><strong>{game.Date || `Week ${activeWeek}`}</strong><span>{game.Kickoff || "Time TBD"} · {game.Network || "AFL Network"}</span></div>
+            <div className="schedule-game__teams">
+              <div><img src={game.AwayLogo || "/favicon.svg"} alt="" /><span><strong>{game.Away}</strong><small>AWAY · 0-0</small></span><b>0</b></div>
+              <div><img src={game.HomeLogo || "/favicon.svg"} alt="" /><span><strong>{game.Home}</strong><small>HOME · 0-0</small></span><b>0</b></div>
+            </div>
+            <div className="schedule-game__action"><span>PRE-GAME</span><button type="button" onClick={() => onSelectGame(game)}>Gamecast <b>›</b></button></div>
+          </article>
+        )) : <div className="schedule-empty"><strong>No games scheduled yet</strong><span>Check back for the Week {activeWeek} matchup announcement.</span></div>}
+      </section>
     </div>
   );
 }

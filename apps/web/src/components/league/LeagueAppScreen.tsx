@@ -9,6 +9,7 @@ import { LeagueSchedule } from "./LeagueSchedule";
 import { LeagueStandings } from "./LeagueStandings";
 import { LeagueStats } from "./LeagueStats";
 import { GameCenter } from "./GameCenter";
+import { GamesBanner } from "./GamesBanner";
 import "./league.css";
 type LeagueAppScreenProps = {
   onBack?: () => void;
@@ -74,6 +75,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
   if (selectedGame)
     return (
       <section className="league-app">
+        <GamesBanner games={games} />
         <GameCenter game={selectedGame} onBack={() => setSelectedGame(null)} />
       </section>
     );
@@ -134,6 +136,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
               ← Back
             </button>
           )}
+          <GamesBanner games={games} />
           <LeagueHeader activeTab={activeTab} onTabChange={setActiveTab} />
           <div id="tabContents">
             {activeTab === "news" && (
