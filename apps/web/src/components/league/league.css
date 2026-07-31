@@ -221,26 +221,102 @@
     grid-column: 1/-1;
   }
 }
-.game-list {
-  padding: 2.5vw;
+.games-banner {
+  position: sticky;
+  top: clamp(92px, 14vw, 150px);
+  z-index: 80;
+  background: #0b0d10;
+  border-bottom: 1px solid #34383f;
+  box-shadow: 0 8px 24px #0008;
 }
+.games-banner__weeks,
+.week-tabs {
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.games-banner__weeks {
+  padding: 0 clamp(16px, 3vw, 48px);
+  border-bottom: 1px solid #292d33;
+}
+.games-banner__weeks button,
+.week-tabs button {
+  flex: 0 0 auto;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #9298a2;
+  font-weight: 700;
+  cursor: pointer;
+}
+.games-banner__weeks button { padding: 12px 20px 10px; font-size: 13px; }
+.games-banner__weeks button.active,
+.week-tabs button.active { color: white; border-bottom-color: var(--accent-red); }
+.games-banner__rail {
+  display: flex;
+  overflow-x: auto;
+  padding: 10px clamp(16px, 3vw, 48px) 12px;
+  scrollbar-color: #444 transparent;
+}
+.banner-game {
+  flex: 0 0 clamp(220px, 25vw, 310px);
+  padding: 0 20px;
+  border-right: 1px solid #30343a;
+}
+.banner-game:first-child { padding-left: 0; }
+.banner-game__meta,
+.banner-game__team { display: flex; align-items: center; }
+.banner-game__meta { justify-content: space-between; color: #9298a2; font-size: 11px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .06em; }
+.banner-game__meta strong { color: #dce0e7; }
+.banner-game__team { gap: 8px; min-height: 26px; font-size: 13px; }
+.banner-game__team img,
+.team-mark-fallback { width: 26px; height: 26px; object-fit: contain; }
+.team-mark-fallback { display: inline-grid; place-items: center; flex: 0 0 auto; border-radius: 50%; background: linear-gradient(145deg, #3e454f, #171a1f); border: 1px solid #58606b; color: white; font-size: 8px; font-weight: 800; }
+.banner-game__team strong { flex: 1; }
+.banner-game__team > span:last-child { color: #79808a; font-weight: 800; }
+.scores-page { max-width: 1180px; margin: 0 auto; padding: clamp(28px, 5vw, 64px) clamp(16px, 3vw, 36px); }
+.scores-heading { display: flex; justify-content: space-between; align-items: end; margin-bottom: 24px; }
+.scores-heading h1 { margin: 4px 0 0; font-size: clamp(30px, 4vw, 48px); letter-spacing: -.04em; }
+.eyebrow { color: var(--accent-red); text-transform: uppercase; font-size: 12px; font-weight: 800; letter-spacing: .16em; }
+.scores-heading__week { color: #aeb4bd; font-weight: 700; }
+.week-tabs { gap: 8px; margin-bottom: 24px; border-bottom: 1px solid #34383f; }
+.week-tabs button { padding: 14px clamp(16px, 3vw, 28px); font-size: 14px; }
+.game-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .game-card {
-  display: block;
   width: 100%;
   text-align: left;
-  background: var(--gray-medium);
-  border: 1px solid var(--gray-light);
-  border-radius: 4px;
-  margin-bottom: 3vw;
+  background: linear-gradient(145deg, #202329, #181a1f);
+  border: 1px solid #363b43;
+  border-radius: 10px;
   cursor: pointer;
-  padding: 2.5vw;
+  padding: 0;
   color: inherit;
+  overflow: hidden;
+  transition: transform .18s ease, border-color .18s ease;
 }
+.game-card:hover { transform: translateY(-2px); border-color: #626a76; }
+.game-card__topline { display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #333840; color: #aeb4bd; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
+.game-card__topline span:last-child { color: #dfe3e8; }
+.scheduled-matchup { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: clamp(20px, 3vw, 32px) 16px; }
+.scheduled-team,
+.scheduled-kickoff { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.scheduled-team .team-mark-fallback { width: 54px; height: 54px; margin-bottom: 10px; font-size: 13px; }
+.scheduled-team strong { font-size: clamp(16px, 2vw, 22px); }
+.record { color: #8f96a0; font-size: 12px; margin-top: 3px; }
+.scheduled-kickoff { padding: 0 12px; }
+.scheduled-kickoff strong { font-size: clamp(16px, 2vw, 21px); }
+.scheduled-kickoff span { color: #9298a2; font-size: 11px; text-transform: uppercase; letter-spacing: .12em; margin-top: 3px; }
+.scheduled-kickoff small { color: #e16d70; margin-top: 14px; }
 .game-card .team-row {
   display: flex;
   align-items: center;
   font-size: 4vw;
   gap: 0;
+}
+@media (max-width: 700px) {
+  .games-banner { top: 132px; }
+  .game-list { grid-template-columns: 1fr; }
+  .league-name { padding-bottom: 1vw; }
 }
 .game-card .team-row + .team-row {
   margin-top: 1vw;

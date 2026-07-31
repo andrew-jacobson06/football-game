@@ -9,11 +9,13 @@ import { LeagueSchedule } from "./LeagueSchedule";
 import { LeagueStandings } from "./LeagueStandings";
 import { LeagueStats } from "./LeagueStats";
 import { GameCenter } from "./GameCenter";
+import { WeeklyGamesBanner } from "./WeeklyGamesBanner";
 import "./league.css";
 export function LeagueAppScreen() {
   const [activeTab, setActiveTab] = useState<LeagueTab>("scores");
   const [games, setGames] = useState<LeagueGame[]>(mockGames);
   const [teams, setTeams] = useState<LeagueTeam[]>(mockTeams);
+  const [selectedWeek, setSelectedWeek] = useState(1);
   const [selectedGame, setSelectedGame] = useState<LeagueGame | null>(null);
   const [loadingGame, setLoadingGame] = useState<LeagueGame | null>(null);
   const [isExitingGameLoad, setIsExitingGameLoad] = useState(false);
@@ -122,6 +124,7 @@ export function LeagueAppScreen() {
       {!loadingGame && (
         <>
           <LeagueHeader activeTab={activeTab} onTabChange={setActiveTab} />
+          <WeeklyGamesBanner games={games} weeks={[1, 2, 3, 4]} selectedWeek={selectedWeek} onWeekChange={setSelectedWeek} />
           <div id="tabContents">
             {activeTab === "news" && (
               <div className="league-tab-content active">
@@ -130,7 +133,7 @@ export function LeagueAppScreen() {
             )}
             {activeTab === "scores" && (
               <div className="league-tab-content active">
-                <LeagueSchedule games={games} onSelectGame={openGame} />
+                <LeagueSchedule games={games} weeks={[1, 2, 3, 4]} selectedWeek={selectedWeek} onWeekChange={setSelectedWeek} onSelectGame={openGame} />
               </div>
             )}
             {activeTab === "standings" && (
