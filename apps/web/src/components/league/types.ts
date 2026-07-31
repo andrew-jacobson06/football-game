@@ -1,4 +1,4 @@
-export type LeagueTab = "news" | "scores" | "standings" | "stats" | "draft";
+export type LeagueTab = "news" | "scores" | "schedules" | "standings" | "stats" | "draft";
 export type GameTab = "gamecast" | "playbyplay" | "boxscore" | "teamstats";
 
 export type LeagueGame = {
@@ -15,6 +15,9 @@ export type LeagueGame = {
   Possession: "Home" | "Away" | string;
   HomeLogo?: string;
   AwayLogo?: string;
+  Week?: string | number;
+  Date?: string;
+  Season?: string | number;
 };
 
 export type LeagueTeam = Record<string, string | number | undefined> & {

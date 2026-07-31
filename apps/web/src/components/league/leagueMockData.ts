@@ -14,6 +14,8 @@ export const mockGames: LeagueGame[] = [
     Distance: 7,
     BallOn: 64,
     Possession: "Home",
+    Week: 1,
+    Date: "Sun, Sep 13",
   },
   {
     GameId: 2,
@@ -27,6 +29,28 @@ export const mockGames: LeagueGame[] = [
     Distance: 10,
     BallOn: 50,
     Possession: "Away",
+    Week: 1,
+    Date: "Sun, Sep 13",
+  },
+  {
+    GameId: 3, Home: "Denver", Away: "Green Bay", HomeScore: 0, AwayScore: 0,
+    Qtr: 1, Time: "4:25 PM", Down: 1, Distance: 10, BallOn: 50, Possession: "Home",
+    Week: 2, Date: "Sun, Sep 20",
+  },
+  {
+    GameId: 4, Home: "Las Vegas", Away: "Chicago", HomeScore: 0, AwayScore: 0,
+    Qtr: 1, Time: "8:20 PM", Down: 1, Distance: 10, BallOn: 50, Possession: "Away",
+    Week: 2, Date: "Sun, Sep 20",
+  },
+  {
+    GameId: 5, Home: "Chicago", Away: "Denver", HomeScore: 20, AwayScore: 27,
+    Qtr: "FINAL", Time: "0:00", Down: 1, Distance: 10, BallOn: 50, Possession: "Home",
+    Week: 3, Date: "Sun, Sep 27",
+  },
+  {
+    GameId: 6, Home: "Green Bay", Away: "Las Vegas", HomeScore: 31, AwayScore: 16,
+    Qtr: "FINAL", Time: "0:00", Down: 1, Distance: 10, BallOn: 50, Possession: "Home",
+    Week: 4, Date: "Sun, Oct 4",
   },
 ];
 
