@@ -9,6 +9,7 @@ import { LeagueSchedule } from "./LeagueSchedule";
 import { LeagueStandings } from "./LeagueStandings";
 import { LeagueStats } from "./LeagueStats";
 import { GameCenter } from "./GameCenter";
+import { TeamScreen } from "./TeamScreen";
 import "./league.css";
 type LeagueAppScreenProps = {
   onBack?: () => void;
@@ -19,6 +20,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
   const [games, setGames] = useState<LeagueGame[]>(mockGames);
   const [teams, setTeams] = useState<LeagueTeam[]>(mockTeams);
   const [selectedGame, setSelectedGame] = useState<LeagueGame | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<LeagueTeam | null>(null);
   const [loadingGame, setLoadingGame] = useState<LeagueGame | null>(null);
   const [isExitingGameLoad, setIsExitingGameLoad] = useState(false);
   const gameLoadTimeout = useRef<number | null>(null);
@@ -75,6 +77,12 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
     return (
       <section className="league-app">
         <GameCenter game={selectedGame} onBack={() => setSelectedGame(null)} />
+      </section>
+    );
+  if (selectedTeam)
+    return (
+      <section className="league-app">
+        <TeamScreen team={selectedTeam} onBack={() => setSelectedTeam(null)} />
       </section>
     );
   return (
@@ -148,7 +156,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
             )}
             {activeTab === "standings" && (
               <div className="league-tab-content active">
-                <LeagueStandings teams={teams} />
+                <LeagueStandings teams={teams} onSelectTeam={setSelectedTeam} />
               </div>
             )}
             {activeTab === "stats" && (

@@ -5,7 +5,13 @@ import {
   parseInteger,
   teamName,
 } from "./leagueMappers";
-export function LeagueStandings({ teams }: { teams: LeagueTeam[] }) {
+export function LeagueStandings({
+  teams,
+  onSelectTeam,
+}: {
+  teams: LeagueTeam[];
+  onSelectTeam?: (team: LeagueTeam) => void;
+}) {
   return (
     <div className="standings-wrapper">
       <div className="standings-header">
@@ -47,7 +53,13 @@ export function LeagueStandings({ teams }: { teams: LeagueTeam[] }) {
                   <tr key={`${teamName(t)}-${i}`}>
                     <td className="team-col">
                       <span className="team-rank">{i + 1}</span>
-                      {teamName(t)}
+                      <button
+                        className="standings-team-link"
+                        type="button"
+                        onClick={() => onSelectTeam?.(t)}
+                      >
+                        {teamName(t)}
+                      </button>
                     </td>
                     <td>{parseInteger(t.Wins ?? t.W)}</td>
                     <td>{parseInteger(t.Losses ?? t.L)}</td>
