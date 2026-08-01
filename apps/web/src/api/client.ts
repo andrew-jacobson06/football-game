@@ -60,6 +60,7 @@ export type PlayerGame = {
   rushing: { carries: number; yards: number; touchdowns: number; long: number };
   receiving: { receptions: number; targets: number; yards: number; touchdowns: number; long: number; firstDowns: number };
   fumbles: { total: number; lost: number };
+  defense: { dlWins: number; dlAttempts: number; tackles: number; tacklesForLoss: number; sacks: number; forcedFumbles: number; interceptions: number };
 };
 export async function getPlayerGames(
   playerName: string,
