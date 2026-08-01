@@ -183,7 +183,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
             )}
             {activeTab === "stats" && (
               <div className="league-tab-content active">
-                <LeagueStats />
+                <LeagueStats teams={teams} />
               </div>
             )}
             {activeTab === "draft" && (
