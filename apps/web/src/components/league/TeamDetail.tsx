@@ -20,6 +20,15 @@ function numericStat(stats: PlayerStats | null | undefined, names: string[]) {
 function stars(player: TeamPlayer, side: "off" | "def") {
   return Number(player[side === "off" ? "Off Stars" : "Def Stars"]) || 0;
 }
+function kickoffParts(game: LeagueGame) {
+  const raw = String(game["Kickoff Time"] ?? game.Kickoff ?? "").trim();
+  const parsed = new Date(raw);
+  if (!raw || Number.isNaN(parsed.getTime())) return { date: game.Date || "TBD", time: raw || "TBD" };
+  return {
+    date: new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(parsed),
+    time: new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(parsed),
+  };
+}
 
 export function TeamDetail({ team, standings, games, onBack, onGame }: { team: LeagueTeam; standings: LeagueTeam[]; games: LeagueGame[]; onBack: () => void; onGame: (game: LeagueGame) => void }) {
   const [section, setSection] = useState<TeamSection>("stats");
@@ -64,6 +73,14 @@ export function TeamDetail({ team, standings, games, onBack, onGame }: { team: L
       <h3>Team Leaders</h3>
       {rosterError ? <p className="players-message players-message--error">{rosterError}</p> : <div className="team-leaders">{leaders.map((leader, index) => leader && <article key={`${leader.Name}-${index}`}><small>{leaderSpecs[index].label}</small><PlayerImage player={leader} className="leader-avatar" /><p><b>{leader.Name}</b> <em>{leader.Pos || leader.DefPos}</em></p><strong>{hasStats ? numericStat(leader.Stats, leaderSpecs[index].fields) : `${stars(leader, leaderSpecs[index].side)}★`}</strong></article>)}</div>}
       <section className="team-stat-group"><h3>Season Stats</h3><div className="team-stat-scroll"><table><thead><tr><th>NAME</th>{statColumns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{players.map((player) => <tr key={String(player.Name)}><td><a>{player.Name}</a> <small>{player.Pos || player.DefPos}</small></td>{statColumns.map((column) => <td key={column}>{player.Stats?.[column] || "—"}</td>)}</tr>)}</tbody></table></div>{!players.length && !rosterError && <p>Loading roster…</p>}{players.length > 0 && !statColumns.length && <p>No season statistics have been recorded yet. Leaders are based on player star ratings.</p>}</section>
-    </section> : section === "schedule" ? <section className="team-simple-panel"><h2>{name} Schedule</h2>{teamGames.length ? teamGames.map((game) => <button type="button" key={game.GameId} onClick={() => onGame(game)}>{game.Away} at {game.Home}<span>{game.Date || `Week ${game.Week || "—"}`} · Gamecast ›</span></button>) : <p>No games have been scheduled.</p>}</section> : section === "roster" ? <section className="team-simple-panel"><h2>{name} Roster</h2>{players.map((player) => <p key={String(player.Name)}><b>{player.Name}</b> · {player.Pos || player.DefPos || "Player"}</p>)}</section> : <section className="team-simple-panel"><h2>{name} Overview</h2><p>{record} · {divisionPlace >= 0 ? `${ordinal(divisionPlace + 1)} in ${division}` : division}</p></section>}
+    </section> : section === "schedule" ? <section className="team-schedule-panel"><header><span>2026 SEASON</span><h2>{name} Schedule 2026</h2></header>{teamGames.length ? <><h3>Regular Season</h3><div className="team-schedule-scroll"><table><thead><tr><th>WK</th><th>DATE</th><th>OPPONENT</th><th>TIME</th><th>TV</th></tr></thead><tbody>{teamGames.map((game, index) => {
+      const isHome = key(game.Home) === key(id);
+      const opponent = isHome ? game.Away : game.Home;
+      const opponentName = isHome ? game.AwayName : game.HomeName;
+      const opponentLogo = isHome ? game.AwayLogo : game.HomeLogo;
+      const kickoff = kickoffParts(game);
+      const final = String(game.Qtr).toUpperCase() === "FINAL";
+      return <tr key={game.GameId} onClick={() => onGame(game)}><td>{game.Week || index + 1}</td><td>{kickoff.date}</td><td><span className="team-schedule-opponent"><em>{isHome ? "vs" : "@"}</em>{opponentLogo ? <img src={opponentLogo} alt="" /> : <i>{opponent.slice(0, 2)}</i>}<strong>{opponentName || opponent}</strong></span></td><td><button type="button" onClick={() => onGame(game)}>{final ? `${Number(game.HomeScore) === Number(game.AwayScore) ? "T" : (isHome ? Number(game.HomeScore) > Number(game.AwayScore) : Number(game.AwayScore) > Number(game.HomeScore)) ? "W" : "L"} ${game.AwayScore}-${game.HomeScore}` : kickoff.time}</button></td><td>{game.Network || "AFL Network"}</td></tr>;
+    })}</tbody></table></div></> : <p>No games have been scheduled.</p>}</section> : section === "roster" ? <section className="team-simple-panel"><h2>{name} Roster</h2>{players.map((player) => <p key={String(player.Name)}><b>{player.Name}</b> · {player.Pos || player.DefPos || "Player"}</p>)}</section> : <section className="team-simple-panel"><h2>{name} Overview</h2><p>{record} · {divisionPlace >= 0 ? `${ordinal(divisionPlace + 1)} in ${division}` : division}</p></section>}
   </main>;
 }

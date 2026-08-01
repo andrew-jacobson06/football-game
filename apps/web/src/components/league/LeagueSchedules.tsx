@@ -1,8 +1,6 @@
 import { useMemo, useState } from "react";
 import type { LeagueGame, LeagueTeam } from "./types";
 
-const WEEKS = Array.from({ length: 18 }, (_, index) => index + 1);
-
 const getWeek = (game: LeagueGame, index: number) => Number(game.Week ?? index + 1);
 const isFinal = (game: LeagueGame) => String(game.Qtr).toUpperCase() === "FINAL";
 const teamName = (team: LeagueTeam) => String(team.Team || team.Name || team.Abbrev || "Team");
@@ -30,7 +28,6 @@ export function LeagueSchedules({
   onSelectGame: (game: LeagueGame) => void;
   onSelectTeam?: (team: LeagueTeam) => void;
 }) {
-  const [week, setWeek] = useState(1);
   const [selectedTeam, setSelectedTeam] = useState("");
   const teamOptions = useMemo(() => {
     const labels = new Map<string, string>();
@@ -45,12 +42,17 @@ export function LeagueSchedules({
     return [...labels].sort((a, b) => a[1].localeCompare(b[1]));
   }, [games, teams]);
 
-  const visibleGames = useMemo(
-    () => selectedTeam
-      ? games.filter((game) => game.Home === selectedTeam || game.Away === selectedTeam)
-      : games.filter((game, index) => getWeek(game, index) === week),
-    [games, selectedTeam, week],
-  );
+  const visibleGames = useMemo(() => selectedTeam
+    ? games.filter((game) => game.Home === selectedTeam || game.Away === selectedTeam)
+    : games, [games, selectedTeam]);
+  const gamesByWeek = useMemo(() => {
+    const grouped = new Map<number, LeagueGame[]>();
+    visibleGames.forEach((game, index) => {
+      const gameWeek = getWeek(game, index);
+      grouped.set(gameWeek, [...(grouped.get(gameWeek) ?? []), game]);
+    });
+    return [...grouped.entries()].sort(([a], [b]) => a - b);
+  }, [visibleGames]);
   const selectedLabel = teamOptions.find(([id]) => id === selectedTeam)?.[1] || selectedTeam;
   const selectedTeamDetails = teams.find((team) => teamAbbrev(team) === selectedTeam);
 
@@ -80,16 +82,14 @@ export function LeagueSchedules({
           </label>
         </header>
 
-        {!selectedTeam && <nav className="schedule-weeks" aria-label="Schedule weeks">
-          {WEEKS.map((item) => <button type="button" key={item} className={week === item ? "active" : ""} onClick={() => setWeek(item)}><b>WEEK {item}</b><small>{item === 1 ? "SEP 6–12" : `2026 · WK ${item}`}</small></button>)}
-        </nav>}
-
         <div className="schedule-table-wrap">
-          <div className="schedule-section-title"><h2>{selectedTeam ? "Regular Season" : `Week ${week}`}</h2><span>{visibleGames.length} {visibleGames.length === 1 ? "game" : "games"}</span></div>
+          {selectedTeam && <div className="schedule-section-title"><h2>Regular Season</h2><span>{visibleGames.length} {visibleGames.length === 1 ? "game" : "games"}</span></div>}
           <table className="schedule-table">
             <thead><tr>{selectedTeam && <th>WK</th>}<th>Date</th><th>Matchup</th><th>{visibleGames.some(isFinal) ? "Result / Time" : "Time"}</th><th>TV</th><th>Game</th></tr></thead>
             <tbody>
-              {visibleGames.map((game) => {
+              {gamesByWeek.flatMap(([gameWeek, weekGames]) => [
+                !selectedTeam && <tr className="schedule-week-row" key={`week-${gameWeek}`}><th colSpan={5}><span>Week {gameWeek}</span><small>{weekGames.length} {weekGames.length === 1 ? "game" : "games"}</small></th></tr>,
+                ...weekGames.map((game) => {
                 const final = isFinal(game);
                 const homeWon = Number(game.HomeScore) > Number(game.AwayScore);
                 const chosenIsHome = selectedTeam === game.Home;
@@ -103,10 +103,10 @@ export function LeagueSchedules({
                   <td>{game.Network || "AFL Network"}</td>
                   <td><button className="schedule-game-link" type="button" onClick={() => onSelectGame(game)}>Gamecast ›</button></td>
                 </tr>;
-              })}
+              })])}
             </tbody>
           </table>
-          {!visibleGames.length && <div className="schedule-no-games"><strong>No games scheduled</strong><span>The Week {week} schedule has not been announced yet.</span></div>}
+          {!visibleGames.length && <div className="schedule-no-games"><strong>No games scheduled</strong><span>The 2026 schedule has not been announced yet.</span></div>}
         </div>
       </section>
     </main>
