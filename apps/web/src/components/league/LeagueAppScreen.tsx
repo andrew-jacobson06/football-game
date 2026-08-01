@@ -11,6 +11,7 @@ import { LeagueStandings } from "./LeagueStandings";
 import { LeagueStats } from "./LeagueStats";
 import { GameCenter } from "./GameCenter";
 import { GamesBanner } from "./GamesBanner";
+import { TeamDetail } from "./TeamDetail";
 import "./league.css";
 type LeagueAppScreenProps = {
   onBack?: () => void;
@@ -22,6 +23,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
   const [teams, setTeams] = useState<LeagueTeam[]>(mockTeams);
   const [standings, setStandings] = useState<LeagueTeam[]>(mockTeams);
   const [selectedGame, setSelectedGame] = useState<LeagueGame | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<LeagueTeam | null>(null);
   const [loadingGame, setLoadingGame] = useState<LeagueGame | null>(null);
   const [isExitingGameLoad, setIsExitingGameLoad] = useState(false);
   const gameLoadTimeout = useRef<number | null>(null);
@@ -91,6 +93,13 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
       <section className="league-app">
         <GamesBanner games={games} />
         <GameCenter game={selectedGame} onBack={() => setSelectedGame(null)} />
+      </section>
+    );
+  if (selectedTeam)
+    return (
+      <section className="league-app">
+        <GamesBanner games={games} />
+        <TeamDetail team={selectedTeam} games={games} onBack={() => setSelectedTeam(null)} onGame={openGame} />
       </section>
     );
   return (
@@ -165,12 +174,12 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
             )}
             {activeTab === "schedules" && (
               <div className="league-tab-content active">
-                <LeagueSchedules games={games} teams={teams} onSelectGame={openGame} />
+                <LeagueSchedules games={games} teams={teams} onSelectGame={openGame} onSelectTeam={setSelectedTeam} />
               </div>
             )}
             {activeTab === "standings" && (
               <div className="league-tab-content active">
-                <LeagueStandings teams={standings} />
+                <LeagueStandings teams={standings} onSelectTeam={setSelectedTeam} />
               </div>
             )}
             {activeTab === "stats" && (
