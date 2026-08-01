@@ -2566,3 +2566,8 @@
   right: auto;
   transform: none;
 }
+.recent-game-tabs { display: flex; border-bottom: 1px solid var(--border-color); }
+.recent-game-tabs button { flex: 1; padding: 12px; border: 0; border-bottom: 2px solid transparent; color: var(--text-muted); background: var(--surface-raised); font: inherit; font-size: .78rem; font-weight: 800; cursor: pointer; }
+.recent-game-tabs button:hover,.recent-game-tabs button:focus-visible { color: var(--text-primary); background: var(--surface-subtle); }
+.recent-game-tabs button.active { border-bottom-color: var(--accent-red); color: var(--text-primary); }
+.recent-game-tabs button:focus-visible { outline: 3px solid color-mix(in srgb, var(--control-accent) 30%, transparent); outline-offset: -3px; }

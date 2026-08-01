@@ -46,7 +46,7 @@ export async function getPlayerStats(): Promise<{
 }> {
   return getJson("/player-stats", "Failed to load player stats");
 }
-export type PlayerRushingGame = {
+export type PlayerGame = {
   gameId: string;
   opponent: string;
   location: "vs" | "@";
@@ -56,12 +56,16 @@ export type PlayerRushingGame = {
   touchdowns: number;
   long: number;
   date: string;
+  passing: { completions: number; attempts: number; yards: number; touchdowns: number; interceptions: number; long: number; sacks: number };
+  rushing: { carries: number; yards: number; touchdowns: number; long: number };
+  receiving: { receptions: number; targets: number; yards: number; touchdowns: number; long: number; firstDowns: number };
+  fumbles: { total: number; lost: number };
 };
-export async function getPlayerRushingGames(
+export async function getPlayerGames(
   playerName: string,
-): Promise<{ games: PlayerRushingGame[] }> {
+): Promise<{ games: PlayerGame[] }> {
   return getJson(
-    `/players/${encodeURIComponent(playerName)}/rushing-games`,
+    `/players/${encodeURIComponent(playerName)}/games`,
     "Failed to load player game log",
   );
 }
