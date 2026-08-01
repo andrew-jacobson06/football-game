@@ -91,6 +91,7 @@ type Stat = {
   dLineLosses?: number;
   oLineWins?: number;
   oLineLosses?: number;
+  leadBlocks?: number;
 };
 const str = (v: unknown) => String(v ?? "");
 const num = (v: unknown) => Number(v) || 0;
@@ -567,6 +568,13 @@ function calcStats(history: Play[]) {
         else if (m.winner === "OL") s.dLineLosses = (s.dLineLosses || 0) + 1;
       }
     });
+    const leadBlocker = str(
+      playField(p, "leadblocker", "LeadBlocker", "leadBlocker"),
+    ).trim();
+    if (leadBlocker) {
+      const s = get(offball, leadBlocker, team);
+      s.leadBlocks = (s.leadBlocks || 0) + 1;
+    }
     if (type === "Pass" || isSack) {
       if (qb) {
         const s = get(pass, qb, team);
@@ -830,11 +838,36 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
         p.ints || 0,
         p.deflections || 0,
       ]);
-  const offballRows = (team: string) =>
-    stats.offball
+  const offballRows = (team: string) => {
+    const rows = stats.offball
       .filter((p) => p.team === team)
-      .sort((a, b) => (b.oLineWins || 0) - (a.oLineWins || 0))
-      .map((p) => [p.playername, p.oLineWins || 0, p.oLineLosses || 0]);
+      .sort((a, b) => (b.oLineWins || 0) - (a.oLineWins || 0));
+    const totals = rows.reduce(
+      (total, player) => ({
+        wins: total.wins + (player.oLineWins || 0),
+        losses: total.losses + (player.oLineLosses || 0),
+        leadBlocks: total.leadBlocks + (player.leadBlocks || 0),
+      }),
+      { wins: 0, losses: 0, leadBlocks: 0 },
+    );
+    const winPct = (wins: number, losses: number) =>
+      `${(wins + losses ? (wins / (wins + losses)) * 100 : 0).toFixed(1)}%`;
+    const output: (string | number)[][] = rows.map((p) => [
+      p.playername,
+      p.oLineWins || 0,
+      p.oLineLosses || 0,
+      p.leadBlocks || 0,
+      winPct(p.oLineWins || 0, p.oLineLosses || 0),
+    ]);
+    output.push([
+      "TEAM",
+      totals.wins,
+      totals.losses,
+      totals.leadBlocks,
+      winPct(totals.wins, totals.losses),
+    ]);
+    return output;
+  };
   const teamName = (t: string) => (t === "Home" ? game.Home : game.Away);
   const renderTeam = (team: string) => (
     <>
@@ -880,8 +913,8 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
         rows={defRows(team)}
       />
       <TeamTable
-        title={`${teamName(team)} Offensive Offball`}
-        columns={["Player", "OL W", "OL L"]}
+        title={`${teamName(team)} Offensive Line`}
+        columns={["Player", "OL W", "OL L", "LEAD", "WIN %"]}
         rows={offballRows(team)}
       />
     </>

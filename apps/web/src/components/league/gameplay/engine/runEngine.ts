@@ -560,6 +560,12 @@ export function runPlay(
       olLosses: dlWins,
       dlWins,
       dlLosses: olWins,
+      // A lead blocker is credited only when the runner sees and hits an OL-won
+      // lane. Missed-hole plays intentionally leave the sheet cell empty.
+      leadblocker:
+        visionCheck.getsPastDL && runLaneTarget.selectedSide === "OL"
+          ? runLaneTarget.selectedPlayer
+          : "",
       trucks: successfulTrucks,
       brokenTackles: successfulTrucks,
       jukes: successfulJukes,
