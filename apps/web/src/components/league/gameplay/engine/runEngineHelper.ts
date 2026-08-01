@@ -914,7 +914,7 @@ function addSecondarySpeedYards(
   }
   if (pursuitResult?.escaped) {
     addSecondaryBreakawayYards(runState, players, settings);
-    resolveBreakawayPursuit(runState, defenseFormation, players, pursuitResult.chaser);
+    tackleByFastestSecondaryDefender(runState, defenseFormation, players);
   }
 }
 
@@ -996,11 +996,10 @@ function addSecondaryBreakawayYards(
   }
 }
 
-function resolveBreakawayPursuit(
+function tackleByFastestSecondaryDefender(
   runState: RunPlayState,
   defenseFormation: DefensiveAssignment[],
   players: PlayerTrait[],
-  initialChaser?: string,
 ) {
   if (runState.stopped) return;
 
@@ -1022,29 +1021,21 @@ function resolveBreakawayPursuit(
 
   const startYards = runState.yards;
   const chaser = fastestDefender.assignment.player;
-  const runnerSpeed = trait(findPlayerByName(players, runState.runner), "speed");
-  // A defender already beaten in the first chase has less leverage on a second
-  // attempt; a new pursuit angle gets a small positioning advantage.
-  const catchChance = Math.max(
-    8,
-    Math.min(82, 48 + fastestDefender.speed - runnerSpeed + (chaser === initialChaser ? -12 : 6)),
+  handleRunnerTackle(
+    runState,
+    chaser,
+    "Breakaway End Fastest Secondary Defender",
+    players,
   );
-  const caught = Math.random() * 100 < catchChance;
-  if (caught) {
-    handleRunnerTackle(runState, chaser, "Breakaway Pursuit", players);
-    runState.log.push(`${chaser} stays in hot pursuit and tracks down ${runState.runner} after the breakaway.`);
-  } else {
-    // Crossing the goal line is clamped to the actual remaining field distance
-    // by runPlay's scoreboard resolution.
-    addYards(runState, 100, `${runState.runner} pulls away from ${chaser} and races to the end zone`);
-    runState.log.push(`${chaser} cannot close the gap; ${runState.runner} finishes the escape in the end zone.`);
-  }
+  runState.log.push(
+    `${chaser} tracks down ${runState.runner} after the breakaway as the fastest DB/LB/S on the field.`,
+  );
   runState.pursuitEvents.push({
     stage: "breakaway",
     chaser,
     startYards,
     endYards: runState.yards,
-    escaped: !caught,
+    escaped: false,
   });
 }
 
