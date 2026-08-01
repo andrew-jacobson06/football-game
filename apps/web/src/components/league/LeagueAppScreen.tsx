@@ -87,17 +87,37 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
     setIsExitingGameLoad(false);
   };
 
+  const returnToLeagueHome = () => {
+    if (gameLoadTimeout.current !== null) {
+      window.clearTimeout(gameLoadTimeout.current);
+      gameLoadTimeout.current = null;
+    }
+    setSelectedGame(null);
+    setSelectedTeam(null);
+    setLoadingGame(null);
+    setIsExitingGameLoad(false);
+    setActiveTab("scores");
+  };
+
   if (selectedGame)
     return (
       <section className="league-app">
-        <GamesBanner games={games} />
+        <GamesBanner
+          games={games}
+          onHome={returnToLeagueHome}
+          onSelectGame={openGame}
+        />
         <GameCenter game={selectedGame} onBack={() => setSelectedGame(null)} />
       </section>
     );
   if (selectedTeam)
     return (
       <section className="league-app">
-        <GamesBanner games={games} />
+        <GamesBanner
+          games={games}
+          onHome={returnToLeagueHome}
+          onSelectGame={openGame}
+        />
         <TeamDetail team={selectedTeam} standings={standings} games={games} onBack={() => setSelectedTeam(null)} onGame={openGame} />
       </section>
     );
@@ -158,7 +178,11 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
               ← Back
             </button>
           )}
-          <GamesBanner games={games} />
+          <GamesBanner
+            games={games}
+            onHome={returnToLeagueHome}
+            onSelectGame={openGame}
+          />
           <LeagueHeader activeTab={activeTab} onTabChange={setActiveTab} />
           <div id="tabContents">
             {activeTab === "news" && (
