@@ -318,16 +318,24 @@
 .schedule-table th { padding: 11px 8px; color: #69717a; text-align: left; text-transform: uppercase; font-size: .66rem; letter-spacing: .05em; }
 .schedule-table td { padding: 13px 8px; border-top: 1px solid #e6e8eb; color: #606871; font-size: .8rem; }
 .schedule-table tbody tr:nth-child(even) { background: #f7f8f9; }
+.schedule-table tbody tr { cursor: pointer; }
+.schedule-table tbody tr:hover { background: #edf5fc; }
 .schedule-table .schedule-week-row { background: #eef1f4; }
 .schedule-table .schedule-week-row th { padding: 17px 10px 9px; border-bottom: 2px solid #cfd4da; color: #242b33; }
 .schedule-week-row th span { font-size: .9rem; font-weight: 900; }
 .schedule-week-row th small { margin-left: 12px; color: #7a838d; font-size: .62rem; font-weight: 700; }
 .schedule-matchup { display: flex; align-items: center; gap: 14px; color: #1e252d; }
 .schedule-matchup span { display: grid; min-width: 58px; }
+.schedule-matchup .schedule-team { grid-template-columns: 30px minmax(70px, auto); align-items: center; gap: 8px; color: #076dcc; }
+.schedule-team img { width: 26px; height: 26px; object-fit: contain; }
 .schedule-matchup small { color: #89919a; font-size: .6rem; text-transform: uppercase; }
 .schedule-matchup em { color: #9299a1; font-style: normal; }
 .kickoff-time, .schedule-game-link { color: #076dcc; }
 .schedule-game-link { padding: 0; border: 0; background: transparent; cursor: pointer; font-weight: 700; }
+.schedule-day + .schedule-day { margin-top: 30px; }
+.schedule-day h2 { margin: 0; padding: 0 0 10px; border-bottom: 1px solid #d7dbe0; font-size: 1rem; }
+.schedule-location, .schedule-weather { display: block; }
+.schedule-weather { margin-top: 3px; color: #7c858f; font-size: .68rem; }
 .game-result { white-space: nowrap; color: #076dcc; }
 .game-result b { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 7px; color: #fff; border-radius: 50%; font-size: .67rem; }
 .game-result.win b { background: #05884e; }
