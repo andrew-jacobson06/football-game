@@ -71,9 +71,25 @@ function profileStats(player: Player, row: PlayerStats, side: PlayerStatSide): P
   };
 
   if (side === "defense") {
-    if (position === "DB") return [stat("TKL", ["Tackles", "Total Tackles", "TOT"]), stat("DFL", ["DFL", "Defl", "Deflections", "Passes Defended", "PassDeflections"]), stat("INT", ["INT", "Interceptions"])];
-    if (position === "LB") return [stat("TKL", ["Tackles", "Total Tackles", "TOT"]), stat("SACK", ["Sacks", "Sack"]), stat("FF", ["FF", "Forced Fumbles", "ForcedFumbles"]), stat("INT", ["INT", "Interceptions"])];
-    return [stat("TKL", ["Tackles", "Total Tackles", "TOT"]), stat("TFL", ["TFL", "Tackles For Loss", "TacklesForLoss"]), stat("SACK", ["Sacks", "Sack"]), stat("FF", ["FF", "Forced Fumbles", "ForcedFumbles"])];
+    const wins = statValue(row, ["DL W", "DL Wins", "Defensive Line Wins"]);
+    const losses = statValue(row, ["DL L", "DL Losses", "Defensive Line Losses"]);
+    const attempts = statValue(row, ["DL Plays", "Defensive Line Plays"]) || wins + losses;
+    const recordedWinRate = statValue(row, ["DL Win %", "DL Win%", "DL Win Percentage"]);
+    return [
+      { label: "DL WIN %", value: `${(recordedWinRate || (attempts ? wins / attempts * 100 : 0)).toFixed(1)}%` },
+      stat("TACKLES", ["Tackles", "Total Tackles", "TOT"]),
+      stat("TFL", ["TFL", "Tackles For Loss", "TacklesForLoss"]),
+      stat("SACK", ["Sacks", "Sack"]),
+      stat("FF", ["FF", "Forced Fumbles", "ForcedFumbles"]),
+      stat("FR", ["FR", "Fumble Recoveries", "FumbleRecoveries"]),
+      stat("FUM RET YDS", ["Fum Ret Yds", "Fumble Return Yards", "FumbleReturnYards"]),
+      stat("FUM TD", ["Fum TD", "Fumble TD", "Fumble Return TD", "FumbleReturnTD"]),
+      stat("DEFL", ["DEFL", "DFL", "Defl", "Deflections", "Passes Defended", "PassDeflections"]),
+      stat("INT", ["INT", "Interceptions"]),
+      stat("INT RET YDS", ["Int Ret Yds", "Interception Return Yards", "IntReturnYards"]),
+      stat("INT TD", ["Int TD", "Interception TD", "Interception Return TD", "IntReturnTD"]),
+      stat("SAFETY FORCED", ["Safety Forced", "Safeties Forced", "Safety", "Safeties"]),
+    ];
   }
 
   if (position === "QB") return [stat("YDS", ["Passing Yards", "Pass Yards", "PassYards"]), stat("TD", ["Passing TD", "Pass TD", "TD Passes"]), stat("INT", ["Interceptions Thrown", "Pass INT"]), stat("QBR", ["QBR", "Passer Rating", "Rating", "RTG"])];
@@ -131,7 +147,7 @@ function PlayerStatsProfile({ player, row, team, stats, playersByName, onBack }:
   const [statSide, setStatSide] = useState<PlayerStatSide>("offense");
   const [recentGames, setRecentGames] = useState<PlayerGame[]>([]);
   const [gamesLoading, setGamesLoading] = useState(true);
-  const [gameStatTab, setGameStatTab] = useState<"Passing" | "Receiving" | "Rushing" | "Fumbles">("Rushing");
+  const [gameStatTab, setGameStatTab] = useState<"Passing" | "Receiving" | "Rushing" | "Fumbles" | "Defense">("Rushing");
   const name = String(player.Name || row?.Player || "Player");
   const summary = profileStats(player, row || {} as PlayerStats, statSide);
   const ranks = leagueRanks(player, row || {} as PlayerStats, statSide, stats, playersByName);
@@ -141,13 +157,14 @@ function PlayerStatsProfile({ player, row, team, stats, playersByName, onBack }:
   const isRunningBack = statSide === "offense" && shownPosition === "RB";
   const isQuarterback = statSide === "offense" && shownPosition === "QB";
   const isReceiver = statSide === "offense" && (shownPosition === "WR" || shownPosition === "TE");
+  const isDefensive = statSide === "defense";
   useEffect(() => {
-    if (!isRunningBack && !isQuarterback && !isReceiver) return;
+    if (!isRunningBack && !isQuarterback && !isReceiver && !isDefensive) return;
     getPlayerGames(name).then(({ games }) => {
       setRecentGames(games);
-      setGameStatTab(isQuarterback ? "Passing" : isReceiver ? "Receiving" : "Rushing");
+      setGameStatTab(isDefensive ? "Defense" : isQuarterback ? "Passing" : isReceiver ? "Receiving" : "Rushing");
     }).catch(() => setRecentGames([])).finally(() => setGamesLoading(false));
-  }, [isQuarterback, isReceiver, isRunningBack, name]);
+  }, [isDefensive, isQuarterback, isReceiver, isRunningBack, name]);
   const rbGroups = [
     { title: "RUSHING", stats: [{ label: "CAR", fields: ["Carries", "Rushing Attempts", "Rush Attempts"] }, { label: "YDS", fields: ["Yards", "Rushing Yards", "Rush Yards"] }, { label: "AVG", value: summary.find((item) => item.label === "AVG")?.value || "0.0" }, { label: "TD", fields: ["Rushing TD", "Rush TD", "TD"] }, { label: "LNG", fields: ["Long", "LNG"] }] },
     { title: "RECEIVING", stats: [{ label: "REC", fields: ["Receptions", "REC"] }, { label: "YDS", fields: ["Receiving Yards", "Rec Yards", "RecYards"] }, { label: "AVG", value: (statValue(row || {} as PlayerStats, ["Receptions", "REC"]) ? statValue(row || {} as PlayerStats, ["Receiving Yards", "Rec Yards", "RecYards"]) / statValue(row || {} as PlayerStats, ["Receptions", "REC"]) : 0).toFixed(1) }, { label: "TD", fields: ["Receiving TD", "Rec TD"] }, { label: "LNG", fields: ["Receiving Long", "Rec Long"] }] },
@@ -162,10 +179,11 @@ function PlayerStatsProfile({ player, row, team, stats, playersByName, onBack }:
     rbGroups[0],
     rbGroups[2],
   ];
-  const overviewGroups = isQuarterback ? qbGroups : isReceiver ? receiverGroups : isRunningBack ? rbGroups : null;
-  const gameTabs = isQuarterback ? ["Passing", "Rushing"] as const : isReceiver ? ["Receiving", "Rushing", "Fumbles"] as const : ["Rushing"] as const;
-  const recentColumns = gameStatTab === "Passing" ? ["CMP", "ATT", "YDS", "CMP%", "AVG", "TD", "INT", "LNG", "SACK"] : gameStatTab === "Receiving" ? ["REC", "TGTS", "YDS", "AVG", "TD", "LNG", "FD"] : gameStatTab === "Fumbles" ? ["FUM", "LST"] : ["CAR", "YDS", "AVG", "TD", "LNG"];
-  const recentValues = (game: PlayerGame) => gameStatTab === "Passing" ? [game.passing.completions, game.passing.attempts, game.passing.yards, game.passing.attempts ? (game.passing.completions / game.passing.attempts * 100).toFixed(1) : "0.0", game.passing.attempts ? (game.passing.yards / game.passing.attempts).toFixed(1) : "0.0", game.passing.touchdowns, game.passing.interceptions, game.passing.long, game.passing.sacks] : gameStatTab === "Receiving" ? [game.receiving.receptions, game.receiving.targets, game.receiving.yards, game.receiving.receptions ? (game.receiving.yards / game.receiving.receptions).toFixed(1) : "0.0", game.receiving.touchdowns, game.receiving.long, game.receiving.firstDowns] : gameStatTab === "Fumbles" ? [game.fumbles.total, game.fumbles.lost] : [game.rushing.carries, game.rushing.yards, game.rushing.carries ? (game.rushing.yards / game.rushing.carries).toFixed(1) : "0.0", game.rushing.touchdowns, game.rushing.long];
+  const defensiveGroups = [{ title: "DEFENSE", stats: summary.map((item) => ({ label: item.label, value: item.value })) }];
+  const overviewGroups = isDefensive ? defensiveGroups : isQuarterback ? qbGroups : isReceiver ? receiverGroups : isRunningBack ? rbGroups : null;
+  const gameTabs = isDefensive ? ["Defense"] as const : isQuarterback ? ["Passing", "Rushing"] as const : isReceiver ? ["Receiving", "Rushing", "Fumbles"] as const : ["Rushing"] as const;
+  const recentColumns = gameStatTab === "Defense" ? ["DL WIN %", "TKL", "TFL", "SACKS", "FF", "INT"] : gameStatTab === "Passing" ? ["CMP", "ATT", "YDS", "CMP%", "AVG", "TD", "INT", "LNG", "SACK"] : gameStatTab === "Receiving" ? ["REC", "TGTS", "YDS", "AVG", "TD", "LNG", "FD"] : gameStatTab === "Fumbles" ? ["FUM", "LST"] : ["CAR", "YDS", "AVG", "TD", "LNG"];
+  const recentValues = (game: PlayerGame) => gameStatTab === "Defense" ? [game.defense.dlAttempts ? `${(game.defense.dlWins / game.defense.dlAttempts * 100).toFixed(1)}%` : "0.0%", game.defense.tackles, game.defense.tacklesForLoss, game.defense.sacks, game.defense.forcedFumbles, game.defense.interceptions] : gameStatTab === "Passing" ? [game.passing.completions, game.passing.attempts, game.passing.yards, game.passing.attempts ? (game.passing.completions / game.passing.attempts * 100).toFixed(1) : "0.0", game.passing.attempts ? (game.passing.yards / game.passing.attempts).toFixed(1) : "0.0", game.passing.touchdowns, game.passing.interceptions, game.passing.long, game.passing.sacks] : gameStatTab === "Receiving" ? [game.receiving.receptions, game.receiving.targets, game.receiving.yards, game.receiving.receptions ? (game.receiving.yards / game.receiving.receptions).toFixed(1) : "0.0", game.receiving.touchdowns, game.receiving.long, game.receiving.firstDowns] : gameStatTab === "Fumbles" ? [game.fumbles.total, game.fumbles.lost] : [game.rushing.carries, game.rushing.yards, game.rushing.carries ? (game.rushing.yards / game.rushing.carries).toFixed(1) : "0.0", game.rushing.touchdowns, game.rushing.long];
   return <main className="player-detail-page">
     <button className="profile-back" type="button" onClick={onBack}>← Back to league leaders</button>
     <section className="player-detail-hero">
@@ -173,7 +191,7 @@ function PlayerStatsProfile({ player, row, team, stats, playersByName, onBack }:
       <div className="player-detail-name"><span>{shownPosition || "PLAYER"}</span><h1>{name}</h1><p>{logo && <img src={logo} alt="" />} <b>{teamName(team || {})}</b> · #{String(player.Jersey || player.jersey || "--")} · {shownPosition || "--"}</p><button className="player-stat-side-toggle" type="button" onClick={() => setStatSide(statSide === "offense" ? "defense" : "offense")}>View {otherSide} Stats</button></div>
       <dl className="player-detail-facts"><div><dt>HEIGHT / WEIGHT</dt><dd>{String(player.Size || "—")}</dd></div><div><dt>TEAM</dt><dd>{teamName(team || {})}</dd></div><div><dt>POSITION</dt><dd>{shownPosition || "—"}</dd></div><div><dt>STATUS</dt><dd><i /> Active</dd></div></dl>
     </section>
-    <section className="player-featured-stats"><h2>SEASON 1 REGULAR SEASON {statSide.toUpperCase()} STATS</h2><div>{summary.map(({ label, value }, index) => <article key={label}><span>{label}</span><strong>{value}</strong><small>{ranks[index]}</small></article>)}</div></section>
+    <section className={`player-featured-stats${isDefensive ? " player-featured-stats--defense" : ""}`}><h2>SEASON 1 REGULAR SEASON {statSide.toUpperCase()} STATS</h2><div>{summary.map(({ label, value }, index) => <article key={label}><span>{label}</span><strong>{value}</strong><small>{ranks[index]}</small></article>)}</div></section>
     <nav className="player-detail-tabs">{(["Overview", "News", "Stats", "Bio", "Splits", "Game Log"] as PlayerProfileTab[]).map((item) => <button className={tab === item ? "active" : ""} type="button" onClick={() => setTab(item)} key={item}>{item}</button>)}</nav>
     {tab === "Overview" ? <div className="player-overview-grid"><section><header><h3>Season 1 {shownPosition || "Player"} Statistics</h3></header>{overviewGroups ? <div className="player-stat-table-scroll"><table className="rb-overview-table"><thead><tr><th rowSpan={2}>STATS</th>{overviewGroups.map((group) => <th key={group.title} colSpan={group.stats.length}>{group.title}</th>)}</tr><tr>{overviewGroups.flatMap((group) => group.stats.map((stat) => <th key={`${group.title}-${stat.label}`}>{stat.label}</th>))}</tr></thead><tbody><tr><td>Regular Season</td>{overviewGroups.flatMap((group) => group.stats.map((stat) => <td key={`${group.title}-${stat.label}`}>{"value" in stat ? stat.value : displayStat(row || {} as PlayerStats, stat.fields)}</td>))}</tr></tbody></table></div> : <div className="player-stat-table-scroll"><table><thead><tr><th>STATS</th>{summary.map(({ label }) => <th key={label}>{label}</th>)}</tr></thead><tbody><tr><td>Regular Season</td>{summary.map(({ label, value }) => <td key={label}>{value}</td>)}</tr></tbody></table></div>}</section><section><header><h3>Recent Games</h3></header>{overviewGroups && <nav className="recent-game-tabs" aria-label="Recent game statistic category">{gameTabs.map((item) => <button type="button" className={gameStatTab === item ? "active" : ""} onClick={() => setGameStatTab(item)} key={item}>{item}</button>)}</nav>}{overviewGroups && recentGames.length ? <div className="player-stat-table-scroll"><table className="recent-games-table"><thead><tr><th>DATE</th><th>OPP</th><th>RESULT</th>{recentColumns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{recentGames.map((game) => <tr key={game.gameId}><td>{game.date || "—"}</td><td>{game.location} {game.opponent}</td><td className={game.result.startsWith("W") ? "game-result-win" : "game-result-loss"}>{game.result}</td>{recentValues(game).map((value, index) => <td key={`${game.gameId}-${recentColumns[index]}`}>{value}</td>)}</tr>)}</tbody></table></div> : <div className="empty-profile-state">{gamesLoading && overviewGroups ? "Loading completed games…" : "Game-by-game statistics will appear after completed games."}</div>}</section></div> : <section className="player-tab-stub"><span>{tab.toUpperCase()}</span><h2>{tab} coming soon</h2><p>This player section is ready for future league data.</p></section>}
   </main>;

@@ -408,9 +408,22 @@ gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
     const playType = index(historySheet.headers, "playtype");
     const playYards = index(historySheet.headers, "yards", "yardsgained");
     const playResult = index(historySheet.headers, "result", "description");
+    const playDefenseResult = index(historySheet.headers, "defenseresult");
+    const playTackler = index(historySheet.headers, "tackler");
+    const playRecoveredBy = index(historySheet.headers, "recoveredby");
+    const playLineMatchups = index(historySheet.headers, "linematchups");
+    const lineMatchups = (row: Row) => {
+      try {
+        const parsed: unknown = JSON.parse(String(cell(row, playLineMatchups) || "[]"));
+        return Array.isArray(parsed) ? parsed as Array<Record<string, unknown>> : [];
+      } catch {
+        return [];
+      }
+    };
+    const isPlayer = (value: unknown) => String(value).trim().toLowerCase() === playerName;
     const playerPlays = historySheet.rows.filter((row) =>
-      [cell(row, playPlayer), cell(row, playReceiver)]
-        .some((value) => String(value).trim().toLowerCase() === playerName),
+      [cell(row, playPlayer), cell(row, playReceiver), cell(row, playTackler), cell(row, playRecoveredBy)].some(isPlayer) ||
+      lineMatchups(row).some((matchup) => isPlayer(matchup.defensePlayer)),
     );
     const byGame = new Map<string, Row[]>();
     playerPlays.forEach((row) => {
@@ -450,6 +463,10 @@ gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
       const receivingPlays = plays.filter((play) => isNamed(play, playReceiver) && isPass(play));
       const receptions = receivingPlays.filter((play) => !/incomplete|interception/i.test(result(play)));
       const fumblePlays = plays.filter((play) => (isNamed(play, playPlayer) || isNamed(play, playReceiver)) && /fumble/i.test(result(play)));
+      const tackles = plays.filter((play) => isNamed(play, playTackler));
+      const defensiveResult = (play: Row) => String(cell(play, playDefenseResult) || cell(play, playResult));
+      const matchupRows = plays.flatMap((play) => lineMatchups(play)).filter((matchup) => isPlayer(matchup.defensePlayer));
+      const interceptions = plays.filter((play) => isNamed(play, playRecoveredBy) && /interception/i.test(defensiveResult(play)));
       const values = (rows: Row[]) => rows.map((play) => asNumber(cell(play, playYards)));
       const passYards = values(completions);
       const receivingYards = values(receptions);
@@ -461,6 +478,7 @@ gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
         rushing: { carries: rushingPlays.length, yards: yards.reduce((sum, value) => sum + value, 0), touchdowns, long: Math.max(0, ...yards) },
         receiving: { receptions: receptions.length, targets: receivingPlays.length, yards: receivingYards.reduce((sum, value) => sum + value, 0), touchdowns: receptions.filter((play) => /touchdown|\btd\b/i.test(result(play))).length, long: Math.max(0, ...receivingYards), firstDowns: 0 },
         fumbles: { total: fumblePlays.length, lost: fumblePlays.filter((play) => /lost|turnover/i.test(result(play))).length },
+        defense: { dlWins: matchupRows.filter((matchup) => matchup.winner === "DL").length, dlAttempts: matchupRows.length, tackles: tackles.length, tacklesForLoss: tackles.filter((play) => /TFL/i.test(defensiveResult(play))).length, sacks: tackles.filter((play) => /sack/i.test(defensiveResult(play))).length, forcedFumbles: tackles.filter((play) => /fumble/i.test(defensiveResult(play))).length, interceptions: interceptions.length },
       }];
     });
     res.json({ games });
