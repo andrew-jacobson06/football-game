@@ -774,6 +774,20 @@
 .league-stats-card .complete-link { padding: 11px 0 0; text-align: center; }
 .league-stats-card .complete-link button { color: #69adff; text-decoration: none; font-size: .78rem; font-weight: 700; }
 .league-stats-card .complete-rushing-leaders { margin-top: 10px; }
+.team-stat-nav { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 20px; border-bottom: 1px solid var(--border-color); text-align: center; }
+.team-stat-nav > * { padding: 13px 8px; color: var(--text-muted); font-size: .8rem; }
+.team-stat-nav b { color: var(--text-light); border-bottom: 2px solid var(--accent-red); }
+.team-stat-filters { display: flex; gap: 10px; margin: 0 0 14px; }
+.team-stat-filters button { padding: 9px 15px; border: 1px solid var(--border-color); border-radius: 20px; color: var(--text-light); background: transparent; }
+.team-table-back { margin: 0 0 12px; color: #69adff; font-size: .78rem; }
+.team-complete-table { width: 100%; min-width: 850px; border-collapse: collapse; font-size: .76rem; }
+.team-complete-table th, .team-complete-table td { padding: 8px 7px; border-top: 1px solid var(--border-color); text-align: right; white-space: nowrap; }
+.team-complete-table th { color: var(--text-muted); font-size: .66rem; text-decoration: underline; text-underline-offset: 2px; }
+.team-complete-table th:first-child, .team-complete-table td:first-child { min-width: 170px; text-align: left; }
+.team-complete-table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--gray-dark) 45%, transparent); }
+.team-complete-table td:nth-child(4) { background: color-mix(in srgb, #5b9bd5 16%, transparent); }
+.team-table-name { display: flex; align-items: center; gap: 8px; color: #69adff; }
+.team-table-name img { width: 23px; height: 23px; object-fit: contain; }
 .league-stats-card .stats-updated { margin-bottom: 0; }
 @media (max-width: 760px) {
   .league-stats-card { width: calc(100% - 20px); margin-top: 10px; padding: 16px; }
