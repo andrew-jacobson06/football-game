@@ -19,6 +19,9 @@ export type LeagueGame = {
   Kickoff?: string;
   Network?: string;
   Weather?: string;
+  Location?: string;
+  Stadium?: string;
+  Venue?: string;
   HomeLogo?: string;
   AwayLogo?: string;
   HomeName?: string;
