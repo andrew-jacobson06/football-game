@@ -6,6 +6,7 @@ import { normalizeGames } from "./leagueMappers";
 import { LeagueHeader } from "./LeagueHeader";
 import { LeagueNews } from "./LeagueNews";
 import { LeagueSchedule } from "./LeagueSchedule";
+import { LeagueSchedules } from "./LeagueSchedules";
 import { LeagueStandings } from "./LeagueStandings";
 import { LeagueStats } from "./LeagueStats";
 import { GameCenter } from "./GameCenter";
@@ -147,6 +148,11 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
             {activeTab === "scores" && (
               <div className="league-tab-content active">
                 <LeagueSchedule games={games} onSelectGame={openGame} />
+              </div>
+            )}
+            {activeTab === "schedules" && (
+              <div className="league-tab-content active">
+                <LeagueSchedules games={games} teams={teams} onSelectGame={openGame} />
               </div>
             )}
             {activeTab === "standings" && (

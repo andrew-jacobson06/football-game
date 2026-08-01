@@ -1,4 +1,4 @@
-export type LeagueTab = "news" | "scores" | "standings" | "stats" | "draft";
+export type LeagueTab = "news" | "scores" | "schedules" | "standings" | "stats" | "draft";
 export type GameTab = "gamecast" | "playbyplay" | "boxscore" | "teamstats";
 
 export type LeagueGame = {
