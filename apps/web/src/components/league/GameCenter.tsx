@@ -1445,7 +1445,7 @@ function PregameMatchup({
       <section><h3>Season Leaders</h3>{categories.map((category) => { const result = leader(team, category.fields); return <div className="pregame-leader" key={category.label}><span>{category.label}</span><strong>{result?.name ?? "—"}</strong><b>{result?.value.toLocaleString() ?? "—"}</b></div>; })}</section>
     </article>;
   };
-  return <section className="pregame-matchup" aria-label="Pregame matchup details"><div className="pregame-heading"><span>Pregame matchup</span><h1>Today's uniforms &amp; season leaders</h1></div><div className="pregame-team-grid">{teamCard(away, "away")}{teamCard(home, "home")}</div></section>;
+  return <section className="pregame-matchup" aria-label="Pregame matchup details"><div className="pregame-heading"><span>Pregame matchup</span><h1>Today's uniforms &amp; season leaders</h1></div><div className="pregame-team-grid">{teamCard(home, "home")}{teamCard(away, "away")}</div></section>;
 }
 
 /**
