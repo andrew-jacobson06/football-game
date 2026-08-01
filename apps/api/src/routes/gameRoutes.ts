@@ -81,6 +81,36 @@ async function getPlayersWithTeamJerseys() {
     Jersey: jerseys.get(String(player.Team ?? "").trim().toLowerCase()) ?? "",
   }));
 }
+async function getTeamPlayers(teamAbbrev: string) {
+  const [assignments, players, playerStats, jerseys] = await Promise.all([
+    readSheetObjects("PlayerTeams!A1:B"),
+    readSheetObjects("Players!A1:AM"),
+    readSheetObjects("PlayerStats!A1:AI"),
+    getTeamJerseys(),
+  ]);
+  const teamKey = teamAbbrev.trim().toLowerCase();
+  const rosterNames = new Set(
+    assignments
+      .filter((row) => String(row.Team ?? "").trim().toLowerCase() === teamKey)
+      .map((row) => String(row.Name ?? "").trim().toLowerCase())
+      .filter(Boolean),
+  );
+  const playersByName = new Map(
+    players.map((player) => [String(player.Name ?? "").trim().toLowerCase(), player]),
+  );
+  const statsByName = new Map<string, Record<string, string>>();
+  playerStats.forEach((stats) => {
+    const name = String(stats.Player ?? stats.Name ?? "").trim().toLowerCase();
+    if (name && rosterNames.has(name)) statsByName.set(name, stats);
+  });
+
+  return [...rosterNames].map((name) => ({
+    ...(playersByName.get(name) ?? { Name: assignments.find((row) => String(row.Name).trim().toLowerCase() === name)?.Name ?? name }),
+    Team: teamAbbrev,
+    Jersey: jerseys.get(teamKey) ?? "",
+    Stats: statsByName.get(name) ?? null,
+  }));
+}
 function normalizeSettingLabel(label: unknown) {
   return String(label || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -377,6 +407,7 @@ gameRoutes.get("/players/:playerName/rushing-games", async (req, res, next) => {
 gameRoutes.get("/player-traits", async (_req, res, next) => { try { res.json({ players: await getPlayerTraitsFromSheet() }); } catch (e) { next(e); } });
 gameRoutes.get("/teams", async (_req, res, next) => { try { res.json({ teams: await getTeamsFromSheet() }); } catch (e) { next(e); } });
 gameRoutes.get("/standings", async (_req, res, next) => { try { res.json({ standings: await getStandingsFromSheet() }); } catch (e) { next(e); } });
+gameRoutes.get("/teams/:team/players", async (req, res, next) => { try { res.json({ players: await getTeamPlayers(req.params.team) }); } catch (e) { next(e); } });
 gameRoutes.get("/games", async (_req, res, next) => { try { res.json({ games: await getGamesList() }); } catch (e) { next(e); } });
 gameRoutes.get("/games/:gameId/state", async (req, res, next) => { try { res.json({ gameState: await getGameState(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/games/:gameId/play-history", async (req, res, next) => { try { res.json({ plays: await getPlayHistory(req.params.gameId) }); } catch (e) { next(e); } });
