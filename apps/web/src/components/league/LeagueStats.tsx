@@ -60,12 +60,23 @@ function displayStat(row: PlayerStats, fields: readonly string[]) {
 function profileStat(row: PlayerStats, label: string, fields: string[]): ProfileStat {
   return { label, value: displayStat(row, fields), rankValue: (candidate) => statValue(candidate, fields) };
 }
+const DL_WIN_FIELDS = ["DL W", "DL Wins", "Defensive Line Wins"];
+const DL_LOSS_FIELDS = ["DL L", "DL Losses", "Defensive Line Losses"];
+const DL_WIN_RATE_FIELDS = ["DL Win %", "DL Win%", "DL Win Percentage"];
+const OL_WIN_FIELDS = ["OL W", "OL Wins", "Offensive Line Wins", "Line Wins"];
+const OL_LOSS_FIELDS = ["OL L", "OL Losses", "Offensive Line Losses", "Line Losses"];
+const OL_WIN_RATE_FIELDS = ["OL Win %", "OL Win%", "OL Win Percentage"];
+
+function lineWinRate(row: PlayerStats, winFields: string[], lossFields: string[], rateFields: string[]) {
+  const wins = statValue(row, winFields);
+  const attempts = wins + statValue(row, lossFields);
+  return attempts ? wins / attempts * 100 : statValue(row, rateFields);
+}
 function defensiveOverviewStats(row: PlayerStats): ProfileStat[] {
   const stat = (label: string, fields: string[]) => profileStat(row, label, fields);
-  const winRateFields = ["DL Win %", "DL Win%", "DL Win Percentage"];
-  const recordedWinRate = statValue(row, winRateFields);
+  const winRate = lineWinRate(row, DL_WIN_FIELDS, DL_LOSS_FIELDS, DL_WIN_RATE_FIELDS);
   return [
-    { label: "DL WIN %", value: `${recordedWinRate.toFixed(1)}%`, rankValue: (candidate) => statValue(candidate, winRateFields) },
+    { label: "DL WIN %", value: `${winRate.toFixed(1)}%`, rankValue: (candidate) => lineWinRate(candidate, DL_WIN_FIELDS, DL_LOSS_FIELDS, DL_WIN_RATE_FIELDS) },
     stat("TACKLES", ["Tackles", "Total Tackles", "TOT"]),
     stat("TFL", ["TFL", "Tackles For Loss", "TacklesForLoss"]),
     stat("SACK", ["Sacks", "Sack"]),
@@ -102,12 +113,11 @@ function profileStats(player: Player, row: PlayerStats, side: PlayerStatSide): P
   if (position === "RB") return [stat("CAR", ["Carries", "Rushing Attempts", "Rush Attempts"]), stat("YDS", ["Yards", "Rushing Yards", "Rush Yards"]), stat("TD", ["Rushing TD", "Rush TD"]), average(["Yards", "Rushing Yards", "Rush Yards"], ["Carries", "Rushing Attempts", "Rush Attempts"])];
   if (position === "WR" || position === "TE") return [stat("REC", ["Receptions", "REC"]), stat("YDS", ["Receiving Yards", "Rec Yards", "RecYards"]), stat("TD", ["Receiving TD", "Rec TD"]), average(["Receiving Yards", "Rec Yards", "RecYards"], ["Receptions", "REC"])];
   if (position === "K") return [stat("FG%", ["FG%", "Field Goal Percentage"]), stat("XP%", ["XP%", "Extra Point Percentage"]), stat("LNG", ["LNG", "Long", "Longest Field Goal"]), stat("PTS", ["PTS", "Points"])];
-  const wins = statValue(row, ["OL W", "OL Wins", "Line Wins"]);
-  const losses = statValue(row, ["OL L", "OL Losses", "Line Losses"]);
-  const plays = statValue(row, ["Total Plays on Line", "Line Plays", "OL Plays"]) || wins + losses;
-  const winRateFields = ["OL Win %", "OL Win%", "OL Win Percentage"];
-  const recordedWinRate = statValue(row, winRateFields);
-  return [{ label: "TOTAL PLAYS ON LINE", value: String(plays), rankValue: (candidate) => statValue(candidate, ["Total Plays on Line", "Line Plays", "OL Plays"]) || statValue(candidate, ["OL W", "OL Wins", "Line Wins"]) + statValue(candidate, ["OL L", "OL Losses", "Line Losses"]) }, { label: "WIN%", value: `${recordedWinRate.toFixed(1)}%`, rankValue: (candidate) => statValue(candidate, winRateFields) }, stat("LEAD BLOCK", ["Lead Block", "Lead Blocks"])];
+  const wins = statValue(row, OL_WIN_FIELDS);
+  const losses = statValue(row, OL_LOSS_FIELDS);
+  const plays = wins + losses;
+  const winRate = lineWinRate(row, OL_WIN_FIELDS, OL_LOSS_FIELDS, OL_WIN_RATE_FIELDS);
+  return [{ label: "TOTAL PLAYS ON LINE", value: String(plays), rankValue: (candidate) => statValue(candidate, OL_WIN_FIELDS) + statValue(candidate, OL_LOSS_FIELDS) }, { label: "WIN%", value: `${winRate.toFixed(1)}%`, rankValue: (candidate) => lineWinRate(candidate, OL_WIN_FIELDS, OL_LOSS_FIELDS, OL_WIN_RATE_FIELDS) }, stat("LEAD BLOCK", ["Lead Block", "Lead Blocks"])];
 }
 function teamName(team: LeagueTeam) { return String(team.Name || team.Team || team.Nickname || team.Abbrev || "Team"); }
 function ordinal(rank: number) {
