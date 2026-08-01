@@ -34,6 +34,8 @@ export type LeagueTeam = Record<string, string | number | undefined> & {
   Ties?: string | number;
   PF?: string | number;
   PA?: string | number;
+  DIFF?: string | number;
+  STRK?: string;
   Streak?: string;
   "Home W"?: string | number;
   "Home L"?: string | number;
