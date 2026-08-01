@@ -60,6 +60,28 @@ function displayStat(row: PlayerStats, fields: readonly string[]) {
 function profileStat(row: PlayerStats, label: string, fields: string[]): ProfileStat {
   return { label, value: displayStat(row, fields) };
 }
+function defensiveOverviewStats(row: PlayerStats): ProfileStat[] {
+  const stat = (label: string, fields: string[]) => profileStat(row, label, fields);
+  const wins = statValue(row, ["DL W", "DL Wins", "Defensive Line Wins"]);
+  const losses = statValue(row, ["DL L", "DL Losses", "Defensive Line Losses"]);
+  const attempts = statValue(row, ["DL Plays", "Defensive Line Plays"]) || wins + losses;
+  const recordedWinRate = statValue(row, ["DL Win %", "DL Win%", "DL Win Percentage"]);
+  return [
+    { label: "DL WIN %", value: `${(recordedWinRate || (attempts ? wins / attempts * 100 : 0)).toFixed(1)}%` },
+    stat("TACKLES", ["Tackles", "Total Tackles", "TOT"]),
+    stat("TFL", ["TFL", "Tackles For Loss", "TacklesForLoss"]),
+    stat("SACK", ["Sacks", "Sack"]),
+    stat("FF", ["FF", "Forced Fumbles", "ForcedFumbles"]),
+    stat("FR", ["FR", "Fumble Recoveries", "FumbleRecoveries"]),
+    stat("FUM RET YDS", ["Fum Ret Yds", "Fumble Return Yards", "FumbleReturnYards"]),
+    stat("FUM TD", ["Fum TD", "Fumble TD", "Fumble Return TD", "FumbleReturnTD"]),
+    stat("DEFL", ["DEFL", "DFL", "Defl", "Deflections", "Passes Defended", "PassDeflections"]),
+    stat("INT", ["INT", "Interceptions"]),
+    stat("INT RET YDS", ["Int Ret Yds", "Interception Return Yards", "IntReturnYards"]),
+    stat("INT TD", ["Int TD", "Interception TD", "Interception Return TD", "IntReturnTD"]),
+    stat("SAFETY FORCED", ["Safety Forced", "Safeties Forced", "Safety", "Safeties"]),
+  ];
+}
 function profileStats(player: Player, row: PlayerStats, side: PlayerStatSide): ProfileStat[] {
   const position = String(side === "offense" ? player.Pos : player.DefPos).trim().toUpperCase();
   const stat = (label: string, fields: string[]) => profileStat(row, label, fields);
@@ -71,25 +93,9 @@ function profileStats(player: Player, row: PlayerStats, side: PlayerStatSide): P
   };
 
   if (side === "defense") {
-    const wins = statValue(row, ["DL W", "DL Wins", "Defensive Line Wins"]);
-    const losses = statValue(row, ["DL L", "DL Losses", "Defensive Line Losses"]);
-    const attempts = statValue(row, ["DL Plays", "Defensive Line Plays"]) || wins + losses;
-    const recordedWinRate = statValue(row, ["DL Win %", "DL Win%", "DL Win Percentage"]);
-    return [
-      { label: "DL WIN %", value: `${(recordedWinRate || (attempts ? wins / attempts * 100 : 0)).toFixed(1)}%` },
-      stat("TACKLES", ["Tackles", "Total Tackles", "TOT"]),
-      stat("TFL", ["TFL", "Tackles For Loss", "TacklesForLoss"]),
-      stat("SACK", ["Sacks", "Sack"]),
-      stat("FF", ["FF", "Forced Fumbles", "ForcedFumbles"]),
-      stat("FR", ["FR", "Fumble Recoveries", "FumbleRecoveries"]),
-      stat("FUM RET YDS", ["Fum Ret Yds", "Fumble Return Yards", "FumbleReturnYards"]),
-      stat("FUM TD", ["Fum TD", "Fumble TD", "Fumble Return TD", "FumbleReturnTD"]),
-      stat("DEFL", ["DEFL", "DFL", "Defl", "Deflections", "Passes Defended", "PassDeflections"]),
-      stat("INT", ["INT", "Interceptions"]),
-      stat("INT RET YDS", ["Int Ret Yds", "Interception Return Yards", "IntReturnYards"]),
-      stat("INT TD", ["Int TD", "Interception TD", "Interception Return TD", "IntReturnTD"]),
-      stat("SAFETY FORCED", ["Safety Forced", "Safeties Forced", "Safety", "Safeties"]),
-    ];
+    if (position === "DB") return [stat("TKL", ["Tackles", "Total Tackles", "TOT"]), stat("DFL", ["DFL", "Defl", "Deflections", "Passes Defended", "PassDeflections"]), stat("INT", ["INT", "Interceptions"])];
+    if (position === "LB") return [stat("TKL", ["Tackles", "Total Tackles", "TOT"]), stat("SACK", ["Sacks", "Sack"]), stat("FF", ["FF", "Forced Fumbles", "ForcedFumbles"]), stat("INT", ["INT", "Interceptions"])];
+    return [stat("TKL", ["Tackles", "Total Tackles", "TOT"]), stat("TFL", ["TFL", "Tackles For Loss", "TacklesForLoss"]), stat("SACK", ["Sacks", "Sack"]), stat("FF", ["FF", "Forced Fumbles", "ForcedFumbles"])];
   }
 
   if (position === "QB") return [stat("YDS", ["Passing Yards", "Pass Yards", "PassYards"]), stat("TD", ["Passing TD", "Pass TD", "TD Passes"]), stat("INT", ["Interceptions Thrown", "Pass INT"]), stat("QBR", ["QBR", "Passer Rating", "Rating", "RTG"])];
@@ -179,7 +185,7 @@ function PlayerStatsProfile({ player, row, team, stats, playersByName, onBack }:
     rbGroups[0],
     rbGroups[2],
   ];
-  const defensiveGroups = [{ title: "DEFENSE", stats: summary.map((item) => ({ label: item.label, value: item.value })) }];
+  const defensiveGroups = [{ title: "DEFENSE", stats: defensiveOverviewStats(row || {} as PlayerStats) }];
   const overviewGroups = isDefensive ? defensiveGroups : isQuarterback ? qbGroups : isReceiver ? receiverGroups : isRunningBack ? rbGroups : null;
   const gameTabs = isDefensive ? ["Defense"] as const : isQuarterback ? ["Passing", "Rushing"] as const : isReceiver ? ["Receiving", "Rushing", "Fumbles"] as const : ["Rushing"] as const;
   const recentColumns = gameStatTab === "Defense" ? ["DL WIN %", "TKL", "TFL", "SACKS", "FF", "INT"] : gameStatTab === "Passing" ? ["CMP", "ATT", "YDS", "CMP%", "AVG", "TD", "INT", "LNG", "SACK"] : gameStatTab === "Receiving" ? ["REC", "TGTS", "YDS", "AVG", "TD", "LNG", "FD"] : gameStatTab === "Fumbles" ? ["FUM", "LST"] : ["CAR", "YDS", "AVG", "TD", "LNG"];
@@ -191,7 +197,7 @@ function PlayerStatsProfile({ player, row, team, stats, playersByName, onBack }:
       <div className="player-detail-name"><span>{shownPosition || "PLAYER"}</span><h1>{name}</h1><p>{logo && <img src={logo} alt="" />} <b>{teamName(team || {})}</b> · #{String(player.Jersey || player.jersey || "--")} · {shownPosition || "--"}</p><button className="player-stat-side-toggle" type="button" onClick={() => setStatSide(statSide === "offense" ? "defense" : "offense")}>View {otherSide} Stats</button></div>
       <dl className="player-detail-facts"><div><dt>HEIGHT / WEIGHT</dt><dd>{String(player.Size || "—")}</dd></div><div><dt>TEAM</dt><dd>{teamName(team || {})}</dd></div><div><dt>POSITION</dt><dd>{shownPosition || "—"}</dd></div><div><dt>STATUS</dt><dd><i /> Active</dd></div></dl>
     </section>
-    <section className={`player-featured-stats${isDefensive ? " player-featured-stats--defense" : ""}`}><h2>SEASON 1 REGULAR SEASON {statSide.toUpperCase()} STATS</h2><div>{summary.map(({ label, value }, index) => <article key={label}><span>{label}</span><strong>{value}</strong><small>{ranks[index]}</small></article>)}</div></section>
+    <section className="player-featured-stats"><h2>SEASON 1 REGULAR SEASON {statSide.toUpperCase()} STATS</h2><div>{summary.map(({ label, value }, index) => <article key={label}><span>{label}</span><strong>{value}</strong><small>{ranks[index]}</small></article>)}</div></section>
     <nav className="player-detail-tabs">{(["Overview", "News", "Stats", "Bio", "Splits", "Game Log"] as PlayerProfileTab[]).map((item) => <button className={tab === item ? "active" : ""} type="button" onClick={() => setTab(item)} key={item}>{item}</button>)}</nav>
     {tab === "Overview" ? <div className="player-overview-grid"><section><header><h3>Season 1 {shownPosition || "Player"} Statistics</h3></header>{overviewGroups ? <div className="player-stat-table-scroll"><table className="rb-overview-table"><thead><tr><th rowSpan={2}>STATS</th>{overviewGroups.map((group) => <th key={group.title} colSpan={group.stats.length}>{group.title}</th>)}</tr><tr>{overviewGroups.flatMap((group) => group.stats.map((stat) => <th key={`${group.title}-${stat.label}`}>{stat.label}</th>))}</tr></thead><tbody><tr><td>Regular Season</td>{overviewGroups.flatMap((group) => group.stats.map((stat) => <td key={`${group.title}-${stat.label}`}>{"value" in stat ? stat.value : displayStat(row || {} as PlayerStats, stat.fields)}</td>))}</tr></tbody></table></div> : <div className="player-stat-table-scroll"><table><thead><tr><th>STATS</th>{summary.map(({ label }) => <th key={label}>{label}</th>)}</tr></thead><tbody><tr><td>Regular Season</td>{summary.map(({ label, value }) => <td key={label}>{value}</td>)}</tr></tbody></table></div>}</section><section><header><h3>Recent Games</h3></header>{overviewGroups && <nav className="recent-game-tabs" aria-label="Recent game statistic category">{gameTabs.map((item) => <button type="button" className={gameStatTab === item ? "active" : ""} onClick={() => setGameStatTab(item)} key={item}>{item}</button>)}</nav>}{overviewGroups && recentGames.length ? <div className="player-stat-table-scroll"><table className="recent-games-table"><thead><tr><th>DATE</th><th>OPP</th><th>RESULT</th>{recentColumns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{recentGames.map((game) => <tr key={game.gameId}><td>{game.date || "—"}</td><td>{game.location} {game.opponent}</td><td className={game.result.startsWith("W") ? "game-result-win" : "game-result-loss"}>{game.result}</td>{recentValues(game).map((value, index) => <td key={`${game.gameId}-${recentColumns[index]}`}>{value}</td>)}</tr>)}</tbody></table></div> : <div className="empty-profile-state">{gamesLoading && overviewGroups ? "Loading completed games…" : "Game-by-game statistics will appear after completed games."}</div>}</section></div> : <section className="player-tab-stub"><span>{tab.toUpperCase()}</span><h2>{tab} coming soon</h2><p>This player section is ready for future league data.</p></section>}
   </main>;
