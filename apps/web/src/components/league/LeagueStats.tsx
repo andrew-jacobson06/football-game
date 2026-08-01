@@ -2,15 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { getPlayers, getPlayerStats, type PlayerStats } from "../../api/client";
 import { PlayerImage } from "../players/PlayerImage";
 import type { Player } from "../players/types";
-import type { LeagueTeam } from "./types";
+import type { LeagueGame, LeagueTeam } from "./types";
 
 type StatsView = "Player" | "Team";
 type PlayerProfileTab = "Overview" | "News" | "Stats" | "Bio" | "Splits" | "Game Log";
-type CompleteView = "rushing" | "tackling" | "team-total" | "team-passing" | "team-rushing" | null;
+type CompleteView = "rushing" | "tackling" | "team-total" | "team-passing" | "team-rushing" | "team-defense" | "team-sacks" | "team-turnovers" | "special-teams" | null;
 type Leader = { name: string; detail?: string; image?: string; player?: Player; value: number };
 type Category = { title: string; label: string; fields: string[]; positions?: string[] };
 type StatColumn = { label: string; fields: string[] };
-type TeamTotal = { team: LeagueTeam; rows: PlayerStats[]; gp: number; passing: number; rushing: number; total: number; sacks: number; turnovers: number; allowed: number };
+type TeamTotal = { team: LeagueTeam; rows: PlayerStats[]; gp: number; passing: number; rushing: number; total: number; sacks: number; interceptions: number; fumbleRecoveries: number; turnovers: number; allowedPassing: number; allowedRushing: number; allowed: number };
 
 const OFFENSE: Category[] = [
   { title: "PASSING", label: "YDS", fields: ["Passing Yards", "Pass Yards", "PassYards"], positions: ["QB"] },
@@ -94,22 +94,22 @@ function PlayerStatsProfile({ player, row, team, onBack }: { player: Player; row
   </main>;
 }
 
-function TeamCompleteTable({ mode, rows, onBack }: { mode: "total" | "passing" | "rushing"; rows: TeamTotal[]; onBack: () => void }) {
-  const columns = mode === "total" ? ["TOTAL YDS", "YDS/G", "PASS YDS", "YDS/G", "RUSH YDS", "YDS/G"] : mode === "passing" ? ["CMP", "ATT", "CMP%", "YDS", "AVG", "YDS/G", "TD", "INT", "SACK"] : ["ATT", "YDS", "AVG", "YDS/G", "TD", "FUM", "LST"];
-  return <section className="team-complete-view">
-    <div className="team-stat-nav"><b>Offense</b><span>Defense</span><span>Special Teams</span><span>Turnovers</span></div>
-    <div className="team-stat-filters"><button type="button">{mode === "total" ? "Total" : mode === "passing" ? "Passing" : "Rushing"}⌄</button><button type="button">Season 1 Regular Season⌄</button></div>
-    <button className="team-table-back" type="button" onClick={onBack}>← Back to stat leaders</button>
-    <div className="complete-leaders-table-scroll"><table className="team-complete-table"><thead><tr><th>TEAM</th><th>GP</th>{columns.map((column, index) => <th key={`${column}-${index}`}>{column}</th>)}</tr></thead><tbody>{rows.map((row) => {
-      const sum = (fields: string[]) => row.rows.reduce((n, stat) => n + statValue(stat, fields), 0);
-      const attempts = sum(mode === "passing" ? ["Pass Attempts", "Attempts", "ATT"] : ["Carries", "Rushing Attempts"]);
-      const values = mode === "total" ? [row.total, row.total / row.gp, row.passing, row.passing / row.gp, row.rushing, row.rushing / row.gp] : mode === "passing" ? [sum(["Completions", "CMP"]), attempts, attempts ? 100 * sum(["Completions", "CMP"]) / attempts : 0, row.passing, attempts ? row.passing / attempts : 0, row.passing / row.gp, sum(["Passing TD", "Pass TD", "TD Passes"]), sum(["Interceptions Thrown", "Pass INT"]), sum(["Sacked", "Times Sacked"])] : [attempts, row.rushing, attempts ? row.rushing / attempts : 0, row.rushing / row.gp, sum(["Rushing TD", "Rush TD", "TD"]), sum(["Fum", "Fumbles"]), sum(["Fum Lost", "Fumbles Lost"])];
-      return <tr key={teamName(row.team)}><td><span className="team-table-name">{row.team.Logo && <img src={String(row.team.Logo)} alt="" />}{teamName(row.team)}</span></td><td>{row.gp}</td>{values.map((value, index) => <td key={index}>{Number.isInteger(value) ? value.toLocaleString() : value.toFixed(1)}</td>)}</tr>;
-    })}</tbody></table></div>
-  </section>;
+function TeamCompleteTable({ mode, rows, onBack, onSpecialTeams }: { mode: "total" | "passing" | "rushing" | "defense" | "sacks" | "turnovers"; rows: TeamTotal[]; onBack: () => void; onSpecialTeams: () => void }) {
+  const defensive = mode === "defense" || mode === "sacks";
+  const columns = mode === "defense" ? ["TOTAL YDS", "YDS/G", "PASS YDS", "YDS/G", "RUSH YDS", "YDS/G"] : mode === "sacks" ? ["PASS YDS", "YDS/G", "SACK", "INT", "FUM REC", "TAKEAWAYS"] : mode === "turnovers" ? ["DIFF", "INT", "FUM", "TAKEAWAYS"] : mode === "total" ? ["TOTAL YDS", "YDS/G", "PASS YDS", "YDS/G", "RUSH YDS", "YDS/G"] : mode === "passing" ? ["YDS", "YDS/G", "TD", "INT", "SACK"] : ["ATT", "YDS", "AVG", "YDS/G", "TD"];
+  const values = (row: TeamTotal) => {
+    const sum = (fields: string[]) => row.rows.reduce((n, stat) => n + statValue(stat, fields), 0); const attempts = sum(["Carries", "Rushing Attempts"]);
+    if (mode === "defense") return [row.allowed, row.allowed / row.gp, row.allowedPassing, row.allowedPassing / row.gp, row.allowedRushing, row.allowedRushing / row.gp];
+    if (mode === "sacks") return [row.allowedPassing, row.allowedPassing / row.gp, row.sacks, row.interceptions, row.fumbleRecoveries, row.interceptions + row.fumbleRecoveries];
+    if (mode === "turnovers") return [row.turnovers, row.interceptions, row.fumbleRecoveries, row.interceptions + row.fumbleRecoveries];
+    if (mode === "total") return [row.total, row.total / row.gp, row.passing, row.passing / row.gp, row.rushing, row.rushing / row.gp];
+    if (mode === "passing") return [row.passing, row.passing / row.gp, sum(["Passing TD", "Pass TD", "TD Passes"]), sum(["Interceptions Thrown", "Pass INT"]), sum(["Sacked", "Times Sacked"])];
+    return [attempts, row.rushing, attempts ? row.rushing / attempts : 0, row.rushing / row.gp, sum(["Rushing TD", "Rush TD", "TD"])];
+  };
+  return <section className="team-complete-view"><div className="team-stat-nav"><span className={!defensive && mode !== "turnovers" ? "active" : ""}>Offense</span><span className={defensive ? "active" : ""}>Defense</span><button type="button" onClick={onSpecialTeams}>Special Teams</button><span className={mode === "turnovers" ? "active" : ""}>Turnovers</span></div><div className="team-stat-filters"><button type="button">{mode === "defense" ? "Total" : mode === "sacks" ? "Passing" : mode[0].toUpperCase() + mode.slice(1)}⌄</button><button type="button">Season 1 Regular Season⌄</button></div><button className="team-table-back" type="button" onClick={onBack}>← Back to stat leaders</button><div className="complete-leaders-table-scroll"><table className="team-complete-table"><thead><tr><th>TEAM</th><th>GP</th>{columns.map((column, index) => <th key={`${column}-${index}`}>{column}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={teamName(row.team)}><td><span className="team-table-name">{row.team.Logo && <img src={String(row.team.Logo)} alt="" />}{teamName(row.team)}</span></td><td>{row.gp}</td>{values(row).map((value, index) => <td key={index}>{Number.isInteger(value) ? value.toLocaleString() : value.toFixed(1)}</td>)}</tr>)}</tbody></table></div></section>;
 }
 
-export function LeagueStats({ teams }: { teams: LeagueTeam[] }) {
+export function LeagueStats({ teams, games = [] }: { teams: LeagueTeam[]; games?: LeagueGame[] }) {
   const [activeView, setActiveView] = useState<StatsView>("Player");
   const [stats, setStats] = useState<PlayerStats[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -123,14 +123,38 @@ export function LeagueStats({ teams }: { teams: LeagueTeam[] }) {
 
   const playerByName = useMemo(() => new Map(players.map((player) => [normalized(player.Name), player])), [players]);
   const teamByKey = useMemo(() => new Map(teams.flatMap((team) => [team.Abbrev, team.Team, team.Name].filter(Boolean).map((value) => [normalized(value), team] as const))), [teams]);
-  const teamTotals = useMemo<TeamTotal[]>(() => teams.map((team) => {
-    const keys = [team.Abbrev, team.Team, team.Name].filter(Boolean).map(normalized);
-    const rows = stats.filter((row) => keys.includes(normalized(playerByName.get(normalized(row.Player))?.Team)));
-    const sum = (fields: string[]) => rows.reduce((total, row) => total + statValue(row, fields), 0);
-    const passing = sum(["Passing Yards", "Pass Yards", "PassYards"]);
-    const rushing = sum(["Yards", "Rushing Yards", "Rush Yards"]);
-    return { team, rows, gp: teamGames(team), passing, rushing, total: passing + rushing, sacks: sum(["Sacks", "Sack"]), turnovers: teamField(team, ["Turnover Differential", "TurnoverDiff", "DIFF", "Takeaways"]) || sum(["Interceptions", "INT", "Fumble Recoveries", "FR"]), allowed: teamField(team, ["Yards Allowed", "YardsAllowed", "YDS Allowed", "YDSA"]) };
-  }), [teams, stats, playerByName]);
+  const teamTotals = useMemo<TeamTotal[]>(() => {
+    const offense = new Map<string, { passing: number; rushing: number }>();
+    const rowsForTeam = (team: LeagueTeam) => {
+      const keys = [team.Abbrev, team.Team, team.Name].filter(Boolean).map(normalized);
+      return stats.filter((row) => keys.includes(normalized(playerByName.get(normalized(row.Player))?.Team)));
+    };
+    teams.forEach((team) => {
+      const rows = rowsForTeam(team);
+      offense.set(normalized(team.Abbrev || team.Team || team.Name), {
+        passing: rows.reduce((n, row) => n + statValue(row, ["Passing Yards", "Pass Yards", "PassYards"]), 0),
+        rushing: rows.reduce((n, row) => n + statValue(row, ["Yards", "Rushing Yards", "Rush Yards"]), 0),
+      });
+    });
+    const findTeam = (key: unknown) => teams.find((team) => [team.Abbrev, team.Team, team.Name].some((value) => normalized(value) === normalized(key)));
+    return teams.map((team) => {
+      const keys = [team.Abbrev, team.Team, team.Name].filter(Boolean).map(normalized);
+      const rows = rowsForTeam(team);
+      const sum = (fields: string[]) => rows.reduce((total, row) => total + statValue(row, fields), 0);
+      const passing = sum(["Passing Yards", "Pass Yards", "PassYards"]);
+      const rushing = sum(["Yards", "Rushing Yards", "Rush Yards"]);
+      const opponents = games
+        .filter((game) => String(game.Qtr).toUpperCase() === "FINAL" && [game.Home, game.Away].some((value) => keys.includes(normalized(value))))
+        .map((game) => findTeam(keys.includes(normalized(game.Home)) ? game.Away : game.Home))
+        .filter((value): value is LeagueTeam => Boolean(value));
+      // Defensive yardage is the offense produced by each opponent in games this team actually played.
+      const allowedPassing = opponents.reduce((n, opponent) => n + (offense.get(normalized(opponent.Abbrev || opponent.Team || opponent.Name))?.passing || 0), 0);
+      const allowedRushing = opponents.reduce((n, opponent) => n + (offense.get(normalized(opponent.Abbrev || opponent.Team || opponent.Name))?.rushing || 0), 0);
+      const interceptions = sum(["Interceptions", "INT"]);
+      const fumbleRecoveries = sum(["Fumble Recoveries", "FR"]);
+      return { team, rows, gp: teamGames(team), passing, rushing, total: passing + rushing, sacks: sum(["Sacks", "Sack"]), interceptions, fumbleRecoveries, turnovers: teamField(team, ["Turnover Differential", "TurnoverDiff", "DIFF"]) || interceptions + fumbleRecoveries, allowedPassing, allowedRushing, allowed: allowedPassing + allowedRushing };
+    });
+  }, [teams, games, stats, playerByName]);
   const leadersFor = (category: Category): Leader[] => {
     if (activeView === "Player") return stats.map((row) => ({ row, player: playerByName.get(normalized(row.Player)), value: statValue(row, category.fields) })).filter(({ player, value }) => value > 0 && (!category.positions || category.positions.includes(String(player?.Pos || "").toUpperCase()))).sort((a, b) => b.value - a.value).slice(0, 5).map(({ row, player, value }) => ({ name: row.Player, detail: String(player?.Team || ""), player, value }));
     const totals = new Map<string, number>();
@@ -146,7 +170,7 @@ export function LeagueStats({ teams }: { teams: LeagueTeam[] }) {
   const allTacklers = stats.filter((row) => statValue(row, DEFENSIVE_COLUMNS[0].fields) >= 1 && (!filter || normalized(row.Player).includes(normalized(filter)))).sort((a, b) => statValue(b, DEFENSIVE_COLUMNS[0].fields) - statValue(a, DEFENSIVE_COLUMNS[0].fields));
   const completeRows = completeView === "rushing" ? allRushers : allTacklers;
   const completeColumns: StatColumn[] = completeView === "rushing" ? RUSHING_COLUMNS.map((label) => ({ label, fields: [label] })) : DEFENSIVE_COLUMNS;
-  const teamMode = completeView?.startsWith("team-") ? completeView.slice(5) as "total" | "passing" | "rushing" : null;
+  const teamMode = completeView?.startsWith("team-") ? completeView.slice(5) as "total" | "passing" | "rushing" | "defense" | "sacks" | "turnovers" : null;
 
   if (selectedPlayer) {
     const row = stats.find((item) => normalized(item.Player) === normalized(selectedPlayer.Name));
@@ -158,7 +182,7 @@ export function LeagueStats({ teams }: { teams: LeagueTeam[] }) {
     <header className="league-stats-heading"><div><span>LEAGUE STATISTICS</span><h1>{teamMode ? `AFL Team ${teamMode === "total" ? "Total Offense" : teamMode[0].toUpperCase() + teamMode.slice(1)} Stats` : "AFL Stat Leaders"}</h1></div><StatsSelect label="Statistics view" value={activeView} onChange={(value) => { setActiveView(value as StatsView); setCompleteView(null); }}><option value="Player">Player Statistics</option><option value="Team">Team Statistics</option></StatsSelect></header>
     <div className="stats-tabs" role="tablist">{(["Player", "Team"] as StatsView[]).map((view) => <button className={`stats-tab ${activeView === view ? "active" : ""}`} key={view} type="button" onClick={() => { setActiveView(view); setCompleteView(null); }}>{view}</button>)}</div>
     <div className="season-row"><StatsSelect label="Season" value="season-1"><option value="season-1">Season 1 Regular Season</option></StatsSelect></div>
-    {teamMode ? <TeamCompleteTable mode={teamMode} rows={[...teamTotals].sort((a, b) => b[teamMode] - a[teamMode])} onBack={() => setCompleteView(null)} /> : completeView ? <section className="complete-rushing-leaders"><div className="complete-leaders-tools"><button type="button" onClick={() => setCompleteView(null)}>← Back to stat leaders</button><label><span>Filter {completeView === "rushing" ? "rushers" : "tacklers"}</span><input type="search" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Player name" /></label></div><div className="complete-leaders-table-scroll"><table className="complete-leaders-table"><thead><tr><th>Player</th>{completeColumns.map((column) => <th key={column.label}>{column.label}</th>)}</tr></thead><tbody>{completeRows.map((row) => <tr key={row.Player}><td className="complete-leader-player"><PlayerImage player={playerByName.get(normalized(row.Player)) || {}} className="player-stats-image" /><button className="player-name-button" type="button" onClick={() => { const player = playerByName.get(normalized(row.Player)); if (player) setSelectedPlayer(player); }}>{row.Player}</button></td>{completeColumns.map((column) => <td key={column.label}>{displayStat(row, column.fields)}</td>)}</tr>)}</tbody></table></div></section> : <div className="stats-leader-grid"><section><h2>Offensive Leaders</h2>{(activeView === "Team" ? TEAM_OFFENSE : OFFENSE).map((category) => <LeaderTable key={category.title} category={category} leaders={activeView === "Team" ? teamLeadersFor(category) : leadersFor(category)} loading={loading} error={error} onPlayer={setSelectedPlayer} onComplete={activeView === "Team" ? () => setCompleteView(`team-${category.fields[0]}` as CompleteView) : category.title === "RUSHING" ? () => setCompleteView("rushing") : undefined} />)}</section><section><h2>Defensive Leaders</h2>{(activeView === "Team" ? TEAM_DEFENSE : DEFENSE).map((category) => <LeaderTable key={category.title} category={category} leaders={activeView === "Team" ? teamLeadersFor(category) : leadersFor(category)} loading={loading} error={error} onPlayer={setSelectedPlayer} onComplete={activeView === "Team" ? undefined : category.title === "TACKLES" ? () => setCompleteView("tackling") : undefined} />)}</section></div>}
+    {completeView === "special-teams" ? <section className="player-tab-stub"><span>SPECIAL TEAMS</span><h2>Special Teams Stats</h2><p>Special teams leader tables are ready for future league data.</p><button className="team-table-back" type="button" onClick={() => setCompleteView(null)}>← Back to stat leaders</button></section> : teamMode ? <TeamCompleteTable mode={teamMode} rows={[...teamTotals].sort((a, b) => teamMode === "defense" ? a.allowed - b.allowed : b[teamMode] - a[teamMode])} onBack={() => setCompleteView(null)} onSpecialTeams={() => setCompleteView("special-teams")} /> : completeView ? <section className="complete-rushing-leaders"><div className="complete-leaders-tools"><button type="button" onClick={() => setCompleteView(null)}>← Back to stat leaders</button><label><span>Filter {completeView === "rushing" ? "rushers" : "tacklers"}</span><input type="search" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Player name" /></label></div><div className="complete-leaders-table-scroll"><table className="complete-leaders-table"><thead><tr><th>Player</th>{completeColumns.map((column) => <th key={column.label}>{column.label}</th>)}</tr></thead><tbody>{completeRows.map((row) => <tr key={row.Player}><td className="complete-leader-player"><PlayerImage player={playerByName.get(normalized(row.Player)) || {}} className="player-stats-image" /><button className="player-name-button" type="button" onClick={() => { const player = playerByName.get(normalized(row.Player)); if (player) setSelectedPlayer(player); }}>{row.Player}</button></td>{completeColumns.map((column) => <td key={column.label}>{displayStat(row, column.fields)}</td>)}</tr>)}</tbody></table></div></section> : <div className="stats-leader-grid"><section><h2>Offensive Leaders</h2>{(activeView === "Team" ? TEAM_OFFENSE : OFFENSE).map((category) => <LeaderTable key={category.title} category={category} leaders={activeView === "Team" ? teamLeadersFor(category) : leadersFor(category)} loading={loading} error={error} onPlayer={setSelectedPlayer} onComplete={activeView === "Team" ? () => setCompleteView(`team-${category.fields[0]}` as CompleteView) : category.title === "RUSHING" ? () => setCompleteView("rushing") : undefined} />)}</section><section><h2>Defensive Leaders</h2>{(activeView === "Team" ? TEAM_DEFENSE : DEFENSE).map((category) => <LeaderTable key={category.title} category={category} leaders={activeView === "Team" ? teamLeadersFor(category) : leadersFor(category)} loading={loading} error={error} onPlayer={setSelectedPlayer} onComplete={activeView === "Team" ? () => setCompleteView(category.title === "YARDS ALLOWED" ? "team-defense" : category.title === "SACKS" ? "team-sacks" : "team-turnovers") : category.title === "TACKLES" ? () => setCompleteView("tackling") : undefined} />)}</section></div>}
     <p className="stats-updated">Statistics are updated after every completed game.</p>
   </main>;
 }

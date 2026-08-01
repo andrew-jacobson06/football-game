@@ -780,7 +780,8 @@
 .league-stats-card .complete-rushing-leaders { margin-top: 10px; }
 .team-stat-nav { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 20px; border-bottom: 1px solid var(--border-color); text-align: center; }
 .team-stat-nav > * { padding: 13px 8px; color: var(--text-muted); font-size: .8rem; }
-.team-stat-nav b { color: var(--text-light); border-bottom: 2px solid var(--accent-red); }
+.team-stat-nav .active { color: var(--text-light); border-bottom: 2px solid var(--accent-red); }
+.team-stat-nav button { border: 0; background: transparent; cursor: pointer; }
 .team-stat-filters { display: flex; gap: 10px; margin: 0 0 14px; }
 .team-stat-filters button { padding: 9px 15px; border: 1px solid var(--border-color); border-radius: 20px; color: var(--text-light); background: transparent; }
 .team-table-back { margin: 0 0 12px; color: #69adff; font-size: .78rem; }
