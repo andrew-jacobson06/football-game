@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getPlayers, getPlayerStats, type PlayerStats } from "../../api/client";
 import { PlayerImage } from "../players/PlayerImage";
+import { AppSelect } from "../ui/AppSelect";
 import type { Player } from "../players/types";
 import type { LeagueGame, LeagueTeam } from "./types";
 
@@ -72,7 +73,7 @@ function LeaderTable({ category, leaders, loading, error, onComplete, onPlayer }
 }
 
 function StatsSelect({ value, onChange, children, label }: { value: string; onChange?: (value: string) => void; children: React.ReactNode; label: string }) {
-  return <label className="stats-select"><span className="sr-only">{label}</span><select value={value} onChange={(event) => onChange?.(event.target.value)}>{children}</select><span aria-hidden="true" className="stats-select-chevron">⌄</span></label>;
+  return <label className="stats-select"><span className="sr-only">{label}</span><AppSelect value={value} onChange={(event) => onChange?.(event.target.value)}>{children}</AppSelect></label>;
 }
 
 function PlayerStatsProfile({ player, row, team, onBack }: { player: Player; row?: PlayerStats; team?: LeagueTeam; onBack: () => void }) {
@@ -106,7 +107,7 @@ function TeamCompleteTable({ mode, rows, onBack, onSpecialTeams }: { mode: "tota
     if (mode === "passing") return [row.passing, row.passing / row.gp, sum(["Passing TD", "Pass TD", "TD Passes"]), sum(["Interceptions Thrown", "Pass INT"]), sum(["Sacked", "Times Sacked"])];
     return [attempts, row.rushing, attempts ? row.rushing / attempts : 0, row.rushing / row.gp, sum(["Rushing TD", "Rush TD", "TD"])];
   };
-  return <section className="team-complete-view"><div className="team-stat-nav"><span className={!defensive && mode !== "turnovers" ? "active" : ""}>Offense</span><span className={defensive ? "active" : ""}>Defense</span><button type="button" onClick={onSpecialTeams}>Special Teams</button><span className={mode === "turnovers" ? "active" : ""}>Turnovers</span></div><div className="team-stat-filters"><button type="button">{mode === "defense" ? "Total" : mode === "sacks" ? "Passing" : mode[0].toUpperCase() + mode.slice(1)}⌄</button><button type="button">Season 1 Regular Season⌄</button></div><button className="team-table-back" type="button" onClick={onBack}>← Back to stat leaders</button><div className="complete-leaders-table-scroll"><table className="team-complete-table"><thead><tr><th>TEAM</th><th>GP</th>{columns.map((column, index) => <th key={`${column}-${index}`}>{column}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={teamName(row.team)}><td><span className="team-table-name">{row.team.Logo && <img src={String(row.team.Logo)} alt="" />}{teamName(row.team)}</span></td><td>{row.gp}</td>{values(row).map((value, index) => <td key={index}>{Number.isInteger(value) ? value.toLocaleString() : value.toFixed(1)}</td>)}</tr>)}</tbody></table></div></section>;
+  return <section className="team-complete-view"><div className="team-stat-nav"><span className={!defensive && mode !== "turnovers" ? "active" : ""}>Offense</span><span className={defensive ? "active" : ""}>Defense</span><button type="button" onClick={onSpecialTeams}>Special Teams</button><span className={mode === "turnovers" ? "active" : ""}>Turnovers</span></div><div className="team-stat-filters"><button className="dropdown-button" type="button">{mode === "defense" ? "Total" : mode === "sacks" ? "Passing" : mode[0].toUpperCase() + mode.slice(1)}<span aria-hidden="true">⌄</span></button><button className="dropdown-button" type="button">Season 1 Regular Season<span aria-hidden="true">⌄</span></button></div><button className="team-table-back" type="button" onClick={onBack}>← Back to stat leaders</button><div className="complete-leaders-table-scroll"><table className="team-complete-table"><thead><tr><th>TEAM</th><th>GP</th>{columns.map((column, index) => <th key={`${column}-${index}`}>{column}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={teamName(row.team)}><td><span className="team-table-name">{row.team.Logo && <img src={String(row.team.Logo)} alt="" />}{teamName(row.team)}</span></td><td>{row.gp}</td>{values(row).map((value, index) => <td key={index}>{Number.isInteger(value) ? value.toLocaleString() : value.toFixed(1)}</td>)}</tr>)}</tbody></table></div></section>;
 }
 
 export function LeagueStats({ teams, games = [] }: { teams: LeagueTeam[]; games?: LeagueGame[] }) {

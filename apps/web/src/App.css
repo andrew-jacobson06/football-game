@@ -18,6 +18,11 @@
   --text-inverse: #ffffff;
   --shadow-color: rgba(0, 0, 0, 0.38);
   --page-gradient: linear-gradient(135deg, #121212 0%, #1e1e1e 100%);
+  --control-bg: linear-gradient(180deg, #30343a, #24272c);
+  --control-bg-hover: linear-gradient(180deg, #383d44, #292d32);
+  --control-border: #4a4f58;
+  --control-border-hover: #7f8792;
+  --control-accent: #8fc2ff;
 }
 
 :root[data-theme="light"] {
@@ -36,6 +41,11 @@
   --text-inverse: #ffffff;
   --shadow-color: rgba(20, 30, 45, 0.14);
   --page-gradient: linear-gradient(135deg, #f7f9fb 0%, #e8edf2 100%);
+  --control-bg: linear-gradient(180deg, #ffffff, #edf1f5);
+  --control-bg-hover: linear-gradient(180deg, #ffffff, #e3e9ef);
+  --control-border: #aeb8c3;
+  --control-border-hover: #697786;
+  --control-accent: #075eb8;
 }
 
 body {
@@ -45,6 +55,54 @@ body {
   background: var(--page-gradient);
   color: var(--text-light);
 }
+
+.app-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 150px;
+  color: var(--text-primary);
+}
+
+.app-select select,
+.dropdown-button {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  appearance: none;
+  padding: 10px 42px 10px 16px;
+  border: 1px solid var(--control-border);
+  border-radius: 10px;
+  outline: 0;
+  color: var(--text-primary);
+  background: var(--control-bg);
+  box-shadow: inset 0 1px rgb(255 255 255 / 6%), 0 3px 10px var(--shadow-color);
+  font: inherit;
+  font-size: .875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.app-select select:hover,
+.app-select select:focus-visible,
+.dropdown-button:hover,
+.dropdown-button:focus-visible {
+  border-color: var(--control-border-hover);
+  background: var(--control-bg-hover);
+}
+
+.app-select select:focus-visible,
+.dropdown-button:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--control-accent) 30%, transparent);
+}
+
+.app-select select:disabled { cursor: not-allowed; opacity: .6; }
+.app-select option { color: var(--text-primary); background: var(--surface-raised); }
+.app-select__chevron { position: absolute; right: 15px; top: 50%; transform: translateY(-58%); color: var(--control-accent); font-size: 1.1rem; pointer-events: none; }
+.app-select--compact { min-width: 0; }
+.app-select--compact select { min-height: 34px; padding-block: 6px; }
+.dropdown-button { display: inline-flex; align-items: center; justify-content: space-between; gap: 16px; width: auto; }
+.dropdown-button > span { color: var(--control-accent); font-size: 1.1rem; }
 
 .app {
   min-height: 100vh;
@@ -217,7 +275,7 @@ body {
 .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 30px; padding-bottom: 30px; border-bottom: 1px solid var(--border-color); }
 .setting-row label { display: block; margin-bottom: 8px; font-size: 1.1rem; font-weight: 800; }
 .setting-row p, .settings-message { margin: 0; color: var(--text-secondary); }
-.setting-row select { min-width: 150px; padding: 11px 38px 11px 13px; border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); background: var(--surface-canvas); cursor: pointer; }
+.setting-row .app-select { min-width: 150px; }
 .settings-message { padding-top: 20px; }
 @media (max-width: 620px) {
   .settings-layout { grid-template-columns: 1fr; }
@@ -253,7 +311,7 @@ body {
 :root[data-theme="light"] .player-table th,
 :root[data-theme="light"] .player-table td { border-color: var(--border-color); }
 
-/* The main menu intentionally keeps its stadium presentation in both modes. */
+/* Theme tokens also flow through the main menu; semantic stadium art remains unchanged. */
 
 .progress-bar {
   height: 100%;

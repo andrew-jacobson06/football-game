@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AppSelect } from "../ui/AppSelect";
 import type { LeagueGame } from "./types";
 import { formatBallOnForPoss, formatClock, formatDownDistance } from "./leagueMappers";
 
@@ -29,9 +30,9 @@ export function GamesBanner({ games, onHome, onSelectGame }: GamesBannerProps) {
       </button>
       <label className="games-banner__picker">
         <span>Week</span>
-        <select value={week} onChange={(event) => setWeek(Number(event.target.value))}>
+        <AppSelect containerClassName="app-select--compact" value={week} onChange={(event) => setWeek(Number(event.target.value))}>
           {WEEKS.map((item) => <option key={item} value={item}>Week {item}</option>)}
-        </select>
+        </AppSelect>
       </label>
       <div className="games-banner__rail">
         {weekGames.length ? (
