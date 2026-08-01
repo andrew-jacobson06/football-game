@@ -5,6 +5,7 @@ import type { Player } from "../players/types";
 import type { LeagueTeam } from "./types";
 
 type StatsView = "Player" | "Team";
+type PlayerProfileTab = "Overview" | "News" | "Stats" | "Bio" | "Splits" | "Game Log";
 type CompleteView = "rushing" | "tackling" | "team-total" | "team-passing" | "team-rushing" | null;
 type Leader = { name: string; detail?: string; image?: string; player?: Player; value: number };
 type Category = { title: string; label: string; fields: string[]; positions?: string[] };
@@ -57,17 +58,40 @@ function teamName(team: LeagueTeam) { return String(team.Name || team.Team || te
 const teamGames = (team: LeagueTeam) => number(team.GP || team.Games || 1) || 1;
 function teamField(team: LeagueTeam, fields: string[]) { return statValue(team as PlayerStats, fields); }
 
-function LeaderTable({ category, leaders, loading, error, onComplete }: { category: Category; leaders: Leader[]; loading: boolean; error: string | null; onComplete?: () => void }) {
+function LeaderTable({ category, leaders, loading, error, onComplete, onPlayer }: { category: Category; leaders: Leader[]; loading: boolean; error: string | null; onComplete?: () => void; onPlayer?: (player: Player) => void }) {
   return <section className="leader-group">
     <table className="leader-table">
       <thead><tr><th>{category.title}</th><th>{category.label}</th></tr></thead>
       <tbody>{loading || error || !leaders.length ? <tr><td className="leader-message" colSpan={2}>{loading ? "Loading leaders…" : error || "No statistics recorded yet."}</td></tr> : leaders.map((leader, index) => <tr key={`${category.title}-${leader.name}`}>
-        <td className="leader-identity"><span className="rank">{index + 1}</span>{leader.player ? <PlayerImage player={leader.player} className="player-stats-image" /> : leader.image ? <img className="team-stats-logo" src={leader.image} alt="" /> : <span className="team-stats-logo-fallback">{leader.name.slice(0, 2)}</span>}<span><b>{leader.name}</b>{leader.detail && <small>{leader.detail}</small>}</span></td>
+        <td className="leader-identity"><span className="rank">{index + 1}</span>{leader.player ? <PlayerImage player={leader.player} className="player-stats-image" /> : leader.image ? <img className="team-stats-logo" src={leader.image} alt="" /> : <span className="team-stats-logo-fallback">{leader.name.slice(0, 2)}</span>}<span>{leader.player && onPlayer ? <button className="player-name-button" type="button" onClick={() => onPlayer(leader.player!)}>{leader.name}</button> : <b>{leader.name}</b>}{leader.detail && <small>{leader.detail}</small>}</span></td>
         <td className="stat-value">{leader.value.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
       </tr>)}</tbody>
     </table>
     {onComplete && !loading && !error && leaders.length > 0 && <div className="complete-link"><button type="button" onClick={onComplete}>Complete Leaders</button></div>}
   </section>;
+}
+
+function StatsSelect({ value, onChange, children, label }: { value: string; onChange?: (value: string) => void; children: React.ReactNode; label: string }) {
+  return <label className="stats-select"><span className="sr-only">{label}</span><select value={value} onChange={(event) => onChange?.(event.target.value)}>{children}</select><span aria-hidden="true" className="stats-select-chevron">⌄</span></label>;
+}
+
+function PlayerStatsProfile({ player, row, team, onBack }: { player: Player; row?: PlayerStats; team?: LeagueTeam; onBack: () => void }) {
+  const [tab, setTab] = useState<PlayerProfileTab>("Overview");
+  const name = String(player.Name || row?.Player || "Player");
+  const statEntries = Object.entries(row || {}).filter(([key, value]) => normalized(key) !== "player" && value !== "" && value != null && number(value) !== 0);
+  const featured = statEntries.slice(0, 4);
+  const logo = String(team?.Logo || "");
+  return <main className="player-detail-page">
+    <button className="profile-back" type="button" onClick={onBack}>← Back to league leaders</button>
+    <section className="player-detail-hero">
+      <div className="player-detail-art"><div className="glass-line glass-line-one" /><div className="glass-line glass-line-two" />{logo && <img className="player-detail-watermark" src={logo} alt="" />}<PlayerImage player={player} className="player-detail-photo" fallback={<div className="player-detail-initials">{name.split(" ").map((part) => part[0]).join("").slice(0, 2)}</div>} /></div>
+      <div className="player-detail-name"><span>{String(player.Pos || "PLAYER")}</span><h1>{name}</h1><p>{logo && <img src={logo} alt="" />} <b>{teamName(team || {})}</b> · #{String(player.Jersey || player.jersey || "--")} · {String(player.Pos || "--")}</p></div>
+      <dl className="player-detail-facts"><div><dt>HEIGHT / WEIGHT</dt><dd>{String(player.Size || "—")}</dd></div><div><dt>TEAM</dt><dd>{teamName(team || {})}</dd></div><div><dt>POSITION</dt><dd>{String(player.Pos || "—")}</dd></div><div><dt>STATUS</dt><dd><i /> Active</dd></div></dl>
+    </section>
+    <section className="player-featured-stats"><h2>SEASON 1 REGULAR SEASON STATS</h2><div>{(featured.length ? featured : [["Games", "0"], ["Starts", "0"], ["Yards", "0"], ["Touchdowns", "0"]]).map(([key, value]) => <article key={key}><span>{key}</span><strong>{String(value)}</strong><small>Season 1</small></article>)}</div></section>
+    <nav className="player-detail-tabs">{(["Overview", "News", "Stats", "Bio", "Splits", "Game Log"] as PlayerProfileTab[]).map((item) => <button className={tab === item ? "active" : ""} type="button" onClick={() => setTab(item)} key={item}>{item}</button>)}</nav>
+    {tab === "Overview" ? <div className="player-overview-grid"><section><header><h3>Season 1 {String(player.Pos || "Player")} Statistics</h3></header><div className="player-stat-table-scroll"><table><thead><tr><th>STATS</th>{statEntries.slice(0, 10).map(([key]) => <th key={key}>{key}</th>)}</tr></thead><tbody><tr><td>Regular Season</td>{statEntries.slice(0, 10).map(([key, value]) => <td key={key}>{String(value)}</td>)}</tr></tbody></table></div></section><section><header><h3>Recent Games</h3></header><div className="empty-profile-state">Game-by-game statistics will appear after completed games.</div></section></div> : <section className="player-tab-stub"><span>{tab.toUpperCase()}</span><h2>{tab} coming soon</h2><p>This player section is ready for future league data.</p></section>}
+  </main>;
 }
 
 function TeamCompleteTable({ mode, rows, onBack }: { mode: "total" | "passing" | "rushing"; rows: TeamTotal[]; onBack: () => void }) {
@@ -93,6 +117,7 @@ export function LeagueStats({ teams }: { teams: LeagueTeam[] }) {
   const [error, setError] = useState<string | null>(null);
   const [completeView, setCompleteView] = useState<CompleteView>(null);
   const [filter, setFilter] = useState("");
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
   useEffect(() => { Promise.all([getPlayerStats(), getPlayers()]).then(([statsResult, playersResult]) => { setStats(statsResult.playerStats); setPlayers(playersResult.players); }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load statistics")).finally(() => setLoading(false)); }, []);
 
@@ -123,11 +148,17 @@ export function LeagueStats({ teams }: { teams: LeagueTeam[] }) {
   const completeColumns: StatColumn[] = completeView === "rushing" ? RUSHING_COLUMNS.map((label) => ({ label, fields: [label] })) : DEFENSIVE_COLUMNS;
   const teamMode = completeView?.startsWith("team-") ? completeView.slice(5) as "total" | "passing" | "rushing" : null;
 
+  if (selectedPlayer) {
+    const row = stats.find((item) => normalized(item.Player) === normalized(selectedPlayer.Name));
+    const team = teamByKey.get(normalized(selectedPlayer.Team));
+    return <PlayerStatsProfile player={selectedPlayer} row={row} team={team} onBack={() => setSelectedPlayer(null)} />;
+  }
+
   return <main className="league-stats-card">
-    <header className="league-stats-heading"><div><span>LEAGUE STATISTICS</span><h1>{teamMode ? `AFL Team ${teamMode === "total" ? "Total Offense" : teamMode[0].toUpperCase() + teamMode.slice(1)} Stats` : "AFL Stat Leaders"}</h1></div><button type="button" onClick={() => setActiveView(activeView === "Player" ? "Team" : "Player")}>{activeView === "Player" ? "Team Statistics" : "Player Statistics"}⌄</button></header>
+    <header className="league-stats-heading"><div><span>LEAGUE STATISTICS</span><h1>{teamMode ? `AFL Team ${teamMode === "total" ? "Total Offense" : teamMode[0].toUpperCase() + teamMode.slice(1)} Stats` : "AFL Stat Leaders"}</h1></div><StatsSelect label="Statistics view" value={activeView} onChange={(value) => { setActiveView(value as StatsView); setCompleteView(null); }}><option value="Player">Player Statistics</option><option value="Team">Team Statistics</option></StatsSelect></header>
     <div className="stats-tabs" role="tablist">{(["Player", "Team"] as StatsView[]).map((view) => <button className={`stats-tab ${activeView === view ? "active" : ""}`} key={view} type="button" onClick={() => { setActiveView(view); setCompleteView(null); }}>{view}</button>)}</div>
-    <div className="season-row"><button className="season-pill" type="button">Season 1 Regular Season⌄</button></div>
-    {teamMode ? <TeamCompleteTable mode={teamMode} rows={[...teamTotals].sort((a, b) => b[teamMode] - a[teamMode])} onBack={() => setCompleteView(null)} /> : completeView ? <section className="complete-rushing-leaders"><div className="complete-leaders-tools"><button type="button" onClick={() => setCompleteView(null)}>← Back to stat leaders</button><label><span>Filter {completeView === "rushing" ? "rushers" : "tacklers"}</span><input type="search" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Player name" /></label></div><div className="complete-leaders-table-scroll"><table className="complete-leaders-table"><thead><tr><th>Player</th>{completeColumns.map((column) => <th key={column.label}>{column.label}</th>)}</tr></thead><tbody>{completeRows.map((row) => <tr key={row.Player}><td className="complete-leader-player"><PlayerImage player={playerByName.get(normalized(row.Player)) || {}} className="player-stats-image" /><span>{row.Player}</span></td>{completeColumns.map((column) => <td key={column.label}>{displayStat(row, column.fields)}</td>)}</tr>)}</tbody></table></div></section> : <div className="stats-leader-grid"><section><h2>Offensive Leaders</h2>{(activeView === "Team" ? TEAM_OFFENSE : OFFENSE).map((category) => <LeaderTable key={category.title} category={category} leaders={activeView === "Team" ? teamLeadersFor(category) : leadersFor(category)} loading={loading} error={error} onComplete={activeView === "Team" ? () => setCompleteView(`team-${category.fields[0]}` as CompleteView) : category.title === "RUSHING" ? () => setCompleteView("rushing") : undefined} />)}</section><section><h2>Defensive Leaders</h2>{(activeView === "Team" ? TEAM_DEFENSE : DEFENSE).map((category) => <LeaderTable key={category.title} category={category} leaders={activeView === "Team" ? teamLeadersFor(category) : leadersFor(category)} loading={loading} error={error} onComplete={activeView === "Team" ? undefined : category.title === "TACKLES" ? () => setCompleteView("tackling") : undefined} />)}</section></div>}
+    <div className="season-row"><StatsSelect label="Season" value="season-1"><option value="season-1">Season 1 Regular Season</option></StatsSelect></div>
+    {teamMode ? <TeamCompleteTable mode={teamMode} rows={[...teamTotals].sort((a, b) => b[teamMode] - a[teamMode])} onBack={() => setCompleteView(null)} /> : completeView ? <section className="complete-rushing-leaders"><div className="complete-leaders-tools"><button type="button" onClick={() => setCompleteView(null)}>← Back to stat leaders</button><label><span>Filter {completeView === "rushing" ? "rushers" : "tacklers"}</span><input type="search" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Player name" /></label></div><div className="complete-leaders-table-scroll"><table className="complete-leaders-table"><thead><tr><th>Player</th>{completeColumns.map((column) => <th key={column.label}>{column.label}</th>)}</tr></thead><tbody>{completeRows.map((row) => <tr key={row.Player}><td className="complete-leader-player"><PlayerImage player={playerByName.get(normalized(row.Player)) || {}} className="player-stats-image" /><button className="player-name-button" type="button" onClick={() => { const player = playerByName.get(normalized(row.Player)); if (player) setSelectedPlayer(player); }}>{row.Player}</button></td>{completeColumns.map((column) => <td key={column.label}>{displayStat(row, column.fields)}</td>)}</tr>)}</tbody></table></div></section> : <div className="stats-leader-grid"><section><h2>Offensive Leaders</h2>{(activeView === "Team" ? TEAM_OFFENSE : OFFENSE).map((category) => <LeaderTable key={category.title} category={category} leaders={activeView === "Team" ? teamLeadersFor(category) : leadersFor(category)} loading={loading} error={error} onPlayer={setSelectedPlayer} onComplete={activeView === "Team" ? () => setCompleteView(`team-${category.fields[0]}` as CompleteView) : category.title === "RUSHING" ? () => setCompleteView("rushing") : undefined} />)}</section><section><h2>Defensive Leaders</h2>{(activeView === "Team" ? TEAM_DEFENSE : DEFENSE).map((category) => <LeaderTable key={category.title} category={category} leaders={activeView === "Team" ? teamLeadersFor(category) : leadersFor(category)} loading={loading} error={error} onPlayer={setSelectedPlayer} onComplete={activeView === "Team" ? undefined : category.title === "TACKLES" ? () => setCompleteView("tackling") : undefined} />)}</section></div>}
     <p className="stats-updated">Statistics are updated after every completed game.</p>
   </main>;
 }
