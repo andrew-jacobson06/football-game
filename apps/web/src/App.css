@@ -253,11 +253,7 @@ body {
 :root[data-theme="light"] .player-table th,
 :root[data-theme="light"] .player-table td { border-color: var(--border-color); }
 
-/* Keep the stadium artwork readable while making its menu chrome follow the selected mode. */
-:root[data-theme="light"] .main-menu-screen::before { content: ""; position: absolute; inset: 0; z-index: 1; background: rgba(255,255,255,.34); pointer-events: none; }
-:root[data-theme="light"] .main-menu-screen .panel { background: rgba(255,255,255,.78); color: #18202a; border-color: rgba(24,32,42,.22); }
-:root[data-theme="light"] .main-menu-screen .menu-button { color: #18202a; background: linear-gradient(135deg, rgba(193,2,6,.16), rgba(255,255,255,.82)); }
-:root[data-theme="light"] .main-menu-screen .brand { color: #fff; }
+/* The main menu intentionally keeps its stadium presentation in both modes. */
 
 .progress-bar {
   height: 100%;
