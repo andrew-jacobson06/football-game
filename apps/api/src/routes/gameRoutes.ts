@@ -27,12 +27,14 @@ function objectFrom(headers: string[], row: Row) {
 async function getGamesList() {
   const { headers, rows } = await sheetRows("Games");
   const idx = (h: string) => headers.indexOf(h);
-  return rows.map((row) => ({
-    GameId: cell(row, idx("Id")), Home: cell(row, idx("Home")), Away: cell(row, idx("Away")),
-    HomeScore: cell(row, idx("HomeScore")), AwayScore: cell(row, idx("AwayScore")), Qtr: cell(row, idx("Qtr")),
-    Time: cell(row, idx("Time")), Down: cell(row, idx("Down")), Distance: cell(row, idx("Distance")),
-    BallOn: cell(row, idx("BallOn")), Possession: cell(row, idx("Possession")), HomeLogo: cell(row, idx("HomeLogo")), AwayLogo: cell(row, idx("AwayLogo")),
-  }));
+  return rows
+    .filter((row) => cell(row, idx("Id")) !== "")
+    .map((row) => ({
+      ...objectFrom(headers, row),
+      // The UI historically called this value GameId. Keep the alias while also
+      // returning every Games sheet column under its workbook header.
+      GameId: cell(row, idx("Id")),
+    }));
 }
 async function getGameState(gameId: string) {
   const { headers, rows } = await sheetRows("Games");

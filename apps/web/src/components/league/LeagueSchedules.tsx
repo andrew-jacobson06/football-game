@@ -6,6 +6,18 @@ const WEEKS = Array.from({ length: 18 }, (_, index) => index + 1);
 const getWeek = (game: LeagueGame, index: number) => Number(game.Week ?? index + 1);
 const isFinal = (game: LeagueGame) => String(game.Qtr).toUpperCase() === "FINAL";
 const teamName = (team: LeagueTeam) => String(team.Team || team.Name || team.Abbrev || "Team");
+const teamAbbrev = (team: LeagueTeam) => String(team.Abbrev || team.Team || "");
+function kickoffParts(game: LeagueGame) {
+  const raw = String(game["Kickoff Time"] ?? game.Kickoff ?? "").trim();
+  const parsed = new Date(raw);
+  if (!raw || Number.isNaN(parsed.getTime())) {
+    return { date: game.Date || `Week ${game.Week || "—"}`, time: raw || "TBD" };
+  }
+  return {
+    date: new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(parsed),
+    time: new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(parsed),
+  };
+}
 
 export function LeagueSchedules({
   games,
@@ -23,7 +35,7 @@ export function LeagueSchedules({
   const teamOptions = useMemo(() => {
     const labels = new Map<string, string>();
     teams.forEach((team) => {
-      const abbreviation = String(team.Abbrev || team.Team || "");
+      const abbreviation = teamAbbrev(team);
       if (abbreviation) labels.set(abbreviation, teamName(team));
     });
     games.forEach((game) => {
@@ -40,12 +52,13 @@ export function LeagueSchedules({
     [games, selectedTeam, week],
   );
   const selectedLabel = teamOptions.find(([id]) => id === selectedTeam)?.[1] || selectedTeam;
+  const selectedTeamDetails = teams.find((team) => teamAbbrev(team) === selectedTeam);
 
   return (
     <main className="schedule-center">
       {selectedTeam && (
         <header className="team-schedule-hero">
-          <div className="team-schedule-crest">{selectedTeam.slice(0, 2)}</div>
+          <div className="team-schedule-crest">{selectedTeamDetails?.Logo ? <img src={String(selectedTeamDetails.Logo)} alt="" /> : selectedTeam.slice(0, 2)}</div>
           <div><span>AFL TEAM</span><h1>{selectedLabel}</h1><small>2026 season</small></div>
         </header>
       )}
@@ -58,7 +71,7 @@ export function LeagueSchedules({
             <select value={selectedTeam} onChange={(event) => {
               const id = event.target.value;
               setSelectedTeam(id);
-              const team = teams.find((item) => String(item.Abbrev || item.Team || "") === id);
+              const team = teams.find((item) => teamAbbrev(item) === id);
               if (team) onSelectTeam?.(team);
             }}>
               <option value="">All weekly schedules</option>
@@ -76,16 +89,17 @@ export function LeagueSchedules({
           <table className="schedule-table">
             <thead><tr>{selectedTeam && <th>WK</th>}<th>Date</th><th>Matchup</th><th>{visibleGames.some(isFinal) ? "Result / Time" : "Time"}</th><th>TV</th><th>Game</th></tr></thead>
             <tbody>
-              {visibleGames.map((game, index) => {
+              {visibleGames.map((game) => {
                 const final = isFinal(game);
                 const homeWon = Number(game.HomeScore) > Number(game.AwayScore);
                 const chosenIsHome = selectedTeam === game.Home;
                 const won = chosenIsHome ? homeWon : !homeWon;
+                const kickoff = kickoffParts(game);
                 return <tr key={String(game.GameId)}>
                   {selectedTeam && <td>{getWeek(game, games.indexOf(game))}</td>}
-                  <td>{game.Date || `Week ${getWeek(game, index)}`}</td>
-                  <td><div className="schedule-matchup"><span><b>{game.Away}</b><small>Away</small></span><em>at</em><span><b>{game.Home}</b><small>Home</small></span></div></td>
-                  <td>{final ? <span className={`game-result ${won ? "win" : "loss"}`}><b>{selectedTeam ? (won ? "W" : "L") : "FINAL"}</b> {game.AwayScore}–{game.HomeScore}</span> : <strong className="kickoff-time">{game.Kickoff || "TBD"}</strong>}</td>
+                  <td>{kickoff.date}</td>
+                  <td><div className="schedule-matchup"><span><b>{game.AwayName || game.Away}</b><small>{game.Away} · Away</small></span><em>at</em><span><b>{game.HomeName || game.Home}</b><small>{game.Home} · Home</small></span></div></td>
+                  <td>{final ? <span className={`game-result ${won ? "win" : "loss"}`}><b>{selectedTeam ? (won ? "W" : "L") : "FINAL"}</b> {game.AwayScore}–{game.HomeScore}</span> : <strong className="kickoff-time">{kickoff.time}</strong>}</td>
                   <td>{game.Network || "AFL Network"}</td>
                   <td><button className="schedule-game-link" type="button" onClick={() => onSelectGame(game)}>Gamecast ›</button></td>
                 </tr>;

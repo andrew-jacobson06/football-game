@@ -28,13 +28,11 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
   const [isExitingGameLoad, setIsExitingGameLoad] = useState(false);
   const gameLoadTimeout = useRef<number | null>(null);
   useEffect(() => {
-    getGames()
-      .then(({ games }) => setGames(normalizeGames(games)))
-      .catch(() => setGames(mockGames));
-    Promise.all([getStandings(), getTeams()])
-      .then(([standingsResponse, teamsResponse]) => {
+    Promise.all([getGames(), getStandings(), getTeams()])
+      .then(([gamesResponse, standingsResponse, teamsResponse]) => {
         const sheetTeams = teamsResponse.teams as LeagueTeam[];
         setTeams(sheetTeams);
+        setGames(normalizeGames(gamesResponse.games, sheetTeams));
         setStandings(
           mergeStandingsWithTeams(
             standingsResponse.standings as LeagueTeam[],
@@ -43,6 +41,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
         );
       })
       .catch(() => {
+        setGames(normalizeGames(mockGames, mockTeams));
         setTeams(mockTeams);
         setStandings(mockTeams);
       });
