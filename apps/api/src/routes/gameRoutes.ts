@@ -85,7 +85,7 @@ async function getTeamPlayers(teamAbbrev: string) {
   const [assignments, players, playerStats, jerseys] = await Promise.all([
     readSheetObjects("PlayerTeams!A1:B"),
     readSheetObjects("Players!A1:AM"),
-    readSheetObjects("PlayerStats!A1:AI"),
+    readSheetObjects("PlayerStats!A1:AJ"),
     getTeamJerseys(),
   ]);
   const teamKey = teamAbbrev.trim().toLowerCase();
@@ -396,7 +396,7 @@ async function savePlayAndGameWithRetry(data: Record<string, unknown>, gameId: s
 
 gameRoutes.get("/health", (_req, res) => res.json({ ok: true, app: "football-game-api", message: "API is running" }));
 gameRoutes.get("/players", async (_req, res, next) => { try { res.json({ players: await getPlayersWithTeamJerseys() }); } catch (e) { next(e); } });
-gameRoutes.get("/player-stats", async (_req, res, next) => { try { res.json({ playerStats: await readSheetObjects("PlayerStats!A1:AI") }); } catch (e) { next(e); } });
+gameRoutes.get("/player-stats", async (_req, res, next) => { try { res.json({ playerStats: await readSheetObjects("PlayerStats!A1:AJ") }); } catch (e) { next(e); } });
 gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
   try {
     const [gamesSheet, historySheet] = await Promise.all([sheetRows("Games"), sheetRows("PlayHistory")]);
