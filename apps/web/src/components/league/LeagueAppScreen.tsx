@@ -27,6 +27,13 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
   const [loadingGame, setLoadingGame] = useState<LeagueGame | null>(null);
   const [isExitingGameLoad, setIsExitingGameLoad] = useState(false);
   const gameLoadTimeout = useRef<number | null>(null);
+  const refreshGames = () =>
+    getGames().then((response) => {
+      setGames((current) => normalizeGames(response.games, teams.length ? teams : mockTeams).map((game) => ({
+        ...current.find((item) => String(item.GameId) === String(game.GameId)),
+        ...game,
+      })));
+    });
   useEffect(() => {
     Promise.all([getGames(), getStandings(), getTeams()])
       .then(([gamesResponse, standingsResponse, teamsResponse]) => {
@@ -97,6 +104,18 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
     setLoadingGame(null);
     setIsExitingGameLoad(false);
     setActiveTab("scores");
+    void refreshGames().catch(() => undefined);
+  };
+
+  const updateLiveGame = (updatedGame: LeagueGame) => {
+    setGames((current) => current.map((item) =>
+      String(item.GameId) === String(updatedGame.GameId) ? { ...item, ...updatedGame } : item,
+    ));
+  };
+
+  const closeGame = () => {
+    setSelectedGame(null);
+    void refreshGames().catch(() => undefined);
   };
 
   if (selectedGame)
@@ -107,7 +126,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
           onHome={returnToLeagueHome}
           onSelectGame={openGame}
         />
-        <GameCenter game={selectedGame} onBack={() => setSelectedGame(null)} />
+        <GameCenter game={selectedGame} onBack={closeGame} onGameUpdate={updateLiveGame} />
       </section>
     );
   if (selectedTeam)
