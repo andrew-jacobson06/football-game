@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AppSelect } from "../ui/AppSelect";
 import type { LeagueGame, LeagueTeam } from "./types";
 
 const getWeek = (game: LeagueGame, index: number) => Number(game.Week ?? index + 1);
@@ -92,7 +93,7 @@ export function LeagueSchedules({
           <div><span className="schedule-kicker">2026 SEASON</span><h1>{selectedTeam ? `${selectedLabel} Schedule` : "AFL Schedule"}</h1></div>
           <label className="team-schedule-picker">
             <span className="sr-only">Choose a team schedule</span>
-            <select value={selectedTeam} onChange={(event) => {
+            <AppSelect value={selectedTeam} onChange={(event) => {
               const id = event.target.value;
               setSelectedTeam(id);
               const team = teamsByAbbrev.get(id);
@@ -100,7 +101,7 @@ export function LeagueSchedules({
             }}>
               <option value="">Team Schedules</option>
               {teamOptions.map(([id, label]) => <option value={id} key={id}>{label}</option>)}
-            </select>
+            </AppSelect>
           </label>
         </header>
 

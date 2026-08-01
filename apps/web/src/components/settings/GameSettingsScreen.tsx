@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { updateGameplaySetting, type VisualMode } from "../../api/client";
+import { AppSelect } from "../ui/AppSelect";
 
 type GameSettingsScreenProps = {
   visualMode: VisualMode;
@@ -46,7 +47,7 @@ export function GameSettingsScreen({ visualMode, onVisualModeChange, onBack }: G
               <label htmlFor="visual-mode">UI Mode</label>
               <p>Choose the color theme used throughout the game.</p>
             </div>
-            <select
+            <AppSelect
               id="visual-mode"
               value={visualMode}
               disabled={isSaving}
@@ -54,7 +55,7 @@ export function GameSettingsScreen({ visualMode, onVisualModeChange, onBack }: G
             >
               <option value="Dark">Dark</option>
               <option value="Light">Light</option>
-            </select>
+            </AppSelect>
           </div>
           {message && <p className="settings-message" role="status">{message}</p>}
         </div>
