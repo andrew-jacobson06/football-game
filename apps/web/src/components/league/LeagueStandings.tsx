@@ -80,8 +80,8 @@ function StandingsTable({ teams, onSelectTeam }: { teams: LeagueTeam[]; onSelect
               <td>{parseInteger(team["Div L"] ?? team.DivisionLosses)}</td>
               <td>{parseInteger(team.PF ?? team.PointsFor)}</td>
               <td>{parseInteger(team.PA ?? team.PointsAgainst)}</td>
-              <td>{computeDiff(team)}</td>
-              <td>{value(team, "Streak") || "—"}</td>
+              <td>{value(team, "DIFF", "Diff") || computeDiff(team)}</td>
+              <td>{value(team, "STRK", "Streak") || "—"}</td>
             </tr>
           ))}
         </tbody>

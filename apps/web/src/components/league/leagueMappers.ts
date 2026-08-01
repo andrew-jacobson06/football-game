@@ -80,6 +80,23 @@ export function computeDiff(team: LeagueTeam): number {
   );
 }
 
+export function mergeStandingsWithTeams(
+  standings: LeagueTeam[],
+  teams: LeagueTeam[],
+): LeagueTeam[] {
+  const teamsByAbbrev = new Map(
+    teams.map((team) => [String(team.Abbrev ?? "").trim().toUpperCase(), team]),
+  );
+
+  return standings.map((standing) => {
+    const abbrev = String(
+      standing.Abbrev ?? standing.Team ?? standing[""] ?? "",
+    ).trim().toUpperCase();
+
+    return { ...teamsByAbbrev.get(abbrev), ...standing, Abbrev: abbrev };
+  });
+}
+
 export function normalizeGames(rows: unknown[]): LeagueGame[] {
   return rows.filter(Boolean).map((row) => row as LeagueGame);
 }

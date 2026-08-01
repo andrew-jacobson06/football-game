@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { getGames, getStandings } from "../../api/client";
+import { getGames, getStandings, getTeams } from "../../api/client";
 import type { LeagueGame, LeagueTab, LeagueTeam } from "./types";
 import { mockGames, mockTeams } from "./leagueMockData";
-import { normalizeGames } from "./leagueMappers";
+import { mergeStandingsWithTeams, normalizeGames } from "./leagueMappers";
 import { LeagueHeader } from "./LeagueHeader";
 import { LeagueNews } from "./LeagueNews";
 import { LeagueSchedule } from "./LeagueSchedule";
@@ -21,6 +21,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
   const [activeTab, setActiveTab] = useState<LeagueTab>("scores");
   const [games, setGames] = useState<LeagueGame[]>(mockGames);
   const [teams, setTeams] = useState<LeagueTeam[]>(mockTeams);
+  const [standings, setStandings] = useState<LeagueTeam[]>(mockTeams);
   const [selectedGame, setSelectedGame] = useState<LeagueGame | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<LeagueTeam | null>(null);
   const [loadingGame, setLoadingGame] = useState<LeagueGame | null>(null);
@@ -30,9 +31,21 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
     getGames()
       .then(({ games }) => setGames(normalizeGames(games)))
       .catch(() => setGames(mockGames));
-    getStandings()
-      .then(({ standings }) => setTeams(standings as LeagueTeam[]))
-      .catch(() => setTeams(mockTeams));
+    Promise.all([getStandings(), getTeams()])
+      .then(([standingsResponse, teamsResponse]) => {
+        const sheetTeams = teamsResponse.teams as LeagueTeam[];
+        setTeams(sheetTeams);
+        setStandings(
+          mergeStandingsWithTeams(
+            standingsResponse.standings as LeagueTeam[],
+            sheetTeams,
+          ),
+        );
+      })
+      .catch(() => {
+        setTeams(mockTeams);
+        setStandings(mockTeams);
+      });
   }, []);
 
   useEffect(() => {
@@ -166,7 +179,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
             )}
             {activeTab === "standings" && (
               <div className="league-tab-content active">
-                <LeagueStandings teams={teams} onSelectTeam={setSelectedTeam} />
+                <LeagueStandings teams={standings} onSelectTeam={setSelectedTeam} />
               </div>
             )}
             {activeTab === "stats" && (

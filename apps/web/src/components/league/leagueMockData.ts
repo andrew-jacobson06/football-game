@@ -38,7 +38,7 @@ export const mockGames: LeagueGame[] = [
   },
 ];
 
-// TODO: Replace fallback standings with the Teams sheet through /api/teams in production-like local runs.
+// Used only when the Standings or Teams sheet cannot be reached.
 export const mockTeams: LeagueTeam[] = [
   {
     Abbrev: "POR",

@@ -44,23 +44,15 @@ async function getTeamsFromSheet() {
   return rows.filter((r) => r?.[0] !== "" && r?.[0] != null).slice(0, 10).map((r) => objectFrom(headers, r));
 }
 async function getStandingsFromSheet() {
-  const [standings, teams] = await Promise.all([
-    readSheetObjects("standings!A1:Z"),
-    getTeamsFromSheet(),
-  ]);
-  const teamsByAbbrev = new Map(
-    teams.map((team) => [String(team.Abbrev ?? "").trim().toUpperCase(), team]),
-  );
-
+  const standings = await readSheetObjects("standings!A1:Z");
   const standingsAbbrev = (row: Record<string, string>) =>
     String(row.Abbrev ?? row.Team ?? row[""] ?? "").trim().toUpperCase();
 
+  // The first standings column is intentionally unlabeled in the workbook.
+  // Expose it as Abbrev while otherwise returning the sheet columns verbatim.
   return standings
     .filter((row) => standingsAbbrev(row) !== "")
-    .map((row) => {
-      const abbrev = standingsAbbrev(row);
-      return { ...teamsByAbbrev.get(abbrev), ...row, Abbrev: abbrev };
-    });
+    .map((row) => ({ ...row, Abbrev: standingsAbbrev(row) }));
 }
 async function getTeamJerseys() {
   const teams = await getTeamsFromSheet();
