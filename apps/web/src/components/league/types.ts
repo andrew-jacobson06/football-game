@@ -31,6 +31,7 @@ export type LeagueGame = {
 };
 
 export type LeagueTeam = Record<string, string | number | undefined> & {
+  ID?: string | number;
   Team?: string;
   Name?: string;
   City?: string;
@@ -38,6 +39,15 @@ export type LeagueTeam = Record<string, string | number | undefined> & {
   Division?: string;
   Logo?: string;
   Abbrev?: string;
+  Location?: string;
+  "Home Jersey Crop"?: string;
+  "Away Jersey Crop"?: string;
+  "Home Uniform"?: string;
+  "Away Uniform"?: string;
+  "Primary Color"?: string;
+  "secondary color"?: string;
+  "third color"?: string;
+  CapSpace?: string | number;
   Wins?: string | number;
   Losses?: string | number;
   Ties?: string | number;

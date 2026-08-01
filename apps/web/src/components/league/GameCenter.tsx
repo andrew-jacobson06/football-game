@@ -11,6 +11,7 @@ import {
 import {
   getFrontendSettings,
   getGameState,
+  getPlayerStats,
   getTeams,
   getPlayerTraits,
   getPlayHistory,
@@ -42,6 +43,16 @@ import type {
 const EXPECTED_PLAYERS_PER_SIDE = 8;
 const teamValue = (team: LeagueTeam | undefined, key: string) =>
   String(team?.[key] ?? "").trim();
+const normalizedTeamKey = (value: unknown) => String(value ?? "").trim().toLowerCase();
+const matchesTeam = (team: LeagueTeam, key: unknown) => {
+  const wanted = normalizedTeamKey(key);
+  return [team.Abbrev, team.Team, team.Name, `${team.Location ?? team.City ?? ""} ${team.Name ?? team.Nickname ?? ""}`]
+    .some((value) => normalizedTeamKey(value) === wanted);
+};
+const isPregame = (game: LeagueGame) => {
+  const quarter = String(game.Qtr ?? "").trim().toUpperCase();
+  return !quarter || quarter === "0" || quarter === "UNSTARTED" || quarter === "PREGAME";
+};
 
 type Play = Record<string, unknown>;
 type LineStatMatchup = {
@@ -1392,6 +1403,51 @@ function ScoreChart({ game, history }: { game: LeagueGame; history: Play[] }) {
     </div>
   );
 }
+const seasonStat = (row: Record<string, string>, ...keys: string[]) => {
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== undefined && value !== "") return Number(value) || 0;
+  }
+  return 0;
+};
+
+function PregameMatchup({
+  game,
+  home,
+  away,
+  players,
+  stats,
+}: {
+  game: LeagueGame;
+  home?: LeagueTeam;
+  away?: LeagueTeam;
+  players: Play[];
+  stats: Record<string, string>[];
+}) {
+  const playerTeam = new Map(players.map((player) => [normalizedTeamKey(player.name ?? player.Name), player.team ?? player.Team]));
+  const categories = [
+    { label: "Passing", fields: ["Passing Yards", "Pass Yards", "PassYards"] },
+    { label: "Rushing", fields: ["Rushing Yards", "Rush Yards", "Yards"] },
+    { label: "Receiving", fields: ["Receiving Yards", "Rec Yards", "RecYards"] },
+    { label: "Tackles", fields: ["Tackles", "TKL"] },
+    { label: "Sacks", fields: ["Sacks", "SACK"] },
+  ];
+  const leader = (team: LeagueTeam | undefined, fields: string[]) => stats
+    .filter((row) => matchesTeam(team ?? {}, playerTeam.get(normalizedTeamKey(row.Player ?? row.Name))))
+    .map((row) => ({ name: String(row.Player ?? row.Name ?? "—"), value: seasonStat(row, ...fields) }))
+    .sort((a, b) => b.value - a.value)[0];
+  const teamCard = (team: LeagueTeam | undefined, side: "home" | "away") => {
+    const abbrev = String(team?.Abbrev ?? (side === "home" ? game.Home : game.Away));
+    const uniform = teamValue(team, side === "home" ? "Home Uniform" : "Away Uniform");
+    return <article className="pregame-team-card">
+      <header><TeamLogo src={team?.Logo} className="pregame-team-logo" alt="" /><div><span>{side} team</span><h2>{teamValue(team, "Location") || teamValue(team, "City")} {teamValue(team, "Name") || abbrev}</h2></div></header>
+      <div className="pregame-uniform">{uniform ? <img src={uniform} alt={`${abbrev} ${side} uniform`} /> : <span>Uniform unavailable</span>}</div>
+      <section><h3>Season Leaders</h3>{categories.map((category) => { const result = leader(team, category.fields); return <div className="pregame-leader" key={category.label}><span>{category.label}</span><strong>{result?.name ?? "—"}</strong><b>{result?.value.toLocaleString() ?? "—"}</b></div>; })}</section>
+    </article>;
+  };
+  return <section className="pregame-matchup" aria-label="Pregame matchup details"><div className="pregame-heading"><span>Pregame matchup</span><h1>Today's uniforms &amp; season leaders</h1></div><div className="pregame-team-grid">{teamCard(away, "away")}{teamCard(home, "home")}</div></section>;
+}
+
 /**
  * Main live-game container. It loads API data, owns the current tab and live
  * game state, coordinates the field/controls components, dispatches play calls
@@ -1411,6 +1467,7 @@ export function GameCenter({
   const [history, setHistory] = useState<Play[]>([]);
   const [players, setPlayers] = useState<Play[]>([]);
   const [teams, setTeams] = useState<LeagueTeam[]>([]);
+  const [seasonStats, setSeasonStats] = useState<Record<string, string>[]>([]);
   const [settings, setSettings] = useState<FrontendSettings>(
     normalizeFrontendSettings({}),
   );
@@ -1425,7 +1482,7 @@ export function GameCenter({
   ]);
   const [isSavingPlay, setIsSavingPlay] = useState(false);
   const [isResettingPlay, setIsResettingPlay] = useState(false);
-  const [isGameFieldCollapsed, setIsGameFieldCollapsed] = useState(false);
+  const [isGameFieldCollapsed, setIsGameFieldCollapsed] = useState(() => isPregame(game));
   const [settingFormation, setSettingFormation] = useState(false);
   const [autoCloseFormationOnSave, setAutoCloseFormationOnSave] =
     useState(false);
@@ -1449,10 +1506,12 @@ export function GameCenter({
     const homeAbbrev = String(currentGame.Home || "")
       .trim()
       .toLowerCase();
-    return teams.find(
-      (team) => teamValue(team, "Abbrev").toLowerCase() === homeAbbrev,
-    );
+    return teams.find((team) => matchesTeam(team, homeAbbrev));
   }, [currentGame.Home, teams]);
+  const awayTeamDetails = useMemo(
+    () => teams.find((team) => matchesTeam(team, currentGame.Away)),
+    [currentGame.Away, teams],
+  );
   useEffect(() => {
     let active = true;
     Promise.all([
@@ -1461,11 +1520,20 @@ export function GameCenter({
       getPlayerTraits(),
       getFrontendSettings(),
       getTeams(),
+      getPlayerStats(),
     ])
-      .then(([stateRes, historyRes, playerRes, settingsRes, teamsRes]) => {
+      .then(([stateRes, historyRes, playerRes, settingsRes, teamsRes, statsRes]) => {
         if (!active) return;
         const loadedSettings = normalizeFrontendSettings(settingsRes);
-        const loadedPlayers = playerRes.players.map((player) => ({ ...player }));
+        const loadedTeams = teamsRes.teams as LeagueTeam[];
+        const loadedPlayers = playerRes.players.map((player) => {
+          const team = loadedTeams.find((candidate) => matchesTeam(candidate, player.team));
+          const homePlayer = matchesTeam(team ?? {}, game.Home);
+          return {
+            ...player,
+            jersey: teamValue(team, homePlayer ? "Home Jersey Crop" : "Away Jersey Crop"),
+          };
+        });
         applyFatigueFromPlayHistory(
           {
             players: loadedPlayers,
@@ -1474,10 +1542,13 @@ export function GameCenter({
           },
           historyRes.plays,
         );
-        setCurrentGame(normalizeGame(game, stateRes.gameState));
+        const normalizedGame = normalizeGame(game, stateRes.gameState);
+        setCurrentGame(normalizedGame);
+        setIsGameFieldCollapsed(isPregame(normalizedGame));
         setHistory(historyRes.plays);
         setPlayers(loadedPlayers);
-        setTeams(teamsRes.teams as LeagueTeam[]);
+        setTeams(loadedTeams);
+        setSeasonStats(statsRes.playerStats);
         setSettings(loadedSettings);
         setLog(
           historyRes.plays.length
@@ -1669,6 +1740,15 @@ export function GameCenter({
               </div>
             </div>
           </div>
+          {isPregame(currentGame) && (
+            <PregameMatchup
+              game={currentGame}
+              home={homeTeamDetails}
+              away={awayTeamDetails}
+              players={players}
+              stats={seasonStats}
+            />
+          )}
           <div
             className={`field-console-stage ${isGameFieldCollapsed ? "field-collapsed" : ""}`}
           >

@@ -65,3 +65,31 @@
     right: clamp(10px, 3vw, 16px);
   }
 }
+.pregame-matchup {
+  margin: 18px auto;
+  padding: clamp(18px, 3vw, 32px);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--gray-medium);
+  box-shadow: 0 8px 28px var(--shadow-color);
+}
+
+.pregame-heading { margin-bottom: 20px; text-align: center; }
+.pregame-heading span, .pregame-team-card header span { color: var(--text-muted); font-size: .7rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.pregame-heading h1, .pregame-team-card h2 { margin: 5px 0 0; color: var(--text-light); }
+.pregame-team-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.pregame-team-card { overflow: hidden; border: 1px solid var(--border-color); border-radius: 12px; background: var(--gray-dark); }
+.pregame-team-card header { display: flex; align-items: center; gap: 13px; padding: 16px; border-bottom: 1px solid var(--border-color); }
+.pregame-team-card h2 { font-size: 1.05rem; }
+.pregame-team-logo { width: 48px; height: 48px; object-fit: contain; }
+.pregame-uniform { display: grid; min-height: 260px; place-items: center; padding: 16px; background: var(--gray-light); color: var(--text-muted); }
+.pregame-uniform img { display: block; width: 100%; max-width: 260px; height: 280px; object-fit: contain; }
+.pregame-team-card section { padding: 16px; }
+.pregame-team-card h3 { margin: 0 0 10px; color: var(--text-light); font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; }
+.pregame-leader { display: grid; grid-template-columns: 82px 1fr auto; gap: 10px; padding: 9px 0; border-top: 1px solid var(--border-color); color: var(--text-secondary); font-size: .8rem; }
+.pregame-leader span { color: var(--text-muted); }
+.pregame-leader b { color: var(--text-light); }
+
+@media (max-width: 700px) {
+  .pregame-team-grid { grid-template-columns: 1fr; }
+}
