@@ -298,6 +298,7 @@ function playValueForHeader(play: Record<string, unknown>, header: string) {
     ollosses: ["olLosses", "ollosses"],
     dlwins: ["dlWins", "dlwins"],
     dllosses: ["dlLosses", "dllosses"],
+    leadblocker: ["leadblocker", "leadBlocker"],
     jukes: ["jukes"],
     trucks: ["trucks"],
     brokentackles: ["brokenTackles", "brokentackles"],
