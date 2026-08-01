@@ -12,7 +12,7 @@ type Leader = { name: string; detail?: string; image?: string; player?: Player; 
 type Category = { title: string; label: string; fields: string[]; positions?: string[] };
 type StatColumn = { label: string; fields: string[] };
 type PlayerStatSide = "offense" | "defense";
-type ProfileStat = { label: string; value: string };
+type ProfileStat = { label: string; value: string; rankValue: (row: PlayerStats) => number };
 type TeamTotal = { team: LeagueTeam; rows: PlayerStats[]; gp: number; passing: number; rushing: number; total: number; sacks: number; interceptions: number; fumbleRecoveries: number; turnovers: number; allowedPassing: number; allowedRushing: number; allowed: number };
 
 const OFFENSE: Category[] = [
@@ -58,7 +58,7 @@ function displayStat(row: PlayerStats, fields: readonly string[]) {
   return String(Object.entries(row).find(([field]) => wanted.has(normalized(field)))?.[1] || "0");
 }
 function profileStat(row: PlayerStats, label: string, fields: string[]): ProfileStat {
-  return { label, value: displayStat(row, fields) };
+  return { label, value: displayStat(row, fields), rankValue: (candidate) => statValue(candidate, fields) };
 }
 function defensiveOverviewStats(row: PlayerStats): ProfileStat[] {
   const stat = (label: string, fields: string[]) => profileStat(row, label, fields);
@@ -67,7 +67,12 @@ function defensiveOverviewStats(row: PlayerStats): ProfileStat[] {
   const attempts = statValue(row, ["DL Plays", "Defensive Line Plays"]) || wins + losses;
   const recordedWinRate = statValue(row, ["DL Win %", "DL Win%", "DL Win Percentage"]);
   return [
-    { label: "DL WIN %", value: `${(recordedWinRate || (attempts ? wins / attempts * 100 : 0)).toFixed(1)}%` },
+    { label: "DL WIN %", value: `${(recordedWinRate || (attempts ? wins / attempts * 100 : 0)).toFixed(1)}%`, rankValue: (candidate) => {
+      const candidateWins = statValue(candidate, ["DL W", "DL Wins", "Defensive Line Wins"]);
+      const candidateLosses = statValue(candidate, ["DL L", "DL Losses", "Defensive Line Losses"]);
+      const candidateAttempts = statValue(candidate, ["DL Plays", "Defensive Line Plays"]) || candidateWins + candidateLosses;
+      return statValue(candidate, ["DL Win %", "DL Win%", "DL Win Percentage"]) || (candidateAttempts ? candidateWins / candidateAttempts * 100 : 0);
+    } },
     stat("TACKLES", ["Tackles", "Total Tackles", "TOT"]),
     stat("TFL", ["TFL", "Tackles For Loss", "TacklesForLoss"]),
     stat("SACK", ["Sacks", "Sack"]),
@@ -86,10 +91,12 @@ function profileStats(player: Player, row: PlayerStats, side: PlayerStatSide): P
   const position = String(side === "offense" ? player.Pos : player.DefPos).trim().toUpperCase();
   const stat = (label: string, fields: string[]) => profileStat(row, label, fields);
   const average = (yards: string[], attempts: string[]) => {
-    const recorded = statValue(row, ["Avg", "Average"]);
     const count = statValue(row, attempts);
-    const value = recorded || (count ? statValue(row, yards) / count : 0);
-    return { label: "AVG", value: value.toFixed(1) };
+    const calculate = (candidate: PlayerStats) => {
+      const candidateCount = statValue(candidate, attempts);
+      return candidateCount ? statValue(candidate, yards) / candidateCount : 0;
+    };
+    return { label: "AVG", value: (count ? statValue(row, yards) / count : 0).toFixed(1), rankValue: calculate };
   };
 
   if (side === "defense") {
@@ -99,30 +106,30 @@ function profileStats(player: Player, row: PlayerStats, side: PlayerStatSide): P
   }
 
   if (position === "QB") return [stat("YDS", ["Passing Yards", "Pass Yards", "PassYards"]), stat("TD", ["Passing TD", "Pass TD", "TD Passes"]), stat("INT", ["Interceptions Thrown", "Pass INT"]), stat("QBR", ["QBR", "Passer Rating", "Rating", "RTG"])];
-  if (position === "RB") return [stat("CAR", ["Carries", "Rushing Attempts", "Rush Attempts"]), stat("YDS", ["Yards", "Rushing Yards", "Rush Yards"]), stat("TD", ["Rushing TD", "Rush TD", "TD"]), average(["Yards", "Rushing Yards", "Rush Yards"], ["Carries", "Rushing Attempts", "Rush Attempts"])];
-  if (position === "WR" || position === "TE") return [stat("REC", ["Receptions", "REC"]), stat("YDS", ["Receiving Yards", "Rec Yards", "RecYards"]), stat("TD", ["Receiving TD", "Rec TD", "TD"]), average(["Receiving Yards", "Rec Yards", "RecYards"], ["Receptions", "REC"])];
+  if (position === "RB") return [stat("CAR", ["Carries", "Rushing Attempts", "Rush Attempts"]), stat("YDS", ["Yards", "Rushing Yards", "Rush Yards"]), stat("TD", ["Rushing TD", "Rush TD"]), average(["Yards", "Rushing Yards", "Rush Yards"], ["Carries", "Rushing Attempts", "Rush Attempts"])];
+  if (position === "WR" || position === "TE") return [stat("REC", ["Receptions", "REC"]), stat("YDS", ["Receiving Yards", "Rec Yards", "RecYards"]), stat("TD", ["Receiving TD", "Rec TD"]), average(["Receiving Yards", "Rec Yards", "RecYards"], ["Receptions", "REC"])];
   if (position === "K") return [stat("FG%", ["FG%", "Field Goal Percentage"]), stat("XP%", ["XP%", "Extra Point Percentage"]), stat("LNG", ["LNG", "Long", "Longest Field Goal"]), stat("PTS", ["PTS", "Points"])];
   const wins = statValue(row, ["OL W", "OL Wins", "Line Wins"]);
   const losses = statValue(row, ["OL L", "OL Losses", "Line Losses"]);
   const plays = statValue(row, ["Total Plays on Line", "Line Plays", "OL Plays"]) || wins + losses;
   const recordedWinRate = statValue(row, ["Win%", "Win Percentage", "OL Win Percentage"]);
-  return [{ label: "TOTAL PLAYS ON LINE", value: String(plays) }, { label: "WIN%", value: `${(recordedWinRate || (plays ? wins / plays * 100 : 0)).toFixed(1)}%` }, stat("LEAD BLOCK", ["Lead Block", "Lead Blocks"])];
+  return [{ label: "TOTAL PLAYS ON LINE", value: String(plays), rankValue: (candidate) => statValue(candidate, ["Total Plays on Line", "Line Plays", "OL Plays"]) || statValue(candidate, ["OL W", "OL Wins", "Line Wins"]) + statValue(candidate, ["OL L", "OL Losses", "Line Losses"]) }, { label: "WIN%", value: `${(recordedWinRate || (plays ? wins / plays * 100 : 0)).toFixed(1)}%`, rankValue: (candidate) => {
+    const candidateWins = statValue(candidate, ["OL W", "OL Wins", "Line Wins"]);
+    const candidateLosses = statValue(candidate, ["OL L", "OL Losses", "Line Losses"]);
+    const candidatePlays = statValue(candidate, ["Total Plays on Line", "Line Plays", "OL Plays"]) || candidateWins + candidateLosses;
+    return statValue(candidate, ["Win%", "Win Percentage", "OL Win Percentage"]) || (candidatePlays ? candidateWins / candidatePlays * 100 : 0);
+  } }, stat("LEAD BLOCK", ["Lead Block", "Lead Blocks"])];
 }
 function teamName(team: LeagueTeam) { return String(team.Name || team.Team || team.Nickname || team.Abbrev || "Team"); }
 function ordinal(rank: number) {
   const suffix = rank % 100 >= 11 && rank % 100 <= 13 ? "th" : rank % 10 === 1 ? "st" : rank % 10 === 2 ? "nd" : rank % 10 === 3 ? "rd" : "th";
   return `${rank}${suffix}`;
 }
-function leagueRanks(player: Player, row: PlayerStats, side: PlayerStatSide, stats: PlayerStats[], playersByName: Map<string, Player>) {
+function leagueRanks(player: Player, row: PlayerStats, side: PlayerStatSide, stats: PlayerStats[]) {
   const selected = profileStats(player, row, side);
-  const position = normalized(side === "offense" ? player.Pos : player.DefPos);
-  return selected.map((stat, index) => {
+  return selected.map((stat) => {
     const value = number(stat.value);
-    const values = stats.map((candidate) => {
-      const candidatePlayer = playersByName.get(normalized(candidate.Player));
-      const candidatePosition = normalized(side === "offense" ? candidatePlayer?.Pos : candidatePlayer?.DefPos);
-      return candidatePlayer && candidatePosition === position ? number(profileStats(candidatePlayer, candidate, side)[index]?.value) : 0;
-    }).filter((candidate) => candidate > 0).sort((a, b) => b - a);
+    const values = stats.map(stat.rankValue).filter((candidate) => candidate > 0).sort((a, b) => b - a);
     const rank = values.findIndex((candidate) => candidate <= value) + 1;
     const tied = value > 0 && values.filter((candidate) => candidate === value).length > 1;
     return rank ? `${tied ? "Tied-" : ""}${ordinal(rank)}` : "Not ranked";
@@ -148,7 +155,7 @@ function StatsSelect({ value, onChange, children, label }: { value: string; onCh
   return <label className="stats-select"><span className="sr-only">{label}</span><AppSelect value={value} onChange={(event) => onChange?.(event.target.value)}>{children}</AppSelect></label>;
 }
 
-function PlayerStatsProfile({ player, row, team, stats, playersByName, onBack }: { player: Player; row?: PlayerStats; team?: LeagueTeam; stats: PlayerStats[]; playersByName: Map<string, Player>; onBack: () => void }) {
+function PlayerStatsProfile({ player, row, team, stats, onBack }: { player: Player; row?: PlayerStats; team?: LeagueTeam; stats: PlayerStats[]; onBack: () => void }) {
   const [tab, setTab] = useState<PlayerProfileTab>("Overview");
   const [statSide, setStatSide] = useState<PlayerStatSide>("offense");
   const [recentGames, setRecentGames] = useState<PlayerGame[]>([]);
@@ -156,7 +163,7 @@ function PlayerStatsProfile({ player, row, team, stats, playersByName, onBack }:
   const [gameStatTab, setGameStatTab] = useState<"Passing" | "Receiving" | "Rushing" | "Fumbles" | "Defense">("Rushing");
   const name = String(player.Name || row?.Player || "Player");
   const summary = profileStats(player, row || {} as PlayerStats, statSide);
-  const ranks = leagueRanks(player, row || {} as PlayerStats, statSide, stats, playersByName);
+  const ranks = leagueRanks(player, row || {} as PlayerStats, statSide, stats);
   const shownPosition = String(statSide === "offense" ? player.Pos : player.DefPos || "DL").toUpperCase();
   const otherSide = statSide === "offense" ? "Defense" : "Offense";
   const logo = String(team?.Logo || "");
@@ -181,7 +188,7 @@ function PlayerStatsProfile({ player, row, team, stats, playersByName, onBack }:
     rbGroups[0],
   ];
   const receiverGroups = [
-    { title: "RECEIVING", stats: [{ label: "REC", fields: ["Receptions", "REC"] }, { label: "TGTS", fields: ["Targets", "Receiving Targets"] }, { label: "YDS", fields: ["Receiving Yards", "Rec Yards", "RecYards"] }, { label: "AVG", value: (statValue(row || {} as PlayerStats, ["Receptions", "REC"]) ? statValue(row || {} as PlayerStats, ["Receiving Yards", "Rec Yards", "RecYards"]) / statValue(row || {} as PlayerStats, ["Receptions", "REC"]) : 0).toFixed(1) }, { label: "TD", fields: ["Receiving TD", "Rec TD"] }, { label: "LNG", fields: ["Receiving Long", "Rec Long"] }, { label: "FD", fields: ["Receiving First Downs", "Rec First Downs", "First Down"] }] },
+    { title: "RECEIVING", stats: [{ label: "REC", fields: ["Receptions", "REC"] }, { label: "TGTS", fields: ["Targets", "Receiving Targets"] }, { label: "YDS", fields: ["Receiving Yards", "Rec Yards", "RecYards"] }, { label: "AVG", value: (statValue(row || {} as PlayerStats, ["Receptions", "REC"]) ? statValue(row || {} as PlayerStats, ["Receiving Yards", "Rec Yards", "RecYards"]) / statValue(row || {} as PlayerStats, ["Receptions", "REC"]) : 0).toFixed(1) }, { label: "TD", fields: ["Receiving TD", "Rec TD"] }, { label: "LNG", fields: ["Receiving Long", "Rec Long"] }, { label: "FD", fields: ["Receiving First Downs", "Rec First Downs"] }] },
     rbGroups[0],
     rbGroups[2],
   ];
@@ -284,7 +291,7 @@ export function LeagueStats({ teams, games = [] }: { teams: LeagueTeam[]; games?
   if (selectedPlayer) {
     const row = stats.find((item) => normalized(item.Player) === normalized(selectedPlayer.Name));
     const team = teamByKey.get(normalized(selectedPlayer.Team));
-    return <PlayerStatsProfile player={selectedPlayer} row={row} team={team} stats={stats} playersByName={playerByName} onBack={() => setSelectedPlayer(null)} />;
+    return <PlayerStatsProfile player={selectedPlayer} row={row} team={team} stats={stats} onBack={() => setSelectedPlayer(null)} />;
   }
 
   return <main className="league-stats-card">
