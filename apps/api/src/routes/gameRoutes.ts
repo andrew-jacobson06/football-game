@@ -396,7 +396,7 @@ async function savePlayAndGameWithRetry(data: Record<string, unknown>, gameId: s
 gameRoutes.get("/health", (_req, res) => res.json({ ok: true, app: "football-game-api", message: "API is running" }));
 gameRoutes.get("/players", async (_req, res, next) => { try { res.json({ players: await getPlayersWithTeamJerseys() }); } catch (e) { next(e); } });
 gameRoutes.get("/player-stats", async (_req, res, next) => { try { res.json({ playerStats: await readSheetObjects("PlayerStats!A1:AI") }); } catch (e) { next(e); } });
-gameRoutes.get("/players/:playerName/rushing-games", async (req, res, next) => {
+gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
   try {
     const [gamesSheet, historySheet] = await Promise.all([sheetRows("Games"), sheetRows("PlayHistory")]);
     const playerName = req.params.playerName.trim().toLowerCase();
@@ -441,10 +441,27 @@ gameRoutes.get("/players/:playerName/rushing-games", async (req, res, next) => {
       const opponentScore = asNumber(cell(game, isHome ? awayScore : homeScore));
       const yards = rushingPlays.map((play) => asNumber(cell(play, playYards)));
       const touchdowns = rushingPlays.filter((play) => /touchdown|\btd\b/i.test(String(cell(play, playResult)))).length;
+      const isNamed = (play: Row, column: number) => String(cell(play, column)).trim().toLowerCase() === playerName;
+      const isPass = (play: Row) => /pass/i.test(String(cell(play, playType)));
+      const result = (play: Row) => String(cell(play, playResult));
+      const passingPlays = plays.filter((play) => isNamed(play, playPlayer) && isPass(play));
+      const passingAttempts = passingPlays.filter((play) => !/sack/i.test(result(play)));
+      const completions = passingAttempts.filter((play) => !/incomplete|interception/i.test(result(play)));
+      const receivingPlays = plays.filter((play) => isNamed(play, playReceiver) && isPass(play));
+      const receptions = receivingPlays.filter((play) => !/incomplete|interception/i.test(result(play)));
+      const fumblePlays = plays.filter((play) => (isNamed(play, playPlayer) || isNamed(play, playReceiver)) && /fumble/i.test(result(play)));
+      const values = (rows: Row[]) => rows.map((play) => asNumber(cell(play, playYards)));
+      const passYards = values(completions);
+      const receivingYards = values(receptions);
       return [{ gameId: id, opponent: isHome ? awayTeam : homeTeam, location: isHome ? "vs" : "@",
         result: `${teamScore > opponentScore ? "W" : teamScore < opponentScore ? "L" : "T"} ${teamScore}-${opponentScore}`,
         carries: rushingPlays.length, yards: yards.reduce((sum, value) => sum + value, 0), touchdowns,
-        long: Math.max(0, ...yards), date: String(cell(game, date)) }];
+        long: Math.max(0, ...yards), date: String(cell(game, date)),
+        passing: { completions: completions.length, attempts: passingAttempts.length, yards: passYards.reduce((sum, value) => sum + value, 0), touchdowns: completions.filter((play) => /touchdown|\btd\b/i.test(result(play))).length, interceptions: passingAttempts.filter((play) => /interception/i.test(result(play))).length, long: Math.max(0, ...passYards), sacks: passingPlays.filter((play) => /sack/i.test(result(play))).length },
+        rushing: { carries: rushingPlays.length, yards: yards.reduce((sum, value) => sum + value, 0), touchdowns, long: Math.max(0, ...yards) },
+        receiving: { receptions: receptions.length, targets: receivingPlays.length, yards: receivingYards.reduce((sum, value) => sum + value, 0), touchdowns: receptions.filter((play) => /touchdown|\btd\b/i.test(result(play))).length, long: Math.max(0, ...receivingYards), firstDowns: 0 },
+        fumbles: { total: fumblePlays.length, lost: fumblePlays.filter((play) => /lost|turnover/i.test(result(play))).length },
+      }];
     });
     res.json({ games });
   } catch (e) { next(e); }

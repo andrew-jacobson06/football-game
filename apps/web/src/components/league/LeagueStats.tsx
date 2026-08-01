@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getPlayerRushingGames, getPlayers, getPlayerStats, type PlayerRushingGame, type PlayerStats } from "../../api/client";
+import { getPlayerGames, getPlayers, getPlayerStats, type PlayerGame, type PlayerStats } from "../../api/client";
 import { PlayerImage } from "../players/PlayerImage";
 import { AppSelect } from "../ui/AppSelect";
 import type { Player } from "../players/types";
@@ -129,8 +129,9 @@ function StatsSelect({ value, onChange, children, label }: { value: string; onCh
 function PlayerStatsProfile({ player, row, team, stats, playersByName, onBack }: { player: Player; row?: PlayerStats; team?: LeagueTeam; stats: PlayerStats[]; playersByName: Map<string, Player>; onBack: () => void }) {
   const [tab, setTab] = useState<PlayerProfileTab>("Overview");
   const [statSide, setStatSide] = useState<PlayerStatSide>("offense");
-  const [recentGames, setRecentGames] = useState<PlayerRushingGame[]>([]);
+  const [recentGames, setRecentGames] = useState<PlayerGame[]>([]);
   const [gamesLoading, setGamesLoading] = useState(true);
+  const [gameStatTab, setGameStatTab] = useState<"Passing" | "Receiving" | "Rushing" | "Fumbles">("Rushing");
   const name = String(player.Name || row?.Player || "Player");
   const summary = profileStats(player, row || {} as PlayerStats, statSide);
   const ranks = leagueRanks(player, row || {} as PlayerStats, statSide, stats, playersByName);
@@ -138,15 +139,33 @@ function PlayerStatsProfile({ player, row, team, stats, playersByName, onBack }:
   const otherSide = statSide === "offense" ? "Defense" : "Offense";
   const logo = String(team?.Logo || "");
   const isRunningBack = statSide === "offense" && shownPosition === "RB";
+  const isQuarterback = statSide === "offense" && shownPosition === "QB";
+  const isReceiver = statSide === "offense" && (shownPosition === "WR" || shownPosition === "TE");
   useEffect(() => {
-    if (!isRunningBack) return;
-    getPlayerRushingGames(name).then(({ games }) => setRecentGames(games)).catch(() => setRecentGames([])).finally(() => setGamesLoading(false));
-  }, [isRunningBack, name]);
+    if (!isRunningBack && !isQuarterback && !isReceiver) return;
+    getPlayerGames(name).then(({ games }) => {
+      setRecentGames(games);
+      setGameStatTab(isQuarterback ? "Passing" : isReceiver ? "Receiving" : "Rushing");
+    }).catch(() => setRecentGames([])).finally(() => setGamesLoading(false));
+  }, [isQuarterback, isReceiver, isRunningBack, name]);
   const rbGroups = [
     { title: "RUSHING", stats: [{ label: "CAR", fields: ["Carries", "Rushing Attempts", "Rush Attempts"] }, { label: "YDS", fields: ["Yards", "Rushing Yards", "Rush Yards"] }, { label: "AVG", value: summary.find((item) => item.label === "AVG")?.value || "0.0" }, { label: "TD", fields: ["Rushing TD", "Rush TD", "TD"] }, { label: "LNG", fields: ["Long", "LNG"] }] },
     { title: "RECEIVING", stats: [{ label: "REC", fields: ["Receptions", "REC"] }, { label: "YDS", fields: ["Receiving Yards", "Rec Yards", "RecYards"] }, { label: "AVG", value: (statValue(row || {} as PlayerStats, ["Receptions", "REC"]) ? statValue(row || {} as PlayerStats, ["Receiving Yards", "Rec Yards", "RecYards"]) / statValue(row || {} as PlayerStats, ["Receptions", "REC"]) : 0).toFixed(1) }, { label: "TD", fields: ["Receiving TD", "Rec TD"] }, { label: "LNG", fields: ["Receiving Long", "Rec Long"] }] },
     { title: "FUMBLES", stats: [{ label: "FUM", fields: ["Fum", "Fumbles"] }, { label: "LST", fields: ["Fum Lost", "Fumbles Lost"] }] },
   ];
+  const qbGroups = [
+    { title: "PASSING", stats: [{ label: "CMP", fields: ["Completions", "Pass Completions", "CMP"] }, { label: "ATT", fields: ["Passing Attempts", "Pass Attempts", "ATT"] }, { label: "CMP%", value: (statValue(row || {} as PlayerStats, ["Passing Attempts", "Pass Attempts", "ATT"]) ? statValue(row || {} as PlayerStats, ["Completions", "Pass Completions", "CMP"]) / statValue(row || {} as PlayerStats, ["Passing Attempts", "Pass Attempts", "ATT"]) * 100 : 0).toFixed(1) }, { label: "YDS", fields: ["Passing Yards", "Pass Yards", "PassYards"] }, { label: "AVG", value: (statValue(row || {} as PlayerStats, ["Passing Attempts", "Pass Attempts", "ATT"]) ? statValue(row || {} as PlayerStats, ["Passing Yards", "Pass Yards", "PassYards"]) / statValue(row || {} as PlayerStats, ["Passing Attempts", "Pass Attempts", "ATT"]) : 0).toFixed(1) }, { label: "TD", fields: ["Passing TD", "Pass TD", "TD Passes"] }, { label: "INT", fields: ["Interceptions Thrown", "Pass INT"] }, { label: "LNG", fields: ["Passing Long", "Pass Long"] }, { label: "SACK", fields: ["Sacked", "Times Sacked"] }, { label: "RTG", fields: ["QBR", "Passer Rating", "Rating", "RTG"] }] },
+    rbGroups[0],
+  ];
+  const receiverGroups = [
+    { title: "RECEIVING", stats: [{ label: "REC", fields: ["Receptions", "REC"] }, { label: "TGTS", fields: ["Targets", "Receiving Targets"] }, { label: "YDS", fields: ["Receiving Yards", "Rec Yards", "RecYards"] }, { label: "AVG", value: (statValue(row || {} as PlayerStats, ["Receptions", "REC"]) ? statValue(row || {} as PlayerStats, ["Receiving Yards", "Rec Yards", "RecYards"]) / statValue(row || {} as PlayerStats, ["Receptions", "REC"]) : 0).toFixed(1) }, { label: "TD", fields: ["Receiving TD", "Rec TD"] }, { label: "LNG", fields: ["Receiving Long", "Rec Long"] }, { label: "FD", fields: ["Receiving First Downs", "Rec First Downs", "First Down"] }] },
+    rbGroups[0],
+    rbGroups[2],
+  ];
+  const overviewGroups = isQuarterback ? qbGroups : isReceiver ? receiverGroups : isRunningBack ? rbGroups : null;
+  const gameTabs = isQuarterback ? ["Passing", "Rushing"] as const : isReceiver ? ["Receiving", "Rushing", "Fumbles"] as const : ["Rushing"] as const;
+  const recentColumns = gameStatTab === "Passing" ? ["CMP", "ATT", "YDS", "CMP%", "AVG", "TD", "INT", "LNG", "SACK"] : gameStatTab === "Receiving" ? ["REC", "TGTS", "YDS", "AVG", "TD", "LNG", "FD"] : gameStatTab === "Fumbles" ? ["FUM", "LST"] : ["CAR", "YDS", "AVG", "TD", "LNG"];
+  const recentValues = (game: PlayerGame) => gameStatTab === "Passing" ? [game.passing.completions, game.passing.attempts, game.passing.yards, game.passing.attempts ? (game.passing.completions / game.passing.attempts * 100).toFixed(1) : "0.0", game.passing.attempts ? (game.passing.yards / game.passing.attempts).toFixed(1) : "0.0", game.passing.touchdowns, game.passing.interceptions, game.passing.long, game.passing.sacks] : gameStatTab === "Receiving" ? [game.receiving.receptions, game.receiving.targets, game.receiving.yards, game.receiving.receptions ? (game.receiving.yards / game.receiving.receptions).toFixed(1) : "0.0", game.receiving.touchdowns, game.receiving.long, game.receiving.firstDowns] : gameStatTab === "Fumbles" ? [game.fumbles.total, game.fumbles.lost] : [game.rushing.carries, game.rushing.yards, game.rushing.carries ? (game.rushing.yards / game.rushing.carries).toFixed(1) : "0.0", game.rushing.touchdowns, game.rushing.long];
   return <main className="player-detail-page">
     <button className="profile-back" type="button" onClick={onBack}>← Back to league leaders</button>
     <section className="player-detail-hero">
@@ -156,7 +175,7 @@ function PlayerStatsProfile({ player, row, team, stats, playersByName, onBack }:
     </section>
     <section className="player-featured-stats"><h2>SEASON 1 REGULAR SEASON {statSide.toUpperCase()} STATS</h2><div>{summary.map(({ label, value }, index) => <article key={label}><span>{label}</span><strong>{value}</strong><small>{ranks[index]}</small></article>)}</div></section>
     <nav className="player-detail-tabs">{(["Overview", "News", "Stats", "Bio", "Splits", "Game Log"] as PlayerProfileTab[]).map((item) => <button className={tab === item ? "active" : ""} type="button" onClick={() => setTab(item)} key={item}>{item}</button>)}</nav>
-    {tab === "Overview" ? <div className="player-overview-grid"><section><header><h3>Season 1 {shownPosition || "Player"} Statistics</h3></header>{isRunningBack ? <div className="player-stat-table-scroll"><table className="rb-overview-table"><thead><tr><th rowSpan={2}>STATS</th>{rbGroups.map((group) => <th key={group.title} colSpan={group.stats.length}>{group.title}</th>)}</tr><tr>{rbGroups.flatMap((group) => group.stats.map((stat) => <th key={`${group.title}-${stat.label}`}>{stat.label}</th>))}</tr></thead><tbody><tr><td>Regular Season</td>{rbGroups.flatMap((group) => group.stats.map((stat) => <td key={`${group.title}-${stat.label}`}>{"value" in stat ? stat.value : displayStat(row || {} as PlayerStats, stat.fields)}</td>))}</tr></tbody></table></div> : <div className="player-stat-table-scroll"><table><thead><tr><th>STATS</th>{summary.map(({ label }) => <th key={label}>{label}</th>)}</tr></thead><tbody><tr><td>Regular Season</td>{summary.map(({ label, value }) => <td key={label}>{value}</td>)}</tr></tbody></table></div>}</section><section><header><h3>Recent Games</h3></header>{isRunningBack && recentGames.length ? <div className="player-stat-table-scroll"><table className="recent-games-table"><thead><tr><th>DATE</th><th>OPP</th><th>RESULT</th><th>CAR</th><th>YDS</th><th>AVG</th><th>TD</th><th>LNG</th></tr></thead><tbody>{recentGames.map((game) => <tr key={game.gameId}><td>{game.date || "—"}</td><td>{game.location} {game.opponent}</td><td className={game.result.startsWith("W") ? "game-result-win" : "game-result-loss"}>{game.result}</td><td>{game.carries}</td><td>{game.yards}</td><td>{game.carries ? (game.yards / game.carries).toFixed(1) : "0.0"}</td><td>{game.touchdowns}</td><td>{game.long}</td></tr>)}</tbody></table></div> : <div className="empty-profile-state">{gamesLoading ? "Loading completed games…" : "Game-by-game statistics will appear after completed games."}</div>}</section></div> : <section className="player-tab-stub"><span>{tab.toUpperCase()}</span><h2>{tab} coming soon</h2><p>This player section is ready for future league data.</p></section>}
+    {tab === "Overview" ? <div className="player-overview-grid"><section><header><h3>Season 1 {shownPosition || "Player"} Statistics</h3></header>{overviewGroups ? <div className="player-stat-table-scroll"><table className="rb-overview-table"><thead><tr><th rowSpan={2}>STATS</th>{overviewGroups.map((group) => <th key={group.title} colSpan={group.stats.length}>{group.title}</th>)}</tr><tr>{overviewGroups.flatMap((group) => group.stats.map((stat) => <th key={`${group.title}-${stat.label}`}>{stat.label}</th>))}</tr></thead><tbody><tr><td>Regular Season</td>{overviewGroups.flatMap((group) => group.stats.map((stat) => <td key={`${group.title}-${stat.label}`}>{"value" in stat ? stat.value : displayStat(row || {} as PlayerStats, stat.fields)}</td>))}</tr></tbody></table></div> : <div className="player-stat-table-scroll"><table><thead><tr><th>STATS</th>{summary.map(({ label }) => <th key={label}>{label}</th>)}</tr></thead><tbody><tr><td>Regular Season</td>{summary.map(({ label, value }) => <td key={label}>{value}</td>)}</tr></tbody></table></div>}</section><section><header><h3>Recent Games</h3></header>{overviewGroups && <nav className="recent-game-tabs" aria-label="Recent game statistic category">{gameTabs.map((item) => <button type="button" className={gameStatTab === item ? "active" : ""} onClick={() => setGameStatTab(item)} key={item}>{item}</button>)}</nav>}{overviewGroups && recentGames.length ? <div className="player-stat-table-scroll"><table className="recent-games-table"><thead><tr><th>DATE</th><th>OPP</th><th>RESULT</th>{recentColumns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{recentGames.map((game) => <tr key={game.gameId}><td>{game.date || "—"}</td><td>{game.location} {game.opponent}</td><td className={game.result.startsWith("W") ? "game-result-win" : "game-result-loss"}>{game.result}</td>{recentValues(game).map((value, index) => <td key={`${game.gameId}-${recentColumns[index]}`}>{value}</td>)}</tr>)}</tbody></table></div> : <div className="empty-profile-state">{gamesLoading && overviewGroups ? "Loading completed games…" : "Game-by-game statistics will appear after completed games."}</div>}</section></div> : <section className="player-tab-stub"><span>{tab.toUpperCase()}</span><h2>{tab} coming soon</h2><p>This player section is ready for future league data.</p></section>}
   </main>;
 }
 
