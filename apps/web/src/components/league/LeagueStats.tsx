@@ -236,7 +236,12 @@ export function LeagueStats({ teams, games = [] }: { teams: LeagueTeam[]; games?
 
   useEffect(() => { Promise.all([getPlayerStats(), getPlayers()]).then(([statsResult, playersResult]) => { setStats(statsResult.playerStats); setPlayers(playersResult.players); }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load statistics")).finally(() => setLoading(false)); }, []);
 
-  const playerByName = useMemo(() => new Map(players.map((player) => [normalized(player.Name), player])), [players]);
+  const statsPlayers = useMemo(() => players.map((player) => {
+    const team = teams.find((candidate) => [candidate.Abbrev, candidate.Team, candidate.Name]
+      .some((value) => normalized(value) === normalized(player.Team)));
+    return { ...player, jersey: String(team?.["Away Jersey Crop"] || player.jersey || "") };
+  }), [players, teams]);
+  const playerByName = useMemo(() => new Map(statsPlayers.map((player) => [normalized(player.Name), player])), [statsPlayers]);
   const teamByKey = useMemo(() => new Map(teams.flatMap((team) => [team.Abbrev, team.Team, team.Name].filter(Boolean).map((value) => [normalized(value), team] as const))), [teams]);
   const teamTotals = useMemo<TeamTotal[]>(() => {
     const offense = new Map<string, { passing: number; rushing: number }>();
@@ -274,7 +279,7 @@ export function LeagueStats({ teams, games = [] }: { teams: LeagueTeam[]; games?
     if (activeView === "Player") return stats.map((row) => ({ row, player: playerByName.get(normalized(row.Player)), value: statValue(row, category.fields) })).filter(({ player, value }) => value > 0 && (!category.positions || category.positions.includes(String(player?.Pos || "").toUpperCase()))).sort((a, b) => b.value - a.value).slice(0, 5).map(({ row, player, value }) => ({ name: row.Player, detail: String(player?.Team || ""), player, value }));
     const totals = new Map<string, number>();
     stats.forEach((row) => { const player = playerByName.get(normalized(row.Player)); const key = normalized(player?.Team); if (key) totals.set(key, (totals.get(key) || 0) + statValue(row, category.fields)); });
-    return [...totals].filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([key, value]) => { const team = teamByKey.get(key); return { name: team ? teamName(team) : players.find((player) => normalized(player.Team) === key)?.Team || key.toUpperCase(), image: String(team?.Logo || ""), value }; });
+    return [...totals].filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([key, value]) => { const team = teamByKey.get(key); return { name: team ? teamName(team) : statsPlayers.find((player) => normalized(player.Team) === key)?.Team || key.toUpperCase(), image: String(team?.Logo || ""), value }; });
   };
   const teamLeadersFor = (category: Category): Leader[] => teamTotals.map((row) => {
     const key = category.fields[0] as "total" | "passing" | "rushing" | "sacks" | "turnovers" | "allowed";
