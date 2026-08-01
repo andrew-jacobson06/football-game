@@ -21,6 +21,15 @@ async function postJson<T>(
   if (!response.ok) throw new Error(message);
   return response.json();
 }
+async function putJson<T>(path: string, body: unknown, message: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error(message);
+  return response.json();
+}
 export async function getApiHealth(): Promise<ApiHealth> {
   return getJson("/health", "Failed to reach backend API");
 }
@@ -116,4 +125,18 @@ export async function getPlayerTraits(): Promise<{
 }
 export async function getFrontendSettings(): Promise<Record<string, unknown>> {
   return getJson("/frontend-settings", "Failed to load frontend settings");
+}
+export type VisualMode = "Dark" | "Light";
+export type GameplaySettings = Record<string, string> & { Visual_Mode?: VisualMode };
+
+export async function getGameplaySettings(): Promise<{ settings: GameplaySettings }> {
+  return getJson("/gameplay-settings", "Failed to load game settings");
+}
+
+export async function updateGameplaySetting(variable: "Visual_Mode", value: VisualMode) {
+  return putJson<{ ok: boolean; variable: string; value: string }>(
+    `/gameplay-settings/${encodeURIComponent(variable)}`,
+    { value },
+    "Failed to save game settings",
+  );
 }

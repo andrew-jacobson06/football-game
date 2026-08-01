@@ -192,6 +192,45 @@ async function getFrontendSettingsFromSheet() {
     sackLossTable: settingRows(rows, "SackLoss_").map((r) => ({ label: r[0], pct: Number(r[1]), max: Number(r[2]), min: Number(r[3]) })),
   };
 }
+
+const GAMEPLAY_SETTING_VALUES = {
+  Visual_Mode: ["Dark", "Light"],
+} as const;
+
+async function getGameplaySettingsFromSheet() {
+  const { headers, rows } = await sheetRows("GamePlaySettings");
+  const variableColumn = headers.findIndex((header) => normHeader(header) === "variable");
+  const valueColumn = headers.findIndex((header) => normHeader(header) === "value");
+  if (variableColumn === -1 || valueColumn === -1) {
+    throw new Error("GamePlaySettings must have Variable and Value columns.");
+  }
+
+  return Object.fromEntries(
+    rows
+      .map((row) => [String(cell(row, variableColumn)).trim(), String(cell(row, valueColumn)).trim()])
+      .filter(([variable]) => variable),
+  );
+}
+
+async function updateGameplaySetting(variable: string, value: string) {
+  const allowedValues = GAMEPLAY_SETTING_VALUES[variable as keyof typeof GAMEPLAY_SETTING_VALUES];
+  if (!allowedValues || !(allowedValues as readonly string[]).includes(value)) {
+    throw new Error(`Invalid GamePlaySettings value for '${variable}'.`);
+  }
+
+  const { headers, rows } = await sheetRows("GamePlaySettings");
+  const variableColumn = headers.findIndex((header) => normHeader(header) === "variable");
+  const valueColumn = headers.findIndex((header) => normHeader(header) === "value");
+  const rowIndex = rows.findIndex((row) => String(cell(row, variableColumn)).trim() === variable);
+  if (variableColumn === -1 || valueColumn === -1 || rowIndex === -1) {
+    throw new Error(`GamePlaySettings variable '${variable}' was not found.`);
+  }
+
+  await batchUpdateSheetValues([{
+    range: `GamePlaySettings!${columnToLetters(valueColumn + 1)}${rowIndex + 2}`,
+    values: [[value]],
+  }]);
+}
 async function getPlayerTraitsFromSheet() {
   const jerseys = await getTeamJerseys();
   const { headers, rows } = await sheetRows("Players"); const headerIndex: Record<string, number> = {};
@@ -412,6 +451,14 @@ gameRoutes.get("/games", async (_req, res, next) => { try { res.json({ games: aw
 gameRoutes.get("/games/:gameId/state", async (req, res, next) => { try { res.json({ gameState: await getGameState(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/games/:gameId/play-history", async (req, res, next) => { try { res.json({ plays: await getPlayHistory(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/frontend-settings", async (_req, res, next) => { try { res.json(await getFrontendSettingsFromSheet()); } catch (e) { next(e); } });
+gameRoutes.get("/gameplay-settings", async (_req, res, next) => { try { res.json({ settings: await getGameplaySettingsFromSheet() }); } catch (e) { next(e); } });
+gameRoutes.put("/gameplay-settings/:variable", async (req, res, next) => {
+  try {
+    const value = String(req.body?.value ?? "");
+    await updateGameplaySetting(req.params.variable, value);
+    res.json({ ok: true, variable: req.params.variable, value });
+  } catch (e) { next(e); }
+});
 gameRoutes.post("/games/:gameId/save-play-and-game", async (req, res, next) => { try { await savePlayAndGameWithRetry(req.body, req.params.gameId); res.json({ ok: true }); } catch (e) { next(e); } });
 
 // Legacy route retained for existing callers while LeagueApp uses save-play-and-game.

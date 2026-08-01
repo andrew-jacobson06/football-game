@@ -16,6 +16,7 @@ const menuItems: MainMenuItem[] = [
     placeholderMessage:
       "New League coming soon! TODO: port the old league creation flow when its backend/API behavior is available.",
   },
+  { label: "Game Settings", screen: "settings" },
 ];
 
 type MainMenuScreenProps = {
