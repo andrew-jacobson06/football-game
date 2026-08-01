@@ -11,10 +11,12 @@ export function LeagueSchedules({
   games,
   teams,
   onSelectGame,
+  onSelectTeam,
 }: {
   games: LeagueGame[];
   teams: LeagueTeam[];
   onSelectGame: (game: LeagueGame) => void;
+  onSelectTeam?: (team: LeagueTeam) => void;
 }) {
   const [week, setWeek] = useState(1);
   const [selectedTeam, setSelectedTeam] = useState("");
@@ -53,7 +55,12 @@ export function LeagueSchedules({
           <div><span className="schedule-kicker">2026 SEASON</span><h1>{selectedTeam ? `${selectedLabel} Schedule` : "AFL Schedule"}</h1></div>
           <label className="team-schedule-picker">
             <span className="sr-only">Choose a team schedule</span>
-            <select value={selectedTeam} onChange={(event) => setSelectedTeam(event.target.value)}>
+            <select value={selectedTeam} onChange={(event) => {
+              const id = event.target.value;
+              setSelectedTeam(id);
+              const team = teams.find((item) => String(item.Abbrev || item.Team || "") === id);
+              if (team) onSelectTeam?.(team);
+            }}>
               <option value="">All weekly schedules</option>
               {teamOptions.map(([id, label]) => <option value={id} key={id}>{label}</option>)}
             </select>

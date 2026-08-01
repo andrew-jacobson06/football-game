@@ -13,14 +13,14 @@ function value(team: LeagueTeam, ...keys: string[]): string {
   return match ? String(team[match]) : "";
 }
 
-function TeamIdentity({ team }: { team: LeagueTeam }) {
+function TeamIdentity({ team, onSelect }: { team: LeagueTeam; onSelect?: (team: LeagueTeam) => void }) {
   const [logoFailed, setLogoFailed] = useState(false);
   const name = value(team, "City", "Location", "TeamName") || teamName(team);
   const nickname = value(team, "Nickname", "NickName", "Name", "Mascot");
   const logo = value(team, "Logo", "LogoUrl", "LogoURL");
 
   return (
-    <div className="standings-team">
+    <button className="standings-team standings-team-button" type="button" onClick={() => onSelect?.(team)}>
       {logo && !logoFailed ? (
         <img
           className="standings-team-logo"
@@ -39,11 +39,11 @@ function TeamIdentity({ team }: { team: LeagueTeam }) {
           <span className="standings-team-nickname">{nickname}</span>
         )}
       </span>
-    </div>
+    </button>
   );
 }
 
-function StandingsTable({ teams }: { teams: LeagueTeam[] }) {
+function StandingsTable({ teams, onSelectTeam }: { teams: LeagueTeam[]; onSelectTeam?: (team: LeagueTeam) => void }) {
   return (
     <div className="standings-table-scroll">
       <table className="standings-table">
@@ -68,7 +68,7 @@ function StandingsTable({ teams }: { teams: LeagueTeam[] }) {
         <tbody>
           {teams.map((team, index) => (
             <tr key={`${teamName(team)}-${index}`}>
-              <td className="team-col"><TeamIdentity team={team} /></td>
+              <td className="team-col"><TeamIdentity team={team} onSelect={onSelectTeam} /></td>
               <td>{parseInteger(team.Wins ?? team.W)}</td>
               <td>{parseInteger(team.Losses ?? team.L)}</td>
               <td>{parseInteger(team.Ties ?? team.T)}</td>
@@ -90,7 +90,7 @@ function StandingsTable({ teams }: { teams: LeagueTeam[] }) {
   );
 }
 
-export function LeagueStandings({ teams }: { teams: LeagueTeam[] }) {
+export function LeagueStandings({ teams, onSelectTeam }: { teams: LeagueTeam[]; onSelectTeam?: (team: LeagueTeam) => void }) {
   const [view, setView] = useState<StandingsView>("league");
   const divisions = Object.entries(
     teams.reduce<Record<string, LeagueTeam[]>>((groups, team) => {
@@ -117,14 +117,14 @@ export function LeagueStandings({ teams }: { teams: LeagueTeam[] }) {
         {view === "league" ? (
           <section className="standings-panel">
             <header className="standings-panel-header">League</header>
-            <StandingsTable teams={teams} />
+            <StandingsTable teams={teams} onSelectTeam={onSelectTeam} />
           </section>
         ) : (
           <div className="standings-division-list">
             {divisions.map(([division, divisionTeams]) => (
               <section className="standings-panel" key={division}>
                 <header className="standings-panel-header">{division} Division</header>
-                <StandingsTable teams={divisionTeams} />
+                <StandingsTable teams={divisionTeams} onSelectTeam={onSelectTeam} />
               </section>
             ))}
           </div>
