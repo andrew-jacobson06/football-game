@@ -98,7 +98,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
     return (
       <section className="league-app">
         <GamesBanner games={games} />
-        <TeamDetail team={selectedTeam} games={games} onBack={() => setSelectedTeam(null)} onGame={openGame} />
+        <TeamDetail team={selectedTeam} standings={standings} games={games} onBack={() => setSelectedTeam(null)} onGame={openGame} />
       </section>
     );
   return (

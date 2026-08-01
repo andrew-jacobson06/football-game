@@ -1,65 +1,69 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getTeamPlayers, type PlayerStats, type TeamPlayer } from "../../api/client";
+import { PlayerImage } from "../players/PlayerImage";
 import type { LeagueGame, LeagueTeam } from "./types";
+import { computeWinPct, parseInteger } from "./leagueMappers";
 
 type TeamSection = "overview" | "stats" | "schedule" | "roster";
-type StatRow = { name: string; pos: string; values: (string | number)[] };
-
-const statGroups: { title: string; columns: string[]; rows: StatRow[] }[] = [
-  { title: "Passing", columns: ["GP", "CMP", "ATT", "CMP%", "YDS", "AVG", "YDS/G", "LNG", "TD", "INT", "RTG"], rows: [
-    { name: "Marcus Cole", pos: "QB", values: [17, 356, 521, "68.3", "4,218", "8.1", "248.1", 72, 31, 9, "106.4"] },
-    { name: "Evan Brooks", pos: "QB", values: [6, 42, 68, "61.8", 487, "7.2", "81.2", 44, 3, 2, "88.7"] },
-  ]},
-  { title: "Rushing", columns: ["GP", "CAR", "YDS", "AVG", "LNG", "BIG", "TD", "YDS/G", "FUM", "FD"], rows: [
-    { name: "Darius King", pos: "RB", values: [17, 284, "1,426", "5.0", 61, 14, 13, "83.9", 2, 72] },
-    { name: "Marcus Cole", pos: "QB", values: [17, 82, 476, "5.8", 29, 5, 6, "28.0", 3, 31] },
-    { name: "Jaylen Price", pos: "RB", values: [15, 96, 421, "4.4", 38, 4, 3, "28.1", 1, 22] },
-    { name: "Andre Bell", pos: "WR", values: [17, 12, 91, "7.6", 24, 1, 1, "5.4", 0, 6] },
-  ]},
-  { title: "Receiving", columns: ["GP", "REC", "TGTS", "YDS", "AVG", "TD", "LNG", "BIG", "YDS/G", "YAC", "FD"], rows: [
-    { name: "Andre Bell", pos: "WR", values: [17, 94, 132, "1,287", "13.7", 9, 58, 18, "75.7", 486, 61] },
-    { name: "Malik Reed", pos: "WR", values: [16, 72, 103, 978, "13.6", 7, 49, 12, "61.1", 312, 45] },
-    { name: "Noah Grant", pos: "TE", values: [17, 58, 76, 681, "11.7", 6, 37, 7, "40.1", 223, 38] },
-  ]},
-  { title: "Defense", columns: ["GP", "SOLO", "AST", "TOT", "SACK", "TFL", "PD", "INT", "YDS", "FF", "FR"], rows: [
-    { name: "Isaiah Ward", pos: "LB", values: [17, 79, 54, 133, "4.5", 11, 6, 1, 18, 2, 1] },
-    { name: "Cam Turner", pos: "S", values: [17, 64, 39, 103, "1.0", 5, 10, 4, 76, 2, 0] },
-    { name: "Dante Lewis", pos: "CB", values: [16, 52, 21, 73, 0, 2, 17, 5, 112, 1, 1] },
-    { name: "Bryce Stone", pos: "DE", values: [17, 39, 24, 63, "10.5", 14, 3, 0, 0, 3, 2] },
-  ]},
-  { title: "Scoring", columns: ["GP", "RUSH", "REC", "RET", "TD", "FG", "PAT", "2PT", "PTS", "PTS/G"], rows: [
-    { name: "Luke Mason", pos: "K", values: [17, 0, 0, 0, 0, 29, 46, 0, 133, "7.8"] },
-    { name: "Darius King", pos: "RB", values: [17, 13, 1, 0, 14, 0, 0, 0, 84, "4.9"] },
-    { name: "Andre Bell", pos: "WR", values: [17, 1, 9, 0, 10, 0, 0, 0, 60, "3.5"] },
-  ]},
-];
 
 function teamLabel(team: LeagueTeam) { return String(team.Name || team.Team || team.Nickname || team.Abbrev || "AFL Team"); }
+function key(value: unknown) { return String(value ?? "").trim().toLowerCase(); }
+function ordinal(value: number) {
+  const mod100 = value % 100;
+  return `${value}${mod100 >= 11 && mod100 <= 13 ? "th" : value % 10 === 1 ? "st" : value % 10 === 2 ? "nd" : value % 10 === 3 ? "rd" : "th"}`;
+}
+function numericStat(stats: PlayerStats | null | undefined, names: string[]) {
+  if (!stats) return 0;
+  const entry = Object.entries(stats).find(([name]) => names.includes(key(name).replace(/[^a-z0-9]/g, "")));
+  return Number(String(entry?.[1] ?? 0).replace(/,/g, "")) || 0;
+}
+function stars(player: TeamPlayer, side: "off" | "def") {
+  return Number(player[side === "off" ? "Off Stars" : "Def Stars"]) || 0;
+}
 
-export function TeamDetail({ team, games, onBack, onGame }: { team: LeagueTeam; games: LeagueGame[]; onBack: () => void; onGame: (game: LeagueGame) => void }) {
+export function TeamDetail({ team, standings, games, onBack, onGame }: { team: LeagueTeam; standings: LeagueTeam[]; games: LeagueGame[]; onBack: () => void; onGame: (game: LeagueGame) => void }) {
   const [section, setSection] = useState<TeamSection>("stats");
+  const [players, setPlayers] = useState<TeamPlayer[]>([]);
+  const [rosterError, setRosterError] = useState("");
   const id = String(team.Abbrev || team.Team || team.Name || "AFL");
-  const name = teamLabel(team);
-  const teamGames = useMemo(() => games.filter((game) => game.Home === id || game.Away === id), [games, id]);
-  const leaders = [statGroups[0].rows[0], statGroups[1].rows[0], statGroups[2].rows[0], statGroups[3].rows[0]];
-  const leaderLabels = ["Passing Yards", "Rushing Yards", "Receiving Yards", "Tackles"];
-  const leaderValues = ["4,218", "1,426", "1,287", "133"];
+  const standing = standings.find((row) => key(row.Abbrev ?? row.Team) === key(id)) ?? team;
+  const name = teamLabel({ ...team, ...standing });
+  const teamGames = useMemo(() => games.filter((game) => key(game.Home) === key(id) || key(game.Away) === key(id)), [games, id]);
+
+  useEffect(() => {
+    getTeamPlayers(id).then((result) => {
+      setPlayers(result.players);
+      setRosterError("");
+    }).catch((error: unknown) => setRosterError(error instanceof Error ? error.message : "Unable to load roster"));
+  }, [id]);
+
+  const division = String(standing.Division ?? "").trim();
+  const divisionRows = standings.filter((row) => key(row.Division) === key(division)).sort((a, b) => Number(computeWinPct(b)) - Number(computeWinPct(a)) || parseInteger(b.Wins) - parseInteger(a.Wins));
+  const divisionPlace = divisionRows.findIndex((row) => key(row.Abbrev ?? row.Team) === key(id));
+  const record = `${standing.Wins ?? 0}-${standing.Losses ?? 0}${parseInteger(standing.Ties) ? `-${standing.Ties}` : ""}`;
+  const hasStats = players.some((player) => player.Stats && Object.entries(player.Stats).some(([field, value]) => !["player", "name", "team"].includes(key(field)) && (Number(String(value).replace(/,/g, "")) || 0) !== 0));
+  const leaderSpecs = [
+    { label: "Passing", positions: ["qb"], fields: ["passingyards", "passyards", "passyds"], side: "off" as const },
+    { label: "Rushing", positions: ["rb", "qb"], fields: ["yards", "rushingyards", "rushyards"], side: "off" as const },
+    { label: "Receiving", positions: ["wr", "te"], fields: ["receivingyards", "recyards", "receptions"], side: "off" as const },
+    { label: "Defense", positions: ["dl", "de", "lb", "cb", "s", "db"], fields: ["tackles", "total", "sacks", "interceptions"], side: "def" as const },
+  ];
+  const leaders = leaderSpecs.map((spec) => {
+    const eligible = players.filter((player) => spec.positions.includes(key(player.Pos ?? player.DefPos)));
+    const pool = eligible.length ? eligible : players;
+    return [...pool].sort((a, b) => hasStats ? numericStat(b.Stats, spec.fields) - numericStat(a.Stats, spec.fields) || stars(b, spec.side) - stars(a, spec.side) : stars(b, spec.side) - stars(a, spec.side))[0];
+  });
+  const statColumns = [...new Set(players.flatMap((player) => Object.keys(player.Stats ?? {})))].filter((column) => !["player", "name", "team"].includes(key(column)));
 
   return <main className="team-page">
     <button className="team-page-back" type="button" onClick={onBack}>← All teams</button>
-    <header className="team-page-hero">
-      {team.Logo ? <img src={String(team.Logo)} alt="" /> : <div className="team-page-crest">{id.slice(0, 2)}</div>}
-      <div><span>AFL TEAM</span><h1>{name}</h1><p>{team.Wins ?? 0}-{team.Losses ?? 0} · 2026 Regular Season</p></div>
-    </header>
-    <nav className="team-page-nav" aria-label={`${name} sections`}>
-      {(["overview", "stats", "schedule", "roster"] as TeamSection[]).map((item) => <button type="button" className={section === item ? "active" : ""} onClick={() => setSection(item)} key={item}>{item}</button>)}
-    </nav>
+    <header className="team-page-hero">{team.Logo ? <img src={String(team.Logo)} alt="" /> : <div className="team-page-crest">{id.slice(0, 2)}</div>}<div><span>AFL TEAM</span><h1>{name}</h1><p>{record} · {divisionPlace >= 0 ? `${ordinal(divisionPlace + 1)} in ${division}` : division || "2026 Regular Season"}</p></div></header>
+    <nav className="team-page-nav" aria-label={`${name} sections`}>{(["overview", "stats", "schedule", "roster"] as TeamSection[]).map((item) => <button type="button" className={section === item ? "active" : ""} onClick={() => setSection(item)} key={item}>{item}</button>)}</nav>
     {section === "stats" ? <section className="team-stats-shell">
-      <header className="team-stats-heading"><div><span>2026 REGULAR SEASON</span><h2>{name} Player Stats</h2></div><button type="button">2026 Regular Season⌄</button></header>
-      <div className="team-stats-mode"><strong>Players</strong><span>Team</span></div>
+      <header className="team-stats-heading"><div><span>2026 REGULAR SEASON</span><h2>{name} Player Stats</h2></div></header>
       <h3>Team Leaders</h3>
-      <div className="team-leaders">{leaders.map((leader, index) => <article key={leader.name}><small>{leaderLabels[index]}</small><div className="leader-avatar">{leader.name.split(" ").map((part) => part[0]).join("")}</div><p><b>{leader.name}</b> <em>{leader.pos}</em></p><strong>{leaderValues[index]}</strong></article>)}</div>
-      {statGroups.map((group) => <section className="team-stat-group" key={group.title}><h3>{group.title}</h3><div className="team-stat-scroll"><table><thead><tr><th>NAME</th>{group.columns.map((column) => <th className={column === "YDS" || column === "TOT" || column === "PTS" ? "sorted" : ""} key={column}>{column}</th>)}</tr></thead><tbody>{group.rows.map((row) => <tr key={row.name}><td><a>{row.name}</a> <small>{row.pos}</small></td>{row.values.map((value, index) => <td className={group.columns[index] === "YDS" || group.columns[index] === "TOT" || group.columns[index] === "PTS" ? "sorted" : ""} key={index}>{value}</td>)}</tr>)}</tbody></table></div></section>)}
-      <p className="stats-updated">Statistics are updated after every game</p>
-    </section> : section === "schedule" ? <section className="team-simple-panel"><h2>{name} Schedule</h2>{teamGames.length ? teamGames.map((game) => <button type="button" key={game.GameId} onClick={() => onGame(game)}>{game.Away} at {game.Home}<span>{game.Date || `Week ${game.Week || "—"}`} · Gamecast ›</span></button>) : <p>No games have been scheduled.</p>}</section> : <section className="team-simple-panel"><h2>{name} {section === "roster" ? "Roster" : "Overview"}</h2><p>This section will be available during the 2026 season.</p></section>}
+      {rosterError ? <p className="players-message players-message--error">{rosterError}</p> : <div className="team-leaders">{leaders.map((leader, index) => leader && <article key={`${leader.Name}-${index}`}><small>{leaderSpecs[index].label}</small><PlayerImage player={leader} className="leader-avatar" /><p><b>{leader.Name}</b> <em>{leader.Pos || leader.DefPos}</em></p><strong>{hasStats ? numericStat(leader.Stats, leaderSpecs[index].fields) : `${stars(leader, leaderSpecs[index].side)}★`}</strong></article>)}</div>}
+      <section className="team-stat-group"><h3>Season Stats</h3><div className="team-stat-scroll"><table><thead><tr><th>NAME</th>{statColumns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{players.map((player) => <tr key={String(player.Name)}><td><a>{player.Name}</a> <small>{player.Pos || player.DefPos}</small></td>{statColumns.map((column) => <td key={column}>{player.Stats?.[column] || "—"}</td>)}</tr>)}</tbody></table></div>{!players.length && !rosterError && <p>Loading roster…</p>}{players.length > 0 && !statColumns.length && <p>No season statistics have been recorded yet. Leaders are based on player star ratings.</p>}</section>
+    </section> : section === "schedule" ? <section className="team-simple-panel"><h2>{name} Schedule</h2>{teamGames.length ? teamGames.map((game) => <button type="button" key={game.GameId} onClick={() => onGame(game)}>{game.Away} at {game.Home}<span>{game.Date || `Week ${game.Week || "—"}`} · Gamecast ›</span></button>) : <p>No games have been scheduled.</p>}</section> : section === "roster" ? <section className="team-simple-panel"><h2>{name} Roster</h2>{players.map((player) => <p key={String(player.Name)}><b>{player.Name}</b> · {player.Pos || player.DefPos || "Player"}</p>)}</section> : <section className="team-simple-panel"><h2>{name} Overview</h2><p>{record} · {divisionPlace >= 0 ? `${ordinal(divisionPlace + 1)} in ${division}` : division}</p></section>}
   </main>;
 }
