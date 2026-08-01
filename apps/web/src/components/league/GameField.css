@@ -739,7 +739,7 @@ textarea {
   color: #f8fafc;
   font-size: 12px;
   font-weight: 1000;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -100%);
   cursor: pointer;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
 }
@@ -1155,7 +1155,7 @@ textarea {
   border-radius: 0;
   border: 0;
   background: transparent;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -100%);
 }
 
 .field-formation-slot.filled {
@@ -1168,7 +1168,7 @@ textarea {
   border: 2px dashed currentColor;
   border-radius: 50%;
   background: #0f172ad1;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -100%);
 }
 
 .field-formation-slot.targetable:not(.open) .player-marker {
