@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getPlayers, getPlayerStats, type PlayerStats } from "../../api/client";
+import { getPlayerRushingGames, getPlayers, getPlayerStats, type PlayerRushingGame, type PlayerStats } from "../../api/client";
 import { PlayerImage } from "../players/PlayerImage";
 import { AppSelect } from "../ui/AppSelect";
 import type { Player } from "../players/types";
@@ -87,6 +87,25 @@ function profileStats(player: Player, row: PlayerStats, side: PlayerStatSide): P
   return [{ label: "TOTAL PLAYS ON LINE", value: String(plays) }, { label: "WIN%", value: `${(recordedWinRate || (plays ? wins / plays * 100 : 0)).toFixed(1)}%` }, stat("LEAD BLOCK", ["Lead Block", "Lead Blocks"])];
 }
 function teamName(team: LeagueTeam) { return String(team.Name || team.Team || team.Nickname || team.Abbrev || "Team"); }
+function ordinal(rank: number) {
+  const suffix = rank % 100 >= 11 && rank % 100 <= 13 ? "th" : rank % 10 === 1 ? "st" : rank % 10 === 2 ? "nd" : rank % 10 === 3 ? "rd" : "th";
+  return `${rank}${suffix}`;
+}
+function leagueRanks(player: Player, row: PlayerStats, side: PlayerStatSide, stats: PlayerStats[], playersByName: Map<string, Player>) {
+  const selected = profileStats(player, row, side);
+  const position = normalized(side === "offense" ? player.Pos : player.DefPos);
+  return selected.map((stat, index) => {
+    const value = number(stat.value);
+    const values = stats.map((candidate) => {
+      const candidatePlayer = playersByName.get(normalized(candidate.Player));
+      const candidatePosition = normalized(side === "offense" ? candidatePlayer?.Pos : candidatePlayer?.DefPos);
+      return candidatePlayer && candidatePosition === position ? number(profileStats(candidatePlayer, candidate, side)[index]?.value) : 0;
+    }).filter((candidate) => candidate > 0).sort((a, b) => b - a);
+    const rank = values.findIndex((candidate) => candidate <= value) + 1;
+    const tied = value > 0 && values.filter((candidate) => candidate === value).length > 1;
+    return rank ? `${tied ? "Tied-" : ""}${ordinal(rank)}` : "Not ranked";
+  });
+}
 const teamGames = (team: LeagueTeam) => number(team.GP || team.Games || 1) || 1;
 function teamField(team: LeagueTeam, fields: string[]) { return statValue(team as PlayerStats, fields); }
 
@@ -107,14 +126,27 @@ function StatsSelect({ value, onChange, children, label }: { value: string; onCh
   return <label className="stats-select"><span className="sr-only">{label}</span><AppSelect value={value} onChange={(event) => onChange?.(event.target.value)}>{children}</AppSelect></label>;
 }
 
-function PlayerStatsProfile({ player, row, team, onBack }: { player: Player; row?: PlayerStats; team?: LeagueTeam; onBack: () => void }) {
+function PlayerStatsProfile({ player, row, team, stats, playersByName, onBack }: { player: Player; row?: PlayerStats; team?: LeagueTeam; stats: PlayerStats[]; playersByName: Map<string, Player>; onBack: () => void }) {
   const [tab, setTab] = useState<PlayerProfileTab>("Overview");
   const [statSide, setStatSide] = useState<PlayerStatSide>("offense");
+  const [recentGames, setRecentGames] = useState<PlayerRushingGame[]>([]);
+  const [gamesLoading, setGamesLoading] = useState(true);
   const name = String(player.Name || row?.Player || "Player");
   const summary = profileStats(player, row || {} as PlayerStats, statSide);
+  const ranks = leagueRanks(player, row || {} as PlayerStats, statSide, stats, playersByName);
   const shownPosition = String(statSide === "offense" ? player.Pos : player.DefPos || "DL").toUpperCase();
   const otherSide = statSide === "offense" ? "Defense" : "Offense";
   const logo = String(team?.Logo || "");
+  const isRunningBack = statSide === "offense" && shownPosition === "RB";
+  useEffect(() => {
+    if (!isRunningBack) return;
+    getPlayerRushingGames(name).then(({ games }) => setRecentGames(games)).catch(() => setRecentGames([])).finally(() => setGamesLoading(false));
+  }, [isRunningBack, name]);
+  const rbGroups = [
+    { title: "RUSHING", stats: [{ label: "CAR", fields: ["Carries", "Rushing Attempts", "Rush Attempts"] }, { label: "YDS", fields: ["Yards", "Rushing Yards", "Rush Yards"] }, { label: "AVG", value: summary.find((item) => item.label === "AVG")?.value || "0.0" }, { label: "TD", fields: ["Rushing TD", "Rush TD", "TD"] }, { label: "LNG", fields: ["Long", "LNG"] }] },
+    { title: "RECEIVING", stats: [{ label: "REC", fields: ["Receptions", "REC"] }, { label: "YDS", fields: ["Receiving Yards", "Rec Yards", "RecYards"] }, { label: "AVG", value: (statValue(row || {} as PlayerStats, ["Receptions", "REC"]) ? statValue(row || {} as PlayerStats, ["Receiving Yards", "Rec Yards", "RecYards"]) / statValue(row || {} as PlayerStats, ["Receptions", "REC"]) : 0).toFixed(1) }, { label: "TD", fields: ["Receiving TD", "Rec TD"] }, { label: "LNG", fields: ["Receiving Long", "Rec Long"] }] },
+    { title: "FUMBLES", stats: [{ label: "FUM", fields: ["Fum", "Fumbles"] }, { label: "LST", fields: ["Fum Lost", "Fumbles Lost"] }] },
+  ];
   return <main className="player-detail-page">
     <button className="profile-back" type="button" onClick={onBack}>← Back to league leaders</button>
     <section className="player-detail-hero">
@@ -122,9 +154,9 @@ function PlayerStatsProfile({ player, row, team, onBack }: { player: Player; row
       <div className="player-detail-name"><span>{shownPosition || "PLAYER"}</span><h1>{name}</h1><p>{logo && <img src={logo} alt="" />} <b>{teamName(team || {})}</b> · #{String(player.Jersey || player.jersey || "--")} · {shownPosition || "--"}</p><button className="player-stat-side-toggle" type="button" onClick={() => setStatSide(statSide === "offense" ? "defense" : "offense")}>View {otherSide} Stats</button></div>
       <dl className="player-detail-facts"><div><dt>HEIGHT / WEIGHT</dt><dd>{String(player.Size || "—")}</dd></div><div><dt>TEAM</dt><dd>{teamName(team || {})}</dd></div><div><dt>POSITION</dt><dd>{shownPosition || "—"}</dd></div><div><dt>STATUS</dt><dd><i /> Active</dd></div></dl>
     </section>
-    <section className="player-featured-stats"><h2>SEASON 1 REGULAR SEASON {statSide.toUpperCase()} STATS</h2><div>{summary.map(({ label, value }) => <article key={label}><span>{label}</span><strong>{value}</strong><small>Season 1</small></article>)}</div></section>
+    <section className="player-featured-stats"><h2>SEASON 1 REGULAR SEASON {statSide.toUpperCase()} STATS</h2><div>{summary.map(({ label, value }, index) => <article key={label}><span>{label}</span><strong>{value}</strong><small>{ranks[index]}</small></article>)}</div></section>
     <nav className="player-detail-tabs">{(["Overview", "News", "Stats", "Bio", "Splits", "Game Log"] as PlayerProfileTab[]).map((item) => <button className={tab === item ? "active" : ""} type="button" onClick={() => setTab(item)} key={item}>{item}</button>)}</nav>
-    {tab === "Overview" ? <div className="player-overview-grid"><section><header><h3>Season 1 {shownPosition || "Player"} Statistics</h3></header><div className="player-stat-table-scroll"><table><thead><tr><th>STATS</th>{summary.map(({ label }) => <th key={label}>{label}</th>)}</tr></thead><tbody><tr><td>Regular Season</td>{summary.map(({ label, value }) => <td key={label}>{value}</td>)}</tr></tbody></table></div></section><section><header><h3>Recent Games</h3></header><div className="empty-profile-state">Game-by-game statistics will appear after completed games.</div></section></div> : <section className="player-tab-stub"><span>{tab.toUpperCase()}</span><h2>{tab} coming soon</h2><p>This player section is ready for future league data.</p></section>}
+    {tab === "Overview" ? <div className="player-overview-grid"><section><header><h3>Season 1 {shownPosition || "Player"} Statistics</h3></header>{isRunningBack ? <div className="player-stat-table-scroll"><table className="rb-overview-table"><thead><tr><th rowSpan={2}>STATS</th>{rbGroups.map((group) => <th key={group.title} colSpan={group.stats.length}>{group.title}</th>)}</tr><tr>{rbGroups.flatMap((group) => group.stats.map((stat) => <th key={`${group.title}-${stat.label}`}>{stat.label}</th>))}</tr></thead><tbody><tr><td>Regular Season</td>{rbGroups.flatMap((group) => group.stats.map((stat) => <td key={`${group.title}-${stat.label}`}>{"value" in stat ? stat.value : displayStat(row || {} as PlayerStats, stat.fields)}</td>))}</tr></tbody></table></div> : <div className="player-stat-table-scroll"><table><thead><tr><th>STATS</th>{summary.map(({ label }) => <th key={label}>{label}</th>)}</tr></thead><tbody><tr><td>Regular Season</td>{summary.map(({ label, value }) => <td key={label}>{value}</td>)}</tr></tbody></table></div>}</section><section><header><h3>Recent Games</h3></header>{isRunningBack && recentGames.length ? <div className="player-stat-table-scroll"><table className="recent-games-table"><thead><tr><th>DATE</th><th>OPP</th><th>RESULT</th><th>CAR</th><th>YDS</th><th>AVG</th><th>TD</th><th>LNG</th></tr></thead><tbody>{recentGames.map((game) => <tr key={game.gameId}><td>{game.date || "—"}</td><td>{game.location} {game.opponent}</td><td className={game.result.startsWith("W") ? "game-result-win" : "game-result-loss"}>{game.result}</td><td>{game.carries}</td><td>{game.yards}</td><td>{game.carries ? (game.yards / game.carries).toFixed(1) : "0.0"}</td><td>{game.touchdowns}</td><td>{game.long}</td></tr>)}</tbody></table></div> : <div className="empty-profile-state">{gamesLoading ? "Loading completed games…" : "Game-by-game statistics will appear after completed games."}</div>}</section></div> : <section className="player-tab-stub"><span>{tab.toUpperCase()}</span><h2>{tab} coming soon</h2><p>This player section is ready for future league data.</p></section>}
   </main>;
 }
 
@@ -209,7 +241,7 @@ export function LeagueStats({ teams, games = [] }: { teams: LeagueTeam[]; games?
   if (selectedPlayer) {
     const row = stats.find((item) => normalized(item.Player) === normalized(selectedPlayer.Name));
     const team = teamByKey.get(normalized(selectedPlayer.Team));
-    return <PlayerStatsProfile player={selectedPlayer} row={row} team={team} onBack={() => setSelectedPlayer(null)} />;
+    return <PlayerStatsProfile player={selectedPlayer} row={row} team={team} stats={stats} playersByName={playerByName} onBack={() => setSelectedPlayer(null)} />;
   }
 
   return <main className="league-stats-card">

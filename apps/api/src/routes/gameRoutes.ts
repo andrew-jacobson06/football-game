@@ -404,15 +404,16 @@ gameRoutes.get("/players/:playerName/rushing-games", async (req, res, next) => {
       headers.findIndex((header) => names.includes(normHeader(header)));
     const playGame = index(historySheet.headers, "gameid");
     const playPlayer = index(historySheet.headers, "player", "rusher");
+    const playReceiver = index(historySheet.headers, "receiver");
     const playType = index(historySheet.headers, "playtype");
     const playYards = index(historySheet.headers, "yards", "yardsgained");
     const playResult = index(historySheet.headers, "result", "description");
-    const rushes = historySheet.rows.filter((row) =>
-      String(cell(row, playPlayer)).trim().toLowerCase() === playerName &&
-      (!cell(row, playType) || /run|rush/i.test(String(cell(row, playType)))),
+    const playerPlays = historySheet.rows.filter((row) =>
+      [cell(row, playPlayer), cell(row, playReceiver)]
+        .some((value) => String(value).trim().toLowerCase() === playerName),
     );
     const byGame = new Map<string, Row[]>();
-    rushes.forEach((row) => {
+    playerPlays.forEach((row) => {
       const id = String(cell(row, playGame));
       byGame.set(id, [...(byGame.get(id) ?? []), row]);
     });
@@ -421,23 +422,28 @@ gameRoutes.get("/players/:playerName/rushing-games", async (req, res, next) => {
     const away = index(gamesSheet.headers, "away");
     const homeScore = index(gamesSheet.headers, "homescore");
     const awayScore = index(gamesSheet.headers, "awayscore");
+    const quarter = index(gamesSheet.headers, "qtr", "quarter");
     const date = index(gamesSheet.headers, "date", "gamedate");
     const possession = index(historySheet.headers, "possession", "team");
     const games = gamesSheet.rows.flatMap((game) => {
       const id = String(cell(game, gameId));
       const plays = byGame.get(id);
-      if (!plays?.length) return [];
+      if (!plays?.length || String(cell(game, quarter)).trim().toUpperCase() !== "FINAL") return [];
+      const rushingPlays = plays.filter((play) =>
+        String(cell(play, playPlayer)).trim().toLowerCase() === playerName &&
+        (!cell(play, playType) || /run|rush/i.test(String(cell(play, playType)))),
+      );
       const homeTeam = String(cell(game, home));
       const awayTeam = String(cell(game, away));
       const playerTeam = String(cell(plays[0], possession));
       const isHome = playerTeam.toLowerCase() === "home" || playerTeam === homeTeam;
       const teamScore = asNumber(cell(game, isHome ? homeScore : awayScore));
       const opponentScore = asNumber(cell(game, isHome ? awayScore : homeScore));
-      const yards = plays.map((play) => asNumber(cell(play, playYards)));
-      const touchdowns = plays.filter((play) => /touchdown|\btd\b/i.test(String(cell(play, playResult)))).length;
+      const yards = rushingPlays.map((play) => asNumber(cell(play, playYards)));
+      const touchdowns = rushingPlays.filter((play) => /touchdown|\btd\b/i.test(String(cell(play, playResult)))).length;
       return [{ gameId: id, opponent: isHome ? awayTeam : homeTeam, location: isHome ? "vs" : "@",
         result: `${teamScore > opponentScore ? "W" : teamScore < opponentScore ? "L" : "T"} ${teamScore}-${opponentScore}`,
-        carries: plays.length, yards: yards.reduce((sum, value) => sum + value, 0), touchdowns,
+        carries: rushingPlays.length, yards: yards.reduce((sum, value) => sum + value, 0), touchdowns,
         long: Math.max(0, ...yards), date: String(cell(game, date)) }];
     });
     res.json({ games });
