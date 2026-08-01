@@ -8,17 +8,41 @@
   --gray-light: #2c2c2c;
   --text-light: #f5f5f5;
   --text-muted: #b0b0b0;
+  --surface-canvas: #121212;
+  --surface-raised: #1e1e1e;
+  --surface-subtle: #2c2c2c;
+  --surface-overlay: rgba(15, 23, 42, 0.92);
+  --border-color: #3f3f46;
+  --text-primary: #f5f5f5;
+  --text-secondary: #b0b0b0;
+  --text-inverse: #ffffff;
+  --shadow-color: rgba(0, 0, 0, 0.38);
+  --page-gradient: linear-gradient(135deg, #121212 0%, #1e1e1e 100%);
+}
+
+:root[data-theme="light"] {
+  --gray-dark: #f4f6f8;
+  --gray-medium: #ffffff;
+  --gray-light: #e5e9ee;
+  --text-light: #18202a;
+  --text-muted: #5f6b78;
+  --surface-canvas: #f4f6f8;
+  --surface-raised: #ffffff;
+  --surface-subtle: #e5e9ee;
+  --surface-overlay: rgba(255, 255, 255, 0.94);
+  --border-color: #c9d1da;
+  --text-primary: #18202a;
+  --text-secondary: #5f6b78;
+  --text-inverse: #ffffff;
+  --shadow-color: rgba(20, 30, 45, 0.14);
+  --page-gradient: linear-gradient(135deg, #f7f9fb 0%, #e8edf2 100%);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   font-family: "Roboto", Arial, sans-serif;
-  background: linear-gradient(
-    135deg,
-    var(--gray-dark) 0%,
-    var(--gray-medium) 100%
-  );
+  background: var(--page-gradient);
   color: var(--text-light);
 }
 
@@ -92,7 +116,7 @@ body {
   grid-template-rows: 30% auto;
   gap: 2vw;
   align-items: flex-start;
-  color: #fff;
+  color: var(--text-primary);
   padding: 2vw;
 }
 
@@ -151,7 +175,7 @@ body {
 }
 
 .trait-bar-card {
-  background: #1e1e1e;
+  background: var(--surface-raised);
   padding: 0.5vw;
   border-radius: 6px;
 }
@@ -168,11 +192,72 @@ body {
 }
 
 .progress {
-  background: #333;
+  background: var(--surface-subtle);
   height: 10px;
   border-radius: 4px;
   overflow: hidden;
 }
+
+.settings-screen {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: clamp(24px, 5vw, 72px);
+  color: var(--text-primary);
+  background: var(--page-gradient);
+}
+.settings-header { display: flex; align-items: center; gap: 20px; max-width: 1080px; margin: 0 auto 38px; }
+.settings-header h1 { margin: 2px 0 0; font-size: clamp(2rem, 5vw, 3.5rem); letter-spacing: -.04em; }
+.settings-eyebrow { margin: 0; color: var(--accent-red); font-size: .75rem; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+.settings-back { width: 48px; height: 48px; border: 1px solid var(--border-color); border-radius: 50%; color: var(--text-primary); background: var(--surface-raised); cursor: pointer; font-size: 1.5rem; box-shadow: 0 8px 24px var(--shadow-color); }
+.settings-layout { display: grid; grid-template-columns: minmax(150px, 220px) 1fr; max-width: 1080px; margin: auto; border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; background: var(--surface-raised); box-shadow: 0 18px 55px var(--shadow-color); }
+.settings-tabs { padding: 18px; background: var(--surface-subtle); }
+.settings-tab { width: 100%; padding: 14px 16px; border: 0; border-left: 3px solid transparent; color: var(--text-secondary); background: transparent; cursor: pointer; text-align: left; font-weight: 700; }
+.settings-tab--active { border-left-color: var(--accent-red); color: var(--text-primary); background: var(--surface-raised); }
+.settings-panel { padding: clamp(24px, 4vw, 48px); }
+.setting-row { display: flex; align-items: center; justify-content: space-between; gap: 30px; padding-bottom: 30px; border-bottom: 1px solid var(--border-color); }
+.setting-row label { display: block; margin-bottom: 8px; font-size: 1.1rem; font-weight: 800; }
+.setting-row p, .settings-message { margin: 0; color: var(--text-secondary); }
+.setting-row select { min-width: 150px; padding: 11px 38px 11px 13px; border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); background: var(--surface-canvas); cursor: pointer; }
+.settings-message { padding-top: 20px; }
+@media (max-width: 620px) {
+  .settings-layout { grid-template-columns: 1fr; }
+  .settings-tabs { padding: 10px; }
+  .setting-row { align-items: stretch; flex-direction: column; }
+}
+
+/* Theme-aware application chrome. Game markings and team colors stay semantic. */
+:root[data-theme="light"] .league-app {
+  --gray-dark: var(--surface-canvas);
+  --gray-medium: var(--surface-raised);
+  --gray-light: var(--surface-subtle);
+  --text-light: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --text-link: #075eb8;
+}
+:root[data-theme="light"] .games-banner,
+:root[data-theme="light"] .league-header { color: var(--text-primary); background: var(--surface-raised); border-color: var(--border-color); }
+:root[data-theme="light"] .games-banner__picker select,
+:root[data-theme="light"] .nav-tab,
+:root[data-theme="light"] .nav-tab.active { color: var(--text-primary); }
+:root[data-theme="light"] .scores-screen,
+:root[data-theme="light"] .team-detail,
+:root[data-theme="light"] .league-schedules { color: var(--text-primary); background: var(--surface-canvas); }
+:root[data-theme="light"] .score-card,
+:root[data-theme="light"] .schedule-card,
+:root[data-theme="light"] .standings-table,
+:root[data-theme="light"] .game-log,
+:root[data-theme="light"] .game-controls { color: var(--text-primary); background: var(--surface-raised); border-color: var(--border-color); box-shadow: 0 8px 22px var(--shadow-color); }
+:root[data-theme="light"] .game-field-toggle,
+:root[data-theme="light"] .play-caller,
+:root[data-theme="light"] .game-scoreboard { color: var(--text-primary); background: var(--surface-overlay); border-color: var(--border-color); }
+:root[data-theme="light"] .player-table th,
+:root[data-theme="light"] .player-table td { border-color: var(--border-color); }
+
+/* Keep the stadium artwork readable while making its menu chrome follow the selected mode. */
+:root[data-theme="light"] .main-menu-screen::before { content: ""; position: absolute; inset: 0; z-index: 1; background: rgba(255,255,255,.34); pointer-events: none; }
+:root[data-theme="light"] .main-menu-screen .panel { background: rgba(255,255,255,.78); color: #18202a; border-color: rgba(24,32,42,.22); }
+:root[data-theme="light"] .main-menu-screen .menu-button { color: #18202a; background: linear-gradient(135deg, rgba(193,2,6,.16), rgba(255,255,255,.82)); }
+:root[data-theme="light"] .main-menu-screen .brand { color: #fff; }
 
 .progress-bar {
   height: 100%;
