@@ -46,7 +46,7 @@ const DEFENSIVE_COLUMNS: StatColumn[] = [
   { label: "Defl", fields: ["Defl", "Deflections", "Passes Defended", "PassDeflections"] },
 ];
 
-const normalized = (value: unknown) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+const normalized = (value: unknown) => String(value ?? "").trim().toLowerCase().replace(/%/g, "percentage").replace(/[^a-z0-9]/g, "");
 const number = (value: unknown) => Number(String(value ?? 0).replace(/,/g, "")) || 0;
 function statValue(row: PlayerStats, fields: string[]) {
   const wanted = new Set(fields.map(normalized));
@@ -62,17 +62,10 @@ function profileStat(row: PlayerStats, label: string, fields: string[]): Profile
 }
 function defensiveOverviewStats(row: PlayerStats): ProfileStat[] {
   const stat = (label: string, fields: string[]) => profileStat(row, label, fields);
-  const wins = statValue(row, ["DL W", "DL Wins", "Defensive Line Wins"]);
-  const losses = statValue(row, ["DL L", "DL Losses", "Defensive Line Losses"]);
-  const attempts = statValue(row, ["DL Plays", "Defensive Line Plays"]) || wins + losses;
-  const recordedWinRate = statValue(row, ["DL Win %", "DL Win%", "DL Win Percentage"]);
+  const winRateFields = ["DL Win %", "DL Win%", "DL Win Percentage"];
+  const recordedWinRate = statValue(row, winRateFields);
   return [
-    { label: "DL WIN %", value: `${(recordedWinRate || (attempts ? wins / attempts * 100 : 0)).toFixed(1)}%`, rankValue: (candidate) => {
-      const candidateWins = statValue(candidate, ["DL W", "DL Wins", "Defensive Line Wins"]);
-      const candidateLosses = statValue(candidate, ["DL L", "DL Losses", "Defensive Line Losses"]);
-      const candidateAttempts = statValue(candidate, ["DL Plays", "Defensive Line Plays"]) || candidateWins + candidateLosses;
-      return statValue(candidate, ["DL Win %", "DL Win%", "DL Win Percentage"]) || (candidateAttempts ? candidateWins / candidateAttempts * 100 : 0);
-    } },
+    { label: "DL WIN %", value: `${recordedWinRate.toFixed(1)}%`, rankValue: (candidate) => statValue(candidate, winRateFields) },
     stat("TACKLES", ["Tackles", "Total Tackles", "TOT"]),
     stat("TFL", ["TFL", "Tackles For Loss", "TacklesForLoss"]),
     stat("SACK", ["Sacks", "Sack"]),
@@ -112,13 +105,9 @@ function profileStats(player: Player, row: PlayerStats, side: PlayerStatSide): P
   const wins = statValue(row, ["OL W", "OL Wins", "Line Wins"]);
   const losses = statValue(row, ["OL L", "OL Losses", "Line Losses"]);
   const plays = statValue(row, ["Total Plays on Line", "Line Plays", "OL Plays"]) || wins + losses;
-  const recordedWinRate = statValue(row, ["Win%", "Win Percentage", "OL Win Percentage"]);
-  return [{ label: "TOTAL PLAYS ON LINE", value: String(plays), rankValue: (candidate) => statValue(candidate, ["Total Plays on Line", "Line Plays", "OL Plays"]) || statValue(candidate, ["OL W", "OL Wins", "Line Wins"]) + statValue(candidate, ["OL L", "OL Losses", "Line Losses"]) }, { label: "WIN%", value: `${(recordedWinRate || (plays ? wins / plays * 100 : 0)).toFixed(1)}%`, rankValue: (candidate) => {
-    const candidateWins = statValue(candidate, ["OL W", "OL Wins", "Line Wins"]);
-    const candidateLosses = statValue(candidate, ["OL L", "OL Losses", "Line Losses"]);
-    const candidatePlays = statValue(candidate, ["Total Plays on Line", "Line Plays", "OL Plays"]) || candidateWins + candidateLosses;
-    return statValue(candidate, ["Win%", "Win Percentage", "OL Win Percentage"]) || (candidatePlays ? candidateWins / candidatePlays * 100 : 0);
-  } }, stat("LEAD BLOCK", ["Lead Block", "Lead Blocks"])];
+  const winRateFields = ["OL Win %", "OL Win%", "OL Win Percentage"];
+  const recordedWinRate = statValue(row, winRateFields);
+  return [{ label: "TOTAL PLAYS ON LINE", value: String(plays), rankValue: (candidate) => statValue(candidate, ["Total Plays on Line", "Line Plays", "OL Plays"]) || statValue(candidate, ["OL W", "OL Wins", "Line Wins"]) + statValue(candidate, ["OL L", "OL Losses", "Line Losses"]) }, { label: "WIN%", value: `${recordedWinRate.toFixed(1)}%`, rankValue: (candidate) => statValue(candidate, winRateFields) }, stat("LEAD BLOCK", ["Lead Block", "Lead Blocks"])];
 }
 function teamName(team: LeagueTeam) { return String(team.Name || team.Team || team.Nickname || team.Abbrev || "Team"); }
 function ordinal(rank: number) {
