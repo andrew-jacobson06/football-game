@@ -56,7 +56,7 @@ async function getStandingsFromSheet() {
     .filter((row) => standingsAbbrev(row) !== "")
     .map((row) => ({ ...row, Abbrev: standingsAbbrev(row) }));
 }
-async function getTeamJerseys() {
+async function getTeamJerseys(column: "Home Jersey Crop" | "Away Jersey Crop" = "Away Jersey Crop") {
   const teams = await getTeamsFromSheet();
   const jerseys = new Map<string, unknown>();
   const add = (key: unknown, jersey: unknown) => {
@@ -64,7 +64,7 @@ async function getTeamJerseys() {
     if (normalized && jersey) jerseys.set(normalized, jersey);
   };
   teams.forEach((team) => {
-    const jersey = team.Jersey;
+    const jersey = team[column];
     add(team.Team, jersey);
     add(team.Name, jersey);
     add(team.Abbrev, jersey);
@@ -74,7 +74,7 @@ async function getTeamJerseys() {
 async function getPlayersWithTeamJerseys() {
   const [players, jerseys] = await Promise.all([
     readSheetObjects("Players!A1:AM"),
-    getTeamJerseys(),
+    getTeamJerseys("Away Jersey Crop"),
   ]);
   return players.map((player) => ({
     ...player,
@@ -86,7 +86,7 @@ async function getTeamPlayers(teamAbbrev: string) {
     readSheetObjects("PlayerTeams!A1:B"),
     readSheetObjects("Players!A1:AM"),
     readSheetObjects("PlayerStats!A1:AJ"),
-    getTeamJerseys(),
+    getTeamJerseys("Away Jersey Crop"),
   ]);
   const teamKey = teamAbbrev.trim().toLowerCase();
   const rosterNames = new Set(
@@ -232,7 +232,9 @@ async function updateGameplaySetting(variable: string, value: string) {
   }]);
 }
 async function getPlayerTraitsFromSheet() {
-  const jerseys = await getTeamJerseys();
+  // Player-trait consumers outside a live matchup (including stats views) use
+  // the away crop. GameCenter replaces this with the matchup-specific crop.
+  const jerseys = await getTeamJerseys("Away Jersey Crop");
   const { headers, rows } = await sheetRows("Players"); const headerIndex: Record<string, number> = {};
   headers.forEach((h, i) => { const k = normHeader(h); if (k) headerIndex[k] = i; });
   const val = (row: Row, ...hs: string[]) => { for (const h of hs) { const i = headerIndex[normHeader(h)]; if (i !== undefined) return row[i] ?? ""; } return ""; };
