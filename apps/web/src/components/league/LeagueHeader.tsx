@@ -10,7 +10,6 @@ export function LeagueHeader({
 }) {
   return (
     <div className="league-header">
-      <div className="league-name">AFL League</div>
       <nav className="nav-tabs" aria-label="League tabs">
         {LEAGUE_TABS.map((tab) => (
           <button
