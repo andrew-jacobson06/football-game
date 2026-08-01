@@ -97,6 +97,34 @@ export function mergeStandingsWithTeams(
   });
 }
 
-export function normalizeGames(rows: unknown[]): LeagueGame[] {
-  return rows.filter(Boolean).map((row) => row as LeagueGame);
+function teamKey(value: unknown): string {
+  return String(value ?? "").trim().toUpperCase();
+}
+
+function teamDisplayName(team: LeagueTeam | undefined, fallback: string): string {
+  if (!team) return fallback;
+  const city = String(team.City ?? "").trim();
+  const nickname = String(team.Nickname ?? "").trim();
+  return String(team.Team ?? team.Name ?? `${city} ${nickname}`.trim() ?? fallback) || fallback;
+}
+
+export function normalizeGames(rows: unknown[], teams: LeagueTeam[] = []): LeagueGame[] {
+  const teamsByAbbrev = new Map(
+    teams.map((team) => [teamKey(team.Abbrev ?? team.Team), team]),
+  );
+
+  return rows.filter(Boolean).map((row) => {
+    const game = row as LeagueGame & { Id?: string | number };
+    const home = teamsByAbbrev.get(teamKey(game.Home));
+    const away = teamsByAbbrev.get(teamKey(game.Away));
+    return {
+      ...game,
+      GameId: game.GameId ?? game.Id ?? "",
+      Kickoff: game.Kickoff ?? game["Kickoff Time"],
+      HomeLogo: String(home?.Logo ?? ""),
+      AwayLogo: String(away?.Logo ?? ""),
+      HomeName: teamDisplayName(home, game.Home),
+      AwayName: teamDisplayName(away, game.Away),
+    };
+  });
 }

@@ -14,11 +14,15 @@ export type LeagueGame = {
   BallOn: string | number;
   Possession: "Home" | "Away" | string;
   Week?: string | number;
+  "Kickoff Time"?: string;
   Date?: string;
   Kickoff?: string;
   Network?: string;
+  Weather?: string;
   HomeLogo?: string;
   AwayLogo?: string;
+  HomeName?: string;
+  AwayName?: string;
 };
 
 export type LeagueTeam = Record<string, string | number | undefined> & {

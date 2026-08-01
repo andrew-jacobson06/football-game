@@ -283,6 +283,7 @@
 .schedule-game__date { border-right: 1px solid #292e35; }
 .schedule-game__date strong { margin-bottom: 8px; font-size: .88rem; }
 .schedule-game__date span { color: #929ba7; font-size: .72rem; }
+.schedule-game__date small { margin-top: 9px; color: #737e8b; font-size: .66rem; }
 .schedule-game__teams { display: grid; align-content: center; padding: 18px 34px; }
 .schedule-game__teams > div { display: grid; grid-template-columns: 42px 1fr auto; align-items: center; gap: 16px; min-height: 64px; }
 .schedule-game__teams img { width: 38px; height: 38px; object-fit: contain; }
@@ -333,6 +334,7 @@
 .team-schedule-hero h1 { margin: 2px 0; font-size: clamp(1.65rem, 3vw, 2.35rem); text-transform: uppercase; }
 .team-schedule-hero span, .team-schedule-hero small { color: #747d87; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; }
 .team-schedule-crest { display: grid; place-items: center; width: 74px; height: 74px; color: #fff; border-radius: 50%; background: linear-gradient(135deg, #ba0714, #171a20); font-size: 1.25rem; font-weight: 900; }
+.team-schedule-crest img { width: 58px; height: 58px; object-fit: contain; }
 .team-subtabs { display: flex; gap: 30px; max-width: 1240px; margin: 0 auto 16px; padding: 0 8px; border-bottom: 1px solid #d0d5db; }
 .team-subtabs span, .team-subtabs strong { padding: 10px 2px 13px; font-size: .82rem; }
 .team-subtabs strong { margin-bottom: -1px; border-bottom: 3px solid var(--accent-red); }
