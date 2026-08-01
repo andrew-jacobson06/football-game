@@ -17,6 +17,57 @@ function numericStat(stats: PlayerStats | null | undefined, names: string[]) {
   const entry = Object.entries(stats).find(([name]) => names.includes(key(name).replace(/[^a-z0-9]/g, "")));
   return Number(String(entry?.[1] ?? 0).replace(/,/g, "")) || 0;
 }
+type StatColumn = { label: string; fields: string[]; decimal?: boolean };
+type StatGroup = { title: string; positions: string[]; columns: StatColumn[]; defaultSort: string };
+
+const statGroups: StatGroup[] = [
+  { title: "Passing", positions: ["qb"], defaultSort: "YDS", columns: [
+    { label: "GP", fields: ["games", "gp"] }, { label: "CMP", fields: ["completions", "cmp", "passcompletions"] },
+    { label: "ATT", fields: ["passattempts", "passingattempts", "att"] }, { label: "CMP%", fields: ["completionpercentage", "completionpct", "cmppct"], decimal: true },
+    { label: "YDS", fields: ["passingyards", "passyards", "passyds"] }, { label: "AVG", fields: ["yardsperpass", "passaverage", "passavg"], decimal: true },
+    { label: "YDS/G", fields: ["passingyardspergame", "passyardspergame", "passydsg"], decimal: true }, { label: "LNG", fields: ["longestpass", "passlong", "lng"] },
+    { label: "TD", fields: ["passingtouchdowns", "passtds", "passtd"] }, { label: "INT", fields: ["interceptionsthrown", "passinterceptions", "passint"] },
+    { label: "SACK", fields: ["sackstaken", "passsacks"] }, { label: "RTG", fields: ["passerrating", "rating", "rtg"], decimal: true },
+  ]},
+  { title: "Rushing", positions: ["qb", "rb", "wr", "te"], defaultSort: "YDS", columns: [
+    { label: "GP", fields: ["games", "gp"] }, { label: "CAR", fields: ["carries", "rushingattempts", "rushattempts", "rushatt"] },
+    { label: "YDS", fields: ["yards", "rushingyards", "rushyards", "rushyds"] }, { label: "AVG", fields: ["rushingaverage", "rushaverage", "rushavg", "yardspercarry"], decimal: true },
+    { label: "LNG", fields: ["longestrush", "rushlong"] }, { label: "TD", fields: ["rushingtouchdowns", "rushtds", "rushtd"] },
+    { label: "YDS/G", fields: ["rushingyardspergame", "rushyardspergame", "rushydsg"], decimal: true }, { label: "FUM", fields: ["fumbles", "fum"] },
+    { label: "FD", fields: ["rushingfirstdowns", "rushfirstdowns", "rushfd"] },
+  ]},
+  { title: "Receiving", positions: ["rb", "wr", "te"], defaultSort: "YDS", columns: [
+    { label: "GP", fields: ["games", "gp"] }, { label: "REC", fields: ["receptions", "rec"] }, { label: "TGTS", fields: ["targets", "tgts", "tgt"] },
+    { label: "YDS", fields: ["receivingyards", "recyards", "recyds"] }, { label: "AVG", fields: ["receivingaverage", "recaverage", "recavg", "yardsperreception"], decimal: true },
+    { label: "TD", fields: ["receivingtouchdowns", "rectds", "rectd"] }, { label: "LNG", fields: ["longestreception", "receivinglong", "reclong"] },
+    { label: "YDS/G", fields: ["receivingyardspergame", "recyardspergame", "recydsg"], decimal: true }, { label: "YAC", fields: ["yardsaftercatch", "yac"] },
+    { label: "FD", fields: ["receivingfirstdowns", "recfirstdowns", "recfd"] },
+  ]},
+  { title: "Defense", positions: ["dl", "dt", "de", "lb", "cb", "s", "db"], defaultSort: "TOT", columns: [
+    { label: "GP", fields: ["games", "gp"] }, { label: "SOLO", fields: ["solotackles", "solo"] }, { label: "AST", fields: ["assistedtackles", "assists", "ast"] },
+    { label: "TOT", fields: ["totaltackles", "tackles", "total", "tot"] }, { label: "SACK", fields: ["sacks", "sack"], decimal: true },
+    { label: "TFL", fields: ["tacklesforloss", "tfl"] }, { label: "PD", fields: ["passesdefended", "passdeflections", "pd"] },
+    { label: "INT", fields: ["interceptions", "defensiveinterceptions", "int"] }, { label: "YDS", fields: ["interceptionyards", "intyards", "intyds"] },
+    { label: "TD", fields: ["defensivetouchdowns", "inttouchdowns", "deftd"] }, { label: "FF", fields: ["forcedfumbles", "ff"] },
+    { label: "FR", fields: ["fumblerecoveries", "fr"] },
+  ]},
+];
+
+function formatStat(value: number, decimal = false) {
+  return decimal ? value.toFixed(1) : new Intl.NumberFormat("en-US").format(value);
+}
+
+function SortableStatTable({ group, players }: { group: StatGroup; players: TeamPlayer[] }) {
+  const [sort, setSort] = useState({ column: group.defaultSort, direction: "desc" as "asc" | "desc" });
+  const rows = useMemo(() => players.filter((player) => group.positions.includes(key(player.Pos ?? player.DefPos))).sort((a, b) => {
+    const column = group.columns.find((item) => item.label === sort.column)!;
+    const difference = numericStat(b.Stats, column.fields) - numericStat(a.Stats, column.fields);
+    return (sort.direction === "desc" ? difference : -difference) || String(a.Name).localeCompare(String(b.Name));
+  }), [group, players, sort]);
+  const changeSort = (column: string) => setSort((current) => ({ column, direction: current.column === column && current.direction === "desc" ? "asc" : "desc" }));
+
+  return <section className="team-stat-group"><h3>{group.title}</h3><div className="team-stat-scroll"><table><thead><tr><th>NAME</th>{group.columns.map((column) => <th className={sort.column === column.label ? "sorted" : ""} key={column.label}><button type="button" onClick={() => changeSort(column.label)}>{column.label}<span aria-hidden="true">{sort.column === column.label ? (sort.direction === "desc" ? "▾" : "▴") : ""}</span></button></th>)}</tr></thead><tbody>{rows.map((player) => <tr key={String(player.Name)}><td><a>{player.Name}</a> <small>{player.Pos || player.DefPos}</small></td>{group.columns.map((column) => <td className={sort.column === column.label ? "sorted" : ""} key={column.label}>{formatStat(numericStat(player.Stats, column.fields), column.decimal)}</td>)}</tr>)}</tbody></table></div>{rows.length === 0 && <p className="team-stats-empty">No {group.title.toLowerCase()} players on the active roster.</p>}</section>;
+}
 function stars(player: TeamPlayer, side: "off" | "def") {
   return Number(player[side === "off" ? "Off Stars" : "Def Stars"]) || 0;
 }
@@ -52,27 +103,27 @@ export function TeamDetail({ team, standings, games, onBack, onGame }: { team: L
   const record = `${standing.Wins ?? 0}-${standing.Losses ?? 0}${parseInteger(standing.Ties) ? `-${standing.Ties}` : ""}`;
   const hasStats = players.some((player) => player.Stats && Object.entries(player.Stats).some(([field, value]) => !["player", "name", "team"].includes(key(field)) && (Number(String(value).replace(/,/g, "")) || 0) !== 0));
   const leaderSpecs = [
-    { label: "Passing", positions: ["qb"], fields: ["passingyards", "passyards", "passyds"], side: "off" as const },
-    { label: "Rushing", positions: ["rb", "qb"], fields: ["yards", "rushingyards", "rushyards"], side: "off" as const },
-    { label: "Receiving", positions: ["wr", "te"], fields: ["receivingyards", "recyards", "receptions"], side: "off" as const },
-    { label: "Defense", positions: ["dl", "de", "lb", "cb", "s", "db"], fields: ["tackles", "total", "sacks", "interceptions"], side: "def" as const },
+    { label: "Passing Yards", positions: ["qb"], fields: ["passingyards", "passyards", "passyds"], side: "off" as const },
+    { label: "Rushing Yards", positions: ["rb", "qb", "wr"], fields: ["yards", "rushingyards", "rushyards", "rushyds"], side: "off" as const },
+    { label: "Receiving Yards", positions: ["wr", "te", "rb"], fields: ["receivingyards", "recyards", "recyds"], side: "off" as const },
+    { label: "Tackles", positions: ["dl", "dt", "de", "lb", "cb", "s", "db"], fields: ["totaltackles", "tackles", "total", "tot"], side: "def" as const },
+    { label: "Interceptions", positions: ["dl", "dt", "de", "lb", "cb", "s", "db"], fields: ["interceptions", "defensiveinterceptions", "int"], side: "def" as const },
   ];
   const leaders = leaderSpecs.map((spec) => {
     const eligible = players.filter((player) => spec.positions.includes(key(player.Pos ?? player.DefPos)));
     const pool = eligible.length ? eligible : players;
     return [...pool].sort((a, b) => hasStats ? numericStat(b.Stats, spec.fields) - numericStat(a.Stats, spec.fields) || stars(b, spec.side) - stars(a, spec.side) : stars(b, spec.side) - stars(a, spec.side))[0];
   });
-  const statColumns = [...new Set(players.flatMap((player) => Object.keys(player.Stats ?? {})))].filter((column) => !["player", "name", "team"].includes(key(column)));
-
   return <main className="team-page">
     <button className="team-page-back" type="button" onClick={onBack}>← All teams</button>
     <header className="team-page-hero">{team.Logo ? <img src={String(team.Logo)} alt="" /> : <div className="team-page-crest">{id.slice(0, 2)}</div>}<div><span>AFL TEAM</span><h1>{name}</h1><p>{record} · {divisionPlace >= 0 ? `${ordinal(divisionPlace + 1)} in ${division}` : division || "2026 Regular Season"}</p></div></header>
     <nav className="team-page-nav" aria-label={`${name} sections`}>{(["overview", "stats", "schedule", "roster"] as TeamSection[]).map((item) => <button type="button" className={section === item ? "active" : ""} onClick={() => setSection(item)} key={item}>{item}</button>)}</nav>
     {section === "stats" ? <section className="team-stats-shell">
-      <header className="team-stats-heading"><div><span>2026 REGULAR SEASON</span><h2>{name} Player Stats</h2></div></header>
+      <header className="team-stats-heading"><div><h2>{name} Player Stats 2026</h2></div><button type="button">2026 Regular Season⌄</button></header>
+      <div className="team-stats-mode"><strong>Players</strong><span>Team</span></div>
       <h3>Team Leaders</h3>
-      {rosterError ? <p className="players-message players-message--error">{rosterError}</p> : <div className="team-leaders">{leaders.map((leader, index) => leader && <article key={`${leader.Name}-${index}`}><small>{leaderSpecs[index].label}</small><PlayerImage player={leader} className="leader-avatar" /><p><b>{leader.Name}</b> <em>{leader.Pos || leader.DefPos}</em></p><strong>{hasStats ? numericStat(leader.Stats, leaderSpecs[index].fields) : `${stars(leader, leaderSpecs[index].side)}★`}</strong></article>)}</div>}
-      <section className="team-stat-group"><h3>Season Stats</h3><div className="team-stat-scroll"><table><thead><tr><th>NAME</th>{statColumns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{players.map((player) => <tr key={String(player.Name)}><td><a>{player.Name}</a> <small>{player.Pos || player.DefPos}</small></td>{statColumns.map((column) => <td key={column}>{player.Stats?.[column] || "—"}</td>)}</tr>)}</tbody></table></div>{!players.length && !rosterError && <p>Loading roster…</p>}{players.length > 0 && !statColumns.length && <p>No season statistics have been recorded yet. Leaders are based on player star ratings.</p>}</section>
+      {rosterError ? <p className="players-message players-message--error">{rosterError}</p> : <div className="team-leaders">{leaders.map((leader, index) => leader && <article key={`${leader.Name}-${index}`}><small>{leaderSpecs[index].label}</small><PlayerImage player={leader} className="leader-avatar" /><p><b>{leader.Name}</b> <em>{leader.Pos || leader.DefPos}</em></p><strong>{hasStats ? formatStat(numericStat(leader.Stats, leaderSpecs[index].fields)) : `${stars(leader, leaderSpecs[index].side)}★`}</strong></article>)}</div>}
+      {!players.length && !rosterError ? <p>Loading roster…</p> : statGroups.map((group) => <SortableStatTable group={group} players={players} key={group.title} />)}
     </section> : section === "schedule" ? <section className="team-schedule-panel"><header><span>2026 SEASON</span><h2>{name} Schedule 2026</h2></header>{teamGames.length ? <><h3>Regular Season</h3><div className="team-schedule-scroll"><table><thead><tr><th>WK</th><th>DATE</th><th>OPPONENT</th><th>TIME</th><th>TV</th></tr></thead><tbody>{teamGames.map((game, index) => {
       const isHome = key(game.Home) === key(id);
       const opponent = isHome ? game.Away : game.Home;
