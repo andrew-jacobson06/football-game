@@ -1367,9 +1367,11 @@ function ScoreChart({ game, history }: { game: LeagueGame; history: Play[] }) {
 export function GameCenter({
   game,
   onBack,
+  onGameUpdate,
 }: {
   game: LeagueGame;
   onBack: () => void;
+  onGameUpdate?: (game: LeagueGame) => void;
 }) {
   const [tab, setTab] = useState<GameTab>("gamecast");
   const [currentGame, setCurrentGame] = useState(game);
@@ -1518,6 +1520,7 @@ export function GameCenter({
       // Preserve the pre-snap situation while the play runs. This state change
       // advances the markers and resets the formation only after animation.
       setCurrentGame(result.game);
+      onGameUpdate?.(result.game);
       setHistory((h) => [...h, result.play]);
       setLog((l) => [result.text, ...l]);
     } catch (error) {
