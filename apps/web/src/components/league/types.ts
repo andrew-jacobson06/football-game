@@ -26,6 +26,8 @@ export type LeagueGame = {
   AwayLogo?: string;
   HomeName?: string;
   AwayName?: string;
+  "Home Record"?: string;
+  "Away Record"?: string;
 };
 
 export type LeagueTeam = Record<string, string | number | undefined> & {

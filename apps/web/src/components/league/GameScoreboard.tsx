@@ -8,10 +8,10 @@ export function GameScoreboard({ game }: { game: LeagueGame }) {
           <img
             className="team-logo"
             src={game.HomeLogo || "https://via.placeholder.com/96"}
-            alt="Home Logo"
+            alt={`${game.Home} logo`}
           />
           <div className="team-name">{game.Home}</div>
-          <div className="team-record">0-0</div>
+          <div className="team-record">{game["Home Record"] || "0-0"}</div>
         </div>
         <div className="score-section">
           <div className="score-row">
@@ -36,10 +36,10 @@ export function GameScoreboard({ game }: { game: LeagueGame }) {
           <img
             className="team-logo"
             src={game.AwayLogo || "https://via.placeholder.com/96"}
-            alt="Away Logo"
+            alt={`${game.Away} logo`}
           />
           <div className="team-name">{game.Away}</div>
-          <div className="team-record">0-0</div>
+          <div className="team-record">{game["Away Record"] || "0-0"}</div>
         </div>
         <div className="score-section">
           <div className="score-row">
