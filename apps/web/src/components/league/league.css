@@ -798,6 +798,17 @@
 .league-stats-card .complete-link { padding: 11px 0 0; text-align: center; }
 .league-stats-card .complete-link button { color: #69adff; text-decoration: none; font-size: .78rem; font-weight: 700; }
 .league-stats-card .complete-rushing-leaders { margin-top: 10px; }
+.player-stat-nav { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 18px; border-bottom: 1px solid var(--border-color); text-align: center; }
+.player-stat-nav button { padding: 13px 8px; border: 0; border-bottom: 2px solid transparent; color: var(--text-muted); background: transparent; font-weight: 800; cursor: pointer; }
+.player-stat-nav button.active { border-bottom-color: var(--accent-red); color: var(--text-primary); }
+.offense-stat-nav { display: flex; align-items: center; gap: 6px; margin-bottom: 18px; }
+.offense-stat-nav button { padding: 9px 16px; border: 1px solid transparent; border-radius: 999px; color: var(--text-muted); background: var(--surface-subtle); font-weight: 700; cursor: pointer; }
+.offense-stat-nav button.active { border-color: var(--control-border); color: var(--text-primary); background: var(--control-bg); box-shadow: 0 2px 8px var(--shadow-color); }
+.player-stats-stub { min-height: 220px; padding: 30px; border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-muted); background: var(--surface-raised); text-align: center; }
+.player-stats-stub h2 { color: var(--text-primary); }
+.player-stats-stub button { border: 0; color: var(--control-accent); background: transparent; font: inherit; cursor: pointer; }
+.complete-leaders-table th:nth-child(2), .complete-leaders-table td:nth-child(2) { text-align: left; }
+.complete-leaders-table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface-subtle) 55%, transparent); }
 .team-stat-nav { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 20px; border-bottom: 1px solid var(--border-color); text-align: center; }
 .team-stat-nav > * { padding: 13px 8px; color: var(--text-muted); font-size: .8rem; }
 .team-stat-nav .active { color: var(--text-light); border-bottom: 2px solid var(--accent-red); }
@@ -823,6 +834,7 @@
   .league-stats-heading { align-items: flex-start; flex-direction: column; }
   .stats-leader-grid { grid-template-columns: 1fr; gap: 4px; }
   .complete-leaders-tools { align-items: stretch; flex-direction: column; }
+  .offense-stat-nav { overflow-x: auto; }
 }
 
 /* Player statistics profile */
