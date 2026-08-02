@@ -2593,3 +2593,19 @@
 .recent-game-tabs button:hover,.recent-game-tabs button:focus-visible { color: var(--text-primary); background: var(--surface-subtle); }
 .recent-game-tabs button.active { border-bottom-color: var(--accent-red); color: var(--text-primary); }
 .recent-game-tabs button:focus-visible { outline: 3px solid color-mix(in srgb, var(--control-accent) 30%, transparent); outline-offset: -3px; }
+
+/* Interactive team names mirror player links while honoring both app themes. */
+.team-name-button {
+  border: 0;
+  padding: 0;
+  color: var(--control-accent);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.team-name-button:hover { text-decoration: underline; }
+.team-name-button:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid var(--control-accent);
+  outline-offset: 2px;
+}
