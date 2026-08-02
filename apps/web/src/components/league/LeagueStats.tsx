@@ -10,7 +10,8 @@ type PlayerProfileTab = "Overview" | "News" | "Stats" | "Bio" | "Splits" | "Game
 type CompleteView = "rushing" | "tackling" | "team-total" | "team-passing" | "team-rushing" | "team-defense" | "team-sacks" | "team-turnovers" | "special-teams" | null;
 type Leader = { name: string; detail?: string; image?: string; player?: Player; value: number };
 type Category = { title: string; label: string; fields: string[]; positions?: string[] };
-type StatColumn = { label: string; fields: string[] };
+type StatColumn = { label: string; fields: string[]; value?: (row: PlayerStats) => number; display?: (row: PlayerStats) => string };
+type CompleteSort = { column: string; direction: "asc" | "desc" };
 type PlayerStatSide = "offense" | "defense";
 type ProfileStat = { label: string; value: string; rankValue: (row: PlayerStats) => number };
 type TeamTotal = { team: LeagueTeam; rows: PlayerStats[]; gp: number; passing: number; rushing: number; total: number; sacks: number; interceptions: number; fumbleRecoveries: number; turnovers: number; allowedPassing: number; allowedRushing: number; allowed: number };
@@ -36,15 +37,6 @@ const TEAM_DEFENSE: Category[] = [
   { title: "TURNOVERS", label: "DIFF", fields: ["turnovers"] },
 ];
 const RUSHING_COLUMNS = ["Carries", "Yards", "TD", "Fum", "Fum Lost", "First Down", "Juke", "BrokenTackle", "Avg", "Loss", "5+", "10+", "20+", "30+", "50+", "Long"] as const;
-const DEFENSIVE_COLUMNS: StatColumn[] = [
-  { label: "Tackles", fields: ["Tackles", "Total Tackles", "TOT"] },
-  { label: "TFL", fields: ["TFL", "Tackles For Loss", "TacklesForLoss"] },
-  { label: "FF", fields: ["FF", "Forced Fumbles", "ForcedFumbles"] },
-  { label: "Sacks", fields: ["Sacks", "Sack"] },
-  { label: "FR", fields: ["FR", "Fumble Recoveries", "FumbleRecoveries"] },
-  { label: "INT", fields: ["INT", "Interceptions"] },
-  { label: "Defl", fields: ["Defl", "Deflections", "Passes Defended", "PassDeflections"] },
-];
 
 const normalized = (value: unknown) => String(value ?? "").trim().toLowerCase().replace(/%/g, "percentage").replace(/[^a-z0-9]/g, "");
 const number = (value: unknown) => Number(String(value ?? 0).replace(/,/g, "")) || 0;
@@ -72,6 +64,22 @@ function lineWinRate(row: PlayerStats, winFields: string[], lossFields: string[]
   const attempts = wins + statValue(row, lossFields);
   return attempts ? wins / attempts * 100 : statValue(row, rateFields);
 }
+const DEFENSIVE_COLUMNS: StatColumn[] = [
+  { label: "DL Win %", fields: DL_WIN_RATE_FIELDS, value: (row) => lineWinRate(row, DL_WIN_FIELDS, DL_LOSS_FIELDS, DL_WIN_RATE_FIELDS), display: (row) => `${lineWinRate(row, DL_WIN_FIELDS, DL_LOSS_FIELDS, DL_WIN_RATE_FIELDS).toFixed(1)}%` },
+  { label: "Tackles", fields: ["Tackles", "Total Tackles", "TOT"] },
+  { label: "TFL", fields: ["TFL", "Tackles For Loss", "TacklesForLoss"] },
+  { label: "Sacks", fields: ["Sacks", "Sack"] },
+  { label: "FF", fields: ["FF", "Forced Fumbles", "ForcedFumbles"] },
+  { label: "FR", fields: ["FR", "Fumble Recoveries", "FumbleRecoveries"] },
+  { label: "INT", fields: ["INT", "Interceptions"] },
+  { label: "Defl", fields: ["DEFL", "DFL", "Defl", "Deflections", "Passes Defended", "PassDeflections"] },
+  { label: "Fum Ret Yds", fields: ["Fum Ret Yds", "Fumble Return Yards", "FumbleReturnYards"] },
+  { label: "Fum TD", fields: ["Fum TD", "Fumble TD", "Fumble Return TD", "FumbleReturnTD"] },
+  { label: "Int Ret Yds", fields: ["Int Ret Yds", "Interception Return Yards", "IntReturnYards"] },
+  { label: "Int TD", fields: ["Int TD", "Interception TD", "Interception Return TD", "IntReturnTD"] },
+  { label: "Safety Forced", fields: ["Safety Forced", "Safeties Forced", "Safety", "Safeties"] },
+];
+const columnValue = (row: PlayerStats, column: StatColumn) => column.value?.(row) ?? statValue(row, column.fields);
 function defensiveOverviewStats(row: PlayerStats): ProfileStat[] {
   const stat = (label: string, fields: string[]) => profileStat(row, label, fields);
   const winRate = lineWinRate(row, DL_WIN_FIELDS, DL_LOSS_FIELDS, DL_WIN_RATE_FIELDS);
@@ -232,6 +240,7 @@ export function LeagueStats({ teams, games = [] }: { teams: LeagueTeam[]; games?
   const [error, setError] = useState<string | null>(null);
   const [completeView, setCompleteView] = useState<CompleteView>(null);
   const [filter, setFilter] = useState("");
+  const [completeSort, setCompleteSort] = useState<CompleteSort>({ column: "Yards", direction: "desc" });
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
   useEffect(() => { Promise.all([getPlayerStats(), getPlayers()]).then(([statsResult, playersResult]) => { setStats(statsResult.playerStats); setPlayers(playersResult.players); }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load statistics")).finally(() => setLoading(false)); }, []);
@@ -286,10 +295,21 @@ export function LeagueStats({ teams, games = [] }: { teams: LeagueTeam[]; games?
     const raw = row[key] as number;
     return { name: teamName(row.team), image: String(row.team.Logo || ""), value: ["total", "passing", "rushing", "allowed"].includes(key) ? raw / row.gp : raw };
   }).filter(({ value }) => value > 0).sort((a, b) => category.title === "YARDS ALLOWED" ? a.value - b.value : b.value - a.value).slice(0, 5);
-  const allRushers = stats.filter((row) => number(row.Carries) > 0 && (!filter || normalized(row.Player).includes(normalized(filter)))).sort((a, b) => number(b.Yards) - number(a.Yards));
-  const allTacklers = stats.filter((row) => statValue(row, DEFENSIVE_COLUMNS[0].fields) >= 1 && (!filter || normalized(row.Player).includes(normalized(filter)))).sort((a, b) => statValue(b, DEFENSIVE_COLUMNS[0].fields) - statValue(a, DEFENSIVE_COLUMNS[0].fields));
-  const completeRows = completeView === "rushing" ? allRushers : allTacklers;
   const completeColumns: StatColumn[] = completeView === "rushing" ? RUSHING_COLUMNS.map((label) => ({ label, fields: [label] })) : DEFENSIVE_COLUMNS;
+  const completeRows = stats.filter((row) => {
+    if (filter && !normalized(row.Player).includes(normalized(filter))) return false;
+    return completeView === "rushing" ? number(row.Carries) > 0 : DEFENSIVE_COLUMNS.some((column) => columnValue(row, column) > 0);
+  }).sort((a, b) => {
+    if (completeSort.column === "Player") {
+      const comparison = String(a.Player).localeCompare(String(b.Player));
+      return completeSort.direction === "asc" ? comparison : -comparison;
+    }
+    const column = completeColumns.find((candidate) => candidate.label === completeSort.column) || completeColumns[0];
+    const comparison = columnValue(a, column) - columnValue(b, column);
+    return (completeSort.direction === "asc" ? comparison : -comparison) || String(a.Player).localeCompare(String(b.Player));
+  });
+  const sortCompleteRows = (column: string) => setCompleteSort((current) => ({ column, direction: current.column === column && current.direction === "desc" ? "asc" : "desc" }));
+  const openCompleteView = (view: Exclude<CompleteView, null>, column: string) => { setCompleteSort({ column, direction: "desc" }); setCompleteView(view); };
   const teamMode = completeView?.startsWith("team-") ? completeView.slice(5) as "total" | "passing" | "rushing" | "defense" | "sacks" | "turnovers" : null;
 
   if (selectedPlayer) {
@@ -302,7 +322,7 @@ export function LeagueStats({ teams, games = [] }: { teams: LeagueTeam[]; games?
     <header className="league-stats-heading"><div><span>LEAGUE STATISTICS</span><h1>{teamMode ? `AFL Team ${teamMode === "total" ? "Total Offense" : teamMode[0].toUpperCase() + teamMode.slice(1)} Stats` : "AFL Stat Leaders"}</h1></div><StatsSelect label="Statistics view" value={activeView} onChange={(value) => { setActiveView(value as StatsView); setCompleteView(null); }}><option value="Player">Player Statistics</option><option value="Team">Team Statistics</option></StatsSelect></header>
     <div className="stats-tabs" role="tablist">{(["Player", "Team"] as StatsView[]).map((view) => <button className={`stats-tab ${activeView === view ? "active" : ""}`} key={view} type="button" onClick={() => { setActiveView(view); setCompleteView(null); }}>{view}</button>)}</div>
     <div className="season-row"><StatsSelect label="Season" value="season-1"><option value="season-1">Season 1 Regular Season</option></StatsSelect></div>
-    {completeView === "special-teams" ? <section className="player-tab-stub"><span>SPECIAL TEAMS</span><h2>Special Teams Stats</h2><p>Special teams leader tables are ready for future league data.</p><button className="team-table-back" type="button" onClick={() => setCompleteView(null)}>← Back to stat leaders</button></section> : teamMode ? <TeamCompleteTable mode={teamMode} rows={[...teamTotals].sort((a, b) => teamMode === "defense" ? a.allowed - b.allowed : b[teamMode] - a[teamMode])} onBack={() => setCompleteView(null)} onSpecialTeams={() => setCompleteView("special-teams")} /> : completeView ? <section className="complete-rushing-leaders"><div className="complete-leaders-tools"><button type="button" onClick={() => setCompleteView(null)}>← Back to stat leaders</button><label><span>Filter {completeView === "rushing" ? "rushers" : "tacklers"}</span><input type="search" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Player name" /></label></div><div className="complete-leaders-table-scroll"><table className="complete-leaders-table"><thead><tr><th>Player</th>{completeColumns.map((column) => <th key={column.label}>{column.label}</th>)}</tr></thead><tbody>{completeRows.map((row) => <tr key={row.Player}><td className="complete-leader-player"><PlayerImage player={playerByName.get(normalized(row.Player)) || {}} className="player-stats-image" /><button className="player-name-button" type="button" onClick={() => { const player = playerByName.get(normalized(row.Player)); if (player) setSelectedPlayer(player); }}>{row.Player}</button></td>{completeColumns.map((column) => <td key={column.label}>{displayStat(row, column.fields)}</td>)}</tr>)}</tbody></table></div></section> : <div className="stats-leader-grid"><section><h2>Offensive Leaders</h2>{(activeView === "Team" ? TEAM_OFFENSE : OFFENSE).map((category) => <LeaderTable key={category.title} category={category} leaders={activeView === "Team" ? teamLeadersFor(category) : leadersFor(category)} loading={loading} error={error} onPlayer={setSelectedPlayer} onComplete={activeView === "Team" ? () => setCompleteView(`team-${category.fields[0]}` as CompleteView) : category.title === "RUSHING" ? () => setCompleteView("rushing") : undefined} />)}</section><section><h2>Defensive Leaders</h2>{(activeView === "Team" ? TEAM_DEFENSE : DEFENSE).map((category) => <LeaderTable key={category.title} category={category} leaders={activeView === "Team" ? teamLeadersFor(category) : leadersFor(category)} loading={loading} error={error} onPlayer={setSelectedPlayer} onComplete={activeView === "Team" ? () => setCompleteView(category.title === "YARDS ALLOWED" ? "team-defense" : category.title === "SACKS" ? "team-sacks" : "team-turnovers") : category.title === "TACKLES" ? () => setCompleteView("tackling") : undefined} />)}</section></div>}
+    {completeView === "special-teams" ? <section className="player-tab-stub"><span>SPECIAL TEAMS</span><h2>Special Teams Stats</h2><p>Special teams leader tables are ready for future league data.</p><button className="team-table-back" type="button" onClick={() => setCompleteView(null)}>← Back to stat leaders</button></section> : teamMode ? <TeamCompleteTable mode={teamMode} rows={[...teamTotals].sort((a, b) => teamMode === "defense" ? a.allowed - b.allowed : b[teamMode] - a[teamMode])} onBack={() => setCompleteView(null)} onSpecialTeams={() => setCompleteView("special-teams")} /> : completeView ? <section className="complete-rushing-leaders"><div className="complete-leaders-tools"><button type="button" onClick={() => setCompleteView(null)}>← Back to stat leaders</button><label><span>Filter {completeView === "rushing" ? "rushers" : "defenders"}</span><input type="search" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Player name" /></label></div><div className="complete-leaders-table-scroll"><table className="complete-leaders-table"><thead><tr><th aria-sort={completeSort.column === "Player" ? completeSort.direction === "asc" ? "ascending" : "descending" : "none"}><button className="stat-sort-button" type="button" onClick={() => sortCompleteRows("Player")}>Player {completeSort.column === "Player" && <span aria-hidden="true">{completeSort.direction === "desc" ? "↓" : "↑"}</span>}</button></th>{completeColumns.map((column) => <th key={column.label} aria-sort={completeSort.column === column.label ? completeSort.direction === "asc" ? "ascending" : "descending" : "none"}><button className="stat-sort-button" type="button" onClick={() => sortCompleteRows(column.label)}>{column.label} {completeSort.column === column.label && <span aria-hidden="true">{completeSort.direction === "desc" ? "↓" : "↑"}</span>}</button></th>)}</tr></thead><tbody>{completeRows.map((row) => <tr key={row.Player}><td className="complete-leader-player"><PlayerImage player={playerByName.get(normalized(row.Player)) || {}} className="player-stats-image" /><button className="player-name-button" type="button" onClick={() => { const player = playerByName.get(normalized(row.Player)); if (player) setSelectedPlayer(player); }}>{row.Player}</button></td>{completeColumns.map((column) => <td key={column.label}>{column.display?.(row) ?? displayStat(row, column.fields)}</td>)}</tr>)}</tbody></table></div></section> : <div className="stats-leader-grid"><section><h2>Offensive Leaders</h2>{(activeView === "Team" ? TEAM_OFFENSE : OFFENSE).map((category) => <LeaderTable key={category.title} category={category} leaders={activeView === "Team" ? teamLeadersFor(category) : leadersFor(category)} loading={loading} error={error} onPlayer={setSelectedPlayer} onComplete={activeView === "Team" ? () => setCompleteView(`team-${category.fields[0]}` as CompleteView) : category.title === "RUSHING" ? () => openCompleteView("rushing", "Yards") : undefined} />)}</section><section><h2>Defensive Leaders</h2>{(activeView === "Team" ? TEAM_DEFENSE : DEFENSE).map((category) => <LeaderTable key={category.title} category={category} leaders={activeView === "Team" ? teamLeadersFor(category) : leadersFor(category)} loading={loading} error={error} onPlayer={setSelectedPlayer} onComplete={activeView === "Team" ? () => setCompleteView(category.title === "YARDS ALLOWED" ? "team-defense" : category.title === "SACKS" ? "team-sacks" : "team-turnovers") : () => openCompleteView("tackling", category.title === "INTERCEPTIONS" ? "INT" : category.title === "SACKS" ? "Sacks" : "Tackles")} />)}</section></div>}
     <p className="stats-updated">Statistics are updated after every completed game.</p>
   </main>;
 }

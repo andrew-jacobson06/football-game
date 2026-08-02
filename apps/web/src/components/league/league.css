@@ -725,6 +725,20 @@
 .complete-leaders-table td:first-child {
   text-align: left;
 }
+.stat-sort-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.stat-sort-button:focus-visible {
+  outline: 2px solid var(--control-accent);
+  outline-offset: 3px;
+}
 .complete-leader-player {
   display: flex;
   align-items: center;
