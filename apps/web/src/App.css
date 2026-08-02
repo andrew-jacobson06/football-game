@@ -23,6 +23,7 @@
   --control-border: #4a4f58;
   --control-border-hover: #7f8792;
   --control-accent: #8fc2ff;
+  --stat-highlight: rgba(91, 155, 213, 0.16);
 }
 
 :root[data-theme="light"] {
@@ -46,6 +47,7 @@
   --control-border: #aeb8c3;
   --control-border-hover: #697786;
   --control-accent: #075eb8;
+  --stat-highlight: rgba(7, 94, 184, 0.12);
 }
 
 body {

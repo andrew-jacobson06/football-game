@@ -803,15 +803,19 @@
 .team-stat-nav .active { color: var(--text-light); border-bottom: 2px solid var(--accent-red); }
 .team-stat-nav button { border: 0; background: transparent; cursor: pointer; }
 .team-stat-filters { display: flex; gap: 10px; margin: 0 0 14px; }
-.team-stat-filters .dropdown-button { min-width: 150px; }
+.team-stat-filters .stats-select { min-width: 170px; }
 .team-table-back { margin: 0 0 12px; color: #69adff; font-size: .78rem; }
 .team-complete-table { width: 100%; min-width: 850px; border-collapse: collapse; font-size: .76rem; }
 .team-complete-table th, .team-complete-table td { padding: 8px 7px; border-top: 1px solid var(--border-color); text-align: right; white-space: nowrap; }
 .team-complete-table th { color: var(--text-muted); font-size: .66rem; text-decoration: underline; text-underline-offset: 2px; }
+.team-complete-table thead tr:first-child th { padding-block: 6px; text-align: center; text-decoration: none; }
+.team-complete-table .team-stat-group { color: var(--text-primary); font-weight: 800; letter-spacing: .04em; }
 .team-complete-table th:first-child, .team-complete-table td:first-child { min-width: 170px; text-align: left; }
 .team-complete-table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--gray-dark) 45%, transparent); }
-.team-complete-table td:nth-child(4) { background: color-mix(in srgb, #5b9bd5 16%, transparent); }
-.team-table-name { display: flex; align-items: center; gap: 8px; color: #69adff; }
+.team-complete-table:not(.team-complete-table--special):not(.team-complete-table--turnovers) td:nth-child(4),
+.team-complete-table--special td:nth-child(5),
+.team-complete-table--turnovers td:nth-child(3) { background: var(--stat-highlight); }
+.team-table-name { display: flex; align-items: center; gap: 8px; color: var(--control-accent); }
 .team-table-name img { width: 23px; height: 23px; object-fit: contain; }
 .league-stats-card .stats-updated { margin-bottom: 0; }
 @media (max-width: 760px) {
