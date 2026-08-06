@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import type { DefensiveAssignment, FormationSlot } from "./gameplay/gameEngine";
 import { PlayerImage } from "../players/PlayerImage";
 import { playerImageUrl, playerJerseyUrl } from "../players/playerImageUrls";
+import { AppSelect } from "../ui/AppSelect";
 
 import "./GameField.css";
 
@@ -265,6 +266,19 @@ const REQUIRED_FORMATION_SLOTS = new Set<FormationSlot>([
   "C",
   "RG",
 ]);
+const PASS_ROUTE_SLOTS: FormationSlot[] = ["WR1", "WR2", "WR3", "WR4", "RB1", "RB2", "LT", "RT"];
+const ROUTE_DEPTHS = ["Quick", "Short", "Short-Mid", "Mid", "Mid-Long", "Long", "Deep", "Shot", "Bomb"];
+const ROUTES_BY_DEPTH: Record<string, string[]> = {
+  Quick: ["WR Screen", "Flat", "Swing", "Hitch", "Out", "Slant", "Drag"],
+  Short: ["Flat", "Swing", "Hitch", "Out", "Slant", "Drag", "Cross"],
+  "Short-Mid": ["Hitch", "Out", "Slant", "Drag", "Cross", "In", "Curl", "Wheel"],
+  Mid: ["Out", "Slant", "Cross", "In", "Curl", "Dig", "Wheel"],
+  "Mid-Long": ["Out", "Cross", "In", "Curl", "Dig", "Wheel", "Comeback", "Corner", "Seam"],
+  Long: ["Cross", "Wheel", "Comeback", "Corner", "Seam", "Fade", "Go", "Post", "Sluggo"],
+  Deep: ["Cross", "Comeback", "Corner", "Seam", "Fade", "Go", "Post", "Sluggo"],
+  Shot: ["Cross", "Corner", "Seam", "Fade", "Go", "Post", "Sluggo", "Post Corner"],
+  Bomb: ["Corner", "Seam", "Fade", "Go", "Post", "Post Corner"],
+};
 const nameOf = (p?: FormationPlayer) => String(p?.name ?? p?.Name ?? "");
 const imgOf = (p?: FormationPlayer) => playerImageUrl(p);
 
@@ -423,6 +437,15 @@ export default function GameField({
   onSetupTransitionChange,
   animationRequest,
   onAnimationComplete,
+  passSetup = false,
+  routes = {},
+  routeDepths = {},
+  reads = {},
+  selectedRoutePlayer = "",
+  onRoutePlayerSelect,
+  onPassOptionsChange,
+  onPassSetupClose,
+  onPassPlay,
   children,
 }: {
   formationMode?: boolean;
@@ -445,6 +468,15 @@ export default function GameField({
   onSetupTransitionChange?: (active: boolean) => void;
   animationRequest?: { id: number; plan: unknown } | null;
   onAnimationComplete?: (id: number) => void;
+  passSetup?: boolean;
+  routes?: Record<string, string>;
+  routeDepths?: Record<string, string>;
+  reads?: Record<string, string>;
+  selectedRoutePlayer?: string;
+  onRoutePlayerSelect?: (player: string) => void;
+  onPassOptionsChange?: (patch: { routes?: Record<string, string>; routeDepths?: Record<string, string>; reads?: Record<string, string> }) => void;
+  onPassSetupClose?: () => void;
+  onPassPlay?: () => void;
   children?: ReactNode;
 }) {
   const fieldViewportRef = useRef<HTMLDivElement>(null);
@@ -490,6 +522,32 @@ export default function GameField({
   const formationFirstDownYard = clampYard(
     formationLosYard + offenseDirection * formationDistance,
   );
+  const eligibleRoutePlayers = PASS_ROUTE_SLOTS.flatMap((slot) =>
+    formation[slot] ? [{ slot, player: formation[slot] as string }] : [],
+  );
+  const routedPlayers = eligibleRoutePlayers
+    .map(({ player }) => player)
+    .filter((player) => Boolean(routes[player]));
+  const orderedReads = [...routedPlayers].sort(
+    (a, b) => Number(reads[a] || 999) - Number(reads[b] || 999),
+  );
+  const updateReadOrder = (order: string[]) =>
+    onPassOptionsChange?.({
+      reads: Object.fromEntries(order.map((player, index) => [player, String(index + 1)])),
+    });
+
+  useEffect(() => {
+    if (!passSetup) return;
+    const viewport = fieldViewportRef.current;
+    const field = fieldRef.current;
+    if (!viewport || !field) return;
+    const boundaryYard = formationLosYard - offenseDirection * 6;
+    const boundaryPx = field.offsetHeight * (yardToYPct(boundaryYard) / 100);
+    viewport.scrollTo({
+      top: offenseDirection === 1 ? boundaryPx - viewport.clientHeight : boundaryPx,
+      behavior: "smooth",
+    });
+  }, [formationLosYard, offenseDirection, passSetup]);
 
   const buildFormationSetupPlan = useCallback((): AnimationPlan => {
     const losYard = formationLosYard;
@@ -1393,7 +1451,7 @@ export default function GameField({
       <div className="field-viewport" id="fieldViewport" ref={fieldViewportRef}>
         {children && <div className="field-controls-overlay">{children}</div>}
         <div
-          className="field-wrap"
+          className={`field-wrap ${passSetup ? "pass-setup-active" : ""}`}
           id="field"
           ref={fieldRef}
           onClick={() => {
@@ -1436,6 +1494,48 @@ export default function GameField({
             END
           </div>
           <div className="football" id="football" ref={footballRef} />
+          {passSetup && PASS_ROUTE_SLOTS.map((slot) => {
+            const playerName = formation[slot];
+            if (!playerName) return null;
+            const lineup = FORMATION_SLOT_LINEUP[slot];
+            const player = findFormationPlayer(playerName);
+            return (
+              <button
+                key={`route-${slot}`}
+                type="button"
+                className={`pass-route-player ${selectedRoutePlayer === playerName ? "selected" : ""} ${routes[playerName] ? "assigned" : ""}`}
+                style={{
+                  left: `${LANES[lineup.lane] ?? 50}%`,
+                  top: `${yardToYPct(formationLosYard + offenseDirection * lineup.yardOffsetFromLos)}%`,
+                  zIndex: playerDepthZIndex(formationLosYard + offenseDirection * lineup.yardOffsetFromLos) + 1,
+                }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRoutePlayerSelect?.(playerName);
+                }}
+                aria-label={`Set route for ${playerName}, ${slot}`}
+              >
+                <span className="pass-route-player__image"><PlayerImage player={player} alt="" /></span>
+                <span>{slot}</span>
+              </button>
+            );
+          })}
+          {passSetup && formation.QB && (() => {
+            const lineup = FORMATION_SLOT_LINEUP.QB;
+            const qb = findFormationPlayer(formation.QB);
+            const qbSelected = selectedRoutePlayer === formation.QB;
+            return (
+              <button
+                type="button"
+                className={`pass-route-player pass-route-qb ${qbSelected ? "selected" : ""}`}
+                style={{ left: `${LANES[lineup.lane]}%`, top: `${yardToYPct(formationLosYard + offenseDirection * lineup.yardOffsetFromLos)}%` }}
+                onClick={(event) => { event.stopPropagation(); onRoutePlayerSelect?.(qbSelected ? "" : formation.QB as string); }}
+                aria-label={`Set read order for ${formation.QB}`}
+              >
+                <span className="pass-route-player__image"><PlayerImage player={qb} alt="" /></span><span>QB reads</span>
+              </button>
+            );
+          })()}
           {formationMode &&
             FORMATION_SLOTS.map((slot) => {
               const lineup = FORMATION_SLOT_LINEUP[slot];
@@ -1490,6 +1590,74 @@ export default function GameField({
                 </button>
               );
             })}
+
+          {passSetup && selectedRoutePlayer === formation.QB && (
+            <div className="qb-read-bubble" onClick={(event) => event.stopPropagation()}>
+              <strong>QB read order</strong>
+              <span>Drag receivers left to right</span>
+              <div className="qb-read-list">
+                {orderedReads.map((player, index) => (
+                  <button
+                    type="button"
+                    draggable
+                    key={player}
+                    onDragStart={(event) => event.dataTransfer.setData("text/plain", player)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      const moved = event.dataTransfer.getData("text/plain");
+                      const next = orderedReads.filter((name) => name !== moved);
+                      next.splice(index, 0, moved);
+                      updateReadOrder(next);
+                    }}
+                  >
+                    <b>{index + 1}</b> {player}
+                  </button>
+                ))}
+                {!orderedReads.length && <em>Assign at least one receiver route.</em>}
+              </div>
+            </div>
+          )}
+
+          {passSetup && selectedRoutePlayer && selectedRoutePlayer !== formation.QB && (
+            <div className="pass-route-sheet" onClick={(event) => event.stopPropagation()}>
+              <div><strong>{selectedRoutePlayer}</strong><span>Choose depth, then route</span></div>
+              <label>
+                Route depth
+                <AppSelect value={routeDepths[selectedRoutePlayer] || ""} onChange={(event) => {
+                  const depth = event.target.value;
+                  onPassOptionsChange?.({
+                    routeDepths: { ...routeDepths, [selectedRoutePlayer]: depth },
+                    routes: { ...routes, [selectedRoutePlayer]: "" },
+                  });
+                }}>
+                  <option value="" disabled>Select depth</option>
+                  {ROUTE_DEPTHS.map((depth) => <option key={depth}>{depth}</option>)}
+                </AppSelect>
+              </label>
+              <label>
+                Route
+                <AppSelect disabled={!routeDepths[selectedRoutePlayer]} value={routes[selectedRoutePlayer] || ""} onChange={(event) => {
+                  const route = event.target.value;
+                  const nextRoutes = { ...routes, [selectedRoutePlayer]: route };
+                  const nextOrder = orderedReads.includes(selectedRoutePlayer) ? orderedReads : [...orderedReads, selectedRoutePlayer];
+                  onPassOptionsChange?.({ routes: nextRoutes, reads: Object.fromEntries(nextOrder.map((name, index) => [name, String(index + 1)])) });
+                }}>
+                  <option value="" disabled>Select route</option>
+                  {(ROUTES_BY_DEPTH[routeDepths[selectedRoutePlayer]] || []).map((route) => <option key={route}>{route}</option>)}
+                </AppSelect>
+              </label>
+              <button type="button" onClick={() => onRoutePlayerSelect?.("")}>Done</button>
+            </div>
+          )}
+
+          {passSetup && (
+            <div className="pass-setup-toolbar" onClick={(event) => event.stopPropagation()}>
+              <div><strong>Design pass play</strong><span>Select a highlighted receiver or the QB.</span></div>
+              <button type="button" onClick={onPassSetupClose}>Cancel</button>
+              <button type="button" disabled={!routedPlayers.length} onClick={onPassPlay}>Run pass</button>
+            </div>
+          )}
 
           {/* The generated defense remains in the pending play data, but is
               deliberately not previewed while the offense is being placed. */}

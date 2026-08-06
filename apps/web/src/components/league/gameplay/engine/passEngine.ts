@@ -135,6 +135,11 @@ export function assignRoutes(
 ) {
   const offense = offenseTeam(game),
     routes = options.routes ?? {};
+  const depthRanges: Record<string, [number, number]> = {
+    Quick: [1, 2], Short: [3, 5], "Short-Mid": [6, 10], Mid: [11, 15],
+    "Mid-Long": [16, 20], Long: [21, 25], Deep: [26, 30], Shot: [31, 39],
+    Bomb: [40, Math.max(40, game.Possession === "Home" ? 100 - n(game.BallOn) : n(game.BallOn))],
+  };
   const names = Object.keys(routes).length
     ? Object.keys(routes)
     : [
@@ -147,8 +152,9 @@ export function assignRoutes(
     .map((name, i) => ({
       player: name,
       routeType: routes[name] || "Go",
-      airYards:
-        routes[name] === "Screen"
+      airYards: options.routeDepths?.[name] && depthRanges[options.routeDepths[name]]
+        ? choose(depthRanges[options.routeDepths[name]])
+        : routes[name] === "Screen"
           ? 0
           : routes[name] === "Slant"
             ? 5
@@ -194,7 +200,10 @@ export function choosePassTarget(
   const readOk = Math.random() * 100 < trait(qb, "readDefense");
   return weightedChoose(routes, (r) => {
     const read = options.reads?.[r.player] ?? "";
-    const readVal =
+    const numericRead = Number.parseInt(read, 10);
+    const readVal = Number.isFinite(numericRead)
+      ? Math.max(1, 6 - numericRead)
+      :
       read === "Primary"
         ? 5
         : read === "2nd"
