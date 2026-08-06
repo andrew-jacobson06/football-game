@@ -1476,6 +1476,7 @@ export function GameCenter({
     formation: {},
     routes: {},
     reads: {},
+    routeDepths: {},
   });
   const [log, setLog] = useState([
     "Loading game state, play history, players, and frontend settings...",
@@ -1487,6 +1488,8 @@ export function GameCenter({
   const [autoCloseFormationOnSave, setAutoCloseFormationOnSave] =
     useState(false);
   const [selectedFormationPlayer, setSelectedFormationPlayer] = useState("");
+  const [passSetup, setPassSetup] = useState(false);
+  const [selectedRoutePlayer, setSelectedRoutePlayer] = useState("");
   const [animationRequest, setAnimationRequest] = useState<{
     id: number;
     plan: AnimationPlan;
@@ -1579,11 +1582,14 @@ export function GameCenter({
       formation: {},
       routes: {},
       reads: {},
+      routeDepths: {},
       runner: undefined,
       defense: [],
     }));
     setSettingFormation(false);
     setSelectedFormationPlayer("");
+    setPassSetup(false);
+    setSelectedRoutePlayer("");
   }, [currentGame.Possession]);
   const persist = async (result: ReturnType<typeof runPlay>) => {
     if (playInFlightRef.current) return;
@@ -1780,6 +1786,24 @@ export function GameCenter({
                 distance={currentGame.Distance}
                 possession={currentGame.Possession}
                 selectedFormationPlayer={selectedFormationPlayer}
+                passSetup={passSetup}
+                routes={playOptions.routes}
+                routeDepths={playOptions.routeDepths}
+                reads={playOptions.reads}
+                selectedRoutePlayer={selectedRoutePlayer}
+                onRoutePlayerSelect={setSelectedRoutePlayer}
+                onPassOptionsChange={(patch) =>
+                  setPlayOptions((current) => ({ ...current, ...patch }))
+                }
+                onPassSetupClose={() => {
+                  setPassSetup(false);
+                  setSelectedRoutePlayer("");
+                }}
+                onPassPlay={() => {
+                  setPassSetup(false);
+                  setSelectedRoutePlayer("");
+                  action("Pass Play", playOptions);
+                }}
                 homeLogo={
                   teamValue(homeTeamDetails, "Logo") || currentGame.HomeLogo
                 }
@@ -1882,6 +1906,10 @@ export function GameCenter({
                   selectedFormationPlayer={selectedFormationPlayer}
                   requestedFormationMode={settingFormation}
                   disabled={isSavingPlay || isResettingPlay}
+                  onPassSetupChange={(active) => {
+                    setPassSetup(active);
+                    setSelectedRoutePlayer("");
+                  }}
                 />
               </GameField>
             </div>

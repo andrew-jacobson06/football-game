@@ -32,6 +32,7 @@ export type DefensiveAssignment = {
 export type PlayCallOptions = {
   formation?: Partial<Record<FormationSlot, string>>;
   routes?: Record<string, string>;
+  routeDepths?: Record<string, string>;
   reads?: Record<string, string>;
   runner?: string;
   clockMode?: ClockMode;

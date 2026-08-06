@@ -818,6 +818,111 @@ textarea {
   pointer-events: none;
 }
 
+.pass-setup-active .token.defense,
+.pass-setup-active .field-formation-slot.defense {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 420ms ease;
+}
+
+.pass-route-player {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 72px;
+  padding: 4px;
+  transform: translate(-50%, -100%);
+  border: 2px solid var(--control-accent);
+  border-radius: 14px;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--surface-overlay) 82%, transparent);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--control-accent) 24%, transparent), 0 8px 20px var(--shadow-color);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.pass-route-player.assigned { border-color: var(--control-border-hover); }
+.pass-route-player.selected { box-shadow: 0 0 0 7px color-mix(in srgb, var(--control-accent) 48%, transparent), 0 8px 20px var(--shadow-color); }
+.pass-route-player__image { width: 44px; height: 52px; overflow: hidden; }
+.pass-route-player__image .player-image-layers { width: 100%; height: 100%; }
+.pass-route-qb { z-index: 210; }
+
+.pass-route-sheet,
+.qb-read-bubble,
+.pass-setup-toolbar {
+  position: sticky;
+  z-index: 310;
+  color: var(--text-primary);
+  background: var(--surface-overlay);
+  border: 1px solid var(--control-border);
+  box-shadow: 0 14px 34px var(--shadow-color);
+}
+
+.pass-setup-toolbar {
+  top: 12px;
+  left: 50%;
+  width: min(620px, calc(100% - 24px));
+  min-height: 64px;
+  margin: 12px auto 0;
+  padding: 10px 12px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pass-setup-toolbar > div { display: grid; margin-right: auto; }
+.pass-setup-toolbar span, .pass-route-sheet > div span, .qb-read-bubble > span { color: var(--text-secondary); font-size: 12px; }
+.pass-setup-toolbar button, .pass-route-sheet > button, .qb-read-list button {
+  border: 1px solid var(--control-border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: var(--text-primary);
+  background: var(--control-bg);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.pass-setup-toolbar button:hover, .pass-route-sheet > button:hover, .qb-read-list button:hover { background: var(--control-bg-hover); border-color: var(--control-border-hover); }
+.pass-setup-toolbar button:disabled { opacity: .55; cursor: not-allowed; }
+
+.pass-route-sheet {
+  top: calc(100% - 176px);
+  width: min(720px, calc(100% - 24px));
+  min-height: 150px;
+  margin: 0 auto;
+  padding: 16px;
+  border-radius: 18px 18px 0 0;
+  display: flex;
+  align-items: end;
+  gap: 14px;
+}
+.pass-route-sheet > div { display: grid; margin-right: auto; align-self: center; }
+.pass-route-sheet label { display: grid; gap: 5px; color: var(--text-secondary); font-size: 12px; font-weight: 800; }
+
+.qb-read-bubble {
+  top: 90px;
+  width: min(760px, calc(100% - 24px));
+  margin: 0 auto;
+  padding: 14px;
+  border-radius: 18px;
+  display: grid;
+  gap: 5px;
+}
+.qb-read-list { display: flex; gap: 8px; overflow-x: auto; padding-top: 7px; }
+.qb-read-list button { white-space: nowrap; }
+.qb-read-list b { color: var(--control-accent); }
+.qb-read-list em { color: var(--text-secondary); }
+
+@media (max-width: 680px) {
+  .pass-route-sheet { align-items: stretch; flex-wrap: wrap; top: calc(100% - 270px); }
+  .pass-route-sheet > div { width: 100%; }
+  .pass-route-sheet label { flex: 1; }
+  .pass-setup-toolbar span { display: none; }
+}
+
 /* Full-body player presentation shared by formation setup and live plays. */
 .token {
   --player-size: clamp(46px, 5.5vw, 64px);

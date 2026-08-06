@@ -35,6 +35,7 @@ type Props = {
   selectedFormationPlayer?: string;
   requestedFormationMode?: boolean;
   disabled?: boolean;
+  onPassSetupChange?: (active: boolean) => void;
 };
 
 /**
@@ -335,6 +336,7 @@ export function GameControls({
   selectedFormationPlayer = "",
   requestedFormationMode,
   disabled = false,
+  onPassSetupChange,
 }: Props) {
   const [activeMenu, setActiveMenu] = useState<"coach" | "play" | null>(null);
   const [modal, setModal] = useState<"routes" | "run" | "clock" | "roster" | null>(null);
@@ -366,9 +368,6 @@ export function GameControls({
   const validFormation =
     formationPlayerCount === EXPECTED_PLAYERS_PER_SIDE &&
     [...REQUIRED].every((slot) => formation[slot]);
-  const canPass = receivers.some(
-    (r) => routes[r.player] && routes[r.player] !== "No Route",
-  );
   const pendingPointAfter = Boolean(
     (game as unknown as Record<string, unknown>).pendingFGTeam,
   );
@@ -518,8 +517,8 @@ export function GameControls({
               <button
                 disabled={disabled || !validFormation}
                 onClick={() => {
-                  if (!canPass) setModal("routes");
-                  else onAction("Pass Play", optionsWithDefense());
+                  setActiveMenu(null);
+                  onPassSetupChange?.(true);
                 }}
                 type="button"
               >
