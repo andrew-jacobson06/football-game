@@ -497,6 +497,9 @@ export default function GameField({
   const isSetupTransitionRef = useRef(false);
   const footballFollowRafRef = useRef<number | null>(null);
   const activePhaseDurationMsRef = useRef(DEFAULT_PHASE_DURATION_MS);
+  const passSetupRef = useRef(passSetup);
+  const formationRef = useRef(formation);
+  const onRoutePlayerSelectRef = useRef(onRoutePlayerSelect);
   const teamEndStyle = homeTeamPrimaryColor
     ? { background: homeTeamPrimaryColor }
     : undefined;
@@ -535,6 +538,39 @@ export default function GameField({
     onPassOptionsChange?.({
       reads: Object.fromEntries(order.map((player, index) => [player, String(index + 1)])),
     });
+
+  useEffect(() => {
+    passSetupRef.current = passSetup;
+    formationRef.current = formation;
+    onRoutePlayerSelectRef.current = onRoutePlayerSelect;
+  }, [formation, onRoutePlayerSelect, passSetup]);
+
+  useEffect(() => {
+    const eligiblePlayers = new Set(eligibleRoutePlayers.map(({ player }) => player));
+    Object.values(playersRef.current).forEach((player) => {
+      const isQuarterback = player.name === formation.QB;
+      const isEligible = eligiblePlayers.has(player.name) || isQuarterback;
+      player.el.classList.toggle("pass-route-eligible", passSetup && isEligible);
+      player.el.classList.toggle(
+        "pass-route-selected",
+        passSetup && selectedRoutePlayer === player.name,
+      );
+      player.el.classList.toggle(
+        "pass-route-assigned",
+        passSetup && Boolean(routes[player.name]),
+      );
+      if (passSetup && isEligible) {
+        player.el.setAttribute(
+          "aria-label",
+          isQuarterback
+            ? `Set read order for ${player.name}`
+            : `Set route for ${player.name}`,
+        );
+      } else {
+        player.el.setAttribute("aria-label", `Open ${player.name} player actions`);
+      }
+    });
+  }, [eligibleRoutePlayers, formation.QB, passSetup, routes, selectedRoutePlayer]);
 
   useEffect(() => {
     if (!passSetup) return;
@@ -1112,6 +1148,19 @@ export default function GameField({
         el.setAttribute("aria-label", `Open ${player.name} player actions`);
         const openPlayerMenu = (event: MouseEvent | KeyboardEvent) => {
           event.stopPropagation();
+          if (passSetupRef.current) {
+            const currentFormation = formationRef.current;
+            const eligibleNames = PASS_ROUTE_SLOTS.map(
+              (slot) => currentFormation[slot],
+            );
+            if (
+              player.name === currentFormation.QB ||
+              eligibleNames.includes(player.name)
+            ) {
+              onRoutePlayerSelectRef.current?.(player.name);
+            }
+            return;
+          }
           const target = event.currentTarget as HTMLDivElement;
           const leftPct = parseFloat(target.style.left) || player.x;
           const topPct =
@@ -1494,48 +1543,6 @@ export default function GameField({
             END
           </div>
           <div className="football" id="football" ref={footballRef} />
-          {passSetup && PASS_ROUTE_SLOTS.map((slot) => {
-            const playerName = formation[slot];
-            if (!playerName) return null;
-            const lineup = FORMATION_SLOT_LINEUP[slot];
-            const player = findFormationPlayer(playerName);
-            return (
-              <button
-                key={`route-${slot}`}
-                type="button"
-                className={`pass-route-player ${selectedRoutePlayer === playerName ? "selected" : ""} ${routes[playerName] ? "assigned" : ""}`}
-                style={{
-                  left: `${LANES[lineup.lane] ?? 50}%`,
-                  top: `${yardToYPct(formationLosYard + offenseDirection * lineup.yardOffsetFromLos)}%`,
-                  zIndex: playerDepthZIndex(formationLosYard + offenseDirection * lineup.yardOffsetFromLos) + 1,
-                }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onRoutePlayerSelect?.(playerName);
-                }}
-                aria-label={`Set route for ${playerName}, ${slot}`}
-              >
-                <span className="pass-route-player__image"><PlayerImage player={player} alt="" /></span>
-                <span>{slot}</span>
-              </button>
-            );
-          })}
-          {passSetup && formation.QB && (() => {
-            const lineup = FORMATION_SLOT_LINEUP.QB;
-            const qb = findFormationPlayer(formation.QB);
-            const qbSelected = selectedRoutePlayer === formation.QB;
-            return (
-              <button
-                type="button"
-                className={`pass-route-player pass-route-qb ${qbSelected ? "selected" : ""}`}
-                style={{ left: `${LANES[lineup.lane]}%`, top: `${yardToYPct(formationLosYard + offenseDirection * lineup.yardOffsetFromLos)}%` }}
-                onClick={(event) => { event.stopPropagation(); onRoutePlayerSelect?.(qbSelected ? "" : formation.QB as string); }}
-                aria-label={`Set read order for ${formation.QB}`}
-              >
-                <span className="pass-route-player__image"><PlayerImage player={qb} alt="" /></span><span>QB reads</span>
-              </button>
-            );
-          })()}
           {formationMode &&
             FORMATION_SLOTS.map((slot) => {
               const lineup = FORMATION_SLOT_LINEUP[slot];
