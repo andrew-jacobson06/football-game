@@ -825,30 +825,18 @@ textarea {
   transition: opacity 420ms ease;
 }
 
-.pass-route-player {
-  position: absolute;
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  width: 72px;
-  padding: 4px;
-  transform: translate(-50%, -100%);
-  border: 2px solid var(--control-accent);
-  border-radius: 14px;
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--surface-overlay) 82%, transparent);
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--control-accent) 24%, transparent), 0 8px 20px var(--shadow-color);
-  font: inherit;
-  font-size: 10px;
-  font-weight: 900;
-  cursor: pointer;
+.token.pass-route-eligible .player-character {
+  filter: drop-shadow(0 0 5px var(--control-accent))
+    drop-shadow(0 0 10px var(--control-accent));
 }
 
-.pass-route-player.assigned { border-color: var(--control-border-hover); }
-.pass-route-player.selected { box-shadow: 0 0 0 7px color-mix(in srgb, var(--control-accent) 48%, transparent), 0 8px 20px var(--shadow-color); }
-.pass-route-player__image { width: 44px; height: 52px; overflow: hidden; }
-.pass-route-player__image .player-image-layers { width: 100%; height: 100%; }
-.pass-route-qb { z-index: 210; }
+.token.pass-route-eligible { cursor: pointer; }
+.token.pass-route-assigned .player-marker { border-color: var(--control-border-hover); }
+.token.pass-route-selected .player-marker {
+  opacity: 1;
+  border-color: var(--control-accent);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--control-accent) 35%, transparent);
+}
 
 .pass-route-sheet,
 .qb-read-bubble,
