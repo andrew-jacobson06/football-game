@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { DefensiveAssignment, FormationSlot } from "./gameplay/gameEngine";
 import { PlayerImage } from "../players/PlayerImage";
 import { playerImageUrl, playerJerseyUrl } from "../players/playerImageUrls";
@@ -539,7 +546,10 @@ export default function GameField({
       reads: Object.fromEntries(order.map((player, index) => [player, String(index + 1)])),
     });
 
-  useEffect(() => {
+  // Player tokens are created imperatively and keep the click handler from the
+  // scene build. Update its inputs before the browser can accept another click
+  // so opening pass setup never leaves the QB handler on the previous mode.
+  useLayoutEffect(() => {
     passSetupRef.current = passSetup;
     formationRef.current = formation;
     onRoutePlayerSelectRef.current = onRoutePlayerSelect;
@@ -550,6 +560,12 @@ export default function GameField({
     Object.values(playersRef.current).forEach((player) => {
       const isQuarterback = player.name === formation.QB;
       const isEligible = eligiblePlayers.has(player.name) || isQuarterback;
+      if (!passSetup && unitClassForPlayer(player) === "defense") {
+        // Animation phases can leave an inline opacity behind. Pass setup also
+        // hides the defense, so clear any imperative visibility state when the
+        // user exits and let the normal defensive token styling take over.
+        player.el.style.removeProperty("opacity");
+      }
       player.el.classList.toggle("pass-route-eligible", passSetup && isEligible);
       player.el.classList.toggle(
         "pass-route-selected",
@@ -1153,10 +1169,10 @@ export default function GameField({
             const eligibleNames = PASS_ROUTE_SLOTS.map(
               (slot) => currentFormation[slot],
             );
-            if (
-              player.name === currentFormation.QB ||
-              eligibleNames.includes(player.name)
-            ) {
+            const quarterback = currentFormation.QB;
+            if (player.name === quarterback) {
+              onRoutePlayerSelectRef.current?.(quarterback);
+            } else if (eligibleNames.includes(player.name)) {
               onRoutePlayerSelectRef.current?.(player.name);
             }
             return;
