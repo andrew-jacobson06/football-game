@@ -825,7 +825,8 @@ textarea {
   transition: opacity 420ms ease;
 }
 
-.token.pass-route-eligible .player-character {
+.token.pass-route-eligible .player-character,
+.token.pass-route-eligible .player-jersey {
   filter: drop-shadow(0 0 5px var(--control-accent))
     drop-shadow(0 0 10px var(--control-accent));
 }
@@ -877,27 +878,35 @@ textarea {
 .pass-setup-toolbar button:disabled { opacity: .55; cursor: not-allowed; }
 
 .pass-route-sheet {
-  top: calc(100% - 176px);
+  position: fixed;
+  left: 50%;
+  right: auto;
+  bottom: 12px;
+  top: auto;
   width: min(720px, calc(100% - 24px));
   min-height: 150px;
-  margin: 0 auto;
+  margin: 0;
   padding: 16px;
   border-radius: 18px 18px 0 0;
   display: flex;
   align-items: end;
   gap: 14px;
+  transform: translateX(-50%);
 }
 .pass-route-sheet > div { display: grid; margin-right: auto; align-self: center; }
 .pass-route-sheet label { display: grid; gap: 5px; color: var(--text-secondary); font-size: 12px; font-weight: 800; }
 
 .qb-read-bubble {
+  position: fixed;
+  left: 50%;
   top: 90px;
   width: min(760px, calc(100% - 24px));
-  margin: 0 auto;
+  margin: 0;
   padding: 14px;
   border-radius: 18px;
   display: grid;
   gap: 5px;
+  transform: translateX(-50%);
 }
 .qb-read-list { display: flex; gap: 8px; overflow-x: auto; padding-top: 7px; }
 .qb-read-list button { white-space: nowrap; }
@@ -905,7 +914,7 @@ textarea {
 .qb-read-list em { color: var(--text-secondary); }
 
 @media (max-width: 680px) {
-  .pass-route-sheet { align-items: stretch; flex-wrap: wrap; top: calc(100% - 270px); }
+  .pass-route-sheet { align-items: stretch; flex-wrap: wrap; }
   .pass-route-sheet > div { width: 100%; }
   .pass-route-sheet label { flex: 1; }
   .pass-setup-toolbar span { display: none; }
