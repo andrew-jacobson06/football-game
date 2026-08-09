@@ -274,6 +274,7 @@ const REQUIRED_FORMATION_SLOTS = new Set<FormationSlot>([
   "RG",
 ]);
 const PASS_ROUTE_SLOTS: FormationSlot[] = ["WR1", "WR2", "WR3", "WR4", "RB1", "RB2", "LT", "RT"];
+const RUNNER_SLOTS = new Set<FormationSlot>(["QB", "RB1", "RB2", "WR1", "WR4"]);
 const ROUTE_DEPTHS = ["Quick", "Short", "Short-Mid", "Mid", "Mid-Long", "Long", "Deep", "Shot", "Bomb"];
 const ROUTES_BY_DEPTH: Record<string, string[]> = {
   Quick: ["WR Screen", "Flat", "Swing", "Hitch", "Out", "Slant", "Drag"],
@@ -445,6 +446,8 @@ export default function GameField({
   animationRequest,
   onAnimationComplete,
   passSetup = false,
+  runSetup = false,
+  runner,
   routes = {},
   routeDepths = {},
   reads = {},
@@ -453,6 +456,8 @@ export default function GameField({
   onPassOptionsChange,
   onPassSetupClose,
   onPassPlay,
+  onRunnerSelect,
+  onRunSetupClose,
   children,
 }: {
   formationMode?: boolean;
@@ -476,6 +481,8 @@ export default function GameField({
   animationRequest?: { id: number; plan: unknown } | null;
   onAnimationComplete?: (id: number) => void;
   passSetup?: boolean;
+  runSetup?: boolean;
+  runner?: string;
   routes?: Record<string, string>;
   routeDepths?: Record<string, string>;
   reads?: Record<string, string>;
@@ -484,6 +491,8 @@ export default function GameField({
   onPassOptionsChange?: (patch: { routes?: Record<string, string>; routeDepths?: Record<string, string>; reads?: Record<string, string> }) => void;
   onPassSetupClose?: () => void;
   onPassPlay?: () => void;
+  onRunnerSelect?: (player: string) => void;
+  onRunSetupClose?: () => void;
   children?: ReactNode;
 }) {
   const fieldViewportRef = useRef<HTMLDivElement>(null);
@@ -505,8 +514,10 @@ export default function GameField({
   const footballFollowRafRef = useRef<number | null>(null);
   const activePhaseDurationMsRef = useRef(DEFAULT_PHASE_DURATION_MS);
   const passSetupRef = useRef(passSetup);
+  const runSetupRef = useRef(runSetup);
   const formationRef = useRef(formation);
   const onRoutePlayerSelectRef = useRef(onRoutePlayerSelect);
+  const onRunnerSelectRef = useRef(onRunnerSelect);
   const teamEndStyle = homeTeamPrimaryColor
     ? { background: homeTeamPrimaryColor }
     : undefined;
@@ -551,9 +562,11 @@ export default function GameField({
   // so opening pass setup never leaves the QB handler on the previous mode.
   useLayoutEffect(() => {
     passSetupRef.current = passSetup;
+    runSetupRef.current = runSetup;
     formationRef.current = formation;
     onRoutePlayerSelectRef.current = onRoutePlayerSelect;
-  }, [formation, onRoutePlayerSelect, passSetup]);
+    onRunnerSelectRef.current = onRunnerSelect;
+  }, [formation, onRoutePlayerSelect, onRunnerSelect, passSetup, runSetup]);
 
   useEffect(() => {
     const eligiblePlayers = new Set(eligibleRoutePlayers.map(({ player }) => player));
@@ -567,6 +580,10 @@ export default function GameField({
         player.el.style.removeProperty("opacity");
       }
       player.el.classList.toggle("pass-route-eligible", passSetup && isEligible);
+      const runnerSlot = Object.entries(formation).find(([, name]) => name === player.name)?.[0] as FormationSlot | undefined;
+      const isRunnerEligible = Boolean(runnerSlot && RUNNER_SLOTS.has(runnerSlot));
+      player.el.classList.toggle("run-player-eligible", runSetup && isRunnerEligible);
+      player.el.classList.toggle("run-player-selected", runSetup && runner === player.name);
       player.el.classList.toggle(
         "pass-route-selected",
         passSetup && selectedRoutePlayer === player.name,
@@ -586,7 +603,7 @@ export default function GameField({
         player.el.setAttribute("aria-label", `Open ${player.name} player actions`);
       }
     });
-  }, [eligibleRoutePlayers, formation.QB, passSetup, routes, selectedRoutePlayer]);
+  }, [eligibleRoutePlayers, formation, formation.QB, passSetup, routes, runSetup, runner, selectedRoutePlayer]);
 
   useEffect(() => {
     if (!passSetup) return;
@@ -1187,6 +1204,13 @@ export default function GameField({
             }
             return;
           }
+          if (runSetupRef.current) {
+            const runnerEntry = Object.entries(formationRef.current).find(
+              ([slot, name]) => name === player.name && RUNNER_SLOTS.has(slot as FormationSlot),
+            );
+            if (runnerEntry) onRunnerSelectRef.current?.(player.name);
+            return;
+          }
           const target = event.currentTarget as HTMLDivElement;
           const leftPct = parseFloat(target.style.left) || player.x;
           const topPct =
@@ -1526,13 +1550,14 @@ export default function GameField({
       <div className="field-viewport" id="fieldViewport" ref={fieldViewportRef}>
         {children && <div className="field-controls-overlay">{children}</div>}
         <div
-          className={`field-wrap ${passSetup ? "pass-setup-active" : ""}`}
+          className={`field-wrap ${passSetup ? "pass-setup-active" : ""} ${runSetup ? "run-setup-active" : ""}`}
           id="field"
           ref={fieldRef}
           onClick={() => {
             setSelectedPlayerMenu(null);
             setRevealedFormationSlot(null);
             if (passSetup) onPassSetupClose?.();
+            if (runSetup) onRunSetupClose?.();
           }}
         >
           <div className="field-title">Dynamic Football Animation View</div>
@@ -1751,7 +1776,15 @@ export default function GameField({
             <div className="pass-setup-toolbar" onClick={(event) => event.stopPropagation()}>
               <div><strong>Design pass play</strong><span>Select a highlighted receiver or the QB.</span></div>
               <button type="button" onClick={onPassSetupClose}>Cancel</button>
-              <button type="button" disabled={!routedPlayers.length} onClick={onPassPlay}>Run pass</button>
+              <button type="button" disabled={!routedPlayers.length} onClick={onPassPlay}>Set pass</button>
+            </div>
+          )}
+
+          {runSetup && (
+            <div className="pass-setup-toolbar run-setup-toolbar" onClick={(event) => event.stopPropagation()}>
+              <div><strong>Choose ball carrier</strong><span>Select a highlighted QB, RB1, RB2, WR1, or WR4.</span></div>
+              <button type="button" onClick={onRunSetupClose}>Cancel</button>
+              <button type="button" disabled={!runner} onClick={onRunSetupClose}>Set runner</button>
             </div>
           )}
 

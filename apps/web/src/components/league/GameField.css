@@ -832,6 +832,15 @@ textarea {
 }
 
 .token.pass-route-eligible { cursor: pointer; }
+.token.run-player-eligible { cursor: pointer; }
+.token.run-player-eligible .player-marker {
+  opacity: 1;
+  border-color: var(--control-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--control-accent) 28%, transparent);
+}
+.token.run-player-selected .player-marker {
+  box-shadow: 0 0 0 7px color-mix(in srgb, var(--control-accent) 48%, transparent);
+}
 .token.pass-route-assigned .player-marker { border-color: var(--control-border-hover); }
 .token.pass-route-selected .player-marker {
   opacity: 1;

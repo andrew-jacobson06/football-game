@@ -36,6 +36,11 @@ type Props = {
   requestedFormationMode?: boolean;
   disabled?: boolean;
   onPassSetupChange?: (active: boolean) => void;
+  selectedPlayType?: "run" | "pass" | null;
+  onPlayTypeChange?: (playType: "run" | "pass") => void;
+  onRunSetupChange?: (active: boolean) => void;
+  onSnap?: () => void;
+  canSnap?: boolean;
 };
 
 /**
@@ -337,6 +342,11 @@ export function GameControls({
   requestedFormationMode,
   disabled = false,
   onPassSetupChange,
+  selectedPlayType = null,
+  onPlayTypeChange,
+  onRunSetupChange,
+  onSnap,
+  canSnap = false,
 }: Props) {
   const [activeMenu, setActiveMenu] = useState<"coach" | "play" | null>(null);
   const [modal, setModal] = useState<"routes" | "run" | "clock" | "roster" | null>(null);
@@ -361,7 +371,7 @@ export function GameControls({
   const routes = options.routes ?? {};
   const reads = options.reads ?? {};
   const receivers = eligibleReceivers(formation);
-  const runners = (["QB", ...RB_SLOTS, ...WR_SLOTS] as FormationSlot[])
+  const runners = (["QB", "RB1", "RB2", "WR1", "WR4"] as FormationSlot[])
     .map((s) => formation[s])
     .filter((r): r is string => Boolean(r));
   const formationPlayerCount = Object.values(formation).filter(Boolean).length;
@@ -509,7 +519,12 @@ export function GameControls({
             <div className="radial-flyout play-flyout">
               <button
                 disabled={disabled || !validFormation || runners.length === 0}
-                onClick={() => setModal("run")}
+                onClick={() => {
+                  setActiveMenu(null);
+                  onPlayTypeChange?.("run");
+                  onPassSetupChange?.(false);
+                  onRunSetupChange?.(true);
+                }}
                 type="button"
               >
                 Run
@@ -518,6 +533,8 @@ export function GameControls({
                 disabled={disabled || !validFormation}
                 onClick={() => {
                   setActiveMenu(null);
+                  onPlayTypeChange?.("pass");
+                  onRunSetupChange?.(false);
                   onPassSetupChange?.(true);
                 }}
                 type="button"
@@ -578,6 +595,19 @@ export function GameControls({
               )}
             </div>
           )}
+        </div>
+        <div className="radial-control-group">
+          <button
+            className={`radial-control-button snap-ball-button ${selectedPlayType ? "play-called" : ""}`}
+            type="button"
+            disabled={disabled || !canSnap}
+            onClick={onSnap}
+            aria-label="Snap Ball"
+            title={!selectedPlayType ? "Call a play first" : !canSnap ? "Finish setting up the play" : "Snap Ball"}
+          >
+            <span className="radial-control-icon" aria-hidden="true">🏈</span>
+            <span className="radial-control-label">Snap Ball</span>
+          </button>
         </div>
       </div>
       {activeFormationMode && (
