@@ -1170,8 +1170,18 @@ export default function GameField({
               (slot) => currentFormation[slot],
             );
             const quarterback = currentFormation.QB;
-            if (player.name === quarterback) {
-              onRoutePlayerSelectRef.current?.(quarterback);
+            // The currently rendered scene can briefly contain the previous
+            // formation's player metadata while the setup transition moves
+            // everyone into place. Treat the QB slot/role as authoritative so
+            // that its token still opens the read-order editor during that
+            // transition, and select the QB from the saved formation.
+            if (
+              player.name === quarterback ||
+              player.position === "QB" ||
+              player.role === "QB"
+            ) {
+              if (quarterback)
+                onRoutePlayerSelectRef.current?.(quarterback);
             } else if (eligibleNames.includes(player.name)) {
               onRoutePlayerSelectRef.current?.(player.name);
             }
@@ -1522,6 +1532,7 @@ export default function GameField({
           onClick={() => {
             setSelectedPlayerMenu(null);
             setRevealedFormationSlot(null);
+            if (passSetup) onPassSetupClose?.();
           }}
         >
           <div className="field-title">Dynamic Football Animation View</div>
@@ -1670,7 +1681,7 @@ export default function GameField({
                   {(ROUTES_BY_DEPTH[routeDepths[selectedRoutePlayer]] || []).map((route) => <option key={route}>{route}</option>)}
                 </AppSelect>
               </label>
-              <button type="button" onClick={() => onRoutePlayerSelect?.("")}>Done</button>
+              <button type="button" onClick={onPassSetupClose}>Done</button>
             </div>
           )}
 
