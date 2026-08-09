@@ -1626,30 +1626,92 @@ export default function GameField({
             })}
 
           {passSetup && selectedRoutePlayer === formation.QB && (
-            <div className="qb-read-bubble" onClick={(event) => event.stopPropagation()}>
-              <strong>QB read order</strong>
-              <span>Drag receivers left to right</span>
-              <div className="qb-read-list">
-                {orderedReads.map((player, index) => (
+            <div
+              className="qb-read-modal"
+              role="presentation"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (event.target === event.currentTarget) onRoutePlayerSelect?.("");
+              }}
+            >
+              <section
+                className="qb-read-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="qb-read-title"
+              >
+                <header>
+                  <div>
+                    <h3 id="qb-read-title">Quarterback read order</h3>
+                    <p>All eligible receivers with assigned routes are shown below.</p>
+                  </div>
                   <button
                     type="button"
-                    draggable
-                    key={player}
-                    onDragStart={(event) => event.dataTransfer.setData("text/plain", player)}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      const moved = event.dataTransfer.getData("text/plain");
-                      const next = orderedReads.filter((name) => name !== moved);
-                      next.splice(index, 0, moved);
-                      updateReadOrder(next);
-                    }}
+                    className="qb-read-close"
+                    aria-label="Close quarterback read order"
+                    onClick={() => onRoutePlayerSelect?.("")}
                   >
-                    <b>{index + 1}</b> {player}
+                    ×
                   </button>
-                ))}
-                {!orderedReads.length && <em>Assign at least one receiver route.</em>}
-              </div>
+                </header>
+                <ol className="qb-read-list">
+                  {orderedReads.map((player, index) => (
+                    <li
+                      key={player}
+                      draggable
+                      onDragStart={(event) => event.dataTransfer.setData("text/plain", player)}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        const moved = event.dataTransfer.getData("text/plain");
+                        if (!orderedReads.includes(moved)) return;
+                        const next = orderedReads.filter((name) => name !== moved);
+                        next.splice(index, 0, moved);
+                        updateReadOrder(next);
+                      }}
+                    >
+                      <b aria-label={`Read ${index + 1}`}>{index + 1}</b>
+                      <span>
+                        <strong>{player}</strong>
+                        <small>{routes[player]}{routeDepths[player] ? ` · ${routeDepths[player]}` : ""}</small>
+                      </span>
+                      <div className="qb-read-actions" aria-label={`Reorder ${player}`}>
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          aria-label={`Move ${player} earlier`}
+                          onClick={() => {
+                            const next = [...orderedReads];
+                            [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                            updateReadOrder(next);
+                          }}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === orderedReads.length - 1}
+                          aria-label={`Move ${player} later`}
+                          onClick={() => {
+                            const next = [...orderedReads];
+                            [next[index], next[index + 1]] = [next[index + 1], next[index]];
+                            updateReadOrder(next);
+                          }}
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+                {!orderedReads.length && (
+                  <p className="qb-read-empty">Assign a route to an eligible receiver first.</p>
+                )}
+                <footer>
+                  <span>Drag rows or use the arrow buttons to set the progression.</span>
+                  <button type="button" onClick={() => onRoutePlayerSelect?.("")}>Done</button>
+                </footer>
+              </section>
             </div>
           )}
 
