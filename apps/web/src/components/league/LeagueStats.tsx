@@ -37,12 +37,13 @@ const TEAM_DEFENSE: Category[] = [
   { title: "TURNOVERS", label: "DIFF", fields: ["turnoverDiff"] },
 ];
 const playerGames = (row: PlayerStats) => statValue(row, ["GP", "Games Played", "Games"]);
+const RUSHING_TD_FIELDS = ["Rushing TD", "Rush TD", "TD"];
 const RUSHING_COLUMNS: StatColumn[] = [
   { label: "GP", fields: ["GP", "Games Played", "Games"] },
   { label: "ATT", fields: ["Carries", "Rushing Attempts", "Rush Attempts"] },
   { label: "YDS", fields: ["Yards", "Rushing Yards", "Rush Yards"] },
   { label: "AVG", fields: ["Avg"], value: (row) => { const attempts = statValue(row, ["Carries", "Rushing Attempts", "Rush Attempts"]); return attempts ? statValue(row, ["Yards", "Rushing Yards", "Rush Yards"]) / attempts : 0; }, display: (row) => columnValue(row, RUSHING_COLUMNS[3]).toFixed(1) },
-  { label: "LNG", fields: ["Long", "LNG"] }, { label: "TD", fields: ["TD", "Rushing TD", "Rush TD"] },
+  { label: "LNG", fields: ["Long", "LNG"] }, { label: "TD", fields: RUSHING_TD_FIELDS },
   { label: "YDS/G", fields: ["Rushing Yards Per Game"], value: (row) => playerGames(row) ? statValue(row, ["Yards", "Rushing Yards", "Rush Yards"]) / playerGames(row) : 0, display: (row) => columnValue(row, RUSHING_COLUMNS[6]).toFixed(1) },
   { label: "FUM", fields: ["Fum", "Fumbles"] }, { label: "LST", fields: ["Fum Lost", "Fumbles Lost"] }, { label: "FD", fields: ["First Down", "Rushing First Downs"] },
   ...["Loss", "5+", "10+", "20+", "30+", "50+"].map((label) => ({ label, fields: [label] })),
@@ -147,7 +148,7 @@ function profileStats(player: Player, row: PlayerStats, side: PlayerStatSide): P
   }
 
   if (position === "QB") return [stat("YDS", ["Passing Yards", "Pass Yards", "PassYards"]), stat("TD", ["Passing TD", "Pass TD", "TD Passes"]), stat("INT", ["Interceptions Thrown", "Pass INT"]), stat("QBR", ["QBR", "Passer Rating", "Rating", "RTG"])];
-  if (position === "RB") return [stat("CAR", ["Carries", "Rushing Attempts", "Rush Attempts"]), stat("YDS", ["Yards", "Rushing Yards", "Rush Yards"]), stat("TD", ["Rushing TD", "Rush TD"]), average(["Yards", "Rushing Yards", "Rush Yards"], ["Carries", "Rushing Attempts", "Rush Attempts"])];
+  if (position === "RB") return [stat("CAR", ["Carries", "Rushing Attempts", "Rush Attempts"]), stat("YDS", ["Yards", "Rushing Yards", "Rush Yards"]), stat("TD", RUSHING_TD_FIELDS), average(["Yards", "Rushing Yards", "Rush Yards"], ["Carries", "Rushing Attempts", "Rush Attempts"])];
   if (position === "WR" || position === "TE") return [stat("REC", ["Receptions", "REC"]), stat("YDS", ["Receiving Yards", "Rec Yards", "RecYards"]), stat("TD", ["Receiving TD", "Rec TD"]), average(["Receiving Yards", "Rec Yards", "RecYards"], ["Receptions", "REC"])];
   if (position === "K") return [stat("FG%", ["FG%", "Field Goal Percentage"]), stat("XP%", ["XP%", "Extra Point Percentage"]), stat("LNG", ["LNG", "Long", "Longest Field Goal"]), stat("PTS", ["PTS", "Points"])];
   const plays = offensiveLinePlays(row);
@@ -214,7 +215,7 @@ function PlayerStatsProfile({ player, row, team, stats, onBack }: { player: Play
     }).catch(() => setRecentGames([])).finally(() => setGamesLoading(false));
   }, [isDefensive, isQuarterback, isReceiver, isRunningBack, name]);
   const rbGroups = [
-    { title: "RUSHING", stats: [{ label: "CAR", fields: ["Carries", "Rushing Attempts", "Rush Attempts"] }, { label: "YDS", fields: ["Yards", "Rushing Yards", "Rush Yards"] }, { label: "AVG", value: summary.find((item) => item.label === "AVG")?.value || "0.0" }, { label: "TD", fields: ["Rushing TD", "Rush TD", "TD"] }, { label: "LNG", fields: ["Long", "LNG"] }] },
+    { title: "RUSHING", stats: [{ label: "CAR", fields: ["Carries", "Rushing Attempts", "Rush Attempts"] }, { label: "YDS", fields: ["Yards", "Rushing Yards", "Rush Yards"] }, { label: "AVG", value: summary.find((item) => item.label === "AVG")?.value || "0.0" }, { label: "TD", fields: RUSHING_TD_FIELDS }, { label: "LNG", fields: ["Long", "LNG"] }] },
     { title: "RECEIVING", stats: [{ label: "REC", fields: ["Receptions", "REC"] }, { label: "YDS", fields: ["Receiving Yards", "Rec Yards", "RecYards"] }, { label: "AVG", value: (statValue(row || {} as PlayerStats, ["Receptions", "REC"]) ? statValue(row || {} as PlayerStats, ["Receiving Yards", "Rec Yards", "RecYards"]) / statValue(row || {} as PlayerStats, ["Receptions", "REC"]) : 0).toFixed(1) }, { label: "TD", fields: ["Receiving TD", "Rec TD"] }, { label: "LNG", fields: ["Receiving Long", "Rec Long"] }] },
     { title: "FUMBLES", stats: [{ label: "FUM", fields: ["Fum", "Fumbles"] }, { label: "LST", fields: ["Fum Lost", "Fumbles Lost"] }] },
   ];
