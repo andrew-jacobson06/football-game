@@ -13,7 +13,7 @@ type Category = { title: string; label: string; fields: string[]; positions?: st
 type StatColumn = { label: string; fields: string[]; value?: (row: PlayerStats) => number; display?: (row: PlayerStats) => string };
 type CompleteSort = { column: string; direction: "asc" | "desc" };
 type PlayerStatSide = "offense" | "defense";
-type ProfileStat = { label: string; value: string; rankValue: (row: PlayerStats) => number };
+type ProfileStat = { label: string; value: string; rankValue: (row: PlayerStats) => number; rankEligible?: (row: PlayerStats) => boolean };
 type TeamTotal = { team: LeagueTeam; rows: PlayerStats[]; gp: number; passing: number; rushing: number; total: number; points: number; pointsAllowed: number; sacks: number; interceptions: number; fumbleRecoveries: number; takeaways: number; interceptionsThrown: number; fumblesLost: number; giveaways: number; turnoverDiff: number; allowedPassing: number; allowedRushing: number; allowed: number };
 
 const OFFENSE: Category[] = [
@@ -77,6 +77,12 @@ const DL_WIN_RATE_FIELDS = ["DL Win %", "DL Win%", "DL Win Percentage"];
 const OL_WIN_FIELDS = ["OL W", "OL Wins", "Offensive Line Wins", "Line Wins"];
 const OL_LOSS_FIELDS = ["OL L", "OL Losses", "Offensive Line Losses", "Line Losses"];
 const OL_WIN_RATE_FIELDS = ["OL Win %", "OL Win%", "OL Win Percentage"];
+const OL_PLAY_FIELDS = ["OL Plays", "Offensive Line Plays", "Total Plays on Line", "Plays on Line"];
+
+function offensiveLinePlays(row: PlayerStats) {
+  const recordedPlays = statValue(row, OL_PLAY_FIELDS);
+  return recordedPlays || statValue(row, OL_WIN_FIELDS) + statValue(row, OL_LOSS_FIELDS);
+}
 
 function lineWinRate(row: PlayerStats, winFields: string[], lossFields: string[], rateFields: string[]) {
   const wins = statValue(row, winFields);
@@ -84,7 +90,7 @@ function lineWinRate(row: PlayerStats, winFields: string[], lossFields: string[]
   return attempts ? wins / attempts * 100 : statValue(row, rateFields);
 }
 const BLOCKING_COLUMNS: StatColumn[] = [
-  { label: "GP", fields: ["GP", "Games Played", "Games"] }, { label: "PLAYS", fields: [], value: (row) => statValue(row, OL_WIN_FIELDS) + statValue(row, OL_LOSS_FIELDS) }, { label: "WIN%", fields: OL_WIN_RATE_FIELDS, value: (row) => lineWinRate(row, OL_WIN_FIELDS, OL_LOSS_FIELDS, OL_WIN_RATE_FIELDS), display: (row) => `${lineWinRate(row, OL_WIN_FIELDS, OL_LOSS_FIELDS, OL_WIN_RATE_FIELDS).toFixed(1)}%` }, { label: "LEAD", fields: ["Lead Block", "Lead Blocks"] },
+  { label: "GP", fields: ["GP", "Games Played", "Games"] }, { label: "PLAYS", fields: OL_PLAY_FIELDS, value: offensiveLinePlays, display: (row) => String(offensiveLinePlays(row)) }, { label: "WIN%", fields: OL_WIN_RATE_FIELDS, value: (row) => lineWinRate(row, OL_WIN_FIELDS, OL_LOSS_FIELDS, OL_WIN_RATE_FIELDS), display: (row) => `${lineWinRate(row, OL_WIN_FIELDS, OL_LOSS_FIELDS, OL_WIN_RATE_FIELDS).toFixed(1)}%` }, { label: "LEAD", fields: ["Lead Block", "Lead Blocks"] },
 ];
 const DEFENSIVE_COLUMNS: StatColumn[] = [
   { label: "GP", fields: ["GP", "Games Played", "Games"] },
@@ -144,11 +150,9 @@ function profileStats(player: Player, row: PlayerStats, side: PlayerStatSide): P
   if (position === "RB") return [stat("CAR", ["Carries", "Rushing Attempts", "Rush Attempts"]), stat("YDS", ["Yards", "Rushing Yards", "Rush Yards"]), stat("TD", ["Rushing TD", "Rush TD"]), average(["Yards", "Rushing Yards", "Rush Yards"], ["Carries", "Rushing Attempts", "Rush Attempts"])];
   if (position === "WR" || position === "TE") return [stat("REC", ["Receptions", "REC"]), stat("YDS", ["Receiving Yards", "Rec Yards", "RecYards"]), stat("TD", ["Receiving TD", "Rec TD"]), average(["Receiving Yards", "Rec Yards", "RecYards"], ["Receptions", "REC"])];
   if (position === "K") return [stat("FG%", ["FG%", "Field Goal Percentage"]), stat("XP%", ["XP%", "Extra Point Percentage"]), stat("LNG", ["LNG", "Long", "Longest Field Goal"]), stat("PTS", ["PTS", "Points"])];
-  const wins = statValue(row, OL_WIN_FIELDS);
-  const losses = statValue(row, OL_LOSS_FIELDS);
-  const plays = wins + losses;
+  const plays = offensiveLinePlays(row);
   const winRate = lineWinRate(row, OL_WIN_FIELDS, OL_LOSS_FIELDS, OL_WIN_RATE_FIELDS);
-  return [{ label: "TOTAL PLAYS ON LINE", value: String(plays), rankValue: (candidate) => statValue(candidate, OL_WIN_FIELDS) + statValue(candidate, OL_LOSS_FIELDS) }, { label: "WIN%", value: `${winRate.toFixed(1)}%`, rankValue: (candidate) => lineWinRate(candidate, OL_WIN_FIELDS, OL_LOSS_FIELDS, OL_WIN_RATE_FIELDS) }, stat("LEAD BLOCK", ["Lead Block", "Lead Blocks"])];
+  return [{ label: "TOTAL PLAYS ON LINE", value: String(plays), rankValue: offensiveLinePlays }, { label: "WIN%", value: `${winRate.toFixed(1)}%`, rankValue: (candidate) => lineWinRate(candidate, OL_WIN_FIELDS, OL_LOSS_FIELDS, OL_WIN_RATE_FIELDS), rankEligible: (candidate) => offensiveLinePlays(candidate) > 0 }, stat("LEAD BLOCK", ["Lead Block", "Lead Blocks"])];
 }
 function teamName(team: LeagueTeam) { return String(team.Name || team.Team || team.Nickname || team.Abbrev || "Team"); }
 function ordinal(rank: number) {
@@ -158,11 +162,12 @@ function ordinal(rank: number) {
 function leagueRanks(player: Player, row: PlayerStats, side: PlayerStatSide, stats: PlayerStats[]) {
   const selected = profileStats(player, row, side);
   return selected.map((stat) => {
-    const value = number(stat.value);
-    const values = stats.map(stat.rankValue).filter((candidate) => candidate > 0).sort((a, b) => b - a);
+    const value = stat.rankValue(row);
+    const eligible = stat.rankEligible ? stat.rankEligible(row) : value > 0;
+    const values = stats.filter((candidate) => stat.rankEligible ? stat.rankEligible(candidate) : stat.rankValue(candidate) > 0).map(stat.rankValue).sort((a, b) => b - a);
     const rank = values.findIndex((candidate) => candidate <= value) + 1;
-    const tied = value > 0 && values.filter((candidate) => candidate === value).length > 1;
-    return rank ? `${tied ? "Tied-" : ""}${ordinal(rank)}` : "Not ranked";
+    const tied = eligible && values.filter((candidate) => candidate === value).length > 1;
+    return eligible && rank ? `${tied ? "Tied-" : ""}${ordinal(rank)}` : "Not ranked";
   });
 }
 const teamGames = (team: LeagueTeam) => number(team.GP || team.Games || 1) || 1;
