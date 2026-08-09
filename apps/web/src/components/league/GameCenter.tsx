@@ -1489,6 +1489,8 @@ export function GameCenter({
     useState(false);
   const [selectedFormationPlayer, setSelectedFormationPlayer] = useState("");
   const [passSetup, setPassSetup] = useState(false);
+  const [runSetup, setRunSetup] = useState(false);
+  const [selectedPlayType, setSelectedPlayType] = useState<"run" | "pass" | null>(null);
   const [selectedRoutePlayer, setSelectedRoutePlayer] = useState("");
   const [animationRequest, setAnimationRequest] = useState<{
     id: number;
@@ -1589,6 +1591,8 @@ export function GameCenter({
     setSettingFormation(false);
     setSelectedFormationPlayer("");
     setPassSetup(false);
+    setRunSetup(false);
+    setSelectedPlayType(null);
     setSelectedRoutePlayer("");
   }, [currentGame.Possession]);
   const persist = async (result: ReturnType<typeof runPlay>) => {
@@ -1633,6 +1637,16 @@ export function GameCenter({
       onGameUpdate?.(result.game);
       setHistory((h) => [...h, result.play]);
       setLog((l) => [result.text, ...l]);
+      setSelectedPlayType(null);
+      setPassSetup(false);
+      setRunSetup(false);
+      setPlayOptions((options) => ({
+        ...options,
+        runner: undefined,
+        routes: {},
+        reads: {},
+        routeDepths: {},
+      }));
     } catch (error) {
       setCurrentGame(previousGame);
       setLog((l) => [
@@ -1787,6 +1801,8 @@ export function GameCenter({
                 possession={currentGame.Possession}
                 selectedFormationPlayer={selectedFormationPlayer}
                 passSetup={passSetup}
+                runSetup={runSetup}
+                runner={playOptions.runner}
                 routes={playOptions.routes}
                 routeDepths={playOptions.routeDepths}
                 reads={playOptions.reads}
@@ -1802,8 +1818,11 @@ export function GameCenter({
                 onPassPlay={() => {
                   setPassSetup(false);
                   setSelectedRoutePlayer("");
-                  action("Pass Play", playOptions);
                 }}
+                onRunnerSelect={(runner) =>
+                  setPlayOptions((current) => ({ ...current, runner }))
+                }
+                onRunSetupClose={() => setRunSetup(false)}
                 homeLogo={
                   teamValue(homeTeamDetails, "Logo") || currentGame.HomeLogo
                 }
@@ -1909,6 +1928,28 @@ export function GameCenter({
                   onPassSetupChange={(active) => {
                     setPassSetup(active);
                     setSelectedRoutePlayer("");
+                  }}
+                  selectedPlayType={selectedPlayType}
+                  onPlayTypeChange={(playType) => {
+                    setSelectedPlayType(playType);
+                    setPlayOptions((current) => ({
+                      ...current,
+                      ...(playType === "run"
+                        ? { routes: {}, reads: {}, routeDepths: {} }
+                        : { runner: undefined }),
+                    }));
+                  }}
+                  onRunSetupChange={setRunSetup}
+                  canSnap={
+                    selectedPlayType === "run"
+                      ? Boolean(playOptions.runner)
+                      : selectedPlayType === "pass"
+                        ? Object.values(playOptions.routes ?? {}).some(Boolean)
+                        : false
+                  }
+                  onSnap={() => {
+                    if (selectedPlayType === "run") action("Run Play", playOptions);
+                    if (selectedPlayType === "pass") action("Pass Play", playOptions);
                   }}
                 />
               </GameField>

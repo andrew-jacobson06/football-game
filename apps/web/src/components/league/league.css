@@ -2470,11 +2470,11 @@
 .radial-control-button {
   width: 74px;
   height: 74px;
-  border: 3px solid rgba(248, 250, 252, 0.92);
+  border: 3px solid var(--control-border-hover);
   border-radius: 50%;
-  background: rgba(15, 23, 42, 0.92);
-  color: #f8fafc;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.48);
+  background: var(--surface-overlay);
+  color: var(--text-primary);
+  box-shadow: 0 14px 30px var(--shadow-color);
   display: grid;
   place-items: center;
   gap: 0;
@@ -2485,8 +2485,11 @@
 .radial-control-button.active,
 .radial-control-button:hover {
   border-color: var(--accent-red);
-  background: #0f172a;
+  background: var(--surface-raised);
 }
+
+.radial-control-button.play-called { border-color: var(--control-accent); }
+.radial-control-button:disabled { cursor: not-allowed; opacity: .5; }
 
 .radial-control-icon {
   font-size: 26px;
