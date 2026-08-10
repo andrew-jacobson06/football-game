@@ -401,8 +401,15 @@ gameRoutes.get("/players", async (_req, res, next) => { try { res.json({ players
 gameRoutes.get("/player-stats", async (_req, res, next) => { try { res.json({ playerStats: await readSheetObjects("PlayerStats!A1:AJ") }); } catch (e) { next(e); } });
 gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
   try {
-    const [gamesSheet, historySheet] = await Promise.all([sheetRows("Games"), sheetRows("PlayHistory")]);
+    const [gamesSheet, historySheet, playerTeams] = await Promise.all([
+      sheetRows("Games"),
+      sheetRows("PlayHistory"),
+      readSheetObjects("PlayerTeams!A1:B"),
+    ]);
     const playerName = req.params.playerName.trim().toLowerCase();
+    const assignedTeam = String(playerTeams.find((assignment) =>
+      String(assignment.Name ?? "").trim().toLowerCase() === playerName,
+    )?.Team ?? "").trim();
     const index = (headers: string[], ...names: string[]) =>
       headers.findIndex((header) => names.includes(normHeader(header)));
     const playGame = index(historySheet.headers, "gameid");
@@ -451,8 +458,14 @@ gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
       );
       const homeTeam = String(cell(game, home));
       const awayTeam = String(cell(game, away));
-      const playerTeam = String(cell(plays[0], possession));
-      const isHome = playerTeam.toLowerCase() === "home" || playerTeam === homeTeam;
+      // Possession belongs to the offense on a play, so it cannot identify the
+      // player's team when this log contains one of their defensive plays.
+      // Prefer the roster assignment and retain possession as a fallback for
+      // legacy players without a PlayerTeams row.
+      const possessionTeam = String(cell(plays[0], possession)).trim();
+      const playerTeam = assignedTeam || possessionTeam;
+      const normalizedPlayerTeam = playerTeam.toLowerCase();
+      const isHome = normalizedPlayerTeam === "home" || normalizedPlayerTeam === homeTeam.trim().toLowerCase();
       const teamScore = asNumber(cell(game, isHome ? homeScore : awayScore));
       const opponentScore = asNumber(cell(game, isHome ? awayScore : homeScore));
       const yards = rushingPlays.map((play) => asNumber(cell(play, playYards)));
