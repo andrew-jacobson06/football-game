@@ -21,7 +21,6 @@ export function LeagueHeader({
 }) {
   return (
     <div className="league-header">
-      <LeagueSearch teams={teams} players={players} onTeam={onTeam} onPlayer={onPlayer} onArticle={(index) => { onTabChange("news"); window.setTimeout(() => document.getElementById(`article-${index}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 0); }} />
       <nav className="nav-tabs" aria-label="League tabs">
         {LEAGUE_TABS.map((tab) => (
           <button
@@ -34,6 +33,7 @@ export function LeagueHeader({
           </button>
         ))}
       </nav>
+      <LeagueSearch teams={teams} players={players} onTeam={onTeam} onPlayer={onPlayer} onArticle={(index) => { onTabChange("news"); window.setTimeout(() => document.getElementById(`article-${index}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 0); }} />
     </div>
   );
 }
