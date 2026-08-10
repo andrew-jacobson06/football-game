@@ -8,6 +8,32 @@ import {
 
 type StandingsView = "league" | "division";
 
+function winPercentage(team: LeagueTeam): number {
+  const wins = parseInteger(team.Wins ?? team.W);
+  const losses = parseInteger(team.Losses ?? team.L);
+  const ties = parseInteger(team.Ties ?? team.T);
+  const games = wins + losses + ties;
+
+  return games ? (wins + ties * 0.5) / games : 0;
+}
+
+function sortStandings(teams: LeagueTeam[]): LeagueTeam[] {
+  return [...teams].sort((a, b) => {
+    const winPercentageDifference = winPercentage(b) - winPercentage(a);
+    if (winPercentageDifference !== 0) return winPercentageDifference;
+
+    const pointDifference =
+      parseInteger(b.DIFF ?? b.Diff, computeDiff(b)) -
+      parseInteger(a.DIFF ?? a.Diff, computeDiff(a));
+    if (pointDifference !== 0) return pointDifference;
+
+    return (
+      parseInteger(b.PF ?? b.PointsFor) -
+      parseInteger(a.PF ?? a.PointsFor)
+    );
+  });
+}
+
 function value(team: LeagueTeam, ...keys: string[]): string {
   const match = keys.find((key) => team[key] !== undefined && team[key] !== "");
   return match ? String(team[match]) : "";
@@ -44,6 +70,8 @@ function TeamIdentity({ team, onSelect }: { team: LeagueTeam; onSelect?: (team: 
 }
 
 function StandingsTable({ teams, onSelectTeam }: { teams: LeagueTeam[]; onSelectTeam?: (team: LeagueTeam) => void }) {
+  const orderedTeams = sortStandings(teams);
+
   return (
     <div className="standings-table-scroll">
       <table className="standings-table">
@@ -66,7 +94,7 @@ function StandingsTable({ teams, onSelectTeam }: { teams: LeagueTeam[]; onSelect
           </tr>
         </thead>
         <tbody>
-          {teams.map((team, index) => (
+          {orderedTeams.map((team, index) => (
             <tr key={`${teamName(team)}-${index}`}>
               <td className="team-col"><TeamIdentity team={team} onSelect={onSelectTeam} /></td>
               <td>{parseInteger(team.Wins ?? team.W)}</td>
