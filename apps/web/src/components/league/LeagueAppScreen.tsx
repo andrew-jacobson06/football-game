@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getGames, getPlayers, getStandings, getTeams } from "../../api/client";
 import type { Player } from "../players/types";
-import { PlayerCard } from "../players/PlayerCard";
 import type { LeagueGame, LeagueTab, LeagueTeam } from "./types";
 import { mockGames, mockTeams } from "./leagueMockData";
 import { mergeStandingsWithTeams, normalizeGames } from "./leagueMappers";
@@ -25,7 +24,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
   const [teams, setTeams] = useState<LeagueTeam[]>(mockTeams);
   const [standings, setStandings] = useState<LeagueTeam[]>(mockTeams);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [searchedPlayer, setSearchedPlayer] = useState<Player | null>(null);
   const [selectedGame, setSelectedGame] = useState<LeagueGame | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<LeagueTeam | null>(null);
   const [loadingGame, setLoadingGame] = useState<LeagueGame | null>(null);
@@ -123,6 +122,17 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
     void refreshGames().catch(() => undefined);
   };
 
+  const searchablePlayers = useMemo(() => players.map((player) => {
+    const team = teams.find((candidate) => [candidate.Abbrev, candidate.Team, candidate.Name]
+      .some((value) => String(value || "").trim().toLocaleLowerCase() === String(player.Team || "").trim().toLocaleLowerCase()));
+    return { ...player, jersey: String(team?.["Away Jersey Crop"] || player.jersey || "") };
+  }), [players, teams]);
+
+  const openSearchedPlayer = (player: Player) => {
+    setSearchedPlayer(player);
+    setActiveTab("stats");
+  };
+
   if (selectedGame)
     return (
       <section className="league-app">
@@ -145,8 +155,6 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
         <TeamDetail team={selectedTeam} standings={standings} games={games} onBack={() => setSelectedTeam(null)} onGame={openGame} />
       </section>
     );
-  if (selectedPlayer)
-    return <PlayerCard player={selectedPlayer} onBack={() => setSelectedPlayer(null)} />;
   return (
     <section className="league-app">
       <div className="app-loading hidden">
@@ -209,7 +217,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
             onHome={returnToLeagueHome}
             onSelectGame={openGame}
           />
-          <LeagueHeader activeTab={activeTab} onTabChange={setActiveTab} teams={teams} players={players} onTeam={setSelectedTeam} onPlayer={setSelectedPlayer} />
+          <LeagueHeader activeTab={activeTab} onTabChange={setActiveTab} teams={teams} players={searchablePlayers} onTeam={setSelectedTeam} onPlayer={openSearchedPlayer} />
           <div id="tabContents">
             {activeTab === "news" && (
               <div className="league-tab-content active">
@@ -233,7 +241,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
             )}
             {activeTab === "stats" && (
               <div className="league-tab-content active">
-                <LeagueStats teams={teams} games={games} onTeam={setSelectedTeam} />
+                <LeagueStats key={`${searchedPlayer?.Name || "leaders"}-${searchedPlayer?.Team || ""}`} teams={teams} games={games} onTeam={setSelectedTeam} requestedPlayer={searchedPlayer} onPlayerClose={() => setSearchedPlayer(null)} />
               </div>
             )}
             {activeTab === "draft" && (
