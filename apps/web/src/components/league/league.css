@@ -72,7 +72,7 @@
   border-bottom: 1px solid var(--gray-light);
   scrollbar-width: none;
 }
-.league-search { position: relative; flex: 0 0 auto; align-self: stretch; display: flex; border-right: 1px solid var(--border-color); }
+.league-search { position: relative; flex: 0 0 auto; align-self: stretch; display: flex; border-left: 1px solid var(--border-color); }
 .league-search__toggle { width: 58px; border: 0; background: transparent; color: var(--text-primary); cursor: pointer; font-size: 2rem; line-height: 1; }
 .league-search__toggle:hover, .league-search__toggle:focus-visible { background: var(--surface-subtle); color: var(--control-accent); }
 .league-search__control { display: flex; align-items: center; width: min(420px, 72vw); padding: 0 12px; color: var(--text-secondary); background: var(--surface-raised); }
@@ -80,7 +80,7 @@
 .league-search__control input { min-width: 0; flex: 1; padding: 15px 10px; border: 0; outline: 0; color: var(--text-primary); background: transparent; font: inherit; }
 .league-search__control input::placeholder { color: var(--text-secondary); }
 .league-search__control button { border: 0; background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 1.25rem; }
-.league-search__results { position: absolute; z-index: 150; top: 100%; left: 0; width: min(430px, 92vw); max-height: min(640px, 72vh); overflow-y: auto; border: 1px solid var(--border-color); background: var(--surface-raised); box-shadow: 0 12px 30px var(--shadow-color); }
+.league-search__results { position: absolute; z-index: 150; top: 100%; right: 0; width: min(430px, 92vw); max-height: min(640px, 72vh); overflow-y: auto; border: 1px solid var(--border-color); background: var(--surface-raised); box-shadow: 0 12px 30px var(--shadow-color); }
 .league-search__results section + section { border-top: 1px solid var(--border-color); }
 .league-search__results h3 { margin: 0; padding: 18px 16px 10px; color: var(--text-secondary); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
 .league-search__results section > button { display: flex; align-items: center; gap: 12px; width: calc(100% - 24px); margin: 0 12px; padding: 11px 4px; border: 0; border-top: 1px dotted var(--border-color); background: transparent; color: var(--text-primary); cursor: pointer; text-align: left; }
