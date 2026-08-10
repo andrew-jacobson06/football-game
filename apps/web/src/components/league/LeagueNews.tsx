@@ -1,12 +1,6 @@
+import { leagueHeadlines } from "./leagueArticles";
+
 export function LeagueNews() {
-  const headlines = [
-    "Placeholder Headline One highlights late-game heroics",
-    "Placeholder Headline Two recaps pivotal injury report",
-    "Placeholder Headline Three focuses on coaching comments",
-    "Placeholder Headline Four previews Sunday night showdown",
-    "Placeholder Headline Five details roster shake-up notes",
-    "Placeholder Headline Six breaks down analyst power rankings",
-  ];
   return (
     <div className="news-feed">
       <section className="news-panel">
@@ -14,8 +8,8 @@ export function LeagueNews() {
           <h2 className="news-panel-title">Top Headlines</h2>
         </header>
         <ul className="news-headline-list">
-          {headlines.map((h, i) => (
-            <li className="news-headline-item" key={h}>
+          {leagueHeadlines.map((h, i) => (
+            <li className="news-headline-item" id={`article-${i}`} key={h}>
               <a className="news-headline-link" href="#">
                 <span className="headline-icon">📰</span>
                 {h}

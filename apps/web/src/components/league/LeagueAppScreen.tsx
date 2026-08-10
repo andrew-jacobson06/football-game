@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { getGames, getStandings, getTeams } from "../../api/client";
+import { getGames, getPlayers, getStandings, getTeams } from "../../api/client";
+import type { Player } from "../players/types";
+import { PlayerCard } from "../players/PlayerCard";
 import type { LeagueGame, LeagueTab, LeagueTeam } from "./types";
 import { mockGames, mockTeams } from "./leagueMockData";
 import { mergeStandingsWithTeams, normalizeGames } from "./leagueMappers";
@@ -22,6 +24,8 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
   const [games, setGames] = useState<LeagueGame[]>(mockGames);
   const [teams, setTeams] = useState<LeagueTeam[]>(mockTeams);
   const [standings, setStandings] = useState<LeagueTeam[]>(mockTeams);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [selectedGame, setSelectedGame] = useState<LeagueGame | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<LeagueTeam | null>(null);
   const [loadingGame, setLoadingGame] = useState<LeagueGame | null>(null);
@@ -35,8 +39,8 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
       })));
     });
   useEffect(() => {
-    Promise.all([getGames(), getStandings(), getTeams()])
-      .then(([gamesResponse, standingsResponse, teamsResponse]) => {
+    Promise.all([getGames(), getStandings(), getTeams(), getPlayers()])
+      .then(([gamesResponse, standingsResponse, teamsResponse, playersResponse]) => {
         const sheetTeams = teamsResponse.teams as LeagueTeam[];
         setTeams(sheetTeams);
         setGames(normalizeGames(gamesResponse.games, sheetTeams));
@@ -46,6 +50,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
             sheetTeams,
           ),
         );
+        setPlayers(playersResponse.players);
       })
       .catch(() => {
         setGames(normalizeGames(mockGames, mockTeams));
@@ -140,6 +145,8 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
         <TeamDetail team={selectedTeam} standings={standings} games={games} onBack={() => setSelectedTeam(null)} onGame={openGame} />
       </section>
     );
+  if (selectedPlayer)
+    return <PlayerCard player={selectedPlayer} onBack={() => setSelectedPlayer(null)} />;
   return (
     <section className="league-app">
       <div className="app-loading hidden">
@@ -202,7 +209,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
             onHome={returnToLeagueHome}
             onSelectGame={openGame}
           />
-          <LeagueHeader activeTab={activeTab} onTabChange={setActiveTab} />
+          <LeagueHeader activeTab={activeTab} onTabChange={setActiveTab} teams={teams} players={players} onTeam={setSelectedTeam} onPlayer={setSelectedPlayer} />
           <div id="tabContents">
             {activeTab === "news" && (
               <div className="league-tab-content active">
