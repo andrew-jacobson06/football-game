@@ -410,6 +410,9 @@ gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
     const assignedTeam = String(playerTeams.find((assignment) =>
       String(assignment.Name ?? "").trim().toLowerCase() === playerName,
     )?.Team ?? "").trim();
+    // Prefer the current roster context supplied by the profile's entry point.
+    const requestedTeam = String(req.query.team ?? "").trim();
+    const currentTeam = requestedTeam || assignedTeam;
     const index = (headers: string[], ...names: string[]) =>
       headers.findIndex((header) => names.includes(normHeader(header)));
     const playGame = index(historySheet.headers, "gameid");
@@ -450,20 +453,26 @@ gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
     const possession = index(historySheet.headers, "possession", "team");
     const games = gamesSheet.rows.flatMap((game) => {
       const id = String(cell(game, gameId));
-      const plays = byGame.get(id);
-      if (!plays?.length || String(cell(game, quarter)).trim().toUpperCase() !== "FINAL") return [];
+      const plays = byGame.get(id) ?? [];
+      if (String(cell(game, quarter)).trim().toUpperCase() !== "FINAL") return [];
+      const homeTeam = String(cell(game, home));
+      const awayTeam = String(cell(game, away));
+      const normalizedCurrentTeam = currentTeam.toLowerCase();
+      const belongsToCurrentTeam = normalizedCurrentTeam && [homeTeam, awayTeam]
+        .some((candidate) => candidate.trim().toLowerCase() === normalizedCurrentTeam);
+      // A player's current schedule—not their first recorded snap—determines
+      // their game log. Keep play-based behavior only for legacy assignments.
+      if (currentTeam ? !belongsToCurrentTeam : !plays.length) return [];
       const rushingPlays = plays.filter((play) =>
         String(cell(play, playPlayer)).trim().toLowerCase() === playerName &&
         (!cell(play, playType) || /run|rush/i.test(String(cell(play, playType)))),
       );
-      const homeTeam = String(cell(game, home));
-      const awayTeam = String(cell(game, away));
       // Possession belongs to the offense on a play, so it cannot identify the
       // player's team when this log contains one of their defensive plays.
       // Prefer the roster assignment and retain possession as a fallback for
       // legacy players without a PlayerTeams row.
-      const possessionTeam = String(cell(plays[0], possession)).trim();
-      const playerTeam = assignedTeam || possessionTeam;
+      const possessionTeam = plays[0] ? String(cell(plays[0], possession)).trim() : "";
+      const playerTeam = currentTeam || possessionTeam;
       const normalizedPlayerTeam = playerTeam.toLowerCase();
       const isHome = normalizedPlayerTeam === "home" || normalizedPlayerTeam === homeTeam.trim().toLowerCase();
       const teamScore = asNumber(cell(game, isHome ? homeScore : awayScore));

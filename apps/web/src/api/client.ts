@@ -64,9 +64,11 @@ export type PlayerGame = {
 };
 export async function getPlayerGames(
   playerName: string,
+  team?: string,
 ): Promise<{ games: PlayerGame[] }> {
+  const teamQuery = team ? `?team=${encodeURIComponent(team)}` : "";
   return getJson(
-    `/players/${encodeURIComponent(playerName)}/games`,
+    `/players/${encodeURIComponent(playerName)}/games${teamQuery}`,
     "Failed to load player game log",
   );
 }
