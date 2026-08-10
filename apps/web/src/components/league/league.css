@@ -85,7 +85,7 @@
 .league-search__results h3 { margin: 0; padding: 18px 16px 10px; color: var(--text-secondary); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
 .league-search__results section > button { display: flex; align-items: center; gap: 12px; width: calc(100% - 24px); margin: 0 12px; padding: 11px 4px; border: 0; border-top: 1px dotted var(--border-color); background: transparent; color: var(--text-primary); cursor: pointer; text-align: left; }
 .league-search__results section > button:hover, .league-search__results section > button:focus-visible { background: var(--surface-subtle); outline: none; }
-.league-search__results img, .league-search__player-image { width: 38px; height: 38px; object-fit: contain; border-radius: 50%; background: var(--surface-subtle); }
+.league-search__results img, .league-search__player-image { width: 38px; height: 38px; object-fit: contain; border-radius: 50%;}
 .league-search__results .league-search__player-image { flex: 0 0 48px; width: 48px; height: 48px; overflow: hidden; border: 1px solid var(--border-color); border-radius: 8px; }
 .league-search__results span { display: grid; gap: 3px; }
 .league-search__results strong { font-size: .8rem; }
