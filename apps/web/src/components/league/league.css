@@ -2395,7 +2395,7 @@
 .field-formation-bench {
   position: absolute;
   left: 75%;
-  top: 90%;
+  top: 40%;
   z-index: 360;
   width: min(980px, calc(100% - 32px));
   transform: translateX(-50%);
