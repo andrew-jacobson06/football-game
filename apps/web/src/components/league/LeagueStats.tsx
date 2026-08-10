@@ -279,7 +279,7 @@ function TeamCompleteTable({ mode, rows, onBack, onMode, onTeam }: { mode: "tota
   return <section className="team-complete-view"><div className="team-stat-nav" role="tablist" aria-label="Team statistic category"><button role="tab" aria-selected={!defensive && !special && mode !== "turnovers"} className={!defensive && !special && mode !== "turnovers" ? "active" : ""} type="button" onClick={() => onMode("team-total")}>Offense</button><button role="tab" aria-selected={defensive} className={defensive ? "active" : ""} type="button" onClick={() => onMode("team-defense")}>Defense</button><button role="tab" aria-selected={special} className={special ? "active" : ""} type="button" onClick={() => onMode("special-teams")}>Special Teams</button><button role="tab" aria-selected={mode === "turnovers"} className={mode === "turnovers" ? "active" : ""} type="button" onClick={() => onMode("team-turnovers")}>Turnovers</button></div><div className="team-stat-filters">{mode !== "turnovers" && <StatsSelect label="Statistic category" value={special ? "returning" : "total"}><option value={special ? "returning" : "total"}>{special ? "Returning" : "Total"}</option></StatsSelect>}<StatsSelect label="Season" value="season-1"><option value="season-1">Season 1 Regular Season</option></StatsSelect></div><button className="team-table-back" type="button" onClick={onBack}>← Back to stat leaders</button><div className="complete-leaders-table-scroll"><table className={`team-complete-table team-complete-table--${mode}`}><thead><tr><th colSpan={2} /><>{groups.map((group) => <th className="team-stat-group" colSpan={group.columns.length} key={group.label || "diff"}>{group.label}</th>)}</></tr><tr>{sortHeader("TEAM", "team")}{sortHeader("GP", "gp")}{groups.flatMap((group) => group.columns.map((column) => { const index = statisticIndex++; return <th key={`${group.label}-${column}-${index}`} aria-sort={sort.column === `stat-${index}` ? sort.direction === "asc" ? "ascending" : "descending" : "none"}><button className="stat-sort-button" type="button" onClick={() => changeSort(`stat-${index}`)}>{column} {sort.column === `stat-${index}` && <span aria-hidden="true">{sort.direction === "desc" ? "↓" : "↑"}</span>}</button></th>; }))}</tr></thead><tbody>{sortedRows.map((row) => <tr key={teamName(row.team)}><td><button className="team-table-name team-name-button" type="button" onClick={() => onTeam(row.team)}>{row.team.Logo && <img src={String(row.team.Logo)} alt="" />}{teamName(row.team)}</button></td><td>{row.gp}</td>{values(row).map((value, index) => <td key={index}>{Number.isInteger(value) ? value.toLocaleString() : value.toFixed(1)}</td>)}</tr>)}</tbody></table></div></section>;
 }
 
-export function LeagueStats({ teams, games = [], onTeam }: { teams: LeagueTeam[]; games?: LeagueGame[]; onTeam: (team: LeagueTeam) => void }) {
+export function LeagueStats({ teams, games = [], onTeam, requestedPlayer = null, onPlayerClose }: { teams: LeagueTeam[]; games?: LeagueGame[]; onTeam: (team: LeagueTeam) => void; requestedPlayer?: Player | null; onPlayerClose?: () => void }) {
   const [activeView, setActiveView] = useState<StatsView>("Player");
   const [stats, setStats] = useState<PlayerStats[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -289,7 +289,7 @@ export function LeagueStats({ teams, games = [], onTeam }: { teams: LeagueTeam[]
   const [filter, setFilter] = useState("");
   const [completeSort, setCompleteSort] = useState<CompleteSort>({ column: "Yards", direction: "desc" });
   const [entrySortColumn, setEntrySortColumn] = useState("YDS");
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(requestedPlayer);
 
   useEffect(() => { Promise.all([getPlayerStats(), getPlayers()]).then(([statsResult, playersResult]) => { setStats(statsResult.playerStats); setPlayers(playersResult.players); }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load statistics")).finally(() => setLoading(false)); }, []);
 
@@ -379,9 +379,10 @@ export function LeagueStats({ teams, games = [], onTeam }: { teams: LeagueTeam[]
   const completeTitle = completeView === "tackling" ? "AFL Player Defense Stats" : isOffenseComplete ? `AFL Player ${completeView[0].toUpperCase() + completeView.slice(1)} Stats` : completeView ? "AFL Player Stat Leaders" : "AFL Stat Leaders";
 
   if (selectedPlayer) {
-    const row = stats.find((item) => normalized(item.Player) === normalized(selectedPlayer.Name));
-    const team = teamByKey.get(normalized(selectedPlayer.Team));
-    return <PlayerStatsProfile key={`${selectedPlayer.Name}-${selectedPlayer.Team}`} player={selectedPlayer} row={row} team={team} stats={stats} onBack={() => setSelectedPlayer(null)} />;
+    const profilePlayer = playerByName.get(normalized(selectedPlayer.Name)) || selectedPlayer;
+    const row = stats.find((item) => normalized(item.Player) === normalized(profilePlayer.Name));
+    const team = teamByKey.get(normalized(profilePlayer.Team));
+    return <PlayerStatsProfile key={`${profilePlayer.Name}-${profilePlayer.Team}`} player={profilePlayer} row={row} team={team} stats={stats} onBack={() => { setSelectedPlayer(null); onPlayerClose?.(); }} />;
   }
 
   return <main className="league-stats-card">
