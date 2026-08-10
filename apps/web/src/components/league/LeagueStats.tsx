@@ -207,13 +207,14 @@ function PlayerStatsProfile({ player, row, team, stats, onBack }: { player: Play
   const isQuarterback = statSide === "offense" && shownPosition === "QB";
   const isReceiver = statSide === "offense" && (shownPosition === "WR" || shownPosition === "TE");
   const isDefensive = statSide === "defense";
+  const currentTeam = String(player.Team || team?.Abbrev || team?.Name || team?.Team || "").trim();
   useEffect(() => {
     if (!isRunningBack && !isQuarterback && !isReceiver && !isDefensive) return;
-    getPlayerGames(name).then(({ games }) => {
+    getPlayerGames(name, currentTeam).then(({ games }) => {
       setRecentGames(games);
       setGameStatTab(isDefensive ? "Defense" : isQuarterback ? "Passing" : isReceiver ? "Receiving" : "Rushing");
     }).catch(() => setRecentGames([])).finally(() => setGamesLoading(false));
-  }, [isDefensive, isQuarterback, isReceiver, isRunningBack, name]);
+  }, [currentTeam, isDefensive, isQuarterback, isReceiver, isRunningBack, name]);
   const rbGroups = [
     { title: "RUSHING", stats: [{ label: "CAR", fields: ["Carries", "Rushing Attempts", "Rush Attempts"] }, { label: "YDS", fields: ["Yards", "Rushing Yards", "Rush Yards"] }, { label: "AVG", value: summary.find((item) => item.label === "AVG")?.value || "0.0" }, { label: "TD", fields: RUSHING_TD_FIELDS }, { label: "LNG", fields: ["Long", "LNG"] }] },
     { title: "RECEIVING", stats: [{ label: "REC", fields: ["Receptions", "REC"] }, { label: "YDS", fields: ["Receiving Yards", "Rec Yards", "RecYards"] }, { label: "AVG", value: (statValue(row || {} as PlayerStats, ["Receptions", "REC"]) ? statValue(row || {} as PlayerStats, ["Receiving Yards", "Rec Yards", "RecYards"]) / statValue(row || {} as PlayerStats, ["Receptions", "REC"]) : 0).toFixed(1) }, { label: "TD", fields: ["Receiving TD", "Rec TD"] }, { label: "LNG", fields: ["Receiving Long", "Rec Long"] }] },
@@ -380,7 +381,7 @@ export function LeagueStats({ teams, games = [], onTeam }: { teams: LeagueTeam[]
   if (selectedPlayer) {
     const row = stats.find((item) => normalized(item.Player) === normalized(selectedPlayer.Name));
     const team = teamByKey.get(normalized(selectedPlayer.Team));
-    return <PlayerStatsProfile player={selectedPlayer} row={row} team={team} stats={stats} onBack={() => setSelectedPlayer(null)} />;
+    return <PlayerStatsProfile key={`${selectedPlayer.Name}-${selectedPlayer.Team}`} player={selectedPlayer} row={row} team={team} stats={stats} onBack={() => setSelectedPlayer(null)} />;
   }
 
   return <main className="league-stats-card">
