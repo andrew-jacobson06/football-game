@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AppSelect } from "../ui/AppSelect";
 import type { LeagueGame } from "./types";
 import { formatBallOnForPoss, formatClock, formatDownDistance } from "./leagueMappers";
@@ -10,12 +10,18 @@ const gameWeek = (game: LeagueGame, index: number) =>
 
 type GamesBannerProps = {
   games: LeagueGame[];
+  currentWeek: number | null;
   onHome: () => void;
   onSelectGame: (game: LeagueGame) => void;
 };
 
-export function GamesBanner({ games, onHome, onSelectGame }: GamesBannerProps) {
-  const [week, setWeek] = useState(1);
+export function GamesBanner({ games, currentWeek, onHome, onSelectGame }: GamesBannerProps) {
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const week = selectedWeek ?? currentWeek ?? 1;
+  const weeks = useMemo(() => {
+    const gameWeeks = games.map(gameWeek).filter(Number.isFinite);
+    return [...new Set([...WEEKS, ...gameWeeks, ...(currentWeek === null ? [] : [currentWeek])])].sort((a, b) => a - b);
+  }, [currentWeek, games]);
   const weekGames = games.filter((game, index) => gameWeek(game, index) === week);
 
   return (
@@ -30,8 +36,8 @@ export function GamesBanner({ games, onHome, onSelectGame }: GamesBannerProps) {
       </button>
       <label className="games-banner__picker">
         <span>Week</span>
-        <AppSelect containerClassName="app-select--compact" value={week} onChange={(event) => setWeek(Number(event.target.value))}>
-          {WEEKS.map((item) => <option key={item} value={item}>Week {item}</option>)}
+        <AppSelect containerClassName="app-select--compact" value={week} onChange={(event) => setSelectedWeek(Number(event.target.value))}>
+          {weeks.map((item) => <option key={item} value={item}>Week {item}</option>)}
         </AppSelect>
       </label>
       <div className="games-banner__rail">

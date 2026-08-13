@@ -160,6 +160,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
       <section className="league-app">
         <GamesBanner
           games={games}
+          currentWeek={seasonWeek}
           onHome={returnToLeagueHome}
           onSelectGame={openGame}
         />
@@ -171,6 +172,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
       <section className="league-app">
         <GamesBanner
           games={games}
+          currentWeek={seasonWeek}
           onHome={returnToLeagueHome}
           onSelectGame={openGame}
         />
@@ -236,6 +238,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
           )}
           <GamesBanner
             games={games}
+            currentWeek={seasonWeek}
             onHome={returnToLeagueHome}
             onSelectGame={openGame}
           />
@@ -255,12 +258,12 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
                   </section>
                 )}
                 {advanceWeekError && <p className="advance-week__error" role="alert">{advanceWeekError}</p>}
-                <LeagueSchedule games={games} onSelectGame={openGame} />
+                <LeagueSchedule games={games} currentWeek={seasonWeek} onSelectGame={openGame} />
               </div>
             )}
             {activeTab === "schedules" && (
               <div className="league-tab-content active">
-                <LeagueSchedules games={games} teams={teams} onSelectGame={openGame} onSelectTeam={setSelectedTeam} />
+                <LeagueSchedules games={games} teams={teams} currentWeek={seasonWeek} onSelectGame={openGame} onSelectTeam={setSelectedTeam} />
               </div>
             )}
             {activeTab === "standings" && (
