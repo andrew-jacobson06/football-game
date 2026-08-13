@@ -129,6 +129,27 @@
   color: var(--text-muted);
   font-size: clamp(16px, 4vw, 24px);
 }
+.advance-week {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 24px 2.5vw 0;
+  padding: 20px 24px;
+  color: var(--text-primary);
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+.advance-week span { color: var(--control-accent); font-size: .72rem; font-weight: 800; letter-spacing: .1em; }
+.advance-week h2 { margin: 5px 0 0; font-size: 1.25rem; }
+.advance-week button { padding: 12px 20px; color: var(--text-primary); border: 1px solid var(--control-border); border-radius: 9px; background: var(--control-bg); box-shadow: 0 3px 10px var(--shadow-color); font: inherit; font-weight: 800; cursor: pointer; }
+.advance-week button:hover, .advance-week button:focus-visible { border-color: var(--control-border-hover); background: var(--control-bg-hover); outline: none; }
+.advance-week button:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--control-accent) 30%, transparent); }
+.advance-week button:disabled { cursor: wait; opacity: .65; }
+.advance-week__error { margin: 12px 2.5vw 0; color: var(--text-primary); }
+@media (max-width: 600px) { .advance-week { align-items: stretch; flex-direction: column; } }
 .news-feed {
   display: grid;
   gap: 3vw;
