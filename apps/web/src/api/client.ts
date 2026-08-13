@@ -46,6 +46,11 @@ export async function getPlayerStats(): Promise<{
 }> {
   return getJson("/player-stats", "Failed to load player stats");
 }
+export async function getSeasonStats(): Promise<{
+  seasonStats: PlayerStats[];
+}> {
+  return getJson("/season-stats", "Failed to load season statistics");
+}
 export type PlayerGame = {
   gameId: string;
   opponent: string;
