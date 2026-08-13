@@ -8,6 +8,7 @@ import type {
 import { buildDefense } from "./formationDefense";
 import { PlayerImage } from "../players/PlayerImage";
 import { playerImageUrl } from "../players/playerImageUrls";
+import { totalEnergy } from "./gameplay/engine/fatigueEngine";
 
 const str = (v: unknown) => String(v ?? "");
 const WR_SLOTS: FormationSlot[] = ["WR1", "WR2", "WR3", "WR4"];
@@ -21,6 +22,8 @@ const PLAYER_IDENTITY_FIELDS = new Set([
   "team", "name", "position", "pos", "defpos", "image", "photo",
   "player image from ai", "translatex", "translatey", "scale", "jersey",
   "jersey image",
+  // Energy bookkeeping is represented by the ring rather than raw table cells.
+  "energy", "fatigue", "temporaryfatigue",
 ]);
 
 type Player = Record<string, unknown>;
@@ -62,14 +65,9 @@ function imgOf(p?: Player) {
 }
 
 function staminaOf(player: Player) {
-  const value = Number(
-    player.fatigue ??
-      player.Fatigue ??
-      player.stamina ??
-      player.Stamina ??
-      100,
-  );
-  return Math.min(100, Math.max(0, Number.isFinite(value) ? value : 100));
+  // The roster ring displays usable total energy, not the underlying stamina
+  // trait or either individual fatigue component.
+  return totalEnergy(player);
 }
 
 function staminaColor(stamina: number) {
@@ -187,8 +185,8 @@ function RosterDetails({ roster }: { roster: Player[] }) {
                           "--stamina-color": staminaColor(stamina),
                         } as React.CSSProperties}
                         role="img"
-                        aria-label={`${nameOf(player)} stamina: ${Math.round(stamina)}%`}
-                        title={`${Math.round(stamina)}% stamina`}
+                        aria-label={`${nameOf(player)} total energy: ${Math.round(stamina)}%`}
+                        title={`${Math.round(stamina)}% total energy`}
                       >
                         <div className="roster-player-image" aria-hidden="true">
                           <PlayerImage player={player} fallback={<span>👤</span>} />
