@@ -56,6 +56,9 @@ const isPregame = (game: LeagueGame) => {
   const quarter = String(game.Qtr ?? "").trim().toUpperCase();
   return !quarter || quarter === "0" || quarter === "UNSTARTED" || quarter === "PREGAME";
 };
+type TossSide = "Heads" | "Tails";
+type TossChoice = "receive" | "kick";
+type TossPhase = "idle" | "call" | "flipping" | "decision" | "saving";
 
 type Play = Record<string, unknown>;
 type LineStatMatchup = {
@@ -1499,6 +1502,11 @@ export function GameCenter({
     id: number;
     plan: AnimationPlan;
   } | null>(null);
+  const [tossPhase, setTossPhase] = useState<TossPhase>("idle");
+  const [tossCall, setTossCall] = useState<TossSide | null>(null);
+  const [tossResult, setTossResult] = useState<TossSide | null>(null);
+  const [tossError, setTossError] = useState("");
+  const tossTimerRef = useRef<number | null>(null);
   const animationSequenceRef = useRef(0);
   const animationResolverRef = useRef<{
     id: number;
@@ -1577,6 +1585,98 @@ export function GameCenter({
       active = false;
     };
   }, [game]);
+
+  useEffect(() => () => {
+    if (tossTimerRef.current !== null) window.clearTimeout(tossTimerRef.current);
+  }, []);
+
+  const beginGame = () => {
+    if (!isPregame(currentGame)) return;
+    setCurrentGame((current) => ({ ...current, Qtr: 1, Time: 900 }));
+    setTossCall(null);
+    setTossResult(null);
+    setTossError("");
+    setTossPhase("call");
+  };
+
+  const callToss = (call: TossSide) => {
+    const result: TossSide = Math.random() < 0.5 ? "Heads" : "Tails";
+    setTossCall(call);
+    setTossResult(result);
+    setTossPhase("flipping");
+    tossTimerRef.current = window.setTimeout(() => {
+      setTossPhase("decision");
+      if (call !== result) {
+        const awayChoice: TossChoice = Math.random() < 0.8 ? "receive" : "kick";
+        tossTimerRef.current = window.setTimeout(() => {
+          tossTimerRef.current = null;
+          void finishToss(awayChoice, call, result);
+        }, 1200);
+      } else {
+        tossTimerRef.current = null;
+      }
+    }, 1400);
+  };
+
+  const finishToss = async (
+    winnerChoice: TossChoice,
+    completedCall = tossCall,
+    completedResult = tossResult,
+  ) => {
+    if (!completedCall || !completedResult) return;
+    const homeWon = completedCall === completedResult;
+    const winner = homeWon ? "Home" : "Away";
+    const receivingTeam = winnerChoice === "receive"
+      ? winner
+      : winner === "Home" ? "Away" : "Home";
+    const ballOn = receivingTeam === "Home" ? 25 : 75;
+    const startedGame: LeagueGame = {
+      ...currentGame,
+      Qtr: 1,
+      Time: 900,
+      Down: 1,
+      Distance: 10,
+      BallOn: ballOn,
+      Possession: receivingTeam,
+      DriveStart: ballOn,
+      Previous: ballOn,
+    } as LeagueGame;
+    setTossPhase("saving");
+    setTossError("");
+    try {
+      await savePlayAndGame(startedGame.GameId, {
+        game: {
+          gameId: startedGame.GameId,
+          quarter: 1,
+          time: 900,
+          down: 1,
+          distance: 10,
+          ballOn,
+          homeScore: startedGame.HomeScore,
+          awayScore: startedGame.AwayScore,
+          driveStart: ballOn,
+          previous: ballOn,
+          possession: receivingTeam,
+          homeTimeouts: 3,
+          awayTimeouts: 3,
+        },
+      });
+      setCurrentGame(startedGame);
+      previousPossessionRef.current = receivingTeam;
+      setIsGameFieldCollapsed(false);
+      setTossPhase("idle");
+      setLog((messages) => [
+        `${homeWon ? currentGame.Home : currentGame.Away} won the toss and chose to ${winnerChoice}. ${receivingTeam === "Home" ? currentGame.Home : currentGame.Away} starts at its 25-yard line.`,
+        ...messages,
+      ]);
+      onGameUpdate?.(startedGame);
+    } catch (error) {
+      setTossError(error instanceof Error ? error.message : "Failed to start the game");
+      setTossPhase("decision");
+    }
+  };
+
+  const homeWonToss = Boolean(tossCall && tossResult && tossCall === tossResult);
 
   useEffect(() => {
     if (previousPossessionRef.current === currentGame.Possession) return;
@@ -1793,13 +1893,57 @@ export function GameCenter({
             </div>
           </div>
           {isPregame(currentGame) && (
-            <PregameMatchup
-              game={currentGame}
-              home={homeTeamDetails}
-              away={awayTeamDetails}
-              players={players}
-              stats={seasonStats}
-            />
+            <>
+              <div className="pregame-start">
+                <span>Ready for kickoff?</span>
+                <button className="pregame-start-button" type="button" onClick={beginGame}>
+                  Start Game
+                </button>
+              </div>
+              <PregameMatchup
+                game={currentGame}
+                home={homeTeamDetails}
+                away={awayTeamDetails}
+                players={players}
+                stats={seasonStats}
+              />
+            </>
+          )}
+          {tossPhase !== "idle" && (
+            <div className="toss-overlay" role="dialog" aria-modal="true" aria-labelledby="toss-title">
+              <section className="toss-dialog">
+                <span className="toss-kicker">Opening coin toss</span>
+                <h2 id="toss-title">
+                  {tossPhase === "call" ? `${currentGame.Home}, make the call` :
+                    tossPhase === "flipping" ? "The coin is in the air…" :
+                      tossPhase === "saving" ? "Setting the field…" :
+                        homeWonToss ? `${currentGame.Home} won the toss!` : `${currentGame.Away} won the toss`}
+                </h2>
+                <div className={`toss-coin ${tossPhase === "flipping" ? "is-flipping" : ""}`} aria-label={tossPhase === "flipping" ? "Coin flipping" : tossResult ? `Coin landed ${tossResult}` : "Coin ready"}>
+                  <span>{tossResult ? (tossResult === "Heads" ? "H" : "T") : "★"}</span>
+                </div>
+                {tossPhase === "call" && (
+                  <div className="toss-actions">
+                    <button type="button" onClick={() => callToss("Heads")}>Heads</button>
+                    <button type="button" onClick={() => callToss("Tails")}>Tails</button>
+                  </div>
+                )}
+                {tossPhase === "flipping" && <p>You called {tossCall}. Watch the flip.</p>}
+                {tossPhase === "decision" && (
+                  <>
+                    <p>The coin landed <strong>{tossResult}</strong>. {homeWonToss ? "Choose how you want to start." : `${currentGame.Away} is making its choice…`}</p>
+                    {homeWonToss && (
+                      <div className="toss-actions">
+                        <button type="button" onClick={() => void finishToss("receive")}>Receive the ball</button>
+                        <button type="button" onClick={() => void finishToss("kick")}>Kick off</button>
+                      </div>
+                    )}
+                  </>
+                )}
+                {tossPhase === "saving" && <p>The receiving team will begin at its own 25-yard line.</p>}
+                {tossError && <p className="toss-error" role="alert">{tossError}</p>}
+              </section>
+            </div>
           )}
           <div
             className={`field-console-stage ${isGameFieldCollapsed ? "field-collapsed" : ""}`}
