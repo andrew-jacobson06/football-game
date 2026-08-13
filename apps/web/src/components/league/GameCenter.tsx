@@ -59,6 +59,8 @@ const matchesTeam = (team: LeagueTeam, key: unknown) => {
   return [teamValue(team, "Abbrev", "Abbreviation"), teamValue(team, "Team"), teamValue(team, "ID"), name, `${location} ${name}`]
     .some((value) => normalizedTeamKey(value) === wanted);
 };
+const findTeam = (teams: LeagueTeam[], ...keys: unknown[]) =>
+  teams.find((team) => keys.some((key) => matchesTeam(team, key)));
 const isPregame = (game: LeagueGame) => {
   const quarter = String(game.Qtr ?? "").trim().toUpperCase();
   return !quarter || quarter === "0" || quarter === "UNSTARTED" || quarter === "PREGAME";
@@ -227,6 +229,7 @@ function normalizeGame(
   if (!state) return game;
   return {
     ...game,
+    ...(state as Record<string, unknown>),
     GameId: (state.Id ?? game.GameId) as string | number,
     Home: str(state.Home ?? game.Home),
     Away: str(state.Away ?? game.Away),
@@ -240,7 +243,6 @@ function normalizeGame(
     Possession: str(state.Possession ?? game.Possession),
     HomeLogo: str(state.HomeLogo ?? game.HomeLogo ?? ""),
     AwayLogo: str(state.AwayLogo ?? game.AwayLogo ?? ""),
-    ...(state as Record<string, unknown>),
   };
 }
 /**
@@ -1437,8 +1439,8 @@ function PregameMatchup({
   stats,
 }: {
   game: LeagueGame;
-  home?: LeagueTeam;
-  away?: LeagueTeam;
+  home: LeagueTeam;
+  away: LeagueTeam;
   players: Play[];
   stats: Record<string, string>[];
 }) {
@@ -1484,7 +1486,10 @@ export function GameCenter({
   const [currentGame, setCurrentGame] = useState(game);
   const [history, setHistory] = useState<Play[]>([]);
   const [players, setPlayers] = useState<Play[]>([]);
-  const [teams, setTeams] = useState<LeagueTeam[]>([]);
+  const [matchupTeams, setMatchupTeams] = useState<{
+    home: LeagueTeam;
+    away: LeagueTeam;
+  } | null>(null);
   const [seasonStats, setSeasonStats] = useState<Record<string, string>[]>([]);
   const [settings, setSettings] = useState<FrontendSettings>(
     normalizeFrontendSettings({}),
@@ -1530,16 +1535,8 @@ export function GameCenter({
     () => ({ players, settings, historyLength: history.length }),
     [players, settings, history.length],
   );
-  const homeTeamDetails = useMemo(() => {
-    const homeAbbrev = String(currentGame.Home || "")
-      .trim()
-      .toLowerCase();
-    return teams.find((team) => matchesTeam(team, homeAbbrev));
-  }, [currentGame.Home, teams]);
-  const awayTeamDetails = useMemo(
-    () => teams.find((team) => matchesTeam(team, currentGame.Away)),
-    [currentGame.Away, teams],
-  );
+  const homeTeamDetails = matchupTeams?.home;
+  const awayTeamDetails = matchupTeams?.away;
   useEffect(() => {
     let active = true;
     Promise.all([
@@ -1554,9 +1551,22 @@ export function GameCenter({
         if (!active) return;
         const loadedSettings = normalizeFrontendSettings(settingsRes);
         const loadedTeams = teamsRes.teams as LeagueTeam[];
+        const normalizedGame = normalizeGame(game, stateRes.gameState);
+        const loadedHomeTeam = findTeam(
+          loadedTeams,
+          normalizedGame.Home,
+          game.Home,
+          normalizedGame.HomeName,
+        );
+        const loadedAwayTeam = findTeam(
+          loadedTeams,
+          normalizedGame.Away,
+          game.Away,
+          normalizedGame.AwayName,
+        );
         const loadedPlayers = playerRes.players.map((player) => {
           const team = loadedTeams.find((candidate) => matchesTeam(candidate, player.team));
-          const homePlayer = matchesTeam(team ?? {}, game.Home);
+          const homePlayer = team === loadedHomeTeam;
           return {
             ...player,
             jersey: teamValue(team, homePlayer ? "Home Jersey Crop" : "Away Jersey Crop"),
@@ -1570,7 +1580,6 @@ export function GameCenter({
           },
           historyRes.plays,
         );
-        const normalizedGame = normalizeGame(game, stateRes.gameState);
         const firstPossession = str(
           playField(historyRes.plays[0], "Possession", "possession"),
         );
@@ -1586,7 +1595,11 @@ export function GameCenter({
         setIsGameFieldCollapsed(isPregame(normalizedGame));
         setHistory(historyRes.plays);
         setPlayers(loadedPlayers);
-        setTeams(loadedTeams);
+        setMatchupTeams(
+          loadedHomeTeam && loadedAwayTeam
+            ? { home: loadedHomeTeam, away: loadedAwayTeam }
+            : null,
+        );
         setSeasonStats(statsRes.playerStats);
         setSettings(loadedSettings);
         setLog(
@@ -1924,13 +1937,15 @@ export function GameCenter({
                   Start Game
                 </button>
               </div>
-              <PregameMatchup
-                game={currentGame}
-                home={homeTeamDetails}
-                away={awayTeamDetails}
-                players={players}
-                stats={seasonStats}
-              />
+              {homeTeamDetails && awayTeamDetails && (
+                <PregameMatchup
+                  game={currentGame}
+                  home={homeTeamDetails}
+                  away={awayTeamDetails}
+                  players={players}
+                  stats={seasonStats}
+                />
+              )}
             </>
           )}
           {tossPhase !== "idle" && (
