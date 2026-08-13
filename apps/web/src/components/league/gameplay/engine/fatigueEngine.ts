@@ -97,6 +97,91 @@ export function applyRunFatigue(ctx: EngineContext, playerName: string) {
 
 type HistoricalPlay = Record<string, unknown>;
 
+export type FatigueRecovery = {
+  player: string;
+  amount: number;
+  reason: "bench" | "opponent-drive";
+};
+
+function randomBetween(min: number, max: number, random: () => number) {
+  return min + random() * (max - min);
+}
+
+function playerTeam(player: PlayerTrait) {
+  return String(player.team ?? player.Team ?? "").trim().toLowerCase();
+}
+
+function recoverTemporaryFatigue(player: PlayerTrait, amount: number) {
+  const current = number(
+    player.temporaryFatigue ?? player.TemporaryFatigue,
+    STARTING_TEMPORARY_FATIGUE,
+  );
+  player.temporaryFatigue = Math.max(0, current - Math.max(0, amount));
+}
+
+/**
+ * Applies recovery earned during a completed offensive snap. Exact rolls are
+ * returned so they can be saved with the play and replayed after a refresh.
+ */
+export function applyFatigueRecovery(
+  ctx: EngineContext,
+  options: {
+    offenseTeam: string;
+    defenseTeam: string;
+    offensivePlayers: string[];
+    opponentDrivePlays?: number;
+    random?: () => number;
+  },
+) {
+  const random = options.random ?? Math.random;
+  const offenseTeam = options.offenseTeam.trim().toLowerCase();
+  const defenseTeam = options.defenseTeam.trim().toLowerCase();
+  const onField = new Set(options.offensivePlayers.filter(Boolean));
+  const recovery: FatigueRecovery[] = [];
+
+  // An absent formation does not prove that everybody was on the bench (for
+  // example, special-teams calls do not currently carry an offensive lineup).
+  if (onField.size) {
+    ctx.players.forEach((player) => {
+      const name = getPlayerName(player);
+      if (playerTeam(player) !== offenseTeam || onField.has(name)) return;
+      const amount = randomBetween(0.75, 1.75, random);
+      recoverTemporaryFatigue(player, amount);
+      recovery.push({ player: name, amount, reason: "bench" });
+    });
+  }
+
+  const drivePlays = Math.max(0, options.opponentDrivePlays ?? 0);
+  if (drivePlays) {
+    ctx.players.forEach((player) => {
+      if (playerTeam(player) !== defenseTeam) return;
+      const amount =
+        randomBetween(3, 6, random) +
+        randomBetween(0.75, 1.5, random) * drivePlays;
+      recoverTemporaryFatigue(player, amount);
+      recovery.push({
+        player: getPlayerName(player),
+        amount,
+        reason: "opponent-drive",
+      });
+    });
+  }
+
+  return recovery;
+}
+
+function savedRecovery(play: HistoricalPlay): FatigueRecovery[] {
+  const value = historicalField(play, "fatigueRecovery");
+  if (Array.isArray(value)) return value as FatigueRecovery[];
+  if (typeof value !== "string" || !value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? (parsed as FatigueRecovery[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 function historicalField(play: HistoricalPlay, fieldName: string) {
   const normalizedFieldName = fieldName.replace(/[^a-z0-9]/gi, "").toLowerCase();
   const entry = Object.entries(play).find(
@@ -127,6 +212,13 @@ export function applyFatigueFromPlayHistory(
     if (playerName && actionType.toLowerCase() === "run") {
       applyRunFatigue(ctx, playerName);
     }
+
+    savedRecovery(play).forEach(({ player: recoveredPlayer, amount }) => {
+      const player = ctx.players.find(
+        (candidate) => getPlayerName(candidate) === recoveredPlayer,
+      );
+      if (player) recoverTemporaryFatigue(player, number(amount));
+    });
   });
 
   return ctx.players;

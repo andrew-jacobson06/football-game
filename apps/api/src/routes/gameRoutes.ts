@@ -306,6 +306,7 @@ function playValueForHeader(play: Record<string, unknown>, header: string) {
     brokentackles: ["brokenTackles", "brokentackles"],
     stopreason: ["stopReason", "stopreason"],
     runlog: ["runLog", "runlog"],
+    fatiguerecovery: ["fatigueRecovery", "fatiguerecovery"],
   };
 
   for (const key of aliases[normalized] ?? [normalized]) {

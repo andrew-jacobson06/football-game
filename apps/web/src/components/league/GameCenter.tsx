@@ -33,7 +33,10 @@ import {
   runPlay,
   spikeBall,
 } from "./gameplay/gameEngine";
-import { applyFatigueFromPlayHistory } from "./gameplay/engine/fatigueEngine";
+import {
+  applyFatigueFromPlayHistory,
+  applyFatigueRecovery,
+} from "./gameplay/engine/fatigueEngine";
 import type {
   FormationSlot,
   FrontendSettings,
@@ -1599,6 +1602,31 @@ export function GameCenter({
     if (playInFlightRef.current) return;
     playInFlightRef.current = true;
     const previousGame = currentGame;
+    const fatigueSnapshot = players.map((player) => ({
+      player,
+      energy: player.energy,
+      temporaryFatigue: player.temporaryFatigue,
+    }));
+    const offenseIsHome = currentGame.Possession === "Home";
+    const offenseTeam = offenseIsHome ? currentGame.Home : currentGame.Away;
+    const defenseTeam = offenseIsHome ? currentGame.Away : currentGame.Home;
+    const possessionChanged = result.game.Possession !== currentGame.Possession;
+    const trailingDrivePlays = [...history]
+      .reverse()
+      .findIndex(
+        (play) =>
+          str(playField(play, "Possession", "possession")) !==
+          currentGame.Possession,
+      );
+    const priorDrivePlays =
+      trailingDrivePlays === -1 ? history.length : trailingDrivePlays;
+    const fatigueRecovery = applyFatigueRecovery(ctx, {
+      offenseTeam: String(offenseTeam ?? ""),
+      defenseTeam: String(defenseTeam ?? ""),
+      offensivePlayers: Object.values(playOptions.formation ?? {}),
+      opponentDrivePlays: possessionChanged ? priorDrivePlays + 1 : 0,
+    });
+    Object.assign(result.play, { fatigueRecovery });
     setIsSavingPlay(true);
     const gamePayload = {
       gameId: result.game.GameId,
@@ -1648,6 +1676,10 @@ export function GameCenter({
         routeDepths: {},
       }));
     } catch (error) {
+      fatigueSnapshot.forEach(({ player, energy, temporaryFatigue }) => {
+        player.energy = energy;
+        player.temporaryFatigue = temporaryFatigue;
+      });
       setCurrentGame(previousGame);
       setLog((l) => [
         `Save failed: ${error instanceof Error ? error.message : String(error)}`,
