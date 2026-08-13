@@ -636,10 +636,10 @@
 .team-stats-mode strong { color: var(--text-light); border-bottom: 3px solid var(--accent-red); }
 .team-stats-shell h3 { margin: 20px 0 10px; font-size: 1.1rem; }
 .team-leaders { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--border-color); }
-.team-leaders article { display: grid; grid-template-columns: 44px 1fr; grid-template-rows: auto auto auto; column-gap: 10px; padding: 14px; border-right: 1px solid var(--border-color); }
+.team-leaders article { display: grid; grid-template-columns: 64px 1fr; grid-template-rows: auto auto auto; column-gap: 10px; padding: 14px; border-right: 1px solid var(--border-color); }
 .team-leaders article:last-child { border: 0; }
 .team-leaders small { grid-column: 1/-1; color: var(--text-muted); font-weight: 800; }
-.leader-avatar { grid-row: 2/4; align-self: center; display: grid; place-items: center; width: 40px; height: 40px; color: #fff; border-radius: 50%; background: linear-gradient(145deg, #34495e, var(--accent-red)); font-size: .7rem; font-weight: 900; }
+.leader-avatar { grid-row: 2/4; align-self: center; display: grid; place-items: center; width: 60px; height: 60px; color: #fff; border-radius: 50%; font-size: .7rem; font-weight: 900; }
 .team-leaders p { margin: 10px 0 0; white-space: nowrap; font-size: .78rem; }
 .team-leaders p em { color: var(--text-muted); font-style: normal; }
 .team-leaders article > strong { font-size: 1.65rem; line-height: 1; }
