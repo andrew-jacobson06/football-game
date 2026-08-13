@@ -54,6 +54,10 @@ const teamValue = (team: LeagueTeam | undefined, ...keys: string[]) => {
 };
 const matchesTeam = (team: LeagueTeam, key: unknown) => {
   const wanted = normalizedTeamKey(key);
+  
+  // Never allow a missing/blank team key to match.
+  if (!wanted) return false;
+
   const location = teamValue(team, "Location", "City");
   const name = teamValue(team, "Name", "Nickname");
   return [teamValue(team, "Abbrev", "Abbreviation"), teamValue(team, "Team"), teamValue(team, "ID"), name, `${location} ${name}`]
@@ -1450,10 +1454,27 @@ function PregameMatchup({
     { label: "Tackles", fields: ["Tackles", "TKL"] },
     { label: "Sacks", fields: ["Sacks", "SACK"] },
   ];
-  const leader = (team: LeagueTeam | undefined, fields: string[]) => stats
-    .filter((row) => matchesTeam(team ?? {}, row.Team ?? playerTeam.get(normalizedTeamKey(row.Player ?? row.Name))))
-    .map((row) => ({ name: String(row.Player ?? row.Name ?? "—"), value: seasonStat(row, ...fields) }))
-    .sort((a, b) => b.value - a.value)[0];
+  const leader = (
+    team: LeagueTeam | undefined,
+    fields: string[],
+  ) =>
+    stats
+      .filter((row) => {
+        const playerName = normalizedTeamKey(
+          row.Player ?? row.Name,
+        );
+
+        const statTeam =
+          row.Team ||
+          playerTeam.get(playerName);
+
+        return matchesTeam(team ?? {}, statTeam);
+      })
+      .map((row) => ({
+        name: String(row.Player ?? row.Name ?? "—"),
+        value: seasonStat(row, ...fields),
+      }))
+      .sort((a, b) => b.value - a.value)[0];
   const teamCard = (team: LeagueTeam | undefined, side: "home" | "away") => {
     const abbrev = String(team?.Abbrev ?? (side === "home" ? game.Home : game.Away));
     const uniform = teamValue(team, side === "home" ? "Home Uniform" : "Away Uniform");
@@ -1552,16 +1573,37 @@ export function GameCenter({
     ])
       .then(([stateRes, historyRes, playerRes, settingsRes, teamsRes, statsRes]) => {
         if (!active) return;
+
         const loadedSettings = normalizeFrontendSettings(settingsRes);
         const loadedTeams = teamsRes.teams as LeagueTeam[];
+        const normalizedGame = normalizeGame(game, stateRes.gameState);
+
+        console.log("ABOUT TO SET TEAMS", loadedTeams.length);
+
+        // Set independent API-backed state immediately. If later player/fatigue
+        // processing throws, the team metadata and matchup data still load.
+        setTeams(loadedTeams);
+        setSeasonStats(statsRes.playerStats);
+        setSettings(loadedSettings);
+        setCurrentGame(normalizedGame);
+        setHistory(historyRes.plays);
+
+        console.log("CALLED setTeams");
+
         const loadedPlayers = playerRes.players.map((player) => {
-          const team = loadedTeams.find((candidate) => matchesTeam(candidate, player.team));
-          const homePlayer = matchesTeam(team ?? {}, game.Home);
+          const team = loadedTeams.find((candidate) =>
+            matchesTeam(candidate, player.team),
+          );
+          const homePlayer = matchesTeam(team ?? {}, normalizedGame.Home);
           return {
             ...player,
-            jersey: teamValue(team, homePlayer ? "Home Jersey Crop" : "Away Jersey Crop"),
+            jersey: teamValue(
+              team,
+              homePlayer ? "Home Jersey Crop" : "Away Jersey Crop",
+            ),
           };
         });
+
         applyFatigueFromPlayHistory(
           {
             players: loadedPlayers,
@@ -1570,7 +1612,7 @@ export function GameCenter({
           },
           historyRes.plays,
         );
-        const normalizedGame = normalizeGame(game, stateRes.gameState);
+
         const firstPossession = str(
           playField(historyRes.plays[0], "Possession", "possession"),
         );
@@ -1582,13 +1624,11 @@ export function GameCenter({
                   normalizedGame.Possession === "Away")
               ? normalizedGame.Possession
               : normalizedGame.OpeningPossession;
-        setCurrentGame(normalizedGame);
+
+        // Re-apply the normalized game after OpeningPossession is resolved.
+        setCurrentGame({ ...normalizedGame });
         setIsGameFieldCollapsed(isPregame(normalizedGame));
-        setHistory(historyRes.plays);
         setPlayers(loadedPlayers);
-        setTeams(loadedTeams);
-        setSeasonStats(statsRes.playerStats);
-        setSettings(loadedSettings);
         setLog(
           historyRes.plays.length
             ? historyRes.plays
@@ -1598,16 +1638,21 @@ export function GameCenter({
             : ["Game loaded. No prior play history found."],
         );
       })
-      .catch((error: unknown) =>
+      .catch((error: unknown) => {
+        console.error("GAME CENTER LOAD FAILED:", error);
         setLog((l) => [
           `Failed to load live game data: ${error instanceof Error ? error.message : String(error)}`,
           ...l,
-        ]),
-      );
+        ]);
+      });
     return () => {
       active = false;
     };
   }, [game]);
+
+  useEffect(() => {
+    console.log("TEAMS STATE ACTUALLY CHANGED:", teams.length, teams);
+  }, [teams]);
 
   useEffect(() => () => {
     if (tossTimerRef.current !== null) window.clearTimeout(tossTimerRef.current);
