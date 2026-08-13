@@ -19,13 +19,15 @@ function kickoffParts(game: LeagueGame) {
   };
 }
 
-export function LeagueSchedule({ games, onSelectGame }: { games: LeagueGame[]; onSelectGame: (game: LeagueGame) => void }) {
-  const [activeWeek, setActiveWeek] = useState(1);
+export function LeagueSchedule({ games, currentWeek, onSelectGame }: { games: LeagueGame[]; currentWeek: number | null; onSelectGame: (game: LeagueGame) => void }) {
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const activeWeek = selectedWeek ?? currentWeek ?? 1;
   const weekGames = useMemo(
     () => games.filter((game, index) => gameWeek(game, index) === activeWeek),
     [activeWeek, games],
   );
   const finalGames = weekGames.filter((game) => String(game.Qtr).toUpperCase() === "FINAL").length;
+
   const weekLabel = (week: number) => {
     const game = games.find((item, index) => gameWeek(item, index) === week);
     if (!game) return `WEEK ${week}`;
@@ -43,7 +45,7 @@ export function LeagueSchedule({ games, onSelectGame }: { games: LeagueGame[]; o
       </header>
       <nav className="week-tabs" aria-label="Scoreboard weeks">
         {WEEKS.map((week) => (
-          <button key={week} type="button" className={activeWeek === week ? "active" : ""} onClick={() => setActiveWeek(week)}>
+          <button key={week} type="button" className={activeWeek === week ? "active" : ""} onClick={() => setSelectedWeek(week)}>
             <span>WEEK {week}</span><small>{weekLabel(week)}</small>
           </button>
         ))}

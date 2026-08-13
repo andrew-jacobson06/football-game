@@ -38,11 +38,13 @@ function dayKey(game: LeagueGame) {
 export function LeagueSchedules({
   games,
   teams,
+  currentWeek,
   onSelectGame,
   onSelectTeam,
 }: {
   games: LeagueGame[];
   teams: LeagueTeam[];
+  currentWeek: number | null;
   onSelectGame: (game: LeagueGame) => void;
   onSelectTeam?: (team: LeagueTeam) => void;
 }) {
@@ -61,8 +63,8 @@ export function LeagueSchedules({
     });
     return [...labels].sort((a, b) => a[1].localeCompare(b[1]));
   }, [games, teams]);
-  const weeks = useMemo(() => [...new Set(games.map(getWeek))].sort((a, b) => a - b), [games]);
-  const displayedWeek = activeWeek ?? weeks[0];
+  const weeks = useMemo(() => [...new Set([...games.map(getWeek), ...(currentWeek === null ? [] : [currentWeek])])].sort((a, b) => a - b), [currentWeek, games]);
+  const displayedWeek = activeWeek ?? currentWeek ?? weeks[0];
 
   const visibleGames = useMemo(() => games.filter((game, index) =>
     getWeek(game, index) === displayedWeek
