@@ -99,6 +99,21 @@ export async function getGamesList(): Promise<{
 }> {
   return getJson("/games", "Failed to load games from backend API");
 }
+export type LeagueArticle = {
+  id: string;
+  season: number;
+  week: number;
+  gameId: string;
+  type: string;
+  title: string;
+  summary: string;
+  articleMarkdown: string;
+  publishedAt: string;
+  featured: boolean;
+  heroImageUrl: string;
+};
+export async function getArticles(): Promise<{ articles: LeagueArticle[] }> {
+  return getJson("/articles", "Failed to load league articles");
 export async function getSeason(): Promise<{ week: number }> {
   return getJson("/season", "Failed to load the current season week");
 }
