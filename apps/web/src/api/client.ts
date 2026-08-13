@@ -114,6 +114,11 @@ export type LeagueArticle = {
 };
 export async function getArticles(): Promise<{ articles: LeagueArticle[] }> {
   return getJson("/articles", "Failed to load league articles");
+export async function getSeason(): Promise<{ week: number }> {
+  return getJson("/season", "Failed to load the current season week");
+}
+export async function advanceSeason(): Promise<{ ok: boolean; week: number }> {
+  return postJson("/season/advance", {}, "Failed to advance the season week");
 }
 export async function getGameState(
   gameId: string | number,

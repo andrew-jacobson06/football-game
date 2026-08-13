@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getGames, getPlayers, getStandings, getTeams } from "../../api/client";
+import { advanceSeason, getGames, getPlayers, getSeason, getStandings, getTeams } from "../../api/client";
 import type { Player } from "../players/types";
 import type { LeagueGame, LeagueTab, LeagueTeam } from "./types";
 import { mockGames, mockTeams } from "./leagueMockData";
@@ -24,6 +24,9 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
   const [teams, setTeams] = useState<LeagueTeam[]>(mockTeams);
   const [standings, setStandings] = useState<LeagueTeam[]>(mockTeams);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [seasonWeek, setSeasonWeek] = useState<number | null>(null);
+  const [isAdvancingWeek, setIsAdvancingWeek] = useState(false);
+  const [advanceWeekError, setAdvanceWeekError] = useState("");
   const [searchedPlayer, setSearchedPlayer] = useState<Player | null>(null);
   const [selectedGame, setSelectedGame] = useState<LeagueGame | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<LeagueTeam | null>(null);
@@ -37,9 +40,9 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
         ...game,
       })));
     });
-  useEffect(() => {
-    Promise.all([getGames(), getStandings(), getTeams(), getPlayers()])
-      .then(([gamesResponse, standingsResponse, teamsResponse, playersResponse]) => {
+  const refreshLeagueData = () =>
+    Promise.all([getGames(), getStandings(), getTeams(), getPlayers(), getSeason()])
+      .then(([gamesResponse, standingsResponse, teamsResponse, playersResponse, seasonResponse]) => {
         const sheetTeams = teamsResponse.teams as LeagueTeam[];
         setTeams(sheetTeams);
         setGames(normalizeGames(gamesResponse.games, sheetTeams));
@@ -50,13 +53,32 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
           ),
         );
         setPlayers(playersResponse.players);
-      })
+        setSeasonWeek(seasonResponse.week);
+      });
+
+  useEffect(() => {
+    refreshLeagueData()
       .catch(() => {
         setGames(normalizeGames(mockGames, mockTeams));
         setTeams(mockTeams);
         setStandings(mockTeams);
-      });
+      })
   }, []);
+
+  const currentWeekGames = seasonWeek === null ? [] : games.filter((game) => Number(game.Week) === seasonWeek);
+  const canAdvanceWeek = currentWeekGames.length > 0 && currentWeekGames.every((game) => String(game.Qtr).trim().toUpperCase() === "FINAL");
+  const handleAdvanceWeek = async () => {
+    setIsAdvancingWeek(true);
+    setAdvanceWeekError("");
+    try {
+      await advanceSeason();
+      await refreshLeagueData();
+    } catch (error) {
+      setAdvanceWeekError(error instanceof Error ? error.message : "Failed to advance the season week");
+    } finally {
+      setIsAdvancingWeek(false);
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -138,6 +160,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
       <section className="league-app">
         <GamesBanner
           games={games}
+          currentWeek={seasonWeek}
           onHome={returnToLeagueHome}
           onSelectGame={openGame}
         />
@@ -149,6 +172,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
       <section className="league-app">
         <GamesBanner
           games={games}
+          currentWeek={seasonWeek}
           onHome={returnToLeagueHome}
           onSelectGame={openGame}
         />
@@ -214,6 +238,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
           )}
           <GamesBanner
             games={games}
+            currentWeek={seasonWeek}
             onHome={returnToLeagueHome}
             onSelectGame={openGame}
           />
@@ -226,12 +251,19 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
             )}
             {activeTab === "scores" && (
               <div className="league-tab-content active">
-                <LeagueSchedule games={games} onSelectGame={openGame} />
+                {canAdvanceWeek && (
+                  <section className="advance-week" aria-labelledby="advance-week-title">
+                    <div><span>WEEK {seasonWeek} COMPLETE</span><h2 id="advance-week-title">Ready for the next week?</h2></div>
+                    <button type="button" onClick={handleAdvanceWeek} disabled={isAdvancingWeek}>{isAdvancingWeek ? "Advancing…" : "Advance Week"}</button>
+                  </section>
+                )}
+                {advanceWeekError && <p className="advance-week__error" role="alert">{advanceWeekError}</p>}
+                <LeagueSchedule games={games} currentWeek={seasonWeek} onSelectGame={openGame} />
               </div>
             )}
             {activeTab === "schedules" && (
               <div className="league-tab-content active">
-                <LeagueSchedules games={games} teams={teams} onSelectGame={openGame} onSelectTeam={setSelectedTeam} />
+                <LeagueSchedules games={games} teams={teams} currentWeek={seasonWeek} onSelectGame={openGame} onSelectTeam={setSelectedTeam} />
               </div>
             )}
             {activeTab === "standings" && (
