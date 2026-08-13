@@ -36,6 +36,33 @@ async function getGamesList() {
       GameId: cell(row, idx("Id")),
     }));
 }
+async function getPublishedArticles() {
+  const { headers, rows } = await sheetRows("Articles");
+  const articles = rows
+    .map((row) => objectFrom(headers, row))
+    .filter((article) => String(article.Id ?? "").trim() !== "")
+    .filter((article) => String(article.Status ?? "").trim().toLowerCase() === "published")
+    .sort((left, right) => {
+      const leftTime = Date.parse(String(left.PublishedAt ?? ""));
+      const rightTime = Date.parse(String(right.PublishedAt ?? ""));
+      return (Number.isNaN(rightTime) ? 0 : rightTime) - (Number.isNaN(leftTime) ? 0 : leftTime);
+    })
+    .map((article) => ({
+      id: String(article.Id ?? ""),
+      season: Number(article.Season) || 0,
+      week: Number(article.Week) || 0,
+      gameId: String(article.GameId ?? ""),
+      type: String(article.Type ?? ""),
+      title: String(article.Title ?? ""),
+      summary: String(article.Summary ?? ""),
+      articleMarkdown: String(article.Article ?? ""),
+      publishedAt: String(article.PublishedAt ?? ""),
+      featured: String(article.Featured ?? "").trim().toLowerCase() === "true",
+      heroImageUrl: String(article.HeroImageUrl ?? ""),
+    }));
+
+  return articles;
+}
 async function getGameState(gameId: string) {
   const { headers, rows } = await sheetRows("Games");
   const row = rows.find((r) => String(r[0]) === String(gameId));
@@ -515,6 +542,7 @@ gameRoutes.get("/teams", async (_req, res, next) => { try { res.json({ teams: aw
 gameRoutes.get("/standings", async (_req, res, next) => { try { res.json({ standings: await getStandingsFromSheet() }); } catch (e) { next(e); } });
 gameRoutes.get("/teams/:team/players", async (req, res, next) => { try { res.json({ players: await getTeamPlayers(req.params.team) }); } catch (e) { next(e); } });
 gameRoutes.get("/games", async (_req, res, next) => { try { res.json({ games: await getGamesList() }); } catch (e) { next(e); } });
+gameRoutes.get("/articles", async (_req, res, next) => { try { res.json({ articles: await getPublishedArticles() }); } catch (e) { next(e); } });
 gameRoutes.get("/games/:gameId/state", async (req, res, next) => { try { res.json({ gameState: await getGameState(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/games/:gameId/play-history", async (req, res, next) => { try { res.json({ plays: await getPlayHistory(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/frontend-settings", async (_req, res, next) => { try { res.json(await getFrontendSettingsFromSheet()); } catch (e) { next(e); } });

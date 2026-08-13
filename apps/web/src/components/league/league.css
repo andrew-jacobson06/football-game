@@ -253,15 +253,38 @@
   padding: 2.5vw;
 }
 .news-secondary-link {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: inherit;
   text-decoration: none;
+  text-align: left;
   font-size: clamp(20px, 4vw, 24px);
   font-weight: bold;
+  cursor: pointer;
 }
+.news-secondary-link:focus-visible,
+.article-view__back:focus-visible { outline: 3px solid var(--control-accent); outline-offset: 4px; }
+.news-secondary-status { color: var(--text-muted); }
 .news-secondary-headline {
   margin: 0 0 1vw;
   font-size: clamp(24px, 4vw, 28px);
 }
+.article-view { min-height: calc(100vh - 170px); padding: clamp(20px, 4vw, 64px); background: var(--surface-canvas); }
+.article-view__back { margin: 0 auto clamp(20px, 3vw, 36px); padding: 10px 0; display: block; width: min(100%, 900px); color: var(--text-link); background: transparent; border: 0; text-align: left; font-weight: 700; cursor: pointer; }
+.article-view__hero { width: min(100%, 1100px); height: clamp(230px, 48vw, 560px); margin: 0 auto; overflow: hidden; border-radius: 14px; background: var(--surface-subtle); box-shadow: 0 12px 32px var(--shadow-color); }
+.article-view__hero img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.article-view__content { width: min(100%, 820px); margin: clamp(28px, 5vw, 64px) auto 0; }
+.article-view__meta { color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.article-view h1 { margin: 12px 0 18px; color: var(--text-primary); font-size: clamp(2.1rem, 6vw, 4.5rem); line-height: 1.04; letter-spacing: -.035em; }
+.article-view__dek { color: var(--text-secondary); font-size: clamp(1.15rem, 2.5vw, 1.45rem); line-height: 1.55; }
+.article-view__body { margin-top: clamp(28px, 5vw, 56px); color: var(--text-primary); font-size: clamp(1rem, 2vw, 1.16rem); line-height: 1.8; }
+.article-view__body h1 { display: none; }
+.article-view__body h2 { margin: 2.2em 0 .6em; font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.2; }
+.article-view__body p { margin: 0 0 1.35em; }
+.article-view__body a { color: var(--text-link); }
 @media (min-width: 1200px) {
   .news-secondary-grid {
     grid-template-columns: repeat(3, 1fr);
