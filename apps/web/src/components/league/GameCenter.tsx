@@ -11,7 +11,7 @@ import {
 import {
   getFrontendSettings,
   getGameState,
-  getPlayerStats,
+  getSeasonStats,
   getTeams,
   getPlayerTraits,
   getPlayHistory,
@@ -54,7 +54,7 @@ const teamValue = (team: LeagueTeam | undefined, ...keys: string[]) => {
 };
 const matchesTeam = (team: LeagueTeam, key: unknown) => {
   const wanted = normalizedTeamKey(key);
-  
+
   // Never allow a missing/blank team key to match.
   if (!wanted) return false;
 
@@ -1437,16 +1437,13 @@ function PregameMatchup({
   game,
   home,
   away,
-  players,
   stats,
 }: {
   game: LeagueGame;
   home?: LeagueTeam;
   away?: LeagueTeam;
-  players: Play[];
   stats: Record<string, string>[];
 }) {
-  const playerTeam = new Map(players.map((player) => [normalizedTeamKey(player.name ?? player.Name), player.team ?? player.Team]));
   const categories = [
     { label: "Passing", fields: ["Passing Yards", "Pass Yards", "PassYards"] },
     { label: "Rushing", fields: ["Rushing Yards", "Rush Yards", "Yards"] },
@@ -1460,15 +1457,7 @@ function PregameMatchup({
   ) =>
     stats
       .filter((row) => {
-        const playerName = normalizedTeamKey(
-          row.Player ?? row.Name,
-        );
-
-        const statTeam =
-          row.Team ||
-          playerTeam.get(playerName);
-
-        return matchesTeam(team ?? {}, statTeam);
+        return matchesTeam(team ?? {}, row.Team);
       })
       .map((row) => ({
         name: String(row.Player ?? row.Name ?? "—"),
@@ -1569,7 +1558,7 @@ export function GameCenter({
       getPlayerTraits(),
       getFrontendSettings(),
       getTeams(),
-      getPlayerStats(),
+      getSeasonStats(),
     ])
       .then(([stateRes, historyRes, playerRes, settingsRes, teamsRes, statsRes]) => {
         if (!active) return;
@@ -1578,17 +1567,13 @@ export function GameCenter({
         const loadedTeams = teamsRes.teams as LeagueTeam[];
         const normalizedGame = normalizeGame(game, stateRes.gameState);
 
-        console.log("ABOUT TO SET TEAMS", loadedTeams.length);
-
         // Set independent API-backed state immediately. If later player/fatigue
         // processing throws, the team metadata and matchup data still load.
         setTeams(loadedTeams);
-        setSeasonStats(statsRes.playerStats);
+        setSeasonStats(statsRes.seasonStats);
         setSettings(loadedSettings);
         setCurrentGame(normalizedGame);
         setHistory(historyRes.plays);
-
-        console.log("CALLED setTeams");
 
         const loadedPlayers = playerRes.players.map((player) => {
           const team = loadedTeams.find((candidate) =>
@@ -1639,7 +1624,6 @@ export function GameCenter({
         );
       })
       .catch((error: unknown) => {
-        console.error("GAME CENTER LOAD FAILED:", error);
         setLog((l) => [
           `Failed to load live game data: ${error instanceof Error ? error.message : String(error)}`,
           ...l,
@@ -1649,10 +1633,6 @@ export function GameCenter({
       active = false;
     };
   }, [game]);
-
-  useEffect(() => {
-    console.log("TEAMS STATE ACTUALLY CHANGED:", teams.length, teams);
-  }, [teams]);
 
   useEffect(() => () => {
     if (tossTimerRef.current !== null) window.clearTimeout(tossTimerRef.current);
@@ -1973,7 +1953,6 @@ export function GameCenter({
                 game={currentGame}
                 home={homeTeamDetails}
                 away={awayTeamDetails}
-                players={players}
                 stats={seasonStats}
               />
             </>
