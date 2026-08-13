@@ -13,6 +13,8 @@ export type LeagueGame = {
   Distance: string | number;
   BallOn: string | number;
   Possession: "Home" | "Away" | string;
+  /** Team that received the opening kickoff; the other team receives in Q3. */
+  OpeningPossession?: "Home" | "Away" | string;
   Week?: string | number;
   "Kickoff Time"?: string;
   Date?: string;

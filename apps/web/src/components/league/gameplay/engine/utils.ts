@@ -81,6 +81,40 @@ export function advanceQuarter(game: LeagueGame, secondsUsed: number) {
   } else if (left === 0 && Number(game.Qtr) >= 4) qtr = "FINAL";
   return { qtr, time };
 }
+
+/**
+ * Ends the first-half drive and awards the second-half opening possession to
+ * the team that kicked off to begin the game. This is intentionally applied
+ * after the play outcome so a score/turnover on the final play is still
+ * recorded before the halftime reset wins.
+ */
+export function applyHalftimeRules<T extends LeagueGame>(
+  previous: LeagueGame,
+  updated: T,
+): T {
+  if (Number(previous.Qtr) !== 2 || Number(updated.Qtr) !== 3) return updated;
+
+  const openingPossession = previous.OpeningPossession;
+  if (openingPossession !== "Home" && openingPossession !== "Away") {
+    return updated;
+  }
+
+  const possession = openingPossession === "Home" ? "Away" : "Home";
+  const ballOn = kickoffSpot(possession);
+  return {
+    ...updated,
+    EndOfHalf: true,
+    HalfEndBallOn: updated.BallOn,
+    Possession: possession,
+    BallOn: ballOn,
+    Previous: ballOn,
+    DriveStart: ballOn,
+    Down: 1,
+    Distance: 10,
+    HomeTimeouts: 3,
+    AwayTimeouts: 3,
+  };
+}
 export function clockRunoff(
   mode: ClockMode = "Normal",
   base = randomInt(4, 12),

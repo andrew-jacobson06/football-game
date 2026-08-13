@@ -1,6 +1,6 @@
 import type { LeagueGame } from "../../types";
 import type { EngineContext, PlayCallOptions } from "./types";
-import { advanceQuarter, kickoffSpot, n, randomInt, switchPoss } from "./utils";
+import { advanceQuarter, applyHalftimeRules, kickoffSpot, n, randomInt, switchPoss } from "./utils";
 import { buildResult } from "./playLogger";
 
 export function punt(game: LeagueGame, ctx: EngineContext) {
@@ -16,7 +16,7 @@ export function punt(game: LeagueGame, ctx: EngineContext) {
   );
   const possession = switchPoss(game);
   const clock = advanceQuarter(game, randomInt(5, 8));
-  const updated = {
+  const updated = applyHalftimeRules(game, {
     ...game,
     Qtr: clock.qtr,
     Time: clock.time,
@@ -26,7 +26,7 @@ export function punt(game: LeagueGame, ctx: EngineContext) {
     Previous: game.BallOn,
     DriveStart: ball,
     Possession: possession,
-  };
+  });
   return buildResult(
     game,
     updated,
@@ -56,7 +56,7 @@ export function kickFG(game: LeagueGame, ctx: EngineContext) {
   const possession = switchPoss(game);
   const clock = advanceQuarter(game, randomInt(3, 8));
   const spot = kickoffSpot(possession);
-  const updated = {
+  const updated = applyHalftimeRules(game, {
     ...game,
     HomeScore: hs,
     AwayScore: as,
@@ -69,7 +69,7 @@ export function kickFG(game: LeagueGame, ctx: EngineContext) {
     DriveStart: spot,
     Possession: possession,
     pendingFGTeam: undefined,
-  };
+  });
   return buildResult(
     game,
     updated,
@@ -95,7 +95,7 @@ export function goForTwo(game: LeagueGame, ctx: EngineContext) {
   }
   const possession = switchPoss(game);
   const spot = kickoffSpot(possession);
-  const updated = {
+  const updated = applyHalftimeRules(game, {
     ...game,
     HomeScore: hs,
     AwayScore: as,
@@ -104,7 +104,7 @@ export function goForTwo(game: LeagueGame, ctx: EngineContext) {
     BallOn: spot,
     DriveStart: spot,
     Possession: possession,
-  };
+  });
   return buildResult(
     game,
     updated,
@@ -137,13 +137,13 @@ export function handleTimeout(game: LeagueGame, ctx: EngineContext) {
 }
 export function spikeBall(game: LeagueGame, ctx: EngineContext) {
   const clock = advanceQuarter(game, 1);
-  const updated = {
+  const updated = applyHalftimeRules(game, {
     ...game,
     Qtr: clock.qtr,
     Time: clock.time,
     Down: Math.min(4, n(game.Down) + 1),
     Distance: game.Distance,
-  };
+  });
   return buildResult(
     game,
     updated,
@@ -165,13 +165,13 @@ export function kneel(
   const clock = advanceQuarter(game, 40);
   const ball =
     game.Possession === "Home" ? n(game.BallOn) - 1 : n(game.BallOn) + 1;
-  const updated = {
+  const updated = applyHalftimeRules(game, {
     ...game,
     Qtr: clock.qtr,
     Time: clock.time,
     Down: Math.min(4, n(game.Down) + 1),
     BallOn: ball,
-  };
+  });
   return buildResult(
     game,
     updated,
