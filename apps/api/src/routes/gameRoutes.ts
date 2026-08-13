@@ -164,27 +164,6 @@ async function getTeamPlayers(teamAbbrev: string) {
     Stats: statsByName.get(name) ?? null,
   }));
 }
-async function getSeasonStats() {
-  const [stats, assignments] = await Promise.all([
-    readSheetObjects("StatHistory!A1:ZZ"),
-    readSheetObjects("PlayerTeams!A1:B"),
-  ]);
-  const teamByPlayer = new Map(
-    assignments
-      .map((assignment) => [
-        String(assignment.Name ?? assignment.Player ?? "").trim().toLowerCase(),
-        String(assignment.Team ?? "").trim(),
-      ] as const)
-      .filter(([name]) => name),
-  );
-
-  // StatHistory identifies a row by player, not by team. Attach the current
-  // PlayerTeams assignment so consumers can calculate team-specific leaders.
-  return stats.map((row) => {
-    const player = String(row.Player ?? row.Name ?? "").trim();
-    return { ...row, Team: teamByPlayer.get(player.toLowerCase()) ?? "" };
-  });
-}
 function normalizeSettingLabel(label: unknown) {
   return String(label || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -474,7 +453,6 @@ async function savePlayAndGameWithRetry(data: Record<string, unknown>, gameId: s
 gameRoutes.get("/health", (_req, res) => res.json({ ok: true, app: "football-game-api", message: "API is running" }));
 gameRoutes.get("/players", async (_req, res, next) => { try { res.json({ players: await getPlayersWithTeamJerseys() }); } catch (e) { next(e); } });
 gameRoutes.get("/player-stats", async (_req, res, next) => { try { res.json({ playerStats: await readSheetObjects("PlayerStats!A1:AJ") }); } catch (e) { next(e); } });
-gameRoutes.get("/season-stats", async (_req, res, next) => { try { res.json({ seasonStats: await getSeasonStats() }); } catch (e) { next(e); } });
 gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
   try {
     const [gamesSheet, historySheet, playerTeams] = await Promise.all([
