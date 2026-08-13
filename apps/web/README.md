@@ -1,5 +1,21 @@
 # React + TypeScript + Vite
 
+## Local development
+
+Install the web app's locked dependencies before starting Vite, and repeat this
+step after pulling a change to `package.json` or `package-lock.json`:
+
+```sh
+cd apps/web
+npm ci
+npm run dev
+```
+
+If Vite reports that it cannot resolve an installed package (for example,
+`react-markdown`), stop the development server, run `npm ci` from `apps/web`,
+and then restart the server. This refreshes `node_modules` from the committed
+lockfile instead of leaving Vite to use a stale installation.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
