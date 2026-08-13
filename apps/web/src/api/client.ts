@@ -99,6 +99,12 @@ export async function getGamesList(): Promise<{
 }> {
   return getJson("/games", "Failed to load games from backend API");
 }
+export async function getSeason(): Promise<{ week: number }> {
+  return getJson("/season", "Failed to load the current season week");
+}
+export async function advanceSeason(): Promise<{ ok: boolean; week: number }> {
+  return postJson("/season/advance", {}, "Failed to advance the season week");
+}
 export async function getGameState(
   gameId: string | number,
 ): Promise<{ gameState: Record<string, unknown> | null }> {
