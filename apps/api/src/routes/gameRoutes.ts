@@ -94,7 +94,9 @@ async function getGameState(gameId: string) {
 }
 async function getTeamsFromSheet() {
   const { headers, rows } = await sheetRows("Teams");
-  return rows.filter((r) => r?.[0] !== "" && r?.[0] != null).slice(0, 10).map((r) => objectFrom(headers, r));
+  return rows
+    .filter((r) => r?.[0] !== "" && r?.[0] != null)
+    .map((r) => objectFrom(headers, r));
 }
 async function getStandingsFromSheet() {
   const standings = await readSheetObjects("standings!A1:Z");
