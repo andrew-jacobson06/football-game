@@ -73,6 +73,22 @@
   background: var(--gray-medium);
   box-shadow: 0 8px 28px var(--shadow-color);
 }
+.pregame-start { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 22px auto 0; color: var(--text-secondary); font-weight: 700; }
+.pregame-start-button, .toss-actions button { border: 1px solid var(--control-border); border-radius: 10px; background: var(--control-bg); color: var(--text-primary); padding: 11px 22px; font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 5px 16px var(--shadow-color); }
+.pregame-start-button:hover, .pregame-start-button:focus-visible, .toss-actions button:hover, .toss-actions button:focus-visible { border-color: var(--control-border-hover); background: var(--control-bg-hover); outline: 3px solid color-mix(in srgb, var(--control-accent) 28%, transparent); }
+.toss-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: color-mix(in srgb, var(--surface-canvas) 78%, transparent); backdrop-filter: blur(8px); }
+.toss-dialog { width: min(460px, 100%); box-sizing: border-box; padding: clamp(24px, 5vw, 42px); border: 1px solid var(--border-color); border-radius: 18px; background: var(--surface-raised); color: var(--text-primary); text-align: center; box-shadow: 0 24px 70px var(--shadow-color); }
+.toss-kicker { color: var(--text-secondary); font-size: .72rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+.toss-dialog h2 { margin: 8px 0 20px; }
+.toss-dialog p { margin: 20px 0 0; color: var(--text-secondary); line-height: 1.5; }
+.toss-dialog strong { color: var(--text-primary); }
+.toss-coin { display: grid; width: 112px; height: 112px; margin: 0 auto; place-items: center; border: 7px double #8a6415; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff2a8, #d49a22 58%, #8a6415); color: #4b3508; font-family: Georgia, serif; font-size: 3.2rem; font-weight: 900; box-shadow: 0 10px 26px var(--shadow-color); }
+.toss-coin.is-flipping { animation: coin-flip 1.4s cubic-bezier(.2,.7,.3,1); }
+.toss-actions { display: flex; justify-content: center; gap: 12px; margin-top: 24px; }
+.toss-error { color: var(--accent-red) !important; font-weight: 700; }
+@keyframes coin-flip { 0% { transform: rotateY(0) translateY(0) scale(1); } 45% { transform: rotateY(900deg) translateY(-48px) scale(1.12); } 100% { transform: rotateY(1800deg) translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .toss-coin.is-flipping { animation-duration: .01ms; } }
+@media (max-width: 520px) { .pregame-start { flex-direction: column; gap: 10px; } .toss-actions { flex-direction: column; } }
 
 .pregame-heading { margin-bottom: 20px; text-align: center; }
 .pregame-heading span, .pregame-team-card header span { color: var(--text-muted); font-size: .7rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
