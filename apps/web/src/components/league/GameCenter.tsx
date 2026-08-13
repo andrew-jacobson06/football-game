@@ -128,11 +128,13 @@ const num = (v: unknown) => Number(v) || 0;
 /**
  * Reads the first populated value from a play record using several possible
  * key names. Play history can contain backend-style PascalCase, lower-case, or
- * legacy field names, so the UI uses this small compatibility layer instead of
- * hard-coding one spelling everywhere.
+ * legacy field names, and a new game has no first play yet. This compatibility
+ * layer handles both cases instead of hard-coding one spelling everywhere.
  */
-const playField = (p: Play, ...keys: string[]) =>
-  keys.map((k) => p[k]).find((v) => v !== undefined && v !== null && v !== "");
+const playField = (p: Play | null | undefined, ...keys: string[]) =>
+  keys
+    .map((k) => p?.[k])
+    .find((v) => v !== undefined && v !== null && v !== "");
 const logoSrc = (value: unknown) => {
   const src = str(value).trim();
   return src || undefined;
