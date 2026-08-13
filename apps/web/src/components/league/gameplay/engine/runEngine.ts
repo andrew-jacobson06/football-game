@@ -39,7 +39,7 @@ import {
   performBruiserCheck,
   performCarryDefenderChecks,
 } from "./runEngineHelper";
-import { applyFatigue } from "./fatigueEngine";
+import { applyRunFatigue } from "./fatigueEngine";
 import {
   runPlayJSONAnimationBuilder,
   type FirstRunChallenge,
@@ -593,9 +593,9 @@ export function runPlay(
     ),
   });
 
-  // Charge the rush after resolving the play so this snap uses the stamina the
-  // runner brought into it and every subsequent snap sees the updated score.
-  applyFatigue(ctx, runnerName, "Run");
+  // Charge only the ball carrier after resolution, so this snap uses the total
+  // energy the runner brought into it and the next snap sees the new fatigue.
+  applyRunFatigue(ctx, runnerName);
 
   return playResult;
 }
