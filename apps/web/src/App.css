@@ -24,6 +24,12 @@
   --control-border-hover: #7f8792;
   --control-accent: #8fc2ff;
   --stat-highlight: rgba(91, 155, 213, 0.16);
+  --profile-hero-bg: linear-gradient(110deg, #111419, #242930 58%, #181b20);
+  --profile-hero-border: #434850;
+  --profile-hero-divider: rgba(255, 255, 255, 0.11);
+  --profile-decor-border: rgba(255, 255, 255, 0.22);
+  --profile-decor-bg: rgba(255, 255, 255, 0.035);
+  --profile-placeholder-bg: #343b44;
 }
 
 :root[data-theme="light"] {
@@ -48,6 +54,12 @@
   --control-border-hover: #697786;
   --control-accent: #075eb8;
   --stat-highlight: rgba(7, 94, 184, 0.12);
+  --profile-hero-bg: linear-gradient(110deg, #ffffff, #eef2f6 58%, #e2e8ee);
+  --profile-hero-border: #c9d1da;
+  --profile-hero-divider: rgba(24, 32, 42, 0.14);
+  --profile-decor-border: rgba(24, 32, 42, 0.16);
+  --profile-decor-bg: rgba(255, 255, 255, 0.32);
+  --profile-placeholder-bg: #d8dee5;
 }
 
 body {

@@ -44,12 +44,19 @@ import type {
 } from "./gameplay/gameEngine";
 
 const EXPECTED_PLAYERS_PER_SIDE = 8;
-const teamValue = (team: LeagueTeam | undefined, key: string) =>
-  String(team?.[key] ?? "").trim();
 const normalizedTeamKey = (value: unknown) => String(value ?? "").trim().toLowerCase();
+const normalizedFieldKey = (value: unknown) => normalizedTeamKey(value).replace(/[^a-z0-9]/g, "");
+const teamValue = (team: LeagueTeam | undefined, ...keys: string[]) => {
+  if (!team) return "";
+  const wanted = new Set(keys.map(normalizedFieldKey));
+  const entry = Object.entries(team).find(([key, value]) => wanted.has(normalizedFieldKey(key)) && value != null);
+  return String(entry?.[1] ?? "").trim();
+};
 const matchesTeam = (team: LeagueTeam, key: unknown) => {
   const wanted = normalizedTeamKey(key);
-  return [team.Abbrev, team.Team, team.Name, `${team.Location ?? team.City ?? ""} ${team.Name ?? team.Nickname ?? ""}`]
+  const location = teamValue(team, "Location", "City");
+  const name = teamValue(team, "Name", "Nickname");
+  return [teamValue(team, "Abbrev", "Abbreviation"), teamValue(team, "Team"), teamValue(team, "ID"), name, `${location} ${name}`]
     .some((value) => normalizedTeamKey(value) === wanted);
 };
 const isPregame = (game: LeagueGame) => {
@@ -1444,7 +1451,7 @@ function PregameMatchup({
     { label: "Sacks", fields: ["Sacks", "SACK"] },
   ];
   const leader = (team: LeagueTeam | undefined, fields: string[]) => stats
-    .filter((row) => matchesTeam(team ?? {}, playerTeam.get(normalizedTeamKey(row.Player ?? row.Name))))
+    .filter((row) => matchesTeam(team ?? {}, row.Team ?? playerTeam.get(normalizedTeamKey(row.Player ?? row.Name))))
     .map((row) => ({ name: String(row.Player ?? row.Name ?? "—"), value: seasonStat(row, ...fields) }))
     .sort((a, b) => b.value - a.value)[0];
   const teamCard = (team: LeagueTeam | undefined, side: "home" | "away") => {
