@@ -2,6 +2,7 @@ import type { LeagueGame } from "../../types";
 import type { EngineContext, PlayCallOptions } from "./types";
 import {
   advanceBall,
+  applyHalftimeRules,
   advanceQuarter,
   byName,
   byPosition,
@@ -98,7 +99,7 @@ export function handleSack(
       ["Safety", "Fumble", "TO on Downs"].includes(result),
     ),
   );
-  const updated = {
+  const updated = applyHalftimeRules(game, {
     ...game,
     HomeScore: hs,
     AwayScore: as,
@@ -114,7 +115,7 @@ export function handleSack(
       (fumble.fumble && fumble.recoveredBy !== qbName)
         ? switchPoss(game)
         : game.Possession,
-  };
+  });
   return buildResult(
     game,
     updated,
@@ -373,7 +374,7 @@ export function passPlay(
       ].includes(result),
     ),
   );
-  const updated = {
+  const updated = applyHalftimeRules(game, {
     ...game,
     HomeScore: hs,
     AwayScore: as,
@@ -384,7 +385,7 @@ export function passPlay(
     BallOn: result === "Incomplete" ? game.BallOn : next.ballOn,
     Previous: game.BallOn,
     Possession: possession,
-  };
+  });
   return buildResult(
     game,
     updated,

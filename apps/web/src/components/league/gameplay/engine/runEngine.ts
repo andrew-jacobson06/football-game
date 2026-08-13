@@ -3,6 +3,7 @@ import type { EngineContext, PlayCallOptions } from "./types";
 import { buildResult } from "./playLogger";
 import {
   advanceBall,
+  applyHalftimeRules,
   advanceQuarter,
   byName,
   clockRunoff,
@@ -510,7 +511,7 @@ export function runPlay(
       ["Touchdown", "Safety", "TO on Downs", "Fumble"].includes(result),
     ),
   ); // TRAIT USED: Speed
-  const updated = {
+  const updated = applyHalftimeRules(game, {
     ...game,
     HomeScore: hs,
     AwayScore: as,
@@ -526,7 +527,7 @@ export function runPlay(
         : ((game as unknown as Record<string, unknown>).DriveStart ??
           game.BallOn),
     Possession: possession,
-  };
+  });
 
   const successfulTrucks = runState.log.filter((entry) =>
     /\btrucks\b/i.test(entry),

@@ -376,7 +376,10 @@ function groupPlaysByDrive(plays: Play[], game: LeagueGame): Drive[] {
     if (!player || (type && !["Run", "Pass"].includes(type))) return;
     const possession = str(playField(play, "Possession", "possession"));
     const driveStart = num(playField(play, "DriveStart", "drivestart"));
-    const key = `${possession}-${driveStart}`;
+    const quarter = num(playField(play, "QTR", "Qtr", "quarter"));
+    // The halftime break always terminates a drive, even when the same team
+    // later starts Q3 from a matching field position.
+    const key = `${possession}-${driveStart}-${quarter >= 3 ? "second" : "first"}`;
     if (!current || current.key !== key) {
       current = {
         key,
@@ -400,7 +403,9 @@ function groupPlaysByDrive(plays: Play[], game: LeagueGame): Drive[] {
     ).trim();
     const lastResult = str(playField(last, "Result", "result"));
     drive.result =
-      lastDescription === "Sack" &&
+      str(playField(last, "EndOfHalf", "endofhalf")) === "Yes"
+        ? "End of Half"
+        : lastDescription === "Sack" &&
       playField(last, "RecoveredBy", "recoveredby")
         ? "Fumble"
         : lastResult;
@@ -1559,6 +1564,17 @@ export function GameCenter({
           historyRes.plays,
         );
         const normalizedGame = normalizeGame(game, stateRes.gameState);
+        const firstPossession = str(
+          playField(historyRes.plays[0], "Possession", "possession"),
+        );
+        normalizedGame.OpeningPossession =
+          firstPossession === "Home" || firstPossession === "Away"
+            ? firstPossession
+            : Number(normalizedGame.Qtr) === 1 &&
+                (normalizedGame.Possession === "Home" ||
+                  normalizedGame.Possession === "Away")
+              ? normalizedGame.Possession
+              : normalizedGame.OpeningPossession;
         setCurrentGame(normalizedGame);
         setIsGameFieldCollapsed(isPregame(normalizedGame));
         setHistory(historyRes.plays);
@@ -1638,6 +1654,7 @@ export function GameCenter({
       Distance: 10,
       BallOn: ballOn,
       Possession: receivingTeam,
+      OpeningPossession: receivingTeam,
       DriveStart: ballOn,
       Previous: ballOn,
     } as LeagueGame;
