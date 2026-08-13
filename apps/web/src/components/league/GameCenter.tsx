@@ -11,7 +11,7 @@ import {
 import {
   getFrontendSettings,
   getGameState,
-  getSeasonStats,
+  getPlayerStats,
   getTeams,
   getPlayerTraits,
   getPlayHistory,
@@ -63,6 +63,8 @@ const matchesTeam = (team: LeagueTeam, key: unknown) => {
   return [teamValue(team, "Abbrev", "Abbreviation"), teamValue(team, "Team"), teamValue(team, "ID"), name, `${location} ${name}`]
     .some((value) => normalizedTeamKey(value) === wanted);
 };
+const findTeam = (teams: LeagueTeam[], ...keys: unknown[]) =>
+  teams.find((team) => keys.some((key) => matchesTeam(team, key)));
 const isPregame = (game: LeagueGame) => {
   const quarter = String(game.Qtr ?? "").trim().toUpperCase();
   return !quarter || quarter === "0" || quarter === "UNSTARTED" || quarter === "PREGAME";
@@ -231,6 +233,7 @@ function normalizeGame(
   if (!state) return game;
   return {
     ...game,
+    ...(state as Record<string, unknown>),
     GameId: (state.Id ?? game.GameId) as string | number,
     Home: str(state.Home ?? game.Home),
     Away: str(state.Away ?? game.Away),
@@ -244,7 +247,6 @@ function normalizeGame(
     Possession: str(state.Possession ?? game.Possession),
     HomeLogo: str(state.HomeLogo ?? game.HomeLogo ?? ""),
     AwayLogo: str(state.AwayLogo ?? game.AwayLogo ?? ""),
-    ...(state as Record<string, unknown>),
   };
 }
 /**
@@ -1437,13 +1439,21 @@ function PregameMatchup({
   game,
   home,
   away,
+  players,
   stats,
 }: {
   game: LeagueGame;
   home?: LeagueTeam;
   away?: LeagueTeam;
+  players: Play[];
   stats: Record<string, string>[];
 }) {
+  const playerTeams = new Map(
+    players.map((player) => [
+      normalizedTeamKey(player.name ?? player.Name),
+      player.team ?? player.Team,
+    ]),
+  );
   const categories = [
     { label: "Passing", fields: ["Passing Yards", "Pass Yards", "PassYards"] },
     { label: "Rushing", fields: ["Rushing Yards", "Rush Yards", "Yards"] },
@@ -1456,9 +1466,12 @@ function PregameMatchup({
     fields: string[],
   ) =>
     stats
-      .filter((row) => {
-        return matchesTeam(team ?? {}, row.Team);
-      })
+      .filter((row) =>
+        matchesTeam(
+          team ?? {},
+          row.Team ?? playerTeams.get(normalizedTeamKey(row.Player ?? row.Name)),
+        ),
+      )
       .map((row) => ({
         name: String(row.Player ?? row.Name ?? "—"),
         value: seasonStat(row, ...fields),
@@ -1541,26 +1554,25 @@ export function GameCenter({
     [players, settings, history.length],
   );
   const homeTeamDetails = useMemo(() => {
-    const homeAbbrev = String(currentGame.Home || "")
-      .trim()
-      .toLowerCase();
-    return teams.find((team) => matchesTeam(team, homeAbbrev));
-  }, [currentGame.Home, teams]);
+    return findTeam(teams, currentGame.Home, game.Home, currentGame.HomeName);
+  }, [currentGame.Home, currentGame.HomeName, game.Home, teams]);
   const awayTeamDetails = useMemo(
-    () => teams.find((team) => matchesTeam(team, currentGame.Away)),
-    [currentGame.Away, teams],
+    () => findTeam(teams, currentGame.Away, game.Away, currentGame.AwayName),
+    [currentGame.Away, currentGame.AwayName, game.Away, teams],
   );
   useEffect(() => {
     let active = true;
+
+    // Team metadata drives the uniform preview, so it must not be held hostage
+    // by the optional season-leader request.
     Promise.all([
       getGameState(game.GameId),
       getPlayHistory(game.GameId),
       getPlayerTraits(),
       getFrontendSettings(),
       getTeams(),
-      getSeasonStats(),
     ])
-      .then(([stateRes, historyRes, playerRes, settingsRes, teamsRes, statsRes]) => {
+      .then(([stateRes, historyRes, playerRes, settingsRes, teamsRes]) => {
         if (!active) return;
 
         const loadedSettings = normalizeFrontendSettings(settingsRes);
@@ -1570,7 +1582,6 @@ export function GameCenter({
         // Set independent API-backed state immediately. If later player/fatigue
         // processing throws, the team metadata and matchup data still load.
         setTeams(loadedTeams);
-        setSeasonStats(statsRes.seasonStats);
         setSettings(loadedSettings);
         setCurrentGame(normalizedGame);
         setHistory(historyRes.plays);
@@ -1627,6 +1638,20 @@ export function GameCenter({
         setLog((l) => [
           `Failed to load live game data: ${error instanceof Error ? error.message : String(error)}`,
           ...l,
+        ]);
+      });
+
+    // PlayerStats is the workbook's existing season-total source. Keep this
+    // optional request separate so leader data cannot block teams or players.
+    getPlayerStats()
+      .then((response) => {
+        if (active) setSeasonStats(response.playerStats);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setLog((current) => [
+          `Failed to load season leaders: ${error instanceof Error ? error.message : String(error)}`,
+          ...current,
         ]);
       });
     return () => {
@@ -1953,6 +1978,7 @@ export function GameCenter({
                 game={currentGame}
                 home={homeTeamDetails}
                 away={awayTeamDetails}
+                players={players}
                 stats={seasonStats}
               />
             </>
