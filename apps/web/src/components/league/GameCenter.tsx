@@ -131,10 +131,17 @@ const num = (v: unknown) => Number(v) || 0;
  * legacy field names, and a new game has no first play yet. This compatibility
  * layer handles both cases instead of hard-coding one spelling everywhere.
  */
-const playField = (p: Play | null | undefined, ...keys: string[]) =>
-  keys
-    .map((k) => p?.[k])
-    .find((v) => v !== undefined && v !== null && v !== "");
+const playField = (p: Play | null | undefined, ...keys: string[]) => {
+  const populated = (value: unknown) =>
+    value !== undefined && value !== null && value !== "";
+  const directValue = keys.map((key) => p?.[key]).find(populated);
+  if (directValue !== undefined || !p) return directValue;
+
+  const normalizedKeys = new Set(keys.map(normalizedFieldKey));
+  return Object.entries(p).find(
+    ([key, value]) => normalizedKeys.has(normalizedFieldKey(key)) && populated(value),
+  )?.[1];
+};
 const logoSrc = (value: unknown) => {
   const src = str(value).trim();
   return src || undefined;
@@ -487,6 +494,23 @@ function PlayByPlayTab({
       num(playField(play, "AwayScore", "awayscore")) > num(playField(previous, "AwayScore", "awayscore"));
   });
   const formatDuration = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  const playResult = (play: Play) => {
+    const result = str(playField(play, "Result", "result"));
+    const type = str(playField(play, "PlayType", "playtype"));
+    const yards = num(playField(play, "Yards", "yards"));
+    return result && result !== "Normal" ? result : `${yards}-yd ${type || "Play"}`;
+  };
+  const playSpot = (play: Play) => {
+    const rawSpot = playField(play, "BallOn", "ballon");
+    if (typeof rawSpot === "string" && /[a-z]/i.test(rawSpot)) return rawSpot;
+    const yard = parseInteger(rawSpot, 50);
+    if (yard === 50) return "50";
+    const possession = str(playField(play, "Possession", "possession"));
+    const fieldSide = yard < 50
+      ? (possession === "Home" ? game.Home : game.Away)
+      : (possession === "Home" ? game.Away : game.Home);
+    return `${fieldSide} ${yard > 50 ? 100 - yard : yard}`;
+  };
   return (
     <div className="drive-log" id="playTimeline">
       <div className="play-view-tabs" role="tablist" aria-label="Play-by-play filter">
@@ -531,10 +555,7 @@ function PlayByPlayTab({
                 (playField(play, "Distance", "distance") as string | number) ??
                   10,
               );
-              const spot = formatBallOnForPoss(
-                (playField(play, "BallOn", "ballon") as string | number) ?? 50,
-                str(playField(play, "Possession", "possession")),
-              );
+              const spot = playSpot(play);
               return (
                 <div
                   className="play-row"
@@ -542,8 +563,9 @@ function PlayByPlayTab({
                     play.PlayId ?? play.playid ?? `${drive.key}-${i}`,
                   )}
                 >
-                  <div className="play-situation">
-                    {formatClock((playField(play, "Time", "time") as string | number) ?? 0)} · {formatQuarter((playField(play, "QTR", "Qtr", "quarter") as string | number) ?? 0)} · {downDist} · Ball on {spot}
+                  <strong className="play-result">{playResult(play)}</strong>
+                  <div className="play-time-quarter">
+                    {formatClock((playField(play, "Time", "time") as string | number) ?? 0)} - {formatQuarter((playField(play, "qtr", "quarter") as string | number) ?? 1)}
                   </div>
                   <div
                     className="play-desc"
@@ -551,6 +573,7 @@ function PlayByPlayTab({
                       __html: playText(play, game),
                     }}
                   />
+                  <div className="play-situation">{downDist} at {spot}</div>
                 </div>
               );
             })}

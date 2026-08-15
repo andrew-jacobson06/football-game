@@ -1633,14 +1633,21 @@
   padding: 2vw 4vw;
 }
 
+.play-result,
 .play-situation {
+  display: block;
   font-weight: bold;
   color: var(--text-light);
 }
 
+.play-time-quarter {
+  margin-top: 2px;
+  color: var(--text-secondary);
+}
+
 .play-desc {
   color: var(--text-muted);
-  margin-top: 0.5vw;
+  margin: 8px 0;
 }
 
 .scoring-play-list {
