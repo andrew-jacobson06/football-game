@@ -833,13 +833,15 @@ textarea {
 
 .token.pass-route-eligible { cursor: pointer; }
 .token.run-player-eligible { cursor: pointer; }
-.token.run-player-eligible .player-marker {
+.token.run-player-eligible .player-aura {
   opacity: 1;
-  border-color: var(--control-accent);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--control-accent) 28%, transparent);
+  background: color-mix(in srgb, var(--control-accent) 42%, transparent);
+  box-shadow: 0 0 18px 7px color-mix(in srgb, var(--control-accent) 48%, transparent);
 }
-.token.run-player-selected .player-marker {
-  box-shadow: 0 0 0 7px color-mix(in srgb, var(--control-accent) 48%, transparent);
+.token.run-player-selected .player-aura {
+  opacity: 1;
+  background: color-mix(in srgb, var(--status-success) 58%, transparent);
+  box-shadow: 0 0 20px 9px color-mix(in srgb, var(--status-success) 62%, transparent);
 }
 .token.pass-route-assigned .player-marker { border-color: var(--control-border-hover); }
 .token.pass-route-selected .player-marker {
@@ -859,7 +861,10 @@ textarea {
 }
 
 .pass-setup-toolbar {
-  top: 12px;
+  position: fixed;
+  z-index: 410;
+  top: auto;
+  bottom: 12px;
   left: 50%;
   width: min(620px, calc(100% - 24px));
   min-height: 64px;
@@ -889,7 +894,7 @@ textarea {
   position: fixed;
   left: 50%;
   right: auto;
-  bottom: 12px;
+  bottom: 96px;
   top: auto;
   width: min(720px, calc(100% - 24px));
   min-height: 150px;

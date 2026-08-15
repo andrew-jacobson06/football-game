@@ -2067,10 +2067,6 @@ export function GameCenter({
                   setPassSetup(false);
                   setSelectedRoutePlayer("");
                 }}
-                onPassPlay={() => {
-                  setPassSetup(false);
-                  setSelectedRoutePlayer("");
-                }}
                 onRunnerSelect={(runner) =>
                   setPlayOptions((current) => ({ ...current, runner }))
                 }
