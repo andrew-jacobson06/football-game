@@ -375,7 +375,27 @@ type Drive = {
   awayScore: unknown;
   yards: number;
   playsCount: number;
+  duration: number;
 };
+
+const isDrivePlay = (play: Play) => {
+  const type = str(playField(play, "PlayType", "playtype")).toLowerCase();
+  const result = str(playField(play, "Result", "result")).toLowerCase();
+  return !type.includes("punt") && !type.includes("kick fg") &&
+    type !== "field goal" && result !== "timeout";
+};
+
+const playGameSeconds = (play: Play) => {
+  const quarter = Math.max(1, parseInteger(playField(play, "QTR", "Qtr", "quarter"), 1));
+  const rawClock = playField(play, "Time", "time");
+  const clock = typeof rawClock === "string" && rawClock.includes(":")
+    ? rawClock.split(":").reduce((minutes, value) => minutes * 60 + num(value), 0)
+    : num(rawClock);
+  return (quarter - 1) * 900 + (900 - clock);
+};
+
+const driveYardsFromSpots = (possession: string, start: number, end: number) =>
+  possession === "Home" ? end - start : start - end;
 /**
  * Groups raw play history into drive sections. A drive is identified by the
  * team in possession plus its starting yard line, then summarized from the last
@@ -386,18 +406,16 @@ function groupPlaysByDrive(plays: Play[], game: LeagueGame): Drive[] {
   const drives: Drive[] = [];
   let current: Drive | null = null;
   plays.forEach((play) => {
-    const player = playField(play, "Player", "Passer", "player");
-    const type = str(playField(play, "PlayType", "playtype"));
-    if (!player || (type && !["Run", "Pass"].includes(type))) return;
     const possession = str(playField(play, "Possession", "possession"));
+    if (!possession) return;
     const driveStart = num(playField(play, "DriveStart", "drivestart"));
     const quarter = num(playField(play, "QTR", "Qtr", "quarter"));
     // The halftime break always terminates a drive, even when the same team
     // later starts Q3 from a matching field position.
-    const key = `${possession}-${driveStart}-${quarter >= 3 ? "second" : "first"}`;
-    if (!current || current.key !== key) {
+    const half = quarter >= 3 ? "second" : "first";
+    if (!current || current.possession !== possession || !current.key.endsWith(half) || (driveStart && current.driveStart !== driveStart)) {
       current = {
-        key,
+        key: `${drives.length}-${possession}-${driveStart}-${half}`,
         possession,
         driveStart,
         plays: [],
@@ -406,12 +424,13 @@ function groupPlaysByDrive(plays: Play[], game: LeagueGame): Drive[] {
         awayScore: game.AwayScore,
         yards: 0,
         playsCount: 0,
+        duration: 0,
       };
       drives.push(current);
     }
     current.plays.push(play);
   });
-  drives.forEach((drive) => {
+  drives.forEach((drive, driveIndex) => {
     const last = drive.plays[drive.plays.length - 1];
     const lastDescription = str(
       playField(last, "Description", "description"),
@@ -428,13 +447,24 @@ function groupPlaysByDrive(plays: Play[], game: LeagueGame): Drive[] {
       playField(last, "HomeScore", "homescore") ?? game.HomeScore;
     drive.awayScore =
       playField(last, "AwayScore", "awayscore") ?? game.AwayScore;
-    const end = num(playField(last, "NewBallOn", "newBallOn", "newballon"));
-    drive.yards =
-      drive.possession === "Home"
-        ? end - drive.driveStart
-        : drive.driveStart - end;
-    drive.playsCount = drive.plays.length;
+    const lastType = str(playField(last, "PlayType", "playtype")).toLowerCase();
+    const isKickEnding = lastType.includes("punt") || lastType.includes("kick fg") || lastType === "field goal";
+    const end = num(playField(last, ...(isKickEnding
+      ? ["BallOn", "ballon"]
+      : ["NewBallOn", "newBallOn", "newballon"])));
+    drive.yards = driveYardsFromSpots(drive.possession, drive.driveStart, end);
+    drive.playsCount = drive.plays.filter(isDrivePlay).length;
+    const previousDrive = drives[driveIndex - 1];
+    const firstQuarter = Math.max(1, parseInteger(playField(drive.plays[0], "QTR", "Qtr", "quarter"), 1));
+    const driveStartedAt = previousDrive
+      ? playGameSeconds(previousDrive.plays[previousDrive.plays.length - 1])
+      : (firstQuarter - 1) * 900;
+    drive.duration = Math.max(0, playGameSeconds(last) - driveStartedAt);
   });
+  const finalState = String(game.Qtr ?? "").toUpperCase();
+  if (drives.length && finalState !== "FINAL" && finalState !== "F") {
+    drives[drives.length - 1].result = "Current Drive";
+  }
   return drives;
 }
 /**
@@ -449,10 +479,22 @@ function PlayByPlayTab({
   game: LeagueGame;
   history: Play[];
 }) {
+  const [view, setView] = useState<"all" | "scoring">("all");
+  const drives = groupPlaysByDrive(history, game);
+  const chronologicalScoring = history.filter((play, index) => {
+    const previous = history[index - 1];
+    return num(playField(play, "HomeScore", "homescore")) > num(playField(previous, "HomeScore", "homescore")) ||
+      num(playField(play, "AwayScore", "awayscore")) > num(playField(previous, "AwayScore", "awayscore"));
+  });
+  const formatDuration = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
   return (
     <div className="drive-log" id="playTimeline">
-      {groupPlaysByDrive(history, game).map((drive) => (
-        <details className="drive-section" key={drive.key} open>
+      <div className="play-view-tabs" role="tablist" aria-label="Play-by-play filter">
+        <button type="button" role="tab" aria-selected={view === "all"} onClick={() => setView("all")}>All Plays</button>
+        <button type="button" role="tab" aria-selected={view === "scoring"} onClick={() => setView("scoring")}>Scoring Plays</button>
+      </div>
+      {view === "all" && [...drives].reverse().map((drive, driveIndex) => (
+        <details className="drive-section" key={drive.key} open={driveIndex === 0}>
           <summary className="drive-header">
             <span className="drive-toggle" aria-hidden="true">
               ^
@@ -464,7 +506,7 @@ function PlayByPlayTab({
             <span className="drive-overview">
               <span className="drive-result">{drive.result}</span>
               <span className="drive-summary">
-                {drive.playsCount} Plays, {drive.yards} Yards
+                {drive.playsCount} plays, {drive.yards} yards, {formatDuration(drive.duration)}
               </span>
             </span>
             <span className="drive-score">
@@ -483,7 +525,7 @@ function PlayByPlayTab({
             </span>
           </summary>
           <div className="drive-plays">
-            {drive.plays.map((play, i) => {
+            {[...drive.plays].reverse().map((play, i) => {
               const downDist = formatDownDistance(
                 (playField(play, "Down", "down") as string | number) ?? 1,
                 (playField(play, "Distance", "distance") as string | number) ??
@@ -501,12 +543,12 @@ function PlayByPlayTab({
                   )}
                 >
                   <div className="play-situation">
-                    {downDist} at {spot}
+                    {formatClock((playField(play, "Time", "time") as string | number) ?? 0)} · {formatQuarter((playField(play, "QTR", "Qtr", "quarter") as string | number) ?? 0)} · {downDist} · Ball on {spot}
                   </div>
                   <div
                     className="play-desc"
                     dangerouslySetInnerHTML={{
-                      __html: `(${formatClock((playField(play, "Time", "time") as string | number) ?? "0:00")} - ${formatQuarter((playField(play, "QTR", "Qtr", "quarter") as string | number) ?? game.Qtr)}) ${playText(play, game)}`,
+                      __html: playText(play, game),
                     }}
                   />
                 </div>
@@ -515,6 +557,18 @@ function PlayByPlayTab({
           </div>
         </details>
       ))}
+      {view === "scoring" && <div className="scoring-play-list">
+        {[...chronologicalScoring].reverse().map((play, index) => {
+          const drive = drives.find((candidate) => candidate.plays.includes(play));
+          const possession = str(playField(play, "Possession", "possession"));
+          return <article className="scoring-play-card" key={String(play.PlayId ?? play.playid ?? index)}>
+            <TeamLogo className="drive-logo" src={possession === "Home" ? game.HomeLogo : game.AwayLogo} />
+            <div><strong>{str(playField(play, "Result", "result")) || "Score"}</strong><span>{formatClock((playField(play, "Time", "time") as string | number) ?? 0)} · {formatQuarter((playField(play, "QTR", "Qtr", "quarter") as string | number) ?? 0)}</span><p dangerouslySetInnerHTML={{ __html: playText(play, game) }} /><small>{drive ? `${drive.playsCount} plays, ${drive.yards} yards, ${formatDuration(drive.duration)}` : "Scoring play"}</small></div>
+            <div className="scoring-score"><b>{String(playField(play, "HomeScore", "homescore") ?? 0)}</b><b>{String(playField(play, "AwayScore", "awayscore") ?? 0)}</b><span>{game.Home}</span><span>{game.Away}</span></div>
+          </article>;
+        })}
+        {!chronologicalScoring.length && <p className="empty-play-message">No scoring plays yet.</p>}
+      </div>}
     </div>
   );
 }
@@ -1884,16 +1938,15 @@ export function GameCenter({
     else if (label === "Spike") void persist(spikeBall(currentGame, ctx));
     else if (label === "Kneel") void persist(kneel(currentGame, ctx, options));
   };
-  const drivePlays = history.filter(
-    (p) =>
-      str(playField(p, "Possession", "possession")) === currentGame.Possession,
-  ).length;
-  const driveYards =
-    currentGame.Possession === "Home"
-      ? num(currentGame.BallOn) -
-        num((currentGame as unknown as Play).DriveStart)
-      : num((currentGame as unknown as Play).DriveStart) -
-        num(currentGame.BallOn);
+  const currentDrive = groupPlaysByDrive(history, currentGame).at(-1);
+  const drivePlays = currentDrive?.possession === currentGame.Possession
+    ? currentDrive.playsCount
+    : 0;
+  const driveYards = driveYardsFromSpots(
+    currentGame.Possession,
+    num((currentGame as unknown as Play).DriveStart),
+    num(currentGame.BallOn),
+  );
   const lastPlay = history.length ? playText(history[history.length - 1]) : "";
   return (
     <div id="gameUI">
