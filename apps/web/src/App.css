@@ -23,6 +23,7 @@
   --control-border: #4a4f58;
   --control-border-hover: #7f8792;
   --control-accent: #8fc2ff;
+  --status-success: #4ade80;
   --stat-highlight: rgba(91, 155, 213, 0.16);
   --profile-hero-bg: linear-gradient(110deg, #111419, #242930 58%, #181b20);
   --profile-hero-border: #434850;
@@ -53,6 +54,7 @@
   --control-border: #aeb8c3;
   --control-border-hover: #697786;
   --control-accent: #075eb8;
+  --status-success: #15803d;
   --stat-highlight: rgba(7, 94, 184, 0.12);
   --profile-hero-bg: linear-gradient(110deg, #ffffff, #eef2f6 58%, #e2e8ee);
   --profile-hero-border: #c9d1da;

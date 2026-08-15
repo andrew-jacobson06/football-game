@@ -455,7 +455,6 @@ export default function GameField({
   onRoutePlayerSelect,
   onPassOptionsChange,
   onPassSetupClose,
-  onPassPlay,
   onRunnerSelect,
   onRunSetupClose,
   children,
@@ -490,7 +489,6 @@ export default function GameField({
   onRoutePlayerSelect?: (player: string) => void;
   onPassOptionsChange?: (patch: { routes?: Record<string, string>; routeDepths?: Record<string, string>; reads?: Record<string, string> }) => void;
   onPassSetupClose?: () => void;
-  onPassPlay?: () => void;
   onRunnerSelect?: (player: string) => void;
   onRunSetupClose?: () => void;
   children?: ReactNode;
@@ -1556,7 +1554,6 @@ export default function GameField({
           onClick={() => {
             setSelectedPlayerMenu(null);
             setRevealedFormationSlot(null);
-            if (passSetup) onPassSetupClose?.();
             if (runSetup) onRunSetupClose?.();
           }}
         >
@@ -1768,15 +1765,14 @@ export default function GameField({
                   {(ROUTES_BY_DEPTH[routeDepths[selectedRoutePlayer]] || []).map((route) => <option key={route}>{route}</option>)}
                 </AppSelect>
               </label>
-              <button type="button" onClick={onPassSetupClose}>Done</button>
+              <button type="button" onClick={() => onRoutePlayerSelect?.("")}>Done</button>
             </div>
           )}
 
           {passSetup && (
             <div className="pass-setup-toolbar" onClick={(event) => event.stopPropagation()}>
               <div><strong>Design pass play</strong><span>Select a highlighted receiver or the QB.</span></div>
-              <button type="button" onClick={onPassSetupClose}>Cancel</button>
-              <button type="button" disabled={!routedPlayers.length} onClick={onPassPlay}>Set pass</button>
+              <button type="button" onClick={onPassSetupClose}>Done</button>
             </div>
           )}
 
