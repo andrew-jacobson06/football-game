@@ -76,6 +76,19 @@ export function logPlayToDB(
     String(extra.recoveredby ?? ""),
     prev.Down,
   );
+  // Scoring plays reset the live game state to the opponent's kickoff spot.
+  // Keep the play's actual ending spot in history so drive summaries measure
+  // to the goal line instead of accidentally measuring to that reset spot.
+  const scoringEndBallOn =
+    normalized.outcome === "Touchdown"
+      ? prev.Possession === "Home"
+        ? 100
+        : 0
+      : normalized.outcome === "Safety"
+        ? prev.Possession === "Home"
+          ? 0
+          : 100
+        : undefined;
   const playid = `${prev.GameId}-${Date.now()}-${historyLength + 1}`;
   return {
     gameid: prev.GameId,
@@ -104,9 +117,9 @@ export function logPlayToDB(
     newdist: game.Distance,
     // Preserve where the final play actually ended; the live game state has
     // already moved the ball to the receiving team's 25 for the third quarter.
-    newballon: updatedState.EndOfHalf
-      ? updatedState.HalfEndBallOn
-      : game.BallOn,
+    newballon:
+      scoringEndBallOn ??
+      (updatedState.EndOfHalf ? updatedState.HalfEndBallOn : game.BallOn),
     endofhalf: updatedState.EndOfHalf ? "Yes" : "",
     drivestart:
       (prev as unknown as Record<string, unknown>).DriveStart ?? prev.BallOn,
