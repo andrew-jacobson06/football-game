@@ -1517,8 +1517,40 @@
   width: 100%;
 }
 
+.play-view-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  margin: 16px;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--surface-subtle);
+}
+
+.play-view-tabs button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.play-view-tabs button[aria-selected="true"] {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: 0 3px 12px var(--shadow-color);
+}
+
+.play-view-tabs button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--control-accent) 30%, transparent);
+}
+
 .drive-section {
-  border-bottom: 1px solid var(--gray-light);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .drive-section > summary {
@@ -1541,7 +1573,7 @@
 
 .drive-toggle {
   grid-row: span 2;
-  color: #4169e1;
+  color: var(--control-accent);
   cursor: pointer;
   text-align: center;
   font-size: 8vw;
@@ -1595,7 +1627,7 @@
 }
 
 .play-row {
-  border-top: 1px solid var(--gray-light);
+  border-top: 1px solid var(--border-color);
   padding: 2vw 4vw;
 }
 
@@ -1607,6 +1639,42 @@
 .play-desc {
   color: var(--text-muted);
   margin-top: 0.5vw;
+}
+
+.scoring-play-list {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.scoring-play-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: 0 3px 12px var(--shadow-color);
+}
+
+.scoring-play-card > div:nth-child(2) { display: grid; gap: 4px; }
+.scoring-play-card span,
+.scoring-play-card small { color: var(--text-secondary); }
+.scoring-play-card p { margin: 4px 0; color: var(--text-secondary); }
+.scoring-score { display: grid; grid-template-columns: repeat(2, auto); gap: 4px 12px; text-align: center; }
+.scoring-score b { font-size: 1.1rem; }
+.scoring-score span { font-size: .72rem; }
+.empty-play-message { color: var(--text-secondary); text-align: center; }
+
+@media (min-width: 700px) {
+  .drive-header { padding: 16px 24px; grid-template-columns: 44px 64px minmax(0, 1fr) 150px; }
+  .drive-toggle { font-size: 2rem; }
+  .drive-logo { width: 44px; height: 44px; }
+  .drive-result, .drive-summary, .drive-score .team-name, .drive-score .score-value { font-size: .9rem; }
+  .play-row { padding: 16px 28px; }
 }
 
 /* Box score and team stats tabs ported from the Apps Script game view */
