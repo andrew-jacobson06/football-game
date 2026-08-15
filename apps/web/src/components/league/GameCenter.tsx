@@ -8,6 +8,7 @@ import {
   formatQuarter,
   parseInteger,
 } from "./leagueMappers";
+import { driveEndYard, driveYardsFromSpots } from "./driveSummary";
 import {
   getFrontendSettings,
   getGameState,
@@ -401,8 +402,6 @@ const playGameSeconds = (play: Play) => {
   return (quarter - 1) * 900 + (900 - clock);
 };
 
-const driveYardsFromSpots = (possession: string, start: number, end: number) =>
-  possession === "Home" ? end - start : start - end;
 /**
  * Groups raw play history into drive sections. A drive is identified by the
  * team in possession plus its starting yard line, then summarized from the last
@@ -456,9 +455,10 @@ function groupPlaysByDrive(plays: Play[], game: LeagueGame): Drive[] {
       playField(last, "AwayScore", "awayscore") ?? game.AwayScore;
     const lastType = str(playField(last, "PlayType", "playtype")).toLowerCase();
     const isKickEnding = lastType.includes("punt") || lastType.includes("kick fg") || lastType === "field goal";
-    const end = num(playField(last, ...(isKickEnding
+    const recordedEnd = num(playField(last, ...(isKickEnding
       ? ["BallOn", "ballon"]
       : ["NewBallOn", "newBallOn", "newballon"])));
+    const end = driveEndYard(drive.possession, lastResult, recordedEnd);
     drive.yards = driveYardsFromSpots(drive.possession, drive.driveStart, end);
     drive.playsCount = drive.plays.filter(isDrivePlay).length;
     const previousDrive = drives[driveIndex - 1];
