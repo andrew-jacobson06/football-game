@@ -1616,6 +1616,8 @@
 .drive-score .team-name {
   color: var(--text-muted);
   font-size: 3vw;
+  justify-content: center;
+  display: flex;
 }
 
 .drive-score .score-value {
