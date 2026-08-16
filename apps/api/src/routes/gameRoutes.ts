@@ -5,6 +5,7 @@ import {
   readSheetObjects,
   readSheetValues,
 } from "../services/sheets.js";
+import { aggregatePlayStats } from "../services/playStats.js";
 
 export const gameRoutes = Router();
 
@@ -135,11 +136,12 @@ async function getPlayersWithTeamJerseys() {
   }));
 }
 async function getTeamPlayers(teamAbbrev: string) {
-  const [assignments, players, playerStats, jerseys] = await Promise.all([
+  const [assignments, players, playerStats, jerseys, playHistory] = await Promise.all([
     readSheetObjects("PlayerTeams!A1:B"),
     readSheetObjects("Players!A1:AM"),
     readSheetObjects("PlayerStats!A1:AJ"),
     getTeamJerseys("Away Jersey Crop"),
+    sheetRows("PlayHistory"),
   ]);
   const teamKey = teamAbbrev.trim().toLowerCase();
   const rosterNames = new Set(
@@ -156,12 +158,13 @@ async function getTeamPlayers(teamAbbrev: string) {
     const name = String(stats.Player ?? stats.Name ?? "").trim().toLowerCase();
     if (name && rosterNames.has(name)) statsByName.set(name, stats);
   });
+  const historyStats = aggregatePlayStats(playHistory.rows.map((row) => objectFrom(playHistory.headers, row)));
 
   return [...rosterNames].map((name) => ({
     ...(playersByName.get(name) ?? { Name: assignments.find((row) => String(row.Name).trim().toLowerCase() === name)?.Name ?? name }),
     Team: teamAbbrev,
     Jersey: jerseys.get(teamKey) ?? "",
-    Stats: statsByName.get(name) ?? null,
+    Stats: { ...(statsByName.get(name) ?? {}), ...(historyStats.get(name) ?? {}) },
   }));
 }
 function normalizeSettingLabel(label: unknown) {
