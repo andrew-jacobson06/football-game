@@ -1688,66 +1688,83 @@
 
 /* Box score and team stats tabs ported from the Apps Script game view */
 .boxscore-card {
+  box-sizing: border-box;
   width: min(100%, 1500px);
-  margin: 5vw auto;
-  padding: clamp(16px, 3vw, 40px);
-  background: var(--gray-medium);
-  border-radius: 8px;
-  box-shadow: 0 0 12px #0006;
+  margin: clamp(16px, 2vw, 28px) auto;
+  padding: clamp(14px, 1.5vw, 22px);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px var(--shadow-color);
   overflow-x: auto;
 }
 .boxscore-pill-container {
   display: flex;
-  background: var(--gray-light);
-  border-radius: 20px;
-  padding: clamp(4px, 1vw, 12px);
-  gap: clamp(4px, 1vw, 12px);
-  margin-bottom: clamp(18px, 4vw, 56px);
+  background: var(--surface-subtle);
+  border-radius: 999px;
+  padding: 0;
+  margin-bottom: 24px;
 }
 .boxscore-pill {
   flex: 1;
-  padding: clamp(10px, 2vw, 24px) clamp(12px, 3vw, 36px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 14px;
   background: transparent;
   border: none;
   cursor: pointer;
   font-weight: 700;
-  border-radius: 16px;
-  color: var(--text-light);
-  font-size: clamp(13px, 2vw, 24px);
+  border-radius: 999px;
+  color: var(--text-primary);
+  font-size: .85rem;
 }
 .boxscore-pill.active {
-  background: var(--accent-red);
-  color: var(--gray-dark);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: 0 2px 9px var(--shadow-color);
 }
+.boxscore-pill:focus-visible { outline: 3px solid color-mix(in srgb, var(--control-accent) 35%, transparent); outline-offset: 1px; }
+.boxscore-pill-logo { width: 20px; height: 20px; object-fit: contain; }
 .stats-group {
-  margin-bottom: clamp(24px, 5vw, 72px);
+  margin-bottom: 18px;
 }
 .stats-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   font-weight: 700;
-  margin: clamp(12px, 2vw, 28px) 0;
-  font-size: clamp(16px, 2.5vw, 28px);
+  margin: 0;
+  padding: 9px 2px 7px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: .9rem;
 }
+.stats-title-logo { width: 20px; height: 20px; object-fit: contain; }
 .stats-table {
   width: 100%;
   border-collapse: collapse;
 }
 .stats-table th,
 .stats-table td {
-  padding: clamp(8px, 1.5vw, 20px);
-  text-align: center;
-  font-size: clamp(12px, 1.8vw, 20px);
+  padding: 7px 8px;
+  text-align: right;
+  font-size: .78rem;
+  white-space: nowrap;
 }
+.stats-table th:first-child,
+.stats-table td:first-child { text-align: left; border-right: 1px solid var(--border-color); }
 .stats-table th {
-  background: var(--gray-light);
-  border-bottom: 2px solid var(--accent-red);
-  color: var(--text-light);
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-weight: 500;
 }
-.stats-table tr:nth-child(even) {
-  background: var(--gray-dark);
-}
-.stats-table tr:nth-child(odd) {
-  background: var(--gray-medium);
-}
+.stats-table tbody tr { border-bottom: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent); }
+.stats-table tbody tr:nth-child(even) { background: var(--surface-subtle); }
+.stats-table tbody tr:nth-child(odd) { background: var(--surface-raised); }
 .stats-table .team-row td {
   font-weight: 700;
 }
@@ -1757,12 +1774,12 @@
 }
 .overview-section {
   display: grid;
-  gap: clamp(18px, 4vw, 56px);
+  gap: 4px;
 }
 .stats-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(16px, 3vw, 48px);
+  gap: 26px;
 }
 .team-table {
   min-width: 0;
@@ -1811,6 +1828,8 @@
   .team-stats-card {
     margin-inline: 0;
   }
+  .boxscore-pill { padding-inline: 8px; }
+  .boxscore-pill-logo { display: none; }
 }
 
 .play-caller {
