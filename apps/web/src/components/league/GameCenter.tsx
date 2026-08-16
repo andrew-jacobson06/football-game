@@ -755,16 +755,21 @@ function parseTimeSeconds(v: unknown) {
  */
 function TeamTable({
   title,
+  logo,
   columns,
   rows,
 }: {
   title: string;
+  logo?: unknown;
   columns: string[];
   rows: (string | number)[][];
 }) {
   return (
     <div className="stats-group">
-      <div className="stats-title">{title}</div>
+      <div className="stats-title">
+        <TeamLogo src={logo} className="stats-title-logo" />
+        <span>{title}</span>
+      </div>
       <table className="stats-table">
         <thead>
           <tr>
@@ -808,10 +813,20 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
   const [subtab, setSubtab] = useState<"Home" | "Overview" | "Away">("Home");
   const stats = useMemo(() => calcStats(history), [history]);
   const passRows = (team: string, condensed = false) =>
-    stats.pass
+    (() => {
+      const rows = stats.pass
       .filter((p) => p.team === team)
-      .sort((a, b) => b.yards - a.yards)
-      .map((p) =>
+      .sort((a, b) => b.yards - a.yards);
+      const total = rows.reduce((sum, player) => ({
+        completions: sum.completions + (player.completions || 0),
+        attempts: sum.attempts + (player.attempts || 0),
+        yards: sum.yards + player.yards,
+        tds: sum.tds + (player.tds || 0),
+        ints: sum.ints + (player.ints || 0),
+        sacks: sum.sacks + (player.sacks || 0),
+        sackYds: sum.sackYds + (player.sackYds || 0),
+      }), { completions: 0, attempts: 0, yards: 0, tds: 0, ints: 0, sacks: 0, sackYds: 0 });
+      const output: (string | number)[][] = rows.map((p) =>
         condensed
           ? [
               p.playername,
@@ -832,6 +847,11 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
               "0.0",
             ],
       );
+      if (rows.length) output.push(condensed
+        ? ["TEAM", `${total.completions}/${total.attempts}`, total.yards, total.tds, total.ints, `${total.sacks}-${Math.abs(total.sackYds)}`]
+        : ["TEAM", `${total.completions}/${total.attempts}`, total.yards, avg(total.yards, total.completions), total.tds, total.ints, `${total.sacks}-${Math.abs(total.sackYds)}`, "0.0"]);
+      return output;
+    })();
   const rushRows = (team: string, condensed = false) => {
     const rows = stats.rush
       .filter((p) => p.team === team)
@@ -932,15 +952,15 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
       );
     return out;
   };
-  const defRows = (team: string) =>
-    stats.def
+  const defRows = (team: string) => {
+    const rows = stats.def
       .filter((p) => p.team === team)
       .sort(
         (a, b) =>
           (b.tackles || 0) - (a.tackles || 0) ||
           (b.dLineWins || 0) - (a.dLineWins || 0),
       )
-      .map((p) => [
+    const output: (string | number)[][] = rows.map((p) => [
         p.playername,
         p.tackles || 0,
         p.tfl || 0,
@@ -950,8 +970,11 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
         p.sacks || 0,
         p.fr || 0,
         p.ints || 0,
-        p.deflections || 0,
-      ]);
+      p.deflections || 0,
+    ]);
+    if (rows.length) output.push(["TEAM", ...(["tackles", "tfl", "ff", "dLineWins", "dLineLosses", "sacks", "fr", "ints", "deflections"] as const).map((field) => rows.reduce((sum, player) => sum + (player[field] || 0), 0))]);
+    return output;
+  };
   const offballRows = (team: string) => {
     const rows = stats.offball
       .filter((p) => p.team === team)
@@ -983,15 +1006,18 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
     return output;
   };
   const teamName = (t: string) => (t === "Home" ? game.Home : game.Away);
+  const teamLogo = (t: string) => (t === "Home" ? game.HomeLogo : game.AwayLogo);
   const renderTeam = (team: string) => (
     <>
       <TeamTable
         title={`${teamName(team)} Passing`}
+        logo={teamLogo(team)}
         columns={["Player", "C/ATT", "YDS", "AVG", "TD", "INT", "SACKS", "RTG"]}
         rows={passRows(team)}
       />
       <TeamTable
         title={`${teamName(team)} Rushing`}
+        logo={teamLogo(team)}
         columns={[
           "Player",
           "CAR",
@@ -1007,11 +1033,13 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
       />
       <TeamTable
         title={`${teamName(team)} Receiving`}
+        logo={teamLogo(team)}
         columns={["Player", "REC", "YDS", "AVG", "TD", "LONG", "TGTS"]}
         rows={recRows(team)}
       />
       <TeamTable
         title={`${teamName(team)} Defensive`}
+        logo={teamLogo(team)}
         columns={[
           "Player",
           "TKL",
@@ -1028,6 +1056,7 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
       />
       <TeamTable
         title={`${teamName(team)} Offensive Line`}
+        logo={teamLogo(team)}
         columns={["Player", "OL W", "OL L", "LEAD", "WIN %"]}
         rows={offballRows(team)}
       />
@@ -1043,7 +1072,8 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
             type="button"
             onClick={() => setSubtab(t)}
           >
-            {t === "Home" ? game.Home : t === "Away" ? game.Away : t}
+            {t !== "Overview" && <TeamLogo src={teamLogo(t)} className="boxscore-pill-logo" />}
+            <span>{t === "Home" ? game.Home : t === "Away" ? game.Away : t}</span>
           </button>
         ))}
       </div>
@@ -1058,6 +1088,7 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
                   {kind === "Passing" && (
                     <TeamTable
                       title={`${teamName(team)} Passing`}
+                      logo={teamLogo(team)}
                       columns={["Player", "C/ATT", "YDS", "TD", "INT", "SACKS"]}
                       rows={passRows(team, true)}
                     />
@@ -1065,6 +1096,7 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
                   {kind === "Rushing" && (
                     <TeamTable
                       title={`${teamName(team)} Rushing`}
+                      logo={teamLogo(team)}
                       columns={["Player", "CAR", "YDS", "TD", "LONG"]}
                       rows={rushRows(team, true)}
                     />
@@ -1072,6 +1104,7 @@ function BoxScoreTab({ game, history }: { game: LeagueGame; history: Play[] }) {
                   {kind === "Receiving" && (
                     <TeamTable
                       title={`${teamName(team)} Receiving`}
+                      logo={teamLogo(team)}
                       columns={["Player", "REC", "YDS", "TD", "LONG"]}
                       rows={recRows(team, true)}
                     />
