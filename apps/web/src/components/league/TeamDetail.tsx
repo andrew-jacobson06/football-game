@@ -27,29 +27,35 @@ const statGroups: StatGroup[] = [
     { label: "YDS", fields: ["passingyards", "passyards", "passyds"] }, { label: "AVG", fields: ["yardsperpass", "passaverage", "passavg"], decimal: true },
     { label: "YDS/G", fields: ["passingyardspergame", "passyardspergame", "passydsg"], decimal: true }, { label: "LNG", fields: ["longestpass", "passlong", "lng"] },
     { label: "TD", fields: ["passingtouchdowns", "passtds", "passtd"] }, { label: "INT", fields: ["interceptionsthrown", "passinterceptions", "passint"] },
-    { label: "SACK", fields: ["sackstaken", "passsacks"] }, { label: "RTG", fields: ["passerrating", "rating", "rtg"], decimal: true },
+    { label: "SACK", fields: ["sacked", "sackstaken", "passsacks"] }, { label: "SYL", fields: ["sackyardslost", "syl"] },
+    { label: "QBR", fields: ["qbr"], decimal: true }, { label: "RTG", fields: ["passerrating", "rating", "rtg"], decimal: true },
   ]},
   { title: "Rushing", positions: ["qb", "rb", "wr", "te"], defaultSort: "YDS", columns: [
-    { label: "GP", fields: ["games", "gp"] }, { label: "CAR", fields: ["carries", "rushingattempts", "rushattempts", "rushatt"] },
+    { label: "GP", fields: ["games", "gp"] }, { label: "ATT", fields: ["carries", "rushingattempts", "rushattempts", "rushatt"] },
     { label: "YDS", fields: ["yards", "rushingyards", "rushyards", "rushyds"] }, { label: "AVG", fields: ["rushingaverage", "rushaverage", "rushavg", "yardspercarry"], decimal: true },
-    { label: "LNG", fields: ["longestrush", "rushlong"] }, { label: "TD", fields: ["rushingtouchdowns", "rushtds", "rushtd"] },
+    { label: "LNG", fields: ["longestrush", "rushinglong", "rushlong"] }, { label: "BIG", fields: ["bigrushes", "rushbig"] }, { label: "TD", fields: ["rushingtouchdowns", "rushingtd", "rushtds", "rushtd"] },
     { label: "YDS/G", fields: ["rushingyardspergame", "rushyardspergame", "rushydsg"], decimal: true }, { label: "FUM", fields: ["fumbles", "fum"] },
-    { label: "FD", fields: ["rushingfirstdowns", "rushfirstdowns", "rushfd"] },
+    { label: "LST", fields: ["rushingfumbleslost", "fumbleslost", "fumlost"] }, { label: "FD", fields: ["rushingfirstdowns", "rushfirstdowns", "rushfd"] },
+    { label: "LOSS", fields: ["rushloss", "loss"] }, { label: "5+", fields: ["rush5+", "5+"] }, { label: "10+", fields: ["rush10+", "10+"] },
+    { label: "20+", fields: ["rush20+", "20+"] }, { label: "30+", fields: ["rush30+", "30+"] }, { label: "50+", fields: ["rush50+", "50+"] },
+    { label: "BRK TKL", fields: ["brokentackles", "brokentackle"] }, { label: "JKE", fields: ["jukes", "juke"] },
   ]},
   { title: "Receiving", positions: ["rb", "wr", "te"], defaultSort: "YDS", columns: [
     { label: "GP", fields: ["games", "gp"] }, { label: "REC", fields: ["receptions", "rec"] }, { label: "TGTS", fields: ["targets", "tgts", "tgt"] },
     { label: "YDS", fields: ["receivingyards", "recyards", "recyds"] }, { label: "AVG", fields: ["receivingaverage", "recaverage", "recavg", "yardsperreception"], decimal: true },
-    { label: "TD", fields: ["receivingtouchdowns", "rectds", "rectd"] }, { label: "LNG", fields: ["longestreception", "receivinglong", "reclong"] },
-    { label: "YDS/G", fields: ["receivingyardspergame", "recyardspergame", "recydsg"], decimal: true }, { label: "YAC", fields: ["yardsaftercatch", "yac"] },
+    { label: "TD", fields: ["receivingtouchdowns", "receivingtd", "rectds", "rectd"] }, { label: "LNG", fields: ["longestreception", "receivinglong", "reclong"] },
+    { label: "BIG", fields: ["bigreceptions", "big"] }, { label: "YDS/G", fields: ["receivingyardspergame", "recyardspergame", "recydsg"], decimal: true },
+    { label: "FUM", fields: ["receivingfumbles", "fumbles", "fum"] }, { label: "LST", fields: ["receivingfumbleslost", "fumbleslost", "fumlost"] }, { label: "YAC", fields: ["yardsaftercatch", "yac"] },
     { label: "FD", fields: ["receivingfirstdowns", "recfirstdowns", "recfd"] },
   ]},
   { title: "Defense", positions: ["dl", "dt", "de", "lb", "cb", "s", "db"], defaultSort: "TOT", columns: [
-    { label: "GP", fields: ["games", "gp"] }, { label: "SOLO", fields: ["solotackles", "solo"] }, { label: "AST", fields: ["assistedtackles", "assists", "ast"] },
-    { label: "TOT", fields: ["totaltackles", "tackles", "total", "tot"] }, { label: "SACK", fields: ["sacks", "sack"], decimal: true },
-    { label: "TFL", fields: ["tacklesforloss", "tfl"] }, { label: "PD", fields: ["passesdefended", "passdeflections", "pd"] },
-    { label: "INT", fields: ["interceptions", "defensiveinterceptions", "int"] }, { label: "YDS", fields: ["interceptionyards", "intyards", "intyds"] },
-    { label: "TD", fields: ["defensivetouchdowns", "inttouchdowns", "deftd"] }, { label: "FF", fields: ["forcedfumbles", "ff"] },
-    { label: "FR", fields: ["fumblerecoveries", "fr"] },
+    { label: "GP", fields: ["games", "gp"] }, { label: "TKL", fields: ["totaltackles", "tackles", "total", "tot", "tkl"] },
+    { label: "SACK", fields: ["sacks", "sack"] }, { label: "YDS", fields: ["sackyards", "sackyardslost", "syl"] },
+    { label: "TFL", fields: ["tacklesforloss", "tfl"] }, { label: "DEFL", fields: ["passesdefended", "passdeflections", "deflections", "defl"] },
+    { label: "INT", fields: ["interceptions", "defensiveinterceptions", "int"] }, { label: "YDS (INT)", fields: ["interceptionreturnyards", "intreturnyards", "intyds"] },
+    { label: "TD (INT)", fields: ["interceptionreturntd", "intreturntd", "inttd"] }, { label: "FF", fields: ["forcedfumbles", "ff"] },
+    { label: "FR", fields: ["fumblerecoveries", "fr"] }, { label: "FTD", fields: ["fumblereturntd", "fumtd", "ftd"] },
+    { label: "DL PLAYS", fields: ["dlplays"] }, { label: "WIN%", fields: ["dlwinpercentage", "dlwinpct"], decimal: true },
   ]},
 ];
 
@@ -59,14 +65,31 @@ function formatStat(value: number, decimal = false) {
 
 function SortableStatTable({ group, players }: { group: StatGroup; players: TeamPlayer[] }) {
   const [sort, setSort] = useState({ column: group.defaultSort, direction: "desc" as "asc" | "desc" });
-  const rows = useMemo(() => players.filter((player) => group.positions.includes(key(player.Pos ?? player.DefPos))).sort((a, b) => {
+  const rows = useMemo(() => players.filter((player) => group.positions.includes(key(group.title === "Defense" ? player.DefPos : player.Pos))).sort((a, b) => {
     const column = group.columns.find((item) => item.label === sort.column)!;
     const difference = numericStat(b.Stats, column.fields) - numericStat(a.Stats, column.fields);
     return (sort.direction === "desc" ? difference : -difference) || String(a.Name).localeCompare(String(b.Name));
   }), [group, players, sort]);
   const changeSort = (column: string) => setSort((current) => ({ column, direction: current.column === column && current.direction === "desc" ? "asc" : "desc" }));
 
-  return <section className="team-stat-group"><h3>{group.title}</h3><div className="team-stat-scroll"><table><thead><tr><th>NAME</th>{group.columns.map((column) => <th className={sort.column === column.label ? "sorted" : ""} key={column.label}><button type="button" onClick={() => changeSort(column.label)}>{column.label}<span aria-hidden="true">{sort.column === column.label ? (sort.direction === "desc" ? "▾" : "▴") : ""}</span></button></th>)}</tr></thead><tbody>{rows.map((player) => <tr key={String(player.Name)}><td><a>{player.Name}</a> <small>{player.Pos || player.DefPos}</small></td>{group.columns.map((column) => <td className={sort.column === column.label ? "sorted" : ""} key={column.label}>{formatStat(numericStat(player.Stats, column.fields), column.decimal)}</td>)}</tr>)}</tbody></table></div>{rows.length === 0 && <p className="team-stats-empty">No {group.title.toLowerCase()} players on the active roster.</p>}</section>;
+  const sumFields = (fields: string[]) => rows.reduce((sum, player) => sum + numericStat(player.Stats, fields), 0);
+  const games = Math.max(0, ...rows.map((player) => numericStat(player.Stats, ["games", "gp"])));
+  const total = (column: StatColumn) => {
+    if (column.label === "GP") return games;
+    if (column.label === "LNG") return Math.max(0, ...rows.map((player) => numericStat(player.Stats, column.fields)));
+    if (column.label === "CMP%") { const attempts = sumFields(["passattempts", "passingattempts", "att"]); return attempts ? sumFields(["completions", "cmp", "passcompletions"]) / attempts * 100 : 0; }
+    if (column.label === "AVG") {
+      const attempts = sumFields(group.title === "Passing" ? ["passattempts", "passingattempts", "att"] : group.title === "Rushing" ? ["carries", "rushingattempts", "rushattempts"] : ["receptions", "rec"]);
+      const yards = sumFields(group.title === "Passing" ? ["passingyards", "passyards"] : group.title === "Rushing" ? ["yards", "rushingyards", "rushyards"] : ["receivingyards", "recyards"]);
+      return attempts ? yards / attempts : 0;
+    }
+    if (column.label === "YDS/G") {
+      const yards = sumFields(group.title === "Passing" ? ["passingyards", "passyards"] : group.title === "Rushing" ? ["yards", "rushingyards", "rushyards"] : ["receivingyards", "recyards"]);
+      return games ? yards / games : 0;
+    }
+    return sumFields(column.fields);
+  };
+  return <section className="team-stat-group"><h3>{group.title}</h3><div className="team-stat-scroll"><table><thead><tr><th>NAME</th>{group.columns.map((column) => <th className={sort.column === column.label ? "sorted" : ""} key={column.label}><button type="button" onClick={() => changeSort(column.label)}>{column.label}<span aria-hidden="true">{sort.column === column.label ? (sort.direction === "desc" ? "▾" : "▴") : ""}</span></button></th>)}</tr></thead><tbody>{rows.map((player) => <tr key={String(player.Name)}><td><a>{player.Name}</a> <small>{group.title === "Defense" ? player.DefPos : player.Pos}</small></td>{group.columns.map((column) => <td className={sort.column === column.label ? "sorted" : ""} key={column.label}>{formatStat(numericStat(player.Stats, column.fields), column.decimal)}</td>)}</tr>)}{rows.length > 0 && <tr className="team-stat-total"><td><strong>Total</strong></td>{group.columns.map((column) => <td key={column.label}><strong>{formatStat(total(column), column.decimal)}</strong></td>)}</tr>}</tbody></table></div>{rows.length === 0 && <p className="team-stats-empty">No {group.title.toLowerCase()} players on the active roster.</p>}</section>;
 }
 function stars(player: TeamPlayer, side: "off" | "def") {
   return Number(player[side === "off" ? "Off Stars" : "Def Stars"]) || 0;
