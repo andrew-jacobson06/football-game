@@ -48,7 +48,7 @@ const statGroups: StatGroup[] = [
     { label: "FUM", fields: ["receivingfumbles", "fumbles", "fum"] }, { label: "LST", fields: ["receivingfumbleslost", "fumbleslost", "fumlost"] }, { label: "YAC", fields: ["yardsaftercatch", "yac"] },
     { label: "FD", fields: ["receivingfirstdowns", "recfirstdowns", "recfd"] },
   ]},
-  { title: "Defense", positions: ["dl", "dt", "de", "lb", "cb", "s", "db"], defaultSort: "TOT", columns: [
+  { title: "Defense", positions: ["dl", "dt", "de", "lb", "cb", "s", "db"], defaultSort: "TKL", columns: [
     { label: "GP", fields: ["games", "gp"] }, { label: "TKL", fields: ["totaltackles", "tackles", "total", "tot", "tkl"] },
     { label: "SACK", fields: ["sacks", "sack"] }, { label: "YDS", fields: ["sackyards", "sackyardslost", "syl"] },
     { label: "TFL", fields: ["tacklesforloss", "tfl"] }, { label: "DEFL", fields: ["passesdefended", "passdeflections", "deflections", "defl"] },
@@ -66,7 +66,7 @@ function formatStat(value: number, decimal = false) {
 function SortableStatTable({ group, players }: { group: StatGroup; players: TeamPlayer[] }) {
   const [sort, setSort] = useState({ column: group.defaultSort, direction: "desc" as "asc" | "desc" });
   const rows = useMemo(() => players.filter((player) => group.positions.includes(key(group.title === "Defense" ? player.DefPos : player.Pos))).sort((a, b) => {
-    const column = group.columns.find((item) => item.label === sort.column)!;
+    const column = group.columns.find((item) => item.label === sort.column) ?? group.columns[0];
     const difference = numericStat(b.Stats, column.fields) - numericStat(a.Stats, column.fields);
     return (sort.direction === "desc" ? difference : -difference) || String(a.Name).localeCompare(String(b.Name));
   }), [group, players, sort]);
