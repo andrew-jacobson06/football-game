@@ -287,6 +287,38 @@ const ROUTES_BY_DEPTH: Record<string, string[]> = {
   Shot: ["Cross", "Corner", "Seam", "Fade", "Go", "Post", "Sluggo", "Post Corner"],
   Bomb: ["Corner", "Seam", "Fade", "Go", "Post", "Post Corner"],
 };
+const ROUTE_DEPTH_AIR_YARDS: Record<string, number> = {
+  Quick: 2, Short: 5, "Short-Mid": 8, Mid: 11, "Mid-Long": 15,
+  Long: 20, Deep: 26, Shot: 34, Bomb: 42,
+};
+type RouteInfo = { routeType?: string; shape?: string };
+
+/** Builds a route in field percentage coordinates from its football landmarks. */
+const routePath = (route: string, startX: number, startYard: number, yards: number, direction: number) => {
+  const y = (pct: number) => yardToYPct(startYard + direction * yards * pct);
+  const startY = yardToYPct(startYard);
+  const towardSideline = startX < 50 ? -1 : 1;
+  const out = (amount: number) => Math.max(9, Math.min(91, startX + towardSideline * amount));
+  const inside = (amount: number) => Math.max(12, Math.min(88, startX - towardSideline * amount));
+  const p = (x: number, yy: number) => `${x.toFixed(1)} ${yy.toFixed(1)}`;
+  switch (route) {
+    case "Flat": return `M ${p(startX, startY)} Q ${p(out(4), y(.45))} ${p(out(10), y(1))} L ${p(out(18), y(1))}`;
+    case "Swing": return `M ${p(startX, startY)} Q ${p(out(7), y(-.5))} ${p(out(12), y(-.5))} Q ${p(out(18), y(.25))} ${p(out(22), y(1))}`;
+    case "Hitch": case "Curl": return `M ${p(startX, startY)} L ${p(startX, y(1.1))} L ${p(inside(5), y(1))}`;
+    case "Comeback": return `M ${p(startX, startY)} L ${p(startX, y(1.1))} L ${p(out(5), y(1))}`;
+    case "Out": return `M ${p(startX, startY)} L ${p(startX, y(1))} L ${p(out(15), y(1))}`;
+    case "In": case "Dig": return `M ${p(startX, startY)} L ${p(startX, y(1))} L ${p(inside(17), y(1))}`;
+    case "Slant": return `M ${p(startX, startY)} L ${p(startX, y(.4))} L ${p(inside(14), y(1))}`;
+    case "Drag": case "Cross": return `M ${p(startX, startY)} L ${p(startX, y(.8))} Q ${p(inside(3), y(1))} ${p(inside(8), y(1))} L ${p(inside(22), y(1))}`;
+    case "Wheel": return `M ${p(startX, startY)} L ${p(out(9), startY)} Q ${p(out(16), y(.1))} ${p(out(17), y(.25))} L ${p(out(17), y(1))}`;
+    case "Corner": return `M ${p(startX, startY)} L ${p(startX, y(.5))} L ${p(out(15), y(1))}`;
+    case "Post": return `M ${p(startX, startY)} L ${p(startX, y(.5))} L ${p(inside(15), y(1))}`;
+    case "Seam": return `M ${p(startX, startY)} Q ${p(inside(3), y(.5))} ${p(inside(4), y(1))}`;
+    case "Fade": return `M ${p(startX, startY)} Q ${p(out(4), y(.25))} ${p(out(5), y(.5))} L ${p(out(5), y(1))}`;
+    case "WR Screen": return `M ${p(startX, startY)} L ${p(inside(3), y(-.25))}`;
+    default: return `M ${p(startX, startY)} L ${p(startX, y(1))}`;
+  }
+};
 const nameOf = (p?: FormationPlayer) => String(p?.name ?? p?.Name ?? "");
 const imgOf = (p?: FormationPlayer) => playerImageUrl(p);
 
@@ -450,6 +482,7 @@ export default function GameField({
   runner,
   routes = {},
   routeDepths = {},
+  routeInfo = [],
   reads = {},
   selectedRoutePlayer = "",
   onRoutePlayerSelect,
@@ -484,6 +517,7 @@ export default function GameField({
   runner?: string;
   routes?: Record<string, string>;
   routeDepths?: Record<string, string>;
+  routeInfo?: unknown[];
   reads?: Record<string, string>;
   selectedRoutePlayer?: string;
   onRoutePlayerSelect?: (player: string) => void;
@@ -550,6 +584,20 @@ export default function GameField({
   const orderedReads = [...routedPlayers].sort(
     (a, b) => Number(reads[a] || 999) - Number(reads[b] || 999),
   );
+  const routeShapeNames = new Map(
+    routeInfo.flatMap((value) => {
+      const info = value as RouteInfo;
+      return info.routeType && info.shape ? [[info.routeType, info.shape] as const] : [];
+    }),
+  );
+  const presnapRoutes = eligibleRoutePlayers.flatMap(({ slot, player }) => {
+    const route = routes[player];
+    if (!route) return [];
+    const lineup = FORMATION_SLOT_LINEUP[slot];
+    const startX = LANES[lineup.lane] ?? 50;
+    const depth = ROUTE_DEPTH_AIR_YARDS[routeDepths[player]] ?? 10;
+    return [{ player, route, shape: routeShapeNames.get(route) || route, startX, startYard: formationLosYard + offenseDirection * lineup.yardOffsetFromLos, depth }];
+  });
   const updateReadOrder = (order: string[]) =>
     onPassOptionsChange?.({
       reads: Object.fromEntries(order.map((player, index) => [player, String(index + 1)])),
@@ -1592,6 +1640,14 @@ export default function GameField({
             END
           </div>
           <div className="football" id="football" ref={footballRef} />
+          {presnapRoutes.length > 0 && !formationMode && !animationRequest && (
+            <svg className="presnap-routes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Selected receiver routes">
+              <defs><marker id="route-arrowhead" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M 0 0 L 5 2.5 L 0 5 z" /></marker></defs>
+              {presnapRoutes.map(({ player, route, shape, startX, startYard, depth }) => (
+                <path key={player} d={routePath(route, startX, startYard, depth, offenseDirection)} data-shape={shape} aria-label={`${player}: ${route}`} />
+              ))}
+            </svg>
+          )}
           {formationMode &&
             FORMATION_SLOTS.map((slot) => {
               const lineup = FORMATION_SLOT_LINEUP[slot];

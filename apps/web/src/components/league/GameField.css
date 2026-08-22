@@ -73,6 +73,33 @@ body {
   box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.38);
 }
 
+.presnap-routes {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.presnap-routes path {
+  fill: none;
+  stroke: #f04b23;
+  stroke-width: 0.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  marker-end: url(#route-arrowhead);
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 1px 1px rgba(74, 18, 5, 0.75));
+}
+
+.presnap-routes marker path {
+  fill: #f04b23;
+  stroke: none;
+  filter: none;
+}
+
 .field-title {
   position: absolute;
   top: 12px;

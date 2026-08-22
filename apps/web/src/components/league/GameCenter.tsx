@@ -216,6 +216,9 @@ function normalizeFrontendSettings(
   normalized.routeTypeAirYards = Array.isArray(normalized.routeTypeAirYards)
     ? normalized.routeTypeAirYards
     : [];
+  normalized.routeInfo = Array.isArray(normalized.routeInfo)
+    ? normalized.routeInfo
+    : [];
   normalized.timeNeededToThrow = Array.isArray(normalized.timeNeededToThrow)
     ? normalized.timeNeededToThrow
     : [];
@@ -2166,6 +2169,7 @@ export function GameCenter({
                 runner={playOptions.runner}
                 routes={playOptions.routes}
                 routeDepths={playOptions.routeDepths}
+                routeInfo={settings.routeInfo}
                 reads={playOptions.reads}
                 selectedRoutePlayer={selectedRoutePlayer}
                 onRoutePlayerSelect={setSelectedRoutePlayer}
