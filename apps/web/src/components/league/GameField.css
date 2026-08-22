@@ -85,8 +85,8 @@ body {
 
 .presnap-routes path {
   fill: none;
-  stroke: #f04b23;
-  stroke-width: 0.65;
+  stroke: #f0a023;
+  stroke-width: clamp(5px, 1vw, 10px);
   stroke-linecap: round;
   stroke-linejoin: round;
   marker-end: url(#route-arrowhead);
@@ -95,7 +95,7 @@ body {
 }
 
 .presnap-routes marker path {
-  fill: #f04b23;
+  fill: #f0a023;
   stroke: none;
   filter: none;
 }
