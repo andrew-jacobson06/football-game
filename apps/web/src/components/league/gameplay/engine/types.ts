@@ -90,6 +90,7 @@ export type FrontendSettings = Record<string, unknown> & {
   tackleSettings?: unknown[];
   completionTable?: unknown[];
   routeTypeAirYards?: unknown[];
+  routeInfo?: unknown[];
   timeNeededToThrow?: unknown[];
   timeNeededToOpen?: unknown[];
   completionSeparationAdjustment?: unknown[];
