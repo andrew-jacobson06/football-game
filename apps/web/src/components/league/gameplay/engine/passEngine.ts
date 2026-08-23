@@ -1,5 +1,13 @@
 import type { LeagueGame } from "../../types";
-import type { EngineContext, PassPlayState, PlayCallOptions } from "./types";
+import type {
+  EngineContext,
+  FormationSlot,
+  PassBlitzGap,
+  PassBlitzResult,
+  PassPlayState,
+  PlayCallOptions,
+  PlayerTrait,
+} from "./types";
 import {
   advanceBall,
   applyHalftimeRules,
@@ -34,6 +42,7 @@ export function createPassPlayState(qb: string): PassPlayState {
     phases: [],
     log: [],
     blitz: false,
+    pressure: [],
     instantPressure: false,
     pocketFormed: false,
     baseTimeToThrow: null,
@@ -42,6 +51,89 @@ export function createPassPlayState(qb: string): PassPlayState {
     opennessTrajectory: [],
     decision: "pending",
   };
+}
+
+const PASS_BLITZ_GAPS: Array<{
+  gap: PassBlitzGap;
+  blockers: FormationSlot[];
+}> = [
+  { gap: "outside-left", blockers: ["LT"] },
+  { gap: "LT-LG", blockers: ["LT", "LG"] },
+  { gap: "LG-C", blockers: ["LG", "C"] },
+  { gap: "C-RG", blockers: ["C", "RG"] },
+  { gap: "RG-RT", blockers: ["RG", "RT"] },
+  { gap: "outside-right", blockers: ["RT"] },
+];
+
+export function passBlitzInstantSackChance(passRush: number) {
+  return (
+    1.367054224554e-8 * passRush ** 5 -
+    0.000003115586224 * passRush ** 4 +
+    0.000221097297242 * passRush ** 3 -
+    0.001139798774598 * passRush ** 2 -
+    0.091745915462176 * passRush
+  );
+}
+
+function linemanPickupScore(player: PlayerTrait | undefined) {
+  return trait(player, "passProtect") + trait(player, "offStars") ** 2;
+}
+
+/** Resolves the extra QB-aligned linebacker independently from the normal line clash. */
+export function resolvePassBlitz(
+  ctx: EngineContext,
+  options: PlayCallOptions,
+): PassBlitzResult | undefined {
+  if (!options.blitz) return undefined;
+  const assignment = options.defense?.find((defender) => {
+    const player = byName(ctx, defender.player);
+    return defender.align === "QB" &&
+      String(player?.defPos ?? player?.DefPos).toUpperCase() === "LB";
+  });
+  const rusher = byName(ctx, assignment?.player);
+  if (!assignment || !rusher) return undefined;
+
+  const selectedGap = choose(PASS_BLITZ_GAPS);
+  const adjacent = selectedGap.blockers
+    .map((slot) => byName(ctx, options.formation?.[slot]))
+    .filter((player): player is PlayerTrait => Boolean(player));
+  const lineman = adjacent.length === 1
+    ? adjacent[0]
+    : weightedChoose(adjacent, linemanPickupScore);
+  const lineThreshold = lineman
+    ? trait(lineman, "passProtect") / 1.2 + trait(lineman, "offStars") ** 2 -
+      (trait(rusher, "passRush") / 10 + trait(rusher, "defStars") ** 2 / 2)
+    : Number.NEGATIVE_INFINITY;
+  const lineBlocked = Boolean(lineman) && Math.random() * 100 <= lineThreshold;
+  const base = {
+    gap: selectedGap.gap,
+    rusher: playerName(rusher),
+    pickedUpBy: lineBlocked ? playerName(lineman) : undefined,
+    lineBlocked,
+    backBlocked: false,
+    quarterbackPressured: false,
+    instantSack: false,
+  };
+  if (lineBlocked) return base;
+
+  const backs = (["RB1", "RB2"] as FormationSlot[])
+    .map((slot) => byName(ctx, options.formation?.[slot]))
+    .filter((player): player is PlayerTrait => Boolean(player))
+    .sort((a, b) => trait(b, "passProtect") - trait(a, "passProtect"));
+  const back = backs[0];
+  if (back) {
+    const backBlocked = Math.random() * 100 <= trait(back, "passProtect");
+    return {
+      ...base,
+      pickedUpBy: backBlocked ? playerName(back) : undefined,
+      backBlocked,
+      quarterbackPressured: !backBlocked,
+    };
+  }
+
+  const instantSack = Math.random() * 100 <=
+    passBlitzInstantSackChance(trait(rusher, "passRush"));
+  return { ...base, quarterbackPressured: !instantSack, instantSack };
 }
 
 function recordPassPhase(
@@ -63,15 +155,32 @@ export function runPassPlayPipeline(
 ) {
   const state = createPassPlayState(qbName);
 
-  // 1. Blitz? Detection is intentionally neutral until blitz assignments are defined.
-  recordPassPhase(state, "blitz-check", "Blitz check stub completed.");
+  // 1. A coaching call is false today, but the snap is ready for the coaching engine.
+  state.blitz = options.blitz === true;
+  state.blitzResult = resolvePassBlitz(ctx, options);
+  if (state.blitzResult) {
+    state.pressure.push(state.blitzResult.rusher);
+    state.instantPressure = state.blitzResult.quarterbackPressured;
+    recordPassPhase(
+      state,
+      "blitz-check",
+      `${state.blitzResult.rusher} blitzed through ${state.blitzResult.gap}.`,
+    );
+    if (state.blitzResult.instantSack) {
+      state.decision = "sack";
+      recordPassPhase(state, "qb-chase", "The unblocked blitzer reached the empty backfield for an immediate sack.");
+      return state;
+    }
+  } else {
+    recordPassPhase(state, "blitz-check", state.blitz ? "No QB-aligned linebacker was available to blitz." : "No blitz was called.");
+  }
 
   // 2. DL/OL clash. Detailed matchup results will be attached here.
   recordPassPhase(state, "line-clash", "DL/OL clash stub completed.");
 
   // 3-4. An immediate loss sends the QB to the chase branch; otherwise a pocket forms.
-  state.instantPressure = timeToThrow < 0;
-  if (state.instantPressure) {
+  if (timeToThrow < 0) {
+    state.instantPressure = true;
     recordPassPhase(state, "qb-chase", "Instant pressure sends the QB into the chase stub.");
     state.decision = "sack";
     recordPassPhase(state, "pressure-response", "Pressure response stub selected a sack.");

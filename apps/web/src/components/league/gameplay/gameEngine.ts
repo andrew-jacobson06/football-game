@@ -9,6 +9,8 @@ export type {
   PassPlayPhase,
   PassPlayDecision,
   PassPlayState,
+  PassBlitzGap,
+  PassBlitzResult,
 } from "./engine/types";
 export {
   runPlay,
@@ -28,6 +30,8 @@ export {
   calcYAC,
   createPassPlayState,
   runPassPlayPipeline,
+  resolvePassBlitz,
+  passBlitzInstantSackChance,
 } from "./engine/passEngine";
 export {
   punt,
