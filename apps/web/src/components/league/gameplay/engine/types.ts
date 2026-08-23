@@ -37,6 +37,8 @@ export type PlayCallOptions = {
   runner?: string;
   clockMode?: ClockMode;
   defense?: DefensiveAssignment[];
+  /** Set by the future defensive coaching engine when it calls a pass blitz. */
+  blitz?: boolean;
 };
 export type PlayerTrait = Record<string, unknown>;
 export type RunThreshold = {
@@ -132,6 +134,8 @@ export type PassPlayState = {
   phases: PassPlayPhase[];
   log: string[];
   blitz: boolean;
+  blitzResult?: PassBlitzResult;
+  pressure: string[];
   instantPressure: boolean;
   pocketFormed: boolean;
   baseTimeToThrow: number | null;
@@ -140,6 +144,22 @@ export type PassPlayState = {
   opennessTrajectory: Array<Record<string, unknown>>;
   target?: Record<string, unknown>;
   decision: PassPlayDecision;
+};
+export type PassBlitzGap =
+  | "outside-left"
+  | "LT-LG"
+  | "LG-C"
+  | "C-RG"
+  | "RG-RT"
+  | "outside-right";
+export type PassBlitzResult = {
+  gap: PassBlitzGap;
+  rusher: string;
+  pickedUpBy?: string;
+  lineBlocked: boolean;
+  backBlocked: boolean;
+  quarterbackPressured: boolean;
+  instantSack: boolean;
 };
 export type NormalizedOutcome = {
   outcome: string;
