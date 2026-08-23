@@ -1,5 +1,5 @@
 import type { LeagueGame } from "../../types";
-import type { EngineContext, PlayCallOptions } from "./types";
+import type { EngineContext, PassPlayState, PlayCallOptions } from "./types";
 import {
   advanceBall,
   applyHalftimeRules,
@@ -22,6 +22,90 @@ import {
 } from "./utils";
 import { buildResult } from "./playLogger";
 import { checkForFumble, determineTackler } from "./runEngine";
+
+/**
+ * Creates the shared state carried through the pass-play pipeline. The fields
+ * are deliberately small placeholders so each phase can be implemented without
+ * changing the snap entry point or the phases that follow it.
+ */
+export function createPassPlayState(qb: string): PassPlayState {
+  return {
+    qb,
+    phases: [],
+    log: [],
+    blitz: false,
+    instantPressure: false,
+    pocketFormed: false,
+    baseTimeToThrow: null,
+    finalTimeToThrow: null,
+    routes: [],
+    opennessTrajectory: [],
+    decision: "pending",
+  };
+}
+
+function recordPassPhase(
+  state: PassPlayState,
+  phase: PassPlayState["phases"][number],
+  message: string,
+) {
+  state.phases.push(phase);
+  state.log.push(message);
+}
+
+/** Runs the ordered shell for a pass snap through handing a throw off to the future completion engine. */
+export function runPassPlayPipeline(
+  game: LeagueGame,
+  ctx: EngineContext,
+  qbName: string,
+  options: PlayCallOptions = {},
+  timeToThrow = determineTimeToThrow(game, ctx, options),
+) {
+  const state = createPassPlayState(qbName);
+
+  // 1. Blitz? Detection is intentionally neutral until blitz assignments are defined.
+  recordPassPhase(state, "blitz-check", "Blitz check stub completed.");
+
+  // 2. DL/OL clash. Detailed matchup results will be attached here.
+  recordPassPhase(state, "line-clash", "DL/OL clash stub completed.");
+
+  // 3-4. An immediate loss sends the QB to the chase branch; otherwise a pocket forms.
+  state.instantPressure = timeToThrow < 0;
+  if (state.instantPressure) {
+    recordPassPhase(state, "qb-chase", "Instant pressure sends the QB into the chase stub.");
+    state.decision = "sack";
+    recordPassPhase(state, "pressure-response", "Pressure response stub selected a sack.");
+    return state;
+  }
+  state.pocketFormed = true;
+  recordPassPhase(state, "pocket-formed", "Pocket formation stub completed.");
+
+  // 5-7. Keep the existing time-to-throw result while the three calculations are built out.
+  state.baseTimeToThrow = timeToThrow;
+  recordPassPhase(state, "base-time-to-throw", "Base time-to-throw stub completed.");
+  recordPassPhase(state, "pass-rush-vs-pass-block", "Pass rush versus pass block stub completed.");
+  state.finalTimeToThrow = timeToThrow;
+  recordPassPhase(state, "final-time-to-throw", "Final time-to-throw stub completed.");
+
+  // 8-9. Existing route/separation helpers temporarily populate the route shells.
+  const routes = assignRoutes(game, ctx, options);
+  state.routes = routes;
+  recordPassPhase(state, "routes-available", "Receiver route availability stub completed.");
+  const openness = determineSeparation(ctx, routes, timeToThrow);
+  state.opennessTrajectory = openness;
+  recordPassPhase(state, "openness-trajectory", "Receiver openness trajectory stub completed.");
+
+  // 10-12. The current target chooser stands in for reads; pressure choices remain future work.
+  state.target = choosePassTarget(ctx, qbName, openness, options);
+  recordPassPhase(state, "qb-read-cycle", "QB read cycle stub completed.");
+  state.decision = state.target ? "throw" : "throw-away";
+  recordPassPhase(state, "qb-decision", `QB decision stub selected ${state.decision}.`);
+
+  // 13. Stop at the boundary where completion/incompletion logic will eventually begin.
+  if (state.decision === "throw")
+    recordPassPhase(state, "throw-to-receiver", "ThrowToReceiver handoff stub reached.");
+  return state;
+}
 
 export function determineTimeToThrow(
   game: LeagueGame,
@@ -312,13 +396,12 @@ export function passPlay(
     choose(byPosition(ctx, offenseTeam(game), "QB"));
   const qbName = playerName(qb, `${offenseTeam(game)} QB`);
   const ttt = determineTimeToThrow(game, ctx, options);
-  if (ttt < 0) return handleSack(game, ctx, qbName, options);
-  const target = choosePassTarget(
-    ctx,
-    qbName,
-    determineSeparation(ctx, assignRoutes(game, ctx, options), ttt),
-    options,
-  );
+  const passState = runPassPlayPipeline(game, ctx, qbName, options, ttt);
+  if (passState.decision === "sack")
+    return handleSack(game, ctx, qbName, options);
+  const target = passState.target as NonNullable<
+    ReturnType<typeof choosePassTarget>
+  > | undefined;
   if (!target) return handleSack(game, ctx, qbName, options);
   const pct = determineCompletionPct(ctx, qbName, target).pct;
   const outcome = determinePassOutcome(ctx, qbName, target, pct);

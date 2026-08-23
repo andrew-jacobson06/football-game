@@ -107,6 +107,40 @@ export type PlayResult = {
   play: Record<string, unknown>;
   text: string;
 };
+export type PassPlayPhase =
+  | "blitz-check"
+  | "line-clash"
+  | "qb-chase"
+  | "pocket-formed"
+  | "base-time-to-throw"
+  | "pass-rush-vs-pass-block"
+  | "final-time-to-throw"
+  | "routes-available"
+  | "openness-trajectory"
+  | "qb-read-cycle"
+  | "qb-decision"
+  | "pressure-response"
+  | "throw-to-receiver";
+export type PassPlayDecision =
+  | "pending"
+  | "throw"
+  | "throw-away"
+  | "scramble"
+  | "sack";
+export type PassPlayState = {
+  qb: string;
+  phases: PassPlayPhase[];
+  log: string[];
+  blitz: boolean;
+  instantPressure: boolean;
+  pocketFormed: boolean;
+  baseTimeToThrow: number | null;
+  finalTimeToThrow: number | null;
+  routes: Array<Record<string, unknown>>;
+  opennessTrajectory: Array<Record<string, unknown>>;
+  target?: Record<string, unknown>;
+  decision: PassPlayDecision;
+};
 export type NormalizedOutcome = {
   outcome: string;
   defenseResult: string;
