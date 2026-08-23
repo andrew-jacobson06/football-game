@@ -6,6 +6,9 @@ export type {
   FrontendSettings,
   DefensiveAssignment,
   RunPlayState,
+  PassPlayPhase,
+  PassPlayDecision,
+  PassPlayState,
 } from "./engine/types";
 export {
   runPlay,
@@ -23,6 +26,8 @@ export {
   determineCompletionPct,
   determinePassOutcome,
   calcYAC,
+  createPassPlayState,
+  runPassPlayPipeline,
 } from "./engine/passEngine";
 export {
   punt,
