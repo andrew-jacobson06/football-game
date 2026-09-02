@@ -65,33 +65,45 @@ const PASS_BLITZ_GAPS: Array<{
   { gap: "outside-right", blockers: ["RT"] },
 ];
 
-export function passBlitzInstantSackChance(passRush: number) {
-  return (
-    1.367054224554e-8 * passRush ** 5 -
-    0.000003115586224 * passRush ** 4 +
-    0.000221097297242 * passRush ** 3 -
-    0.001139798774598 * passRush ** 2 -
-    0.091745915462176 * passRush
-  );
+export function passBlitzSelectionWeight(linebacker: PlayerTrait) {
+  return (trait(linebacker, "passRush") / 2) ** 2;
+}
+
+export function passBlitzInstantSackChance(
+  linebacker: PlayerTrait,
+  quarterback: PlayerTrait,
+) {
+  const linebackerValue =
+    (trait(linebacker, "passRush") + trait(linebacker, "tackling")) / 2 +
+    trait(linebacker, "defStars") ** 2 / 2;
+  const quarterbackValue =
+    (trait(quarterback, "readDefense") +
+      trait(quarterback, "juke") * 2 +
+      trait(quarterback, "poise")) /
+    4 /
+    2;
+  return quarterbackValue > 0 ? linebackerValue / quarterbackValue : 0;
 }
 
 function linemanPickupScore(player: PlayerTrait | undefined) {
   return trait(player, "passProtect") + trait(player, "offStars") ** 2;
 }
 
-/** Resolves the extra QB-aligned linebacker independently from the normal line clash. */
+/** Selects and resolves one of the linebackers on the field independently from the normal line clash. */
 export function resolvePassBlitz(
   ctx: EngineContext,
   options: PlayCallOptions,
 ): PassBlitzResult | undefined {
   if (!options.blitz) return undefined;
-  const assignment = options.defense?.find((defender) => {
-    const player = byName(ctx, defender.player);
-    return defender.align === "QB" &&
-      String(player?.defPos ?? player?.DefPos).toUpperCase() === "LB";
-  });
-  const rusher = byName(ctx, assignment?.player);
-  if (!assignment || !rusher) return undefined;
+  const linebackers = (options.defense ?? [])
+    .map((defender) => byName(ctx, defender.player))
+    .filter(
+      (player): player is PlayerTrait =>
+        Boolean(player) &&
+        String(player?.defPos ?? player?.DefPos).toUpperCase() === "LB",
+    );
+  const rusher = weightedChoose(linebackers, passBlitzSelectionWeight);
+  if (!rusher) return undefined;
 
   const selectedGap = choose(PASS_BLITZ_GAPS);
   const adjacent = selectedGap.blockers
@@ -123,16 +135,17 @@ export function resolvePassBlitz(
   const back = backs[0];
   if (back) {
     const backBlocked = Math.random() * 100 <= trait(back, "passProtect");
-    return {
-      ...base,
-      pickedUpBy: backBlocked ? playerName(back) : undefined,
-      backBlocked,
-      quarterbackPressured: !backBlocked,
-    };
+    if (backBlocked)
+      return {
+        ...base,
+        pickedUpBy: playerName(back),
+        backBlocked: true,
+      };
   }
 
-  const instantSack = Math.random() * 100 <=
-    passBlitzInstantSackChance(trait(rusher, "passRush"));
+  const quarterback = byName(ctx, options.formation?.QB);
+  const instantSack = Boolean(quarterback) && Math.random() * 100 <
+    passBlitzInstantSackChance(rusher, quarterback);
   return { ...base, quarterbackPressured: !instantSack, instantSack };
 }
 
@@ -172,7 +185,7 @@ export function runPassPlayPipeline(
       return state;
     }
   } else {
-    recordPassPhase(state, "blitz-check", state.blitz ? "No QB-aligned linebacker was available to blitz." : "No blitz was called.");
+    recordPassPhase(state, "blitz-check", state.blitz ? "No linebacker was available to blitz." : "No blitz was called.");
   }
 
   // 2. DL/OL clash. Detailed matchup results will be attached here.
