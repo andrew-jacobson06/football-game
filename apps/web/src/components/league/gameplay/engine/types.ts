@@ -135,6 +135,7 @@ export type PassPlayState = {
   log: string[];
   blitz: boolean;
   blitzResult?: PassBlitzResult;
+  lineConfrontation: PassLineConfrontationResult[];
   pressure: string[];
   instantPressure: boolean;
   pocketFormed: boolean;
@@ -144,6 +145,16 @@ export type PassPlayState = {
   opennessTrajectory: Array<Record<string, unknown>>;
   target?: Record<string, unknown>;
   decision: PassPlayDecision;
+};
+export type PassLineConfrontationResult = {
+  slot: FormationSlot;
+  offensiveLineman: string;
+  defensiveLineman: string;
+  defensiveScore: number;
+  offensiveScore: number;
+  defensiveWinChance: number;
+  roll: number;
+  winner: "OL" | "DL";
 };
 export type PassBlitzGap =
   | "outside-left"
