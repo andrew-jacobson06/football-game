@@ -11,6 +11,7 @@ export type {
   PassPlayState,
   PassBlitzGap,
   PassBlitzResult,
+  PassLineConfrontationResult,
 } from "./engine/types";
 export {
   runPlay,
@@ -31,6 +32,7 @@ export {
   createPassPlayState,
   runPassPlayPipeline,
   resolvePassBlitz,
+  resolvePassLineConfrontation,
   passBlitzInstantSackChance,
 } from "./engine/passEngine";
 export {

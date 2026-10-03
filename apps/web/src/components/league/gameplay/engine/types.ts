@@ -136,6 +136,8 @@ export type PassPlayState = {
   blitz: boolean;
   blitzResult?: PassBlitzResult;
   lineConfrontation: PassLineConfrontationResult[];
+  /** Sum of all line-confrontation adjustments, retained for the time-to-throw calculation. */
+  timeToThrowLineModifier: number;
   pressure: string[];
   instantPressure: boolean;
   pocketFormed: boolean;
@@ -150,10 +152,18 @@ export type PassLineConfrontationResult = {
   slot: FormationSlot;
   offensiveLineman: string;
   defensiveLineman: string;
-  defensiveScore: number;
-  offensiveScore: number;
+  passRush: number;
+  passProtect: number;
   defensiveWinChance: number;
-  roll: number;
+  contests: Array<{
+    roll: number;
+    winner: "OL" | "DL";
+    timeToThrowModifier: number;
+  }>;
+  defensiveWins: number;
+  offensiveWins: number;
+  timeToThrowModifier: number;
+  /** The best-of-three winner, retained for consumers that summarize the matchup. */
   winner: "OL" | "DL";
 };
 export type PassBlitzGap =
