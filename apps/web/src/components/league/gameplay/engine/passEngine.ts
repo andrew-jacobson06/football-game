@@ -4,6 +4,7 @@ import type {
   FormationSlot,
   PassBlitzGap,
   PassBlitzResult,
+  PassLineConfrontationResult,
   PassPlayState,
   PlayCallOptions,
   PlayerTrait,
@@ -42,6 +43,7 @@ export function createPassPlayState(qb: string): PassPlayState {
     phases: [],
     log: [],
     blitz: false,
+    lineConfrontation: [],
     pressure: [],
     instantPressure: false,
     pocketFormed: false,
@@ -51,6 +53,47 @@ export function createPassPlayState(qb: string): PassPlayState {
     opennessTrajectory: [],
     decision: "pending",
   };
+}
+
+const PASS_LINE_SLOTS = new Set<FormationSlot>(["LT", "LG", "C", "RG", "RT"]);
+
+/** Resolves each aligned pass-rush matchup and returns the complete line result. */
+export function resolvePassLineConfrontation(
+  ctx: EngineContext,
+  options: PlayCallOptions,
+  random: () => number = Math.random,
+): PassLineConfrontationResult[] {
+  return (options.defense ?? []).flatMap((assignment) => {
+    const slot = assignment.align;
+    if (!slot || !PASS_LINE_SLOTS.has(slot)) return [];
+
+    const defensiveLineman = byName(ctx, assignment.player);
+    const offensiveLineman = byName(ctx, options.formation?.[slot]);
+    if (!defensiveLineman || !offensiveLineman) return [];
+
+    const defensiveScore =
+      trait(defensiveLineman, "passRush") / 20 +
+      (trait(defensiveLineman, "defStars") / 2) ** 2;
+    const offensiveScore =
+      trait(offensiveLineman, "passProtect") / 25 +
+      (trait(offensiveLineman, "offStars") / 2) ** 1.8;
+    const combinedScore = defensiveScore + offensiveScore;
+    const defensiveWinChance = combinedScore > 0
+      ? defensiveScore / combinedScore * 100
+      : 0;
+    const roll = random() * 100;
+
+    return [{
+      slot,
+      offensiveLineman: playerName(offensiveLineman),
+      defensiveLineman: playerName(defensiveLineman),
+      defensiveScore,
+      offensiveScore,
+      defensiveWinChance,
+      roll,
+      winner: roll < defensiveWinChance ? "DL" : "OL",
+    }];
+  });
 }
 
 const PASS_BLITZ_GAPS: Array<{
@@ -144,7 +187,7 @@ export function resolvePassBlitz(
   }
 
   const quarterback = byName(ctx, options.formation?.QB);
-  const instantSack = Boolean(quarterback) && Math.random() * 100 <
+  const instantSack = quarterback !== undefined && Math.random() * 100 <
     passBlitzInstantSackChance(rusher, quarterback);
   return { ...base, quarterbackPressured: !instantSack, instantSack };
 }
@@ -188,8 +231,21 @@ export function runPassPlayPipeline(
     recordPassPhase(state, "blitz-check", state.blitz ? "No linebacker was available to blitz." : "No blitz was called.");
   }
 
-  // 2. DL/OL clash. Detailed matchup results will be attached here.
-  recordPassPhase(state, "line-clash", "DL/OL clash stub completed.");
+  // 2. Resolve every aligned DL/OL matchup independently. Any winning DL
+  // contributes pressure; a clean sweep by the OL continues the normal pocket path.
+  state.lineConfrontation = resolvePassLineConfrontation(ctx, options);
+  const winningDefensiveLinemen = state.lineConfrontation
+    .filter((matchup) => matchup.winner === "DL")
+    .map((matchup) => matchup.defensiveLineman);
+  state.pressure.push(...winningDefensiveLinemen);
+  if (winningDefensiveLinemen.length > 0) state.instantPressure = true;
+  recordPassPhase(
+    state,
+    "line-clash",
+    winningDefensiveLinemen.length > 0
+      ? `${winningDefensiveLinemen.join(", ")} won at the line and pressured the quarterback.`
+      : "The offensive line won every matchup and formed a clean pocket.",
+  );
 
   // 3-4. An immediate loss sends the QB to the chase branch; otherwise a pocket forms.
   if (timeToThrow < 0) {
