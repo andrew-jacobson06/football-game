@@ -214,6 +214,26 @@ function recordPassPhase(
 ) {
   state.phases.push(phase);
   state.log.push(message);
+  console.debug(`[Pass Engine] Phase ${state.phases.length}: ${phase}`, {
+    message,
+    quarterback: state.qb,
+    blitz: state.blitz,
+    blitzResult: state.blitzResult ? { ...state.blitzResult } : undefined,
+    lineConfrontation: state.lineConfrontation.map((matchup) => ({
+      ...matchup,
+      contests: matchup.contests.map((contest) => ({ ...contest })),
+    })),
+    timeToThrowLineModifier: state.timeToThrowLineModifier,
+    pressure: [...state.pressure],
+    instantPressure: state.instantPressure,
+    pocketFormed: state.pocketFormed,
+    baseTimeToThrow: state.baseTimeToThrow,
+    finalTimeToThrow: state.finalTimeToThrow,
+    routes: state.routes.map((route) => ({ ...route })),
+    opennessTrajectory: state.opennessTrajectory.map((route) => ({ ...route })),
+    target: state.target ? { ...state.target } : undefined,
+    decision: state.decision,
+  });
 }
 
 /** Runs the ordered shell for a pass snap through handing a throw off to the future completion engine. */
@@ -602,6 +622,11 @@ export function passPlay(
   > | undefined;
   if (!target) return handleSack(game, ctx, qbName, options);
   const pct = determineCompletionPct(ctx, qbName, target).pct;
+  console.debug("[Pass Engine] Completion check", {
+    quarterback: qbName,
+    target: { ...target },
+    completionChance: pct,
+  });
   const outcome = determinePassOutcome(ctx, qbName, target, pct);
   const rawYards = outcome.intercepted ? 0 : outcome.yards;
   const newBall = advanceBall(game, rawYards);
@@ -627,6 +652,13 @@ export function passPlay(
             : rawYards >= n(game.Distance)
               ? "First Down"
               : "Normal";
+  console.debug("[Pass Engine] Pass outcome", {
+    quarterback: qbName,
+    target: target.player,
+    completionChance: pct,
+    ...outcome,
+    result,
+  });
   let hs = n(game.HomeScore),
     as = n(game.AwayScore);
   if (td) {
