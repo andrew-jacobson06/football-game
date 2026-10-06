@@ -79,6 +79,7 @@ export type RunNegativeYardageSetting = {
   minYards: number;
   maxYards: number;
 };
+export type TimeToThrowRange = { min: number; max: number; percentage: number };
 export type FrontendSettings = Record<string, unknown> & {
   thresholds?: RunThreshold[];
   breakaways?: RunBreakawaySetting[];
@@ -94,6 +95,7 @@ export type FrontendSettings = Record<string, unknown> & {
   routeTypeAirYards?: unknown[];
   routeInfo?: unknown[];
   timeNeededToThrow?: unknown[];
+  timeToThrowRanges?: TimeToThrowRange[];
   timeNeededToOpen?: unknown[];
   completionSeparationAdjustment?: unknown[];
   yacBySeparation?: Record<string, unknown>;

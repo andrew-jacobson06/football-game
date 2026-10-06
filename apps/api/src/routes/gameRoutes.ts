@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { parseTimeToThrowSettings } from "../services/timeToThrowSettings.js";
 import {
   appendSheetRow,
   batchUpdateSheetValues,
@@ -175,7 +176,7 @@ function settingRows(rows: Row[], prefix: string) {
   return rows.filter((r) => normalizeSettingLabel(r[0]).startsWith(normalizedPrefix));
 }
 async function getFrontendSettingsFromSheet() {
-  const { rows } = await sheetRows("Settings");
+  const { headers, rows } = await sheetRows("Settings");
   let cumulative = 0;
 
   const thresholds = rows.flatMap((r) => {
@@ -248,6 +249,7 @@ async function getFrontendSettingsFromSheet() {
       shape: String(r[2] ?? ""),
     })),
     timeNeededToThrow: settingRows(rows, "TNTT_").map((r) => ({ label: r[0], qbRead: String(r[1]), lt10: Number(r[2]), tenTo20: Number(r[3]), twentyOnePlus: Number(r[4]) })),
+    timeToThrowRanges: parseTimeToThrowSettings([headers, ...rows]),
     completionSeparationAdjustment: settingRows(rows, "separation_").map((r) => ({ label: r[0], separation: Number(r[1]), catchPctChange: Number(r[2]) })),
     yacBySeparation,
     sackLossTable: settingRows(rows, "SackLoss_").map((r) => ({ label: r[0], pct: Number(r[1]), max: Number(r[2]), min: Number(r[3]) })),
