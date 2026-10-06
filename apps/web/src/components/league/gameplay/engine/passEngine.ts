@@ -31,6 +31,7 @@ import {
 } from "./utils";
 import { buildResult } from "./playLogger";
 import { checkForFumble, determineTackler } from "./runEngine";
+import { calculateTimeToThrow } from "./timeToThrow";
 
 /**
  * Creates the shared state carried through the pass-play pipeline. The fields
@@ -60,7 +61,7 @@ const PASS_LINE_SLOTS = new Set<FormationSlot>(["LT", "LG", "C", "RG", "RT"]);
 
 /**
  * Resolves three contests for each aligned pass-rush matchup. Each contest also
- * produces the small adjustment that a later time-to-throw calculation will use.
+ * produces the small adjustment applied to the Settings-based time to throw.
  */
 export function resolvePassLineConfrontation(
   ctx: EngineContext,
@@ -242,7 +243,6 @@ export function runPassPlayPipeline(
   ctx: EngineContext,
   qbName: string,
   options: PlayCallOptions = {},
-  timeToThrow = determineTimeToThrow(game, ctx, options),
 ) {
   const state = createPassPlayState(qbName);
 
@@ -267,17 +267,7 @@ export function runPassPlayPipeline(
     recordPassPhase(state, "blitz-check", state.blitz ? "No linebacker was available to blitz." : "No blitz was called.");
   }
 
-  // A defensive-line instant win ends the play before the normal confrontation.
-  if (timeToThrow < 0) {
-    state.instantPressure = true;
-    recordPassPhase(state, "qb-chase", "Instant pressure sends the QB into the chase stub.");
-    state.decision = "sack";
-    recordPassPhase(state, "pressure-response", "Pressure response stub selected a sack.");
-    return state;
-  }
-
-  // 2. Only a pressure-free play reaches the normal line confrontation. Its
-  // modifier is stored now and applied when time-to-throw calculations arrive.
+  // 2. Only a pressure-free play reaches the normal line confrontation.
   if (state.pressure.length === 0) {
     state.lineConfrontation = resolvePassLineConfrontation(ctx, options);
     state.timeToThrowLineModifier = state.lineConfrontation.reduce(
@@ -298,18 +288,33 @@ export function runPassPlayPipeline(
   state.pocketFormed = true;
   recordPassPhase(state, "pocket-formed", "Pocket formation stub completed.");
 
-  // 5-7. Keep the existing time-to-throw result while the three calculations are built out.
-  state.baseTimeToThrow = timeToThrow;
-  recordPassPhase(state, "base-time-to-throw", "Base time-to-throw stub completed.");
+  // 5-7. Sample the Settings table only after the line contests are complete.
+  const timing = calculateTimeToThrow(
+    ctx.settings.timeToThrowRanges ?? [],
+    state.timeToThrowLineModifier,
+  );
+  state.baseTimeToThrow = timing.baseTimeToThrow;
+  recordPassPhase(state, "base-time-to-throw",
+    `Roll ${timing.percentageRoll.toFixed(2)} selected ${timing.range.min}–${timing.range.max} seconds; ` +
+    `base time to throw is ${timing.baseTimeToThrow.toFixed(2)} seconds.`);
   recordPassPhase(state, "pass-rush-vs-pass-block", "Pass rush versus pass block stub completed.");
-  state.finalTimeToThrow = timeToThrow;
-  recordPassPhase(state, "final-time-to-throw", "Final time-to-throw stub completed.");
+  state.finalTimeToThrow = timing.timeToThrow;
+  recordPassPhase(state, "final-time-to-throw",
+    `${timing.baseTimeToThrow.toFixed(2)} + ${state.timeToThrowLineModifier.toFixed(2)} = ` +
+    `${state.finalTimeToThrow.toFixed(2)} seconds to throw.`);
+  if (state.finalTimeToThrow < 0) {
+    state.instantPressure = true;
+    state.decision = "sack";
+    recordPassPhase(state, "qb-chase", "Line pressure exhausted the QB's time to throw.");
+    recordPassPhase(state, "pressure-response", "Pressure response stub selected a sack.");
+    return state;
+  }
 
   // 8-9. Existing route/separation helpers temporarily populate the route shells.
   const routes = assignRoutes(game, ctx, options);
   state.routes = routes;
   recordPassPhase(state, "routes-available", "Receiver route availability stub completed.");
-  const openness = determineSeparation(ctx, routes, timeToThrow);
+  const openness = determineSeparation(ctx, routes, state.finalTimeToThrow);
   state.opennessTrajectory = openness;
   recordPassPhase(state, "openness-trajectory", "Receiver openness trajectory stub completed.");
 
@@ -326,38 +331,12 @@ export function runPassPlayPipeline(
 }
 
 export function determineTimeToThrow(
-  game: LeagueGame,
+  _game: LeagueGame,
   ctx: EngineContext,
-  options: PlayCallOptions = {},
+  _options: PlayCallOptions = {},
+  lineModifier = 0,
 ) {
-  const defense = defenseTeam(game);
-  const formation = options.formation ?? {};
-  const rush = teamPlayers(ctx, defense)
-    .filter((p) => ["DL", "LB"].includes(String(p.defPos ?? "").toUpperCase()))
-    .reduce((s, p) => s + trait(p, "passRush") + trait(p, "defStars") / 2, 0);
-  const protectors = [
-    formation.RB1,
-    formation.RB2,
-    formation.LT,
-    formation.LG,
-    formation.C,
-    formation.RG,
-    formation.RT,
-  ]
-    .map((name) => byName(ctx, name))
-    .filter(Boolean);
-  const protection = protectors.reduce(
-    (s, p) => s + trait(p, "passProtect") + trait(p, "offStars") / 2,
-    0,
-  );
-  const diff = protection - rush + (Math.random() * 80 - 40);
-  if (diff < -80) return -1;
-  if (diff < -45) return 0;
-  if (diff < -20) return 1;
-  if (diff < 10) return 2;
-  if (diff < 35) return 3;
-  if (diff < 60) return 4;
-  return 5;
+  return calculateTimeToThrow(ctx.settings.timeToThrowRanges ?? [], lineModifier).timeToThrow;
 }
 export function handleSack(
   game: LeagueGame,
@@ -613,8 +592,7 @@ export function passPlay(
     byName(ctx, options.formation?.QB) ??
     choose(byPosition(ctx, offenseTeam(game), "QB"));
   const qbName = playerName(qb, `${offenseTeam(game)} QB`);
-  const ttt = determineTimeToThrow(game, ctx, options);
-  const passState = runPassPlayPipeline(game, ctx, qbName, options, ttt);
+  const passState = runPassPlayPipeline(game, ctx, qbName, options);
   if (passState.decision === "sack")
     return handleSack(game, ctx, qbName, options);
   const target = passState.target as NonNullable<
