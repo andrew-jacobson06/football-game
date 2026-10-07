@@ -36,7 +36,7 @@ test("ignores the zero placeholder when its percentage is formatted as 0%", () =
 });
 
 test("stops at adjacent openness tables without blank separator rows", () => {
-  for (const title of ["Curve Type", "Phase", "RouteTreeDetails", "baseTTO", "BaseImpact Calcs"]) {
+  for (const title of ["Curve Type Openness", "Curve Type", "Phase", "RouteTreeDetails", "baseTTO", "BaseImpact Calcs"]) {
     const rows = [
       ["", "time_to_Throw"], ["", "Min", "Max", "Avg", "Pct"],
       ["", 0, 1.5, 0.75, "5.0%"],
@@ -45,6 +45,23 @@ test("stops at adjacent openness tables without blank separator rows", () => {
     ];
     assert.deepEqual(parseTimeToThrowSettings(rows), [{ min: 0, max: 1.5, percentage: 5 }]);
   }
+});
+
+test("the renamed curve header at Settings row 175 ends the eight time-to-throw ranges", () => {
+  const rows: unknown[][] = [
+    ...Array.from({ length: 163 }, () => []),
+    ["time_to_Throw"], ["Min", "Max", "Avg", "Pct"], ["", 0, 0, ""],
+    ["0", "1.5", "0.75", "5.0%"], ["1.5", "2", "1.75", "16.0%"],
+    ["2", "2.5", "2.25", "20.0%"], ["2.5", "2.8", "2.65", "11.0%"],
+    ["2.8", "3.1", "2.95", "10.0%"], ["3.1", "3.4", "3.25", "10.0%"],
+    ["3.4", "3.7", "3.55", "9.0%"], ["3.7", "4.5", "4.1", "18.0%"],
+    ["Curve Type Openness", "0.25", "0.5", "0.75", "1", "1.25", "1.5", "2"],
+    ["Quick", 20, 40, 50, 55, 40, 35, 15],
+  ];
+  assert.equal(rows[174][0], "Curve Type Openness");
+  const ranges = parseTimeToThrowSettings(rows);
+  assert.equal(ranges.length, 8);
+  assert.deepEqual(ranges.at(-1), { min: 3.7, max: 4.5, percentage: 18 });
 });
 
 test("real invalid ranges still report the workbook row and values", () => {
