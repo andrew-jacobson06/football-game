@@ -16,9 +16,13 @@ export function parseTimeToThrowSettings(rows: unknown[][]): TimeToThrowRange[] 
   );
   if (headerRow < 0) throw new Error("time_to_Throw table is missing Min/Max/Avg/Pct headers.");
   const ranges: TimeToThrowRange[] = [];
-  for (const row of rows.slice(headerRow + 1)) {
+  const followingTables = new Set(["curve type", "phase", "routetreedetails", "basetto", "baseimpact calcs"]);
+  for (let rowIndex = headerRow + 1; rowIndex < rows.length; rowIndex++) {
+    const row = rows[rowIndex];
     const cells = row.slice(startColumn, startColumn + 4);
     if (cells.every((value) => value == null || String(value).trim() === "")) break;
+    // Neighboring Settings tables need not have a blank separator row.
+    if (followingTables.has(String(cells[0] ?? "").trim().toLowerCase())) break;
     // Ignore the table's placeholder row without a percentage.
     const pct = cells[3];
     if (pct == null || String(pct).trim() === "") {
@@ -29,11 +33,15 @@ export function parseTimeToThrowSettings(rows: unknown[][]): TimeToThrowRange[] 
     const max = Number(cells[1]);
     // Sheets returns formatted percentages as strings (e.g. "5.0%").
     const percentage = Number(String(pct).trim().replace(/%$/, ""));
+    // The workbook placeholder may have a formula displaying 0% instead of blank.
+    if (!ranges.length && (cells[0] == null || String(cells[0]).trim() === "") &&
+        max === 0 && Number(cells[2]) === 0 && percentage === 0) continue;
     if (cells[0] == null || String(cells[0]).trim() === "" ||
         cells[1] == null || String(cells[1]).trim() === "" ||
         !Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < min ||
         !Number.isFinite(percentage) || percentage < 0) {
-      throw new Error("Invalid range in time_to_Throw settings table.");
+      throw new Error(`Invalid range in time_to_Throw settings table at Settings row ${rowIndex + 1} ` +
+        `(Min=${JSON.stringify(cells[0] ?? "")}, Max=${JSON.stringify(cells[1] ?? "")}, Pct=${JSON.stringify(pct)}).`);
     }
     if (percentage > 0) ranges.push({ min, max, percentage });
   }
