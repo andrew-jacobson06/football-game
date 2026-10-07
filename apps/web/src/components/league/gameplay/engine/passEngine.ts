@@ -32,6 +32,7 @@ import {
 import { buildResult } from "./playLogger";
 import { checkForFumble, determineTackler } from "./runEngine";
 import { calculateTimeToThrow } from "./timeToThrow";
+import { calculateRouteOpennessInputs } from "./routeOpenness";
 
 /**
  * Creates the shared state carried through the pass-play pipeline. The fields
@@ -313,7 +314,7 @@ export function runPassPlayPipeline(
   // 8-9. Existing route/separation helpers temporarily populate the route shells.
   const routes = assignRoutes(game, ctx, options);
   state.routes = routes;
-  recordPassPhase(state, "routes-available", "Receiver route availability stub completed.");
+  recordPassPhase(state, "routes-available", "Receiver route timing, phase windows, and matchup trait impacts calculated.");
   const openness = determineSeparation(ctx, routes, state.finalTimeToThrow);
   state.opennessTrajectory = openness;
   recordPassPhase(state, "openness-trajectory", "Receiver openness trajectory stub completed.");
@@ -431,23 +432,33 @@ export function assignRoutes(
       ].map((p) => playerName(p));
   return names
     .filter((name) => routes[name] !== "No Route")
-    .map((name, i) => ({
-      player: name,
-      routeType: routes[name] || "Go",
-      airYards: options.routeDepths?.[name] && depthRanges[options.routeDepths[name]]
+    .map((name, i) => {
+      const routeType = routes[name] || "Go";
+      const airYards = options.routeDepths?.[name] && depthRanges[options.routeDepths[name]]
         ? choose(depthRanges[options.routeDepths[name]])
-        : routes[name] === "Screen"
-          ? 0
-          : routes[name] === "Slant"
-            ? 5
-            : routes[name] === "Post"
-              ? 14
-              : 8,
-      TTO: routes[name] === "Go" ? 4 : 2,
-      defender: teamPlayers(ctx, defenseTeam(game))[i]?.name as
-        string | undefined,
-      position: i,
-    }));
+        : routeType === "Screen" ? 0 : routeType === "Slant" ? 5 : routeType === "Post" ? 14 : 8;
+      const depth = options.routeDepths?.[name] ??
+        (Object.entries(depthRanges).find(([, [min, max]]) => airYards >= min && airYards <= max)?.[0] ?? "Quick");
+      const slot = Object.entries(options.formation ?? {}).find(([, player]) => player === name)?.[0];
+      const assignment = options.defense?.find((defender) => defender.align === slot && slot !== undefined);
+      const coveragePlayers = teamPlayers(ctx, defenseTeam(game)).filter((player) =>
+        ["DB", "S"].includes(String(player.defPos ?? player.DefPos ?? "").toUpperCase()));
+      const defenderName = assignment?.player ?? playerName(coveragePlayers[i]);
+      const receiver = byName(ctx, name), defender = byName(ctx, defenderName);
+      if (!ctx.settings.routeOpennessSettings) throw new Error("Missing route openness Settings tables.");
+      if (!receiver || !defender) throw new Error(`Missing receiver/defender matchup for ${name}.`);
+      const opennessInputs = calculateRouteOpennessInputs(ctx.settings.routeOpennessSettings, routeType, depth, receiver, defender);
+      return {
+        player: name,
+        routeType,
+        depth,
+        airYards,
+        TTO: opennessInputs.timeToOpen,
+        opennessInputs,
+        defender: defenderName,
+        position: i,
+      };
+    });
 }
 export function determineSeparation(
   ctx: EngineContext,
