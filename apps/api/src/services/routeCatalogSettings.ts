@@ -48,13 +48,14 @@ export function parseRouteCatalogSettings(rows: unknown[][]) {
   }
   const routesByDepth: Record<string, string[]> = Object.fromEntries(routeTypeAirYards.map(({ routeType }) => [routeType, []]));
   if (!routeTypeAirYards.length) return { routeTypeAirYards, routesByDepth };
-  let routeColumn = -1;
-  const headerIndex = rows.findIndex((row) => {
-    routeColumn = row.findIndex((value, index) => ["route", "routes"].includes(key(value)) &&
-      row.slice(index + 1).some((header) => depths.has(key(header))));
-    return routeColumn >= 0;
-  });
-  if (headerIndex < 0) throw new Error("Missing Routes table with depth columns matching the AirYards table.");
+  const headers = rows.flatMap((row, rowIndex) => row.flatMap((value, column) =>
+    ["route", "routes"].includes(key(value)) && row.slice(column + 1).some((header) => depths.has(key(header)))
+      ? [{ rowIndex, column, title: key(value) }] : []));
+  // A Routes section heading can repeat the depth names above the actual Route header.
+  // Prefer the column header so the section heading cannot produce an empty catalog.
+  const selectedHeader = headers.find(({ title }) => title === "route") ?? headers[0];
+  if (!selectedHeader) throw new Error("Missing Routes table with depth columns matching the AirYards table.");
+  const { rowIndex: headerIndex, column: routeColumn } = selectedHeader;
   const header = rows[headerIndex];
   const depthColumns = routeTypeAirYards.map(({ routeType }) => ({
     routeType,
@@ -63,6 +64,8 @@ export function parseRouteCatalogSettings(rows: unknown[][]) {
   let foundRoute = false;
   for (let index = headerIndex + 1; index < rows.length; index++) {
     const row = rows[index], route = text(row[routeColumn]);
+    // Also allow a label-only Route header underneath a combined Routes/depth heading.
+    if (!foundRoute && ["route", "routes"].includes(key(route))) continue;
     if (sectionTitles.has(key(route))) break;
     if (!route) {
       if (foundRoute) break;

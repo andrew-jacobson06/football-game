@@ -61,6 +61,25 @@ test("supports a Routes section title above its Route column header", () => {
   assert.deepEqual(result.routesByDepth, { Quick: ["Flat"] });
 });
 
+test("a Routes heading repeating depth names does not hide the actual Route header", () => {
+  const result = parseRouteCatalogSettings([
+    ["AirYards", "routeType", "airyards min", "airyards max"],
+    ["range", "Quick", 1, 2], ["range", "Short", 3, 5], [],
+    ["Routes", "Quick", "Short"], ["Route", "Quick", "Short"],
+    ["WR Screen", 1, ""], ["Flat", 1, 1],
+  ]);
+  assert.deepEqual(result.routesByDepth, { Quick: ["WR Screen", "Flat"], Short: ["Flat"] });
+});
+
+test("a label-only second header does not terminate route reading", () => {
+  const result = parseRouteCatalogSettings([
+    ["AirYards", "routeType", "airyards min", "airyards max"],
+    ["range", "Quick", 1, 2], [],
+    ["Routes", "Quick"], ["Route"], ["Flat", 1],
+  ]);
+  assert.deepEqual(result.routesByDepth, { Quick: ["Flat"] });
+});
+
 test("does not treat other prefixed Settings rows as an AirYards table", () => {
   assert.deepEqual(parseRouteCatalogSettings([["routeType_AirYardsReqd_Quick", "Quick", 1, 2]]),
     { routeTypeAirYards: [], routesByDepth: {} });
