@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calculateRouteOpennessInputs, type RouteOpennessSettings } from "../src/components/league/gameplay/engine/routeOpenness.ts";
+import { calculateRouteOpennessInputs, calculateRoutePhaseImpacts, type RouteOpennessSettings } from "../src/components/league/gameplay/engine/routeOpenness.ts";
 import { assignRoutes, runPassPlayPipeline } from "../src/components/league/gameplay/engine/passEngine.ts";
 import type { LeagueGame } from "../src/components/league/types.ts";
 import type { EngineContext, PlayCallOptions } from "../src/components/league/gameplay/engine/types.ts";
@@ -64,6 +64,51 @@ test("WR Screen uses existing Screen timing details when the workbook names diff
   assert.equal(calculateRouteOpennessInputs(screenSettings, "WR Screen", "Quick", receiver, defender).timeToOpen, 0.8);
 });
 
+test("phase impacts sum signed base impacts times weights, then apply the route percentage", () => {
+  const inputs = calculateRouteOpennessInputs(settings, "Flat", "Quick", receiver, defender);
+  const result = calculateRoutePhaseImpacts(inputs, receiver, defender, () => 0);
+  assert.ok(Math.abs(result.phaseImpacts.Release - 15.47) < 1e-10);
+  assert.equal(result.phaseImpacts.Stem, 0);
+  assert.ok(Math.abs(result.phaseImpacts.Break - 2.4175) < 1e-10);
+  assert.ok(Math.abs(result.phaseImpacts.Sustain - 26.37) < 1e-10);
+  assert.equal(result.phaseOpenness[0].traits.speed.baseImpact, 10);
+  assert.equal(result.phaseOpenness[0].traits.speed.phaseModifier, 0.7);
+  assert.equal(result.phaseOpenness[0].traits.speed.signedImpact, 7);
+});
+
+test("each phase rolls all four contests independently and keeps WR/DB outcomes", () => {
+  const inputs = calculateRouteOpennessInputs(settings, "Flat", "Quick", receiver, defender);
+  const rolls = [0.69, 0.30, 0.89, 0.90, 0, 0, 0, 0, 0.99, 0.99, 0.99, 0.99, 0, 0, 0, 0];
+  let count = 0;
+  const result = calculateRoutePhaseImpacts(inputs, receiver, defender, () => rolls[count++]);
+  assert.equal(count, 16);
+  const release = result.phaseOpenness[0];
+  assert.deepEqual(Object.values(release.traits).map((trait) => trait.winner), ["WR", "DB", "WR", "DB"]);
+  assert.equal(release.traits.speed.receiverWinNumber, 70);
+  assert.equal(release.traits.acceleration.receiverWinNumber, 30);
+  assert.equal(release.traits.routeCoverage.receiverWinNumber, 90);
+  assert.equal(release.traits.size.receiverWinNumber, 90);
+  assert.ok(Math.abs(release.phaseImpact - (-0.07)) < 1e-10);
+  assert.equal(result.phaseOpenness[2].traits.speed.winner, "DB");
+  assert.equal(result.phaseOpenness[3].traits.speed.winner, "WR");
+  assert.equal(result.phaseImpacts.Stem, 0);
+});
+
+test("the WR win number has a floor of five and equal rolls lose, without an upper cap", () => {
+  const weak = { ...receiver, speed: 0 }, strong = { ...defender, speed: 100 };
+  const inputs = calculateRouteOpennessInputs(settings, "Flat", "Quick", weak, strong);
+  const loss = calculateRoutePhaseImpacts(inputs, weak, strong, () => 0.05);
+  assert.equal(loss.phaseOpenness[0].traits.speed.receiverWinNumber, 5);
+  assert.equal(loss.phaseOpenness[0].traits.speed.winner, "DB");
+  const win = calculateRoutePhaseImpacts(inputs, weak, strong, () => 0.04999);
+  assert.equal(win.phaseOpenness[0].traits.speed.winner, "WR");
+  const fast = { ...receiver, speed: 200 };
+  const fastInputs = calculateRouteOpennessInputs(settings, "Flat", "Quick", fast, defender);
+  const fastWin = calculateRoutePhaseImpacts(fastInputs, fast, defender, () => 0.99999);
+  assert.equal(fastWin.phaseOpenness[0].traits.speed.receiverWinNumber, 190);
+  assert.equal(fastWin.phaseOpenness[0].traits.speed.winner, "WR");
+});
+
 const game: LeagueGame = { GameId: 1, Home: "Home", Away: "Away", Possession: "Home", HomeScore: 0, AwayScore: 0, Qtr: 1, Time: 900, Down: 1, Distance: 10, BallOn: 25 };
 const ctx: EngineContext = {
   players: [{ name: "Lineman", team: "Away", defPos: "DL" }, receiver, defender],
@@ -88,5 +133,10 @@ test("pass pipeline retains calculation inputs for later openness graphs", (t) =
   assert.equal(state.routes[0].TTO, 0.8);
   const route = state.routes[0] as ReturnType<typeof assignRoutes>[number];
   assert.equal(route.opennessInputs.phases.at(-1)?.end, 0.8);
+  assert.deepEqual(Object.keys(route.phaseImpacts), ["Release", "Stem", "Break", "Sustain"]);
+  assert.equal(route.phaseOpenness.length, 4);
+  assert.equal(route.phaseOpenness[0].traits.acceleration.winner, "DB");
+  assert.equal(route.phaseImpacts.Release, route.phaseOpenness[0].phaseImpact);
+  assert.equal(state.opennessTrajectory[0].phaseImpacts, route.phaseImpacts);
   assert.equal(state.opennessTrajectory[0].opennessInputs, route.opennessInputs);
 });
