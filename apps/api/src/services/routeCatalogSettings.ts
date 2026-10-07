@@ -1,34 +1,81 @@
 const text = (value: unknown) => String(value ?? "").trim();
-const sectionTitles = new Set(["route", "airyards", "curve type", "phase", "routetreedetails", "basetto", "baseimpact calcs", "time_to_throw"]);
+const key = (value: unknown) => text(value).replace(/[‐‑–—]/g, "-").replace(/\s+/g, " ").toLowerCase();
+const sectionTitles = new Set(["route", "routes", "airyards", "curve type", "phase", "routetreedetails", "basetto", "baseimpact calcs", "time_to_throw"]);
 
+/** Depths belong exclusively to the named AirYards table, never other prefixed rows. */
 export function parseRouteCatalogSettings(rows: unknown[][]) {
-  const routeTypeAirYards = rows.flatMap((row) => {
-    const column = row.findIndex((value) => text(value).toLowerCase().startsWith("routetype_airyardsreqd_"));
-    if (column < 0) return [];
-    const [label, name, min, max] = row.slice(column, column + 4);
-    const minAirYards = Number(min);
-    const maxAirYards = text(max) === "--" ? null : Number(max);
-    if (!text(name) || !text(min) || !Number.isInteger(minAirYards) || minAirYards < 0 ||
-        (maxAirYards !== null && (!text(max) || !Number.isInteger(maxAirYards) || maxAirYards < minAirYards)))
-      throw new Error(`Invalid AirYards setting: ${text(label)}.`);
-    return [{ label: text(label), routeType: text(name), minAirYards, maxAirYards }];
-  });
-  const routesByDepth: Record<string, string[]> = Object.fromEntries(routeTypeAirYards.map(({ routeType }) => [routeType, []]));
-  const headerIndex = rows.findIndex((row) => row.some((value, index) =>
-    text(value).toLowerCase() === "route" && row.slice(index + 1).some((header) => text(header) in routesByDepth)));
-  if (headerIndex >= 0) {
-    const column = rows[headerIndex].findIndex((value) => text(value).toLowerCase() === "route");
+  const routeTypeAirYards: Array<{ label: string; routeType: string; minAirYards: number; maxAirYards: number | null }> = [];
+  const depths = new Map<string, typeof routeTypeAirYards[number]>();
+  const airTitleRow = rows.findIndex((row) => row.some((value) => key(value) === "airyards"));
+  if (airTitleRow >= 0) {
+    const startColumn = rows[airTitleRow].findIndex((value) => key(value) === "airyards");
+    let headerIndex = airTitleRow;
+    const isAirHeader = (row: unknown[]) => ["routetype", "airyards min", "airyards max"].every((name) =>
+      row.slice(startColumn, startColumn + 4).some((value) => key(value) === name));
+    // Support a section title above the column-header row as well as a combined title/header.
+    while (headerIndex < rows.length && !isAirHeader(rows[headerIndex])) {
+      headerIndex++;
+      if (headerIndex < rows.length && rows[headerIndex].some((value) => sectionTitles.has(key(value)))) break;
+    }
+    if (headerIndex >= rows.length || !isAirHeader(rows[headerIndex]))
+      throw new Error("AirYards table is missing routeType / airyards min / airyards max headers.");
     const header = rows[headerIndex];
+    const column = (name: string) => header.findIndex((value, index) => index >= startColumn && index < startColumn + 4 && key(value) === name);
+    const depthColumn = column("routetype"), minColumn = column("airyards min"), maxColumn = column("airyards max");
     for (let index = headerIndex + 1; index < rows.length; index++) {
-      const row = rows[index], route = text(row[column]);
-      if (!route || sectionTitles.has(route.toLowerCase())) break;
-      for (const depth of routeTypeAirYards) {
-        const depthColumn = header.findIndex((value, position) => position > column && text(value) === depth.routeType);
-        if (depthColumn < 0) continue;
-        const marker = text(row[depthColumn]);
-        if (marker && marker !== "0" && Number(marker) !== 1)
-          throw new Error(`Invalid route eligibility for ${route} / ${depth.routeType}.`);
-        if (marker && Number(marker) === 1) routesByDepth[depth.routeType].push(route);
+      const row = rows[index];
+      if (sectionTitles.has(key(row[startColumn]))) break;
+      const routeType = text(row[depthColumn]);
+      if (!routeType) {
+        if (routeTypeAirYards.length) break;
+        continue;
+      }
+      const min = row[minColumn], max = row[maxColumn];
+      const minAirYards = Number(min), maxAirYards = text(max) === "--" ? null : Number(max);
+      if (!text(min) || !Number.isInteger(minAirYards) || minAirYards < 0 ||
+          (maxAirYards !== null && (!text(max) || !Number.isInteger(maxAirYards) || maxAirYards < minAirYards)))
+        throw new Error(`Invalid AirYards setting at Settings row ${index + 1}: ${routeType}.`);
+      const range = { label: text(row[startColumn]), routeType, minAirYards, maxAirYards };
+      const existing = depths.get(key(routeType));
+      if (existing) {
+        if (existing.minAirYards !== minAirYards || existing.maxAirYards !== maxAirYards)
+          throw new Error(`Conflicting AirYards ranges for depth ${routeType}.`);
+        continue;
+      }
+      depths.set(key(routeType), range);
+      routeTypeAirYards.push(range);
+    }
+  }
+  const routesByDepth: Record<string, string[]> = Object.fromEntries(routeTypeAirYards.map(({ routeType }) => [routeType, []]));
+  if (!routeTypeAirYards.length) return { routeTypeAirYards, routesByDepth };
+  let routeColumn = -1;
+  const headerIndex = rows.findIndex((row) => {
+    routeColumn = row.findIndex((value, index) => ["route", "routes"].includes(key(value)) &&
+      row.slice(index + 1).some((header) => depths.has(key(header))));
+    return routeColumn >= 0;
+  });
+  if (headerIndex < 0) throw new Error("Missing Routes table with depth columns matching the AirYards table.");
+  const header = rows[headerIndex];
+  const depthColumns = routeTypeAirYards.map(({ routeType }) => ({
+    routeType,
+    columns: header.flatMap((value, index) => index > routeColumn && key(value) === key(routeType) ? [index] : []),
+  }));
+  let foundRoute = false;
+  for (let index = headerIndex + 1; index < rows.length; index++) {
+    const row = rows[index], route = text(row[routeColumn]);
+    if (sectionTitles.has(key(route))) break;
+    if (!route) {
+      if (foundRoute) break;
+      continue;
+    }
+    foundRoute = true;
+    for (const { routeType, columns } of depthColumns) {
+      for (const column of columns) {
+        const marker = text(row[column]);
+        if (marker && Number(marker) !== 0 && Number(marker) !== 1)
+          throw new Error(`Invalid route eligibility for ${route} / ${routeType}.`);
+        if (marker && Number(marker) === 1 && !routesByDepth[routeType].includes(route))
+          routesByDepth[routeType].push(route);
       }
     }
   }
