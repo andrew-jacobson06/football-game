@@ -34,6 +34,7 @@ import { checkForFumble, determineTackler } from "./runEngine";
 import { calculateTimeToThrow } from "./timeToThrow";
 import { calculateRouteOpennessInputs, calculateRoutePhaseImpacts } from "./routeOpenness";
 import { routeDepthBounds } from "./routeCatalog";
+import { runUnpressuredReadLoop } from "./passReadLoop";
 
 /**
  * Creates the shared state carried through the pass-play pipeline. The fields
@@ -234,6 +235,7 @@ function recordPassPhase(
     finalTimeToThrow: state.finalTimeToThrow,
     routes: state.routes.map((route) => ({ ...route })),
     opennessTrajectory: state.opennessTrajectory.map((route) => ({ ...route })),
+    readLoop: state.readLoop,
     target: state.target ? { ...state.target } : undefined,
     decision: state.decision,
   });
@@ -320,9 +322,19 @@ export function runPassPlayPipeline(
   state.opennessTrajectory = openness;
   recordPassPhase(state, "openness-trajectory", "Receiver openness trajectory stub completed.");
 
-  // 10-12. The current target chooser stands in for reads; pressure choices remain future work.
+  // 10. Begin unpressured reads using the stored route curves and phase impacts.
+  if (state.pressure.length === 0 && !state.instantPressure && routes.length > 0) {
+    state.readLoop = runUnpressuredReadLoop(
+      ctx.settings.routeOpennessSettings!, routes, state.finalTimeToThrow,
+      trait(byName(ctx, qbName), "readDefense"), options.reads,
+    );
+  }
+  recordPassPhase(state, "qb-read-cycle", state.readLoop
+    ? `Unpressured read ${state.readLoop.currentRead} paused at ${state.readLoop.currentTime.toFixed(2)} seconds (${state.readLoop.stopReason}); ${state.readLoop.snapshots.length} perceived-openness snapshots recorded.`
+    : "Unpressured read loop skipped for pressure or no routes.");
+
+  // 11-12. Retain the existing target fallback until the read loop's decisions are built.
   state.target = choosePassTarget(ctx, qbName, openness, options);
-  recordPassPhase(state, "qb-read-cycle", "QB read cycle stub completed.");
   state.decision = state.target ? "throw" : "throw-away";
   recordPassPhase(state, "qb-decision", `QB decision stub selected ${state.decision}.`);
 
