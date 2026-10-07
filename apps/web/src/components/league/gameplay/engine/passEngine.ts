@@ -450,6 +450,7 @@ export function assignRoutes(
       return {
         player: name,
         routeType,
+        curveType: opennessInputs.curveType,
         depth,
         airYards,
         TTO: opennessInputs.timeToOpen,

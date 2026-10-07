@@ -23,7 +23,7 @@ test("pass engine samples the entire Settings range and validates route eligibil
       routesByDepth: { Custom: ["Flat"] },
       routeOpennessSettings: {
         curves: {}, phaseWeights: { Release: weights, Stem: weights, Break: weights, Sustain: weights },
-        routeTree: { Flat: { type: "Simple", timingMod: 0, phases: { Release: 35, Stem: 0, Break: 5, Sustain: 60 } } },
+        routeTree: { Flat: { type: "Simple", curveType: "Quick", timingMod: 0, phases: { Release: 35, Stem: 0, Break: 5, Sustain: 60 } } },
         baseTTO: { Custom: 2 }, baseImpacts: Object.fromEntries(["Speed", "Accel", "Route/Coverage", "Size"].map((key) => [key, { base: 5, max: 10, diffWeight: 0.25 }])),
       },
     },

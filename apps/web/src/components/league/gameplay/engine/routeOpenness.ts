@@ -22,7 +22,7 @@ export type PhaseTraitContest = {
 export type RouteOpennessSettings = {
   curves: Record<string, Array<{ time: number; openness: number }>>;
   phaseWeights: Record<string, TraitImpacts>;
-  routeTree: Record<string, { type: string; timingMod: number; phases: Record<RoutePhase, number> }>;
+  routeTree: Record<string, { type: string; curveType: string; timingMod: number; phases: Record<RoutePhase, number> }>;
   baseTTO: Record<string, number>;
   baseImpacts: Record<string, { base: number; max: number; diffWeight: number }>;
 };
@@ -76,7 +76,45 @@ export function calculateRouteOpennessInputs(
     const difference = Math.abs(playerTrait(receiver, [...receiverKeys]) - playerTrait(defender, [...defenderKeys]));
     return [trait, base + Math.min(max, difference * diffWeight)];
   })) as TraitImpacts;
-  return { route, depth, routeType: details.type, baseTTO, timingMod: details.timingMod, timeToOpen, phases, traitImpacts };
+  return { route, depth, routeType: details.type, curveType: details.curveType, baseTTO, timingMod: details.timingMod, timeToOpen, phases, traitImpacts };
+}
+
+/** Interpolate the curve at elapsedSeconds / TTO. This excludes matchup phase impacts. */
+export function calculateBaseOpenness(
+  settings: Pick<RouteOpennessSettings, "curves">,
+  curveType: string,
+  timeToOpen: number,
+  elapsedSeconds: number,
+) {
+  if (!Number.isFinite(timeToOpen) || timeToOpen <= 0)
+    throw new Error("Base openness requires a positive TTO.");
+  if (!Number.isFinite(elapsedSeconds) || elapsedSeconds < 0)
+    throw new Error("Base openness requires a nonnegative elapsed time.");
+  if (!curveType?.trim()) throw new Error("Missing Curve Type in RouteTreeDetails.");
+  const points = [...lookup(settings.curves, curveType)].sort((a, b) => a.time - b.time);
+  if (!points.length || points.some((point, index) =>
+    !Number.isFinite(point.time) || point.time < 0 || !Number.isFinite(point.openness) ||
+    (index > 0 && point.time === points[index - 1].time)))
+    throw new Error(`Missing or invalid openness curve: ${curveType}.`);
+  const progress = elapsedSeconds / timeToOpen;
+  let previous = { time: 0, openness: 0 };
+  for (const point of points) {
+    if (progress === point.time) return point.openness;
+    if (progress < point.time) {
+      const fraction = (progress - previous.time) / (point.time - previous.time);
+      return previous.openness + fraction * (point.openness - previous.openness);
+    }
+    previous = point;
+  }
+  return previous.openness;
+}
+
+export function getRouteBaseOpenness(
+  settings: Pick<RouteOpennessSettings, "curves">,
+  route: { TTO: number; curveType: string },
+  elapsedSeconds: number,
+) {
+  return calculateBaseOpenness(settings, route.curveType, route.TTO, elapsedSeconds);
 }
 
 /** Roll independent WR/DB contests for every trait in every phase of this snap. */

@@ -14,8 +14,8 @@ const settings: RouteOpennessSettings = {
     Sustain: { speed: 2, acceleration: 0.25, routeCoverage: 0.95, size: 0.8 },
   },
   routeTree: {
-    Flat: { type: "Simple", timingMod: -0.2, phases: { Release: 35, Stem: 0, Break: 5, Sustain: 60 } },
-    Sluggo: { type: "Complex", timingMod: 0.3, phases: { Release: 15, Stem: 15, Break: 45, Sustain: 25 } },
+    Flat: { type: "Simple", curveType: "Quick", timingMod: -0.2, phases: { Release: 35, Stem: 0, Break: 5, Sustain: 60 } },
+    Sluggo: { type: "Complex", curveType: "DoubleMove", timingMod: 0.3, phases: { Release: 15, Stem: 15, Break: 45, Sustain: 25 } },
   },
   baseTTO: { Quick: 1, Deep: 3.2 },
   baseImpacts: {
@@ -121,6 +121,7 @@ test("route assignment uses the aligned DB and excludes No Route players", () =>
   const routes = assignRoutes(game, ctx, options);
   assert.equal(routes[0].defender, "Corner");
   assert.equal(routes[0].TTO, 0.8);
+  assert.equal(routes[0].curveType, "Quick");
   assert.equal(routes[0].opennessInputs.traitImpacts.speed, 10);
   assert.deepEqual(assignRoutes(game, ctx, { ...options, routes: { Receiver: "No Route" } }), []);
 });
