@@ -32,7 +32,11 @@ export function calculateRouteOpennessInputs(
   receiver: PlayerTrait,
   defender: PlayerTrait,
 ) {
-  const details = lookup(settings.routeTree, route);
+  // The route matrix calls this WR Screen; older RouteTreeDetails calls it Screen.
+  const routeTreeName = route.trim().toLowerCase() === "wr screen" &&
+    !Object.keys(settings.routeTree).some((key) => key.trim().toLowerCase() === "wr screen")
+    ? "Screen" : route;
+  const details = lookup(settings.routeTree, routeTreeName);
   const baseTTO = lookup(settings.baseTTO, depth);
   const timeToOpen = baseTTO + details.timingMod;
   if (!Number.isFinite(timeToOpen) || timeToOpen < 0) throw new Error("Invalid route time to open.");

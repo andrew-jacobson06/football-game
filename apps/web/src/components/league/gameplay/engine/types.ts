@@ -1,5 +1,6 @@
 import type { LeagueGame } from "../../types";
 import type { RouteOpennessSettings } from "./routeOpenness";
+import type { RouteDepthRange } from "./routeCatalog";
 
 export type PlayKind =
   | "Run"
@@ -93,7 +94,8 @@ export type FrontendSettings = Record<string, unknown> & {
   tackleTable?: unknown[];
   tackleSettings?: unknown[];
   completionTable?: unknown[];
-  routeTypeAirYards?: unknown[];
+  routeTypeAirYards?: RouteDepthRange[];
+  routesByDepth?: Record<string, string[]>;
   routeInfo?: unknown[];
   timeNeededToThrow?: unknown[];
   timeToThrowRanges?: TimeToThrowRange[];

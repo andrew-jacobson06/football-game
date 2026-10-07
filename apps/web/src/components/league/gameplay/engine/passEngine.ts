@@ -33,6 +33,7 @@ import { buildResult } from "./playLogger";
 import { checkForFumble, determineTackler } from "./runEngine";
 import { calculateTimeToThrow } from "./timeToThrow";
 import { calculateRouteOpennessInputs } from "./routeOpenness";
+import { routeDepthBounds } from "./routeCatalog";
 
 /**
  * Creates the shared state carried through the pass-play pipeline. The fields
@@ -418,11 +419,6 @@ export function assignRoutes(
 ) {
   const offense = offenseTeam(game),
     routes = options.routes ?? {};
-  const depthRanges: Record<string, [number, number]> = {
-    Quick: [1, 2], Short: [3, 5], "Short-Mid": [6, 10], Mid: [11, 15],
-    "Mid-Long": [16, 20], Long: [21, 25], Deep: [26, 30], Shot: [31, 39],
-    Bomb: [40, Math.max(40, game.Possession === "Home" ? 100 - n(game.BallOn) : n(game.BallOn))],
-  };
   const names = Object.keys(routes).length
     ? Object.keys(routes)
     : [
@@ -431,14 +427,16 @@ export function assignRoutes(
         ...byPosition(ctx, offense, "TE"),
       ].map((p) => playerName(p));
   return names
-    .filter((name) => routes[name] !== "No Route")
+    .filter((name) => Boolean(routes[name]) && routes[name] !== "No Route")
     .map((name, i) => {
-      const routeType = routes[name] || "Go";
-      const airYards = options.routeDepths?.[name] && depthRanges[options.routeDepths[name]]
-        ? choose(depthRanges[options.routeDepths[name]])
-        : routeType === "Screen" ? 0 : routeType === "Slant" ? 5 : routeType === "Post" ? 14 : 8;
-      const depth = options.routeDepths?.[name] ??
-        (Object.entries(depthRanges).find(([, [min, max]]) => airYards >= min && airYards <= max)?.[0] ?? "Quick");
+      const routeType = routes[name];
+      const depth = options.routeDepths?.[name];
+      const range = ctx.settings.routeTypeAirYards?.find((range) => range.routeType === depth);
+      if (!depth || !range) throw new Error(`Missing or invalid route depth for ${name}.`);
+      if (!ctx.settings.routesByDepth?.[depth]?.includes(routeType))
+        throw new Error(`Route ${routeType} is not available at depth ${depth}.`);
+      const bounds = routeDepthBounds(range, game.Possession === "Home" ? 100 - n(game.BallOn) : n(game.BallOn));
+      const airYards = Math.floor(bounds.min + Math.random() * (bounds.max - bounds.min + 1));
       const slot = Object.entries(options.formation ?? {}).find(([, player]) => player === name)?.[0];
       const assignment = options.defense?.find((defender) => defender.align === slot && slot !== undefined);
       const coveragePlayers = teamPlayers(ctx, defenseTeam(game)).filter((player) =>

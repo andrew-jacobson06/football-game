@@ -2170,6 +2170,8 @@ export function GameCenter({
                 routes={playOptions.routes}
                 routeDepths={playOptions.routeDepths}
                 routeInfo={settings.routeInfo}
+                routeTypeAirYards={settings.routeTypeAirYards}
+                routesByDepth={settings.routesByDepth}
                 reads={playOptions.reads}
                 selectedRoutePlayer={selectedRoutePlayer}
                 onRoutePlayerSelect={setSelectedRoutePlayer}

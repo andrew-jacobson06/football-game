@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { parseTimeToThrowSettings } from "../services/timeToThrowSettings.js";
 import { parseRouteOpennessSettings } from "../services/routeOpennessSettings.js";
+import { parseRouteCatalogSettings } from "../services/routeCatalogSettings.js";
 import {
   appendSheetRow,
   batchUpdateSheetValues,
@@ -243,7 +244,7 @@ async function getFrontendSettingsFromSheet() {
     staminaDrains,
     tackleTable: settingRows(rows, "Tackle_").map((r) => ({ label: r[0], yardageCap: Number(r[1]), DL: Number(r[2]) || 0, LB: Number(r[3]) || 0, DBS: Number(r[4]) || 0 })).sort((a,b)=>a.yardageCap-b.yardageCap),
     completionTable: settingRows(rows, "airYards_Completion_").map((r) => ({ label: r[0], pastLos: Number(r[1]), baseCompletion: Number(r[2]), percentage: Number(r[3]) })),
-    routeTypeAirYards: settingRows(rows, "routeType_AirYardsReqd_").map((r) => ({ label: r[0], routeType: String(r[1]), minAirYards: Number(r[2]), maxAirYards: Number(r[3]) })),
+    ...parseRouteCatalogSettings([headers, ...rows]),
     routeInfo: settingRows(rows, "RouteInfo").map((r) => ({
       label: String(r[0]),
       routeType: String(r[1]),
