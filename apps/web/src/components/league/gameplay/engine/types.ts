@@ -151,6 +151,7 @@ export type PassPlayState = {
   finalTimeToThrow: number | null;
   routes: Array<Record<string, unknown>>;
   opennessTrajectory: Array<Record<string, unknown>>;
+  readLoop?: import("./passReadLoop").PassReadLoopState;
   target?: Record<string, unknown>;
   decision: PassPlayDecision;
 };

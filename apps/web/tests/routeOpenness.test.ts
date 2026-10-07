@@ -140,4 +140,24 @@ test("pass pipeline retains calculation inputs for later openness graphs", (t) =
   assert.equal(route.phaseImpacts.Release, route.phaseOpenness[0].phaseImpact);
   assert.equal(state.opennessTrajectory[0].phaseImpacts, route.phaseImpacts);
   assert.equal(state.opennessTrajectory[0].opennessInputs, route.opennessInputs);
+  assert.equal(state.readLoop?.currentRead, 1);
+  assert.equal(state.readLoop?.currentTime, 1);
+  assert.equal(state.readLoop?.stopReason, "read-ready");
+  assert.deepEqual(state.readLoop?.snapshots.map((snapshot) => snapshot.currentTime), [0.25, 0.5, 0.75]);
+  const perceived = state.readLoop!.snapshots[0].receivers[0];
+  assert.equal(perceived.player, "Receiver");
+  assert.equal(perceived.openness, perceived.baseOpenness + perceived.skillBasedOpennessMod);
+  assert.equal(perceived.perceivedOpenness, perceived.openness + perceived.readDefenseAdjustment);
+});
+
+test("an unblocked blitz skips the unpressured read loop", (t) => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(Math, "random", () => 0.99);
+  const blitzContext = { ...ctx, players: [...ctx.players,
+    { name: "Blitzer", team: "Away", defPos: "LB", passRush: 60, tackling: 60, defStars: 1 }] };
+  const state = runPassPlayPipeline(game, blitzContext, "QB", { ...options, blitz: true,
+    defense: [...options.defense!, { player: "Blitzer", position: "LB1" }] });
+  assert.deepEqual(state.pressure, ["Blitzer"]);
+  assert.equal(state.readLoop, undefined);
+  assert.ok(state.log.some((message) => message.includes("Unpressured read loop skipped")));
 });
