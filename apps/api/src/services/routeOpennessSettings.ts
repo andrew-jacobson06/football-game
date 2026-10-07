@@ -1,12 +1,18 @@
-const titles = ["Curve Type", "Phase", "RouteTreeDetails", "baseTTO", "BaseImpact Calcs", "Route", "Routes", "AirYards", "time_to_Throw"];
+const titles = ["Curve Type Openness", "Curve Type", "Phase", "RouteTreeDetails", "baseTTO", "BaseImpact Calcs", "Route", "Routes", "AirYards", "time_to_Throw"];
 const key = (value: unknown) => String(value ?? "").trim().toLowerCase();
 
 /** Read the workbook tables wherever they are placed, including offset columns. */
 export function parseRouteOpennessSettings(rows: unknown[][]) {
-  function table(title: string) {
-    const rowIndex = rows.findIndex((row) => row.some((cell) => key(cell) === key(title)));
+  function table(title: string, aliases: string[] = [], validHeader: (row: unknown[], column: number) => boolean = () => true) {
+    let rowIndex = -1, column = -1;
+    for (const name of [title, ...aliases]) {
+      rowIndex = rows.findIndex((row) => row.some((cell, index) => key(cell) === key(name) && validHeader(row, index)));
+      if (rowIndex >= 0) {
+        column = rows[rowIndex].findIndex((cell, index) => key(cell) === key(name) && validHeader(rows[rowIndex], index));
+        break;
+      }
+    }
     if (rowIndex < 0) return { header: [] as unknown[], rows: [] as unknown[][] };
-    const column = rows[rowIndex].findIndex((cell) => key(cell) === key(title));
     const data: unknown[][] = [];
     for (const row of rows.slice(rowIndex + 1)) {
       const cells = row.slice(column);
@@ -25,15 +31,20 @@ export function parseRouteOpennessSettings(rows: unknown[][]) {
       throw new Error(`Invalid ${label} in route openness Settings.`);
     return parsed;
   }
-  const curves = table("Curve Type");
+  // Do not mistake RouteTreeDetails' new Curve Type column for the curve table.
+  const curves = table("Curve Type Openness", ["Curve Type"], (row, column) =>
+    row.slice(column + 1).some((value) => key(value) !== "" && Number.isFinite(Number(String(value).replace(/%$/, "")))));
   const phases = table("Phase");
   const routes = table("RouteTreeDetails");
   const depths = table("baseTTO");
   const impacts = table("BaseImpact Calcs");
+  const curveTypeColumn = routes.header.findIndex((value) => key(value) === "curve type");
   return {
     curves: Object.fromEntries(curves.rows.map((row) => [String(row[0]).trim(),
       curves.header.slice(1).flatMap((header, index) => key(header) ? [{
-        time: number(header, "curve time"), openness: number(row[index + 1], "curve openness"),
+        // Curve header values are fractions of TTO, not elapsed seconds.
+        time: number(header, "curve progress") / (String(header).trim().endsWith("%") ? 100 : 1),
+        openness: number(row[index + 1], "curve openness"),
       }] : []),
     ])),
     phaseWeights: Object.fromEntries(phases.rows.map((row) => [String(row[0]).trim(), {
@@ -42,6 +53,7 @@ export function parseRouteOpennessSettings(rows: unknown[][]) {
     }])),
     routeTree: Object.fromEntries(routes.rows.map((row) => [String(row[0]).trim(), {
       type: String(row[1] ?? "").trim(), timingMod: number(row[2], "route timing modifier"),
+      curveType: String(row[curveTypeColumn] ?? "").trim(),
       phases: { Release: number(row[3], "release percentage"), Stem: number(row[4], "stem percentage"),
         Break: number(row[5], "break percentage"), Sustain: number(row[6], "sustain percentage") },
     }])),

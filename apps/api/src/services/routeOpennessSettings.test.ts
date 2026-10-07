@@ -13,9 +13,9 @@ const tables = [
   ["Stem", 1.5, 0.75, 1.5, 0.25],
   ["Break", 0.85, 1, 1.75, 0.4],
   ["Sustain", 2, 0.25, 0.95, 0.8],
-  ["RouteTreeDetails", "Type", "Timing Mod", "Release %", "Stem %", "Break %", "Sustain %"],
-  ["Flat", "Simple", -0.2, 35, 0, 5, 60],
-  ["Sluggo", "Complex", 0.3, 15, 15, 45, 25],
+  ["RouteTreeDetails", "Type", "Timing Mod", "Release %", "Stem %", "Break %", "Sustain %", "Curve Type"],
+  ["Flat", "Simple", -0.2, 35, 0, 5, 60, "Quick"],
+  ["Sluggo", "Complex", 0.3, 15, 15, 45, 25, "DoubleMove"],
   ["baseTTO", "routeType", "TTO"],
   ["baseTTO_Quick", "Quick", 1],
   ["baseTTO_Deep", "Deep", 3.2],
@@ -37,9 +37,30 @@ test("loads all openness tables in offset columns with section boundaries", () =
   assert.equal(settings.routeTree.Flat.phases.Stem, 0);
   assert.equal(settings.routeTree.Flat.timingMod, -0.2);
   assert.equal(settings.routeTree.Sluggo.type, "Complex");
+  assert.equal(settings.routeTree.Flat.curveType, "Quick");
+  assert.equal(settings.routeTree.Sluggo.curveType, "DoubleMove");
   assert.equal(settings.baseTTO.Deep, 3.2);
   assert.deepEqual(settings.baseImpacts.Size, { base: 3, max: 6, diffWeight: 0.15 });
   assert.equal(Object.keys(settings.baseImpacts).length, 4);
+});
+
+test("loads Curve Type Openness without confusing the route's Curve Type header", () => {
+  const renamed = tables.map((row) => [...row]);
+  renamed[0][0] = "Curve Type Openness";
+  const settings = parseRouteOpennessSettings([
+    ...renamed.slice(10, 13), [], ...renamed.slice(0, 10), ...renamed.slice(13),
+  ]);
+  assert.equal(settings.curves.Break[1].openness, 20);
+  assert.equal(settings.curves.Break[2].openness, 40);
+  assert.equal(settings.routeTree.Flat.curveType, "Quick");
+});
+
+test("percentage-formatted curve headers represent fractions of TTO", () => {
+  const settings = parseRouteOpennessSettings([
+    ["Curve Type Openness", "25%", "50%", "75%", "100%", "125%", "150%", "200%"],
+    ["Break", 5, 20, 40, 60, 65, 50, 30],
+  ]);
+  assert.deepEqual(settings.curves.Break.map((point) => point.time), [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2]);
 });
 
 test("uses current workbook values and rejects malformed numeric data", () => {
