@@ -179,6 +179,14 @@ function settingRows(rows: Row[], prefix: string) {
 }
 async function getFrontendSettingsFromSheet() {
   const { headers, rows } = await sheetRows("Settings");
+  const routeCatalog = parseRouteCatalogSettings([headers, ...rows]);
+
+  console.log("Route catalog debug", {
+    runningFile: import.meta.url,
+    returnedKeys: Object.keys(routeCatalog),
+    routesByDepth: routeCatalog.routesByDepth,
+  });
+
   let cumulative = 0;
 
   const thresholds = rows.flatMap((r) => {
@@ -244,7 +252,7 @@ async function getFrontendSettingsFromSheet() {
     staminaDrains,
     tackleTable: settingRows(rows, "Tackle_").map((r) => ({ label: r[0], yardageCap: Number(r[1]), DL: Number(r[2]) || 0, LB: Number(r[3]) || 0, DBS: Number(r[4]) || 0 })).sort((a,b)=>a.yardageCap-b.yardageCap),
     completionTable: settingRows(rows, "airYards_Completion_").map((r) => ({ label: r[0], pastLos: Number(r[1]), baseCompletion: Number(r[2]), percentage: Number(r[3]) })),
-    ...parseRouteCatalogSettings([headers, ...rows]),
+    ...routeCatalog,
     routeInfo: settingRows(rows, "RouteInfo").map((r) => ({
       label: String(r[0]),
       routeType: String(r[1]),
