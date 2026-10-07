@@ -32,7 +32,7 @@ import {
 import { buildResult } from "./playLogger";
 import { checkForFumble, determineTackler } from "./runEngine";
 import { calculateTimeToThrow } from "./timeToThrow";
-import { calculateRouteOpennessInputs } from "./routeOpenness";
+import { calculateRouteOpennessInputs, calculateRoutePhaseImpacts } from "./routeOpenness";
 import { routeDepthBounds } from "./routeCatalog";
 
 /**
@@ -315,7 +315,7 @@ export function runPassPlayPipeline(
   // 8-9. Existing route/separation helpers temporarily populate the route shells.
   const routes = assignRoutes(game, ctx, options);
   state.routes = routes;
-  recordPassPhase(state, "routes-available", "Receiver route timing, phase windows, and matchup trait impacts calculated.");
+  recordPassPhase(state, "routes-available", "Receiver route timing, phase windows, trait contests, and phase impacts calculated.");
   const openness = determineSeparation(ctx, routes, state.finalTimeToThrow);
   state.opennessTrajectory = openness;
   recordPassPhase(state, "openness-trajectory", "Receiver openness trajectory stub completed.");
@@ -446,6 +446,7 @@ export function assignRoutes(
       if (!ctx.settings.routeOpennessSettings) throw new Error("Missing route openness Settings tables.");
       if (!receiver || !defender) throw new Error(`Missing receiver/defender matchup for ${name}.`);
       const opennessInputs = calculateRouteOpennessInputs(ctx.settings.routeOpennessSettings, routeType, depth, receiver, defender);
+      const phaseResults = calculateRoutePhaseImpacts(opennessInputs, receiver, defender);
       return {
         player: name,
         routeType,
@@ -453,6 +454,7 @@ export function assignRoutes(
         airYards,
         TTO: opennessInputs.timeToOpen,
         opennessInputs,
+        ...phaseResults,
         defender: defenderName,
         position: i,
       };
