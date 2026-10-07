@@ -59,10 +59,16 @@ test("updated depth settings and positive timing modifiers affect all windows", 
   assert.throws(() => calculateRouteOpennessInputs(settings, "Flat", "Quick", {}, defender), /trait/);
 });
 
+test("WR Screen uses existing Screen timing details when the workbook names differ", () => {
+  const screenSettings = { ...settings, routeTree: { Screen: settings.routeTree.Flat } };
+  assert.equal(calculateRouteOpennessInputs(screenSettings, "WR Screen", "Quick", receiver, defender).timeToOpen, 0.8);
+});
+
 const game: LeagueGame = { GameId: 1, Home: "Home", Away: "Away", Possession: "Home", HomeScore: 0, AwayScore: 0, Qtr: 1, Time: 900, Down: 1, Distance: 10, BallOn: 25 };
 const ctx: EngineContext = {
   players: [{ name: "Lineman", team: "Away", defPos: "DL" }, receiver, defender],
-  settings: { routeOpennessSettings: settings, timeToThrowRanges: [{ min: 2, max: 2, percentage: 100 }] }, historyLength: 0,
+  settings: { routeOpennessSettings: settings, timeToThrowRanges: [{ min: 2, max: 2, percentage: 100 }],
+    routeTypeAirYards: [{ routeType: "Quick", minAirYards: 1, maxAirYards: 2 }], routesByDepth: { Quick: ["Flat"] } }, historyLength: 0,
 };
 const options: PlayCallOptions = { formation: { WR1: "Receiver" }, routes: { Receiver: "Flat" }, routeDepths: { Receiver: "Quick" }, defense: [{ player: "Corner", position: "DB1", align: "WR1" }] };
 

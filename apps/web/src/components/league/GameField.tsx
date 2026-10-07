@@ -10,6 +10,7 @@ import type { DefensiveAssignment, FormationSlot } from "./gameplay/gameEngine";
 import { PlayerImage } from "../players/PlayerImage";
 import { playerImageUrl, playerJerseyUrl } from "../players/playerImageUrls";
 import { AppSelect } from "../ui/AppSelect";
+import { routePreviewDepth, type RouteDepthRange } from "./gameplay/engine/routeCatalog";
 
 import "./GameField.css";
 
@@ -275,22 +276,6 @@ const REQUIRED_FORMATION_SLOTS = new Set<FormationSlot>([
 ]);
 const PASS_ROUTE_SLOTS: FormationSlot[] = ["WR1", "WR2", "WR3", "WR4", "RB1", "RB2", "LT", "RT"];
 const RUNNER_SLOTS = new Set<FormationSlot>(["QB", "RB1", "RB2", "WR1", "WR4"]);
-const ROUTE_DEPTHS = ["Quick", "Short", "Short-Mid", "Mid", "Mid-Long", "Long", "Deep", "Shot", "Bomb"];
-const ROUTES_BY_DEPTH: Record<string, string[]> = {
-  Quick: ["WR Screen", "Flat", "Swing", "Hitch", "Out", "Slant", "Drag"],
-  Short: ["Flat", "Swing", "Hitch", "Out", "Slant", "Drag", "Cross"],
-  "Short-Mid": ["Hitch", "Out", "Slant", "Drag", "Cross", "In", "Curl", "Wheel"],
-  Mid: ["Out", "Slant", "Cross", "In", "Curl", "Dig", "Wheel"],
-  "Mid-Long": ["Out", "Cross", "In", "Curl", "Dig", "Wheel", "Comeback", "Corner", "Seam"],
-  Long: ["Cross", "Wheel", "Comeback", "Corner", "Seam", "Fade", "Go", "Post", "Sluggo"],
-  Deep: ["Cross", "Comeback", "Corner", "Seam", "Fade", "Go", "Post", "Sluggo"],
-  Shot: ["Cross", "Corner", "Seam", "Fade", "Go", "Post", "Sluggo", "Post Corner"],
-  Bomb: ["Corner", "Seam", "Fade", "Go", "Post", "Post Corner"],
-};
-const ROUTE_DEPTH_AIR_YARDS: Record<string, number> = {
-  Quick: 2, Short: 5, "Short-Mid": 8, Mid: 11, "Mid-Long": 15,
-  Long: 20, Deep: 26, Shot: 34, Bomb: 42,
-};
 type RouteInfo = { routeType?: string; shape?: string };
 
 /** Builds a route in field percentage coordinates from its football landmarks. */
@@ -483,6 +468,8 @@ export default function GameField({
   routes = {},
   routeDepths = {},
   routeInfo = [],
+  routeTypeAirYards = [],
+  routesByDepth = {},
   reads = {},
   selectedRoutePlayer = "",
   onRoutePlayerSelect,
@@ -518,6 +505,8 @@ export default function GameField({
   routes?: Record<string, string>;
   routeDepths?: Record<string, string>;
   routeInfo?: unknown[];
+  routeTypeAirYards?: RouteDepthRange[];
+  routesByDepth?: Record<string, string[]>;
   reads?: Record<string, string>;
   selectedRoutePlayer?: string;
   onRoutePlayerSelect?: (player: string) => void;
@@ -595,7 +584,9 @@ export default function GameField({
     if (!route) return [];
     const lineup = FORMATION_SLOT_LINEUP[slot];
     const startX = LANES[lineup.lane] ?? 50;
-    const depth = ROUTE_DEPTH_AIR_YARDS[routeDepths[player]] ?? 10;
+    const range = routeTypeAirYards.find((range) => range.routeType === routeDepths[player]);
+    if (!range || !routesByDepth[range.routeType]?.includes(route)) return [];
+    const depth = routePreviewDepth(range, offenseDirection === 1 ? 100 - formationLosYard : formationLosYard);
     return [{ player, route, shape: routeShapeNames.get(route) || route, startX, startYard: formationLosYard + offenseDirection * lineup.yardOffsetFromLos, depth }];
   });
   const updateReadOrder = (order: string[]) =>
@@ -1798,7 +1789,7 @@ export default function GameField({
               <div><strong>{selectedRoutePlayer}</strong><span>Choose depth, then route</span></div>
               <label>
                 Route depth
-                <AppSelect value={routeDepths[selectedRoutePlayer] || ""} onChange={(event) => {
+                <AppSelect disabled={!routeTypeAirYards.length} value={routeDepths[selectedRoutePlayer] || ""} onChange={(event) => {
                   const depth = event.target.value;
                   onPassOptionsChange?.({
                     routeDepths: { ...routeDepths, [selectedRoutePlayer]: depth },
@@ -1806,7 +1797,7 @@ export default function GameField({
                   });
                 }}>
                   <option value="" disabled>Select depth</option>
-                  {ROUTE_DEPTHS.map((depth) => <option key={depth}>{depth}</option>)}
+                  {routeTypeAirYards.map(({ routeType }) => <option key={routeType}>{routeType}</option>)}
                 </AppSelect>
               </label>
               <label>
@@ -1818,7 +1809,7 @@ export default function GameField({
                   onPassOptionsChange?.({ routes: nextRoutes, reads: Object.fromEntries(nextOrder.map((name, index) => [name, String(index + 1)])) });
                 }}>
                   <option value="" disabled>Select route</option>
-                  {(ROUTES_BY_DEPTH[routeDepths[selectedRoutePlayer]] || []).map((route) => <option key={route}>{route}</option>)}
+                  {(routesByDepth[routeDepths[selectedRoutePlayer]] || []).map((route) => <option key={route}>{route}</option>)}
                 </AppSelect>
               </label>
               <button type="button" onClick={() => onRoutePlayerSelect?.("")}>Done</button>
