@@ -35,7 +35,8 @@ export {
   resolvePassLineConfrontation,
   passBlitzInstantSackChance,
 } from "./engine/passEngine";
-export { calculateBaseOpenness, getRouteBaseOpenness } from "./engine/routeOpenness";
+export { calculateBaseOpenness, getRouteBaseOpenness, getSkillBasedOpennessMod,
+  getRouteOpenness, getCurrentRouteOpenness } from "./engine/routeOpenness";
 export {
   punt,
   kickFG,

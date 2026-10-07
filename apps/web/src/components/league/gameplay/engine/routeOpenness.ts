@@ -117,6 +117,45 @@ export function getRouteBaseOpenness(
   return calculateBaseOpenness(settings, route.curveType, route.TTO, elapsedSeconds);
 }
 
+export type RouteWithPhaseOpenness = {
+  phaseOpenness: ReadonlyArray<{ start: number; end: number; duration: number; phaseImpact: number }>;
+};
+
+/** Accumulate the stored phase impacts without rolling any new trait contests. */
+export function getSkillBasedOpennessMod(route: RouteWithPhaseOpenness, elapsedSeconds: number) {
+  if (!Number.isFinite(elapsedSeconds) || elapsedSeconds < 0)
+    throw new Error("Skill openness requires a nonnegative elapsed time.");
+  return route.phaseOpenness.reduce((total, phase) => {
+    const { start, end, duration, phaseImpact } = phase;
+    if (![start, end, duration, phaseImpact].every(Number.isFinite) ||
+        start < 0 || end < start || duration < 0 || (end > start && duration === 0))
+      throw new Error("Invalid phase openness timing or impact.");
+    if (elapsedSeconds >= end) return total + phaseImpact;
+    if (elapsedSeconds <= start) return total;
+    return total + (elapsedSeconds - start) / duration * phaseImpact;
+  }, 0);
+}
+
+/** Combine the Settings curve with the skill impact accrued by this time. */
+export function getRouteOpenness(
+  settings: Pick<RouteOpennessSettings, "curves">,
+  route: RouteWithPhaseOpenness & { TTO: number; curveType: string },
+  elapsedSeconds: number,
+) {
+  const baseOpenness = getRouteBaseOpenness(settings, route, elapsedSeconds);
+  const skillBasedOpennessMod = getSkillBasedOpennessMod(route, elapsedSeconds);
+  return { baseOpenness, skillBasedOpennessMod, openness: baseOpenness + skillBasedOpennessMod };
+}
+
+/** Query every current receiver route using the same elapsed time since the snap. */
+export function getCurrentRouteOpenness<T extends RouteWithPhaseOpenness & { TTO: number; curveType: string }>(
+  settings: Pick<RouteOpennessSettings, "curves">,
+  routes: readonly T[],
+  elapsedSeconds: number,
+) {
+  return routes.map((route) => ({ ...route, ...getRouteOpenness(settings, route, elapsedSeconds) }));
+}
+
 /** Roll independent WR/DB contests for every trait in every phase of this snap. */
 export function calculateRoutePhaseImpacts(
   inputs: ReturnType<typeof calculateRouteOpennessInputs>,
