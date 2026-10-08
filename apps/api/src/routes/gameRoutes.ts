@@ -181,6 +181,14 @@ function settingRows(rows: Row[], prefix: string) {
 }
 async function getFrontendSettingsFromSheet() {
   const { headers, rows } = await sheetRows("Settings");
+  const routeCatalog = parseRouteCatalogSettings([headers, ...rows]);
+
+  console.log("Route catalog debug", {
+    runningFile: import.meta.url,
+    returnedKeys: Object.keys(routeCatalog),
+    routesByDepth: routeCatalog.routesByDepth,
+  });
+
   let cumulative = 0;
 
   const thresholds = rows.flatMap((r) => {
