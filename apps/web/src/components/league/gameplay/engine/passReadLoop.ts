@@ -3,12 +3,21 @@ import { getCurrentRouteOpenness, type RouteOpennessSettings, type RouteWithPhas
 type ReadRoute = RouteWithPhaseOpenness & { player: string; TTO: number; curveType: string };
 export type QBDecisionRow = { perceivedMax: number; label: string; baseNotice: number | null; noticeIfPrimary: number | null };
 
-export function getPrimaryNoticeChance(table: readonly QBDecisionRow[], perceivedOpenness: number) {
+function getNoticeRow(table: readonly QBDecisionRow[], perceivedOpenness: number) {
   if (!Number.isFinite(perceivedOpenness)) throw new Error("Invalid perceived openness.");
   if (!table.length) throw new Error("Missing QB Decision Table in Settings.");
   // Decimal scores enter the first band whose upper bound contains them.
-  const row = table.find((row) => perceivedOpenness <= row.perceivedMax) ?? table[table.length - 1];
+  return table.find((row) => perceivedOpenness <= row.perceivedMax) ?? table[table.length - 1];
+}
+
+export function getPrimaryNoticeChance(table: readonly QBDecisionRow[], perceivedOpenness: number) {
+  const row = getNoticeRow(table, perceivedOpenness);
   return { label: row.label, chance: row.noticeIfPrimary ?? 0 };
+}
+
+export function getBaseNoticeChance(table: readonly QBDecisionRow[], perceivedOpenness: number) {
+  const row = getNoticeRow(table, perceivedOpenness);
+  return { label: row.label, chance: row.baseNotice ?? 0 };
 }
 export type PassReadLoopState = {
   currentTime: number;
@@ -19,7 +28,7 @@ export type PassReadLoopState = {
   targetPlayer?: string;
   decisions: Array<{ currentTime: number; currentRead: number; player: string;
     perceivedOpenness: number; label: string; noticeChance: number; roll: number;
-    throw: boolean; readDelay?: number }>;
+    noticeType: "base" | "primary"; throw: boolean; readDelay?: number }>;
   snapshots: Array<{
     currentTime: number;
     currentRead: number;
@@ -40,7 +49,7 @@ function readOrder(value: string | undefined) {
   return Number.isInteger(numeric) && numeric > 0 ? numeric : labels[value ?? ""] ?? Infinity;
 }
 
-/** Evaluate each ready read against Settings until a throw or the end of the read budget. */
+/** Check base notice while waiting, then primary notice when the current read is ready. */
 export function runUnpressuredReadLoop(
   settings: Pick<RouteOpennessSettings, "curves"> & { qbDecisionTable: readonly QBDecisionRow[] },
   routes: readonly ReadRoute[],
@@ -75,13 +84,33 @@ export function runUnpressuredReadLoop(
       receivers,
     });
     if (state.currentTime >= timeToThrow) break;
-    if (state.currentTime < currentRoute.TTO) continue;
+    if (state.currentTime < currentRoute.TTO) {
+      // While waiting for this read, an open receiver can attract the QB's notice.
+      for (const route of orderedReads) {
+        const perceivedOpenness = receivers.find((receiver) => receiver.player === route.player)!.perceivedOpenness;
+        const { label, chance } = getBaseNoticeChance(settings.qbDecisionTable, perceivedOpenness);
+        if (chance <= 0) continue; // NA/zero bands consume no notice roll.
+        const roll = random() * 100;
+        const decision: PassReadLoopState["decisions"][number] = {
+          currentTime: state.currentTime, currentRead: state.currentRead, player: route.player,
+          perceivedOpenness, label, noticeChance: chance, roll, noticeType: "base", throw: roll < chance,
+        };
+        state.decisions.push(decision);
+        if (decision.throw) {
+          state.targetPlayer = route.player;
+          state.stopReason = "throw";
+          break;
+        }
+      }
+      if (state.targetPlayer) break;
+      continue;
+    }
     const perceivedOpenness = receivers.find((receiver) => receiver.player === currentRoute.player)!.perceivedOpenness;
     const { label, chance } = getPrimaryNoticeChance(settings.qbDecisionTable, perceivedOpenness);
     const roll = random() * 100;
     const decision: PassReadLoopState["decisions"][number] = {
       currentTime: state.currentTime, currentRead: state.currentRead, player: currentRoute.player,
-      perceivedOpenness, label, noticeChance: chance, roll, throw: roll < chance,
+      perceivedOpenness, label, noticeChance: chance, roll, noticeType: "primary", throw: roll < chance,
     };
     state.decisions.push(decision);
     if (decision.throw) {
