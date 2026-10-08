@@ -1,6 +1,6 @@
 const text = (value: unknown) => String(value ?? "").trim();
 const key = (value: unknown) => text(value).replace(/[‐‑–—]/g, "-").replace(/\s+/g, " ").toLowerCase();
-const sectionTitles = new Set(["hands impact based on openness", "accuracy mod", "completion pct", "openness completion modifier", "qb decision table", "route", "routes", "airyards", "curve type openness", "curve type", "phase", "routetreedetails", "basetto", "baseimpact calcs", "time_to_throw"]);
+const sectionTitles = new Set(["jump effect (accuracy+coverage)", "jump based on air yards", "hands impact based on openness", "accuracy mod", "completion pct", "openness completion modifier", "qb decision table", "route", "routes", "airyards", "curve type openness", "curve type", "phase", "routetreedetails", "basetto", "baseimpact calcs", "time_to_throw"]);
 
 /** Depths belong exclusively to the named AirYards table, never other prefixed rows. */
 export function parseRouteCatalogSettings(rows: unknown[][]) {

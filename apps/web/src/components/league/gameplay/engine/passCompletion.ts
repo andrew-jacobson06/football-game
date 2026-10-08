@@ -1,6 +1,7 @@
 import { getRouteOpenness, type RouteOpennessSettings, type RouteWithPhaseOpenness } from "./routeOpenness";
 import { rollQBAccuracy, type AccuracyModRow } from "./qbAccuracy";
 import { rollReceiverHands, type HandsImpactRow } from "./receiverHands";
+import { rollReceiverJump, type JumpEffectRow, type JumpAirYardsRow } from "./receiverJump";
 
 export type CompletionDepthRow = { label?: string; pastLos: number; baseCompletion: number };
 export type OpennessCompletionRow = { label: string; minOpen: number; maxOpen: number | null; minAdjust: number; maxAdjust: number };
@@ -9,6 +10,8 @@ export type PassCompletionSettings = Pick<RouteOpennessSettings, "curves"> & {
   opennessCompletionModifiers: readonly OpennessCompletionRow[];
   accuracyModifiers: readonly AccuracyModRow[];
   handsImpactByOpenness: readonly HandsImpactRow[];
+  jumpEffects: readonly JumpEffectRow[];
+  jumpAirYards: readonly JumpAirYardsRow[];
 };
 
 export function getBaseCompletion(table: readonly CompletionDepthRow[], airYards: number) {
@@ -38,6 +41,8 @@ export function calculateThrowCompletion(
   throwTime: number,
   qbAccuracy: number,
   receiverHands: number,
+  receiverJump: number,
+  yardsToGoal: number,
   random: () => number = Math.random,
 ) {
   const baseCompletion = getBaseCompletion(settings.completionTable, target.airYards);
@@ -45,7 +50,9 @@ export function calculateThrowCompletion(
   const { opennessAdjustment, opennessBand } = getOpennessCompletionAdjustment(settings.opennessCompletionModifiers, actualOpenness);
   const accuracy = rollQBAccuracy(qbAccuracy, settings.accuracyModifiers, random);
   const hands = rollReceiverHands(receiverHands, actualOpenness, settings.handsImpactByOpenness, random);
+  const jump = rollReceiverJump(receiverJump, actualOpenness, accuracy.throwType, target.airYards, yardsToGoal,
+    settings.jumpEffects, settings.jumpAirYards, random);
   return { throwTime, airYards: target.airYards, baseCompletion, actualOpenness,
-    opennessAdjustment, opennessBand, ...accuracy, ...hands,
-    pct: Math.max(0, Math.min(100, baseCompletion + opennessAdjustment + accuracy.accuracyAdjustment + hands.handsAdjustment)) };
+    opennessAdjustment, opennessBand, ...accuracy, ...hands, ...jump,
+    pct: Math.max(0, Math.min(100, baseCompletion + opennessAdjustment + accuracy.accuracyAdjustment + hands.handsAdjustment + jump.jumpAdjustment)) };
 }

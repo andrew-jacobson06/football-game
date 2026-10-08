@@ -16,7 +16,7 @@ export function parseTimeToThrowSettings(rows: unknown[][]): TimeToThrowRange[] 
   );
   if (headerRow < 0) throw new Error("time_to_Throw table is missing Min/Max/Avg/Pct headers.");
   const ranges: TimeToThrowRange[] = [];
-  const followingTables = new Set(["hands impact based on openness", "accuracy mod", "completion pct", "openness completion modifier", "qb decision table", "curve type openness", "curve type", "phase", "routetreedetails", "basetto", "baseimpact calcs", "route", "routes", "airyards"]);
+  const followingTables = new Set(["jump effect (accuracy+coverage)", "jump based on air yards", "hands impact based on openness", "accuracy mod", "completion pct", "openness completion modifier", "qb decision table", "curve type openness", "curve type", "phase", "routetreedetails", "basetto", "baseimpact calcs", "route", "routes", "airyards"]);
   for (let rowIndex = headerRow + 1; rowIndex < rows.length; rowIndex++) {
     const row = rows[rowIndex];
     const cells = row.slice(startColumn, startColumn + 4);

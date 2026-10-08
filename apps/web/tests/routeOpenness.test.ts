@@ -117,6 +117,8 @@ const ctx: EngineContext = {
     completionTable: [{ pastLos: 0, baseCompletion: 75 }, { pastLos: 3, baseCompletion: 70 }],
     opennessCompletionModifiers: [{ label: "All", minOpen: 0, maxOpen: null, minAdjust: -30, maxAdjust: 20 }],
     handsImpactByOpenness: [{ label: "All", minOpen: 0, maxOpen: null, handsImpact: 0.5 }],
+    jumpEffects: [{ label: "All", minOpen: 0, maxOpen: null, multipliers: { Perfect: 0.05, Accurate: 0.05, Close: 0.1, Catchable: 0.15, "Off Target": 0 } }],
+    jumpAirYards: [{ airYards: "EndZone", multiplier: 1.35 }, { airYards: 5, multiplier: 0.25 }, { airYards: 10, multiplier: 0.5 }, { airYards: 100, multiplier: 1 }],
     accuracyModifiers: [{ throwType: "Perfect", min: 10, max: 20 }, { throwType: "Accurate", min: 5, max: 9 },
       { throwType: "Close", min: -4, max: 4 }, { throwType: "Catchable", min: -9, max: -5 }, { throwType: "Off Target", min: -20, max: -10 }],
     qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 0, noticeIfPrimary: 100 }] }, historyLength: 0,
@@ -205,4 +207,20 @@ test("a base-notice throw is handed to the pass pipeline before the read is read
   assert.equal(state.throwCompletion?.accuracyAdjustment, 0);
   assert.equal(state.throwCompletion?.receiverHands, 50);
   assert.equal(state.throwCompletion?.handsAdjustment, state.throwCompletion!.handsEffectMod * 0.5);
+  assert.equal(state.throwCompletion?.jumpAirYardsMultiplier, 0.25);
+  assert.equal(state.throwCompletion?.isEndZoneThrow, false);
+});
+
+test("end-zone jump detection respects both possession directions", (t) => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => 0.5);
+  const home = runPassPlayPipeline({ ...game, BallOn: 98 }, ctx, "QB", options);
+  const awayContext = { ...ctx, players: ctx.players.map((player) => ({ ...player,
+    team: player.team === "Home" ? "Away" : "Home" })) };
+  const away = runPassPlayPipeline({ ...game, Possession: "Away", BallOn: 2 }, awayContext, "QB", options);
+  for (const state of [home, away]) {
+    assert.equal(state.throwCompletion?.isEndZoneThrow, true);
+    assert.equal(state.throwCompletion?.jumpAirYardsMultiplier, 1.35);
+  }
 });

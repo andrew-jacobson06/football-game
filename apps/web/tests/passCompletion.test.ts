@@ -5,7 +5,7 @@ import { parseAccuracySettings } from "../../api/src/services/accuracySettings.t
 import { calculateThrowCompletion as calculateCompletion, getBaseCompletion, getOpennessCompletionAdjustment } from "../src/components/league/gameplay/engine/passCompletion.ts";
 
 const calculateThrowCompletion = (settings: Parameters<typeof calculateCompletion>[0], target: Parameters<typeof calculateCompletion>[1], throwTime: number) =>
-  calculateCompletion(settings, target, throwTime, 50, 50, () => 0.5);
+  calculateCompletion(settings, target, throwTime, 50, 50, 50, 75, () => 0.5);
 
 const parsed = parseCompletionSettings([
   ["Completion Pct", "past los", "base completion"],
@@ -17,6 +17,8 @@ const parsed = parseCompletionSettings([
   ["70–79", 70, 79, 3, 6], ["80–89", 80, 89, 7, 11], ["90–100", 90, -1, 12, 20],
 ]);
 const settings = { ...parsed, handsImpactByOpenness: [{ label: "Neutral", minOpen: 0, maxOpen: null, handsImpact: 0 }],
+  jumpEffects: [{ label: "Neutral", minOpen: 0, maxOpen: null, multipliers: { Perfect: 0, Accurate: 0, Close: 0, Catchable: 0, "Off Target": 0 } }],
+  jumpAirYards: [{ airYards: "EndZone" as const, multiplier: 1.35 }, { airYards: 5, multiplier: 0.25 }, { airYards: 10, multiplier: 0.5 }, { airYards: 100, multiplier: 1 }],
   accuracyModifiers: parseAccuracySettings([["Accuracy Mod"], ["Throw Type", "MIN", "MAX"],
   ["Perfect", 10, 20], ["Accurate", 5, 9], ["Close", -4, 4], ["Catchable", -9, -5], ["Off Target", -20, -10]]), curves: { Break: [
   { time: 0.25, openness: 5 }, { time: 0.5, openness: 20 }, { time: 0.75, openness: 40 }, { time: 1, openness: 60 },
@@ -65,8 +67,8 @@ test("completion chances are bounded and missing Settings fail explicitly", () =
 });
 
 test("stores the accuracy throw type and adds its adjustment before bounding the total", () => {
-  const rolls = [0, 0.5, 0.5];
-  const result = calculateCompletion(settings, target, 1.4, 50, 50, () => rolls.shift()!);
+  const rolls = [0, 0.5, 0.5, 0.5];
+  const result = calculateCompletion(settings, target, 1.4, 50, 50, 50, 75, () => rolls.shift()!);
   assert.equal(result.throwType, "Perfect");
   assert.equal(result.accuracyAdjustment, 15);
   assert.equal(result.accuracyRoll, 0);
@@ -80,12 +82,29 @@ test("weights the sampled hands effect by actual openness and adds it to the raw
     { label: "40-49", minOpen: 40, maxOpen: 49, handsImpact: 1 },
     { label: "90+", minOpen: 90, maxOpen: null, handsImpact: 0.25 },
   ] };
-  const rolls = [0, 0.5, 0.37];
-  const result = calculateCompletion(config, target, 1.4, 50, 50, () => rolls.shift()!);
+  const rolls = [0, 0.5, 0.37, 0.5];
+  const result = calculateCompletion(config, target, 1.4, 50, 50, 50, 75, () => rolls.shift()!);
   assert.ok(Math.abs(result.actualOpenness - 43) < 1e-10);
   assert.equal(result.handsImpactMultiplier, 1); // perceived score is 200 and must not select 25%.
   assert.equal(result.handsEffectMod, result.handsMin + 0.37 * (result.handsMax - result.handsMin));
   assert.equal(result.handsAdjustment, result.handsEffectMod);
   assert.equal(result.pct, result.baseCompletion + result.opennessAdjustment + result.accuracyAdjustment + result.handsAdjustment);
+  assert.equal(rolls.length, 0);
+});
+
+test("jump is weighted by actual openness, the stored throw type and end-zone status", () => {
+  const config = { ...settings, jumpEffects: [
+    { label: "40-49", minOpen: 40, maxOpen: 49, multipliers: { Perfect: 0.25, Accurate: 0.33, Close: 0.7, Catchable: 1, "Off Target": 0.03 } },
+    { label: "90+", minOpen: 90, maxOpen: null, multipliers: { Perfect: 0, Accurate: 0, Close: 0, Catchable: 0, "Off Target": 0 } },
+  ] };
+  const rolls = [0, 0.5, 0.5, 0.37];
+  const result = calculateCompletion(config, target, 1.4, 50, 50, 50, 8, () => rolls.shift()!);
+  assert.equal(result.throwType, "Perfect");
+  assert.equal(result.jumpEffectMultiplier, 0.25);
+  assert.equal(result.jumpAirYardsMultiplier, 1.35);
+  assert.equal(result.isEndZoneThrow, true);
+  assert.equal(result.jumpMod, result.jumpMin + 0.37 * (result.jumpMax - result.jumpMin));
+  assert.equal(result.jumpAdjustment, result.jumpMod * 0.25 * 1.35);
+  assert.equal(result.pct, result.baseCompletion + result.opennessAdjustment + result.accuracyAdjustment + result.handsAdjustment + result.jumpAdjustment);
   assert.equal(rolls.length, 0);
 });
