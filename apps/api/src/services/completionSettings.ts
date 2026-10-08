@@ -1,4 +1,4 @@
-const key = (value: unknown) => String(value ?? "").trim().toLowerCase();
+const key = (value: unknown) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
 /** Read completion inputs independently of table order, including a final table at EOF. */
 export function parseCompletionSettings(rows: unknown[][]) {
@@ -23,16 +23,17 @@ export function parseCompletionSettings(rows: unknown[][]) {
 
   const opennessCompletionModifiers: Array<{ label: string; minOpen: number; maxOpen: number | null;
     minAdjust: number; maxAdjust: number }> = [];
-  const title = rows.findIndex((row) => row.some((value) => key(value) === "openness completion modifier"));
-  if (title < 0) return { completionTable, opennessCompletionModifiers };
-  const column = rows[title].findIndex((value) => key(value) === "openness completion modifier");
+  const title = rows.findIndex((row) => row.some((value) => key(value) === "opennesscompletionmodifier"));
   const required = ["open score", "min open", "max open", "min adjust", "max adjust"];
-  let headerIndex = title + 1;
-  while (headerIndex < rows.length && rows[headerIndex].slice(column).every((value) => !key(value))) headerIndex++;
-  const header = rows[headerIndex]?.slice(column).map(key) ?? [];
-  if (!required.every((name) => header.includes(name)))
+  // The five headers uniquely identify this table, unlike Open Score alone,
+  // which also occurs in the QB Decision Table. Titles may be wrapped, merged,
+  // or placed in a different column from the data.
+  const headerIndex = rows.findIndex((row, index) => index >= Math.max(0, title) &&
+    required.every((name) => row.some((value) => key(value) === key(name))));
+  if (headerIndex < 0 && title < 0) return { completionTable, opennessCompletionModifiers };
+  if (headerIndex < 0)
     throw new Error("Openness Completion Modifier is missing Open Score/min open/max open/min adjust/max adjust headers.");
-  const columns = required.map((name) => column + header.indexOf(name));
+  const columns = required.map((name) => rows[headerIndex].findIndex((value) => key(value) === key(name)));
   for (let index = headerIndex + 1; index < rows.length; index++) {
     const row = rows[index];
     const label = String(row[columns[0]] ?? "").trim();

@@ -35,6 +35,26 @@ test("absent tables stay absent; malformed real values report the workbook row",
   assert.throws(() => parseCompletionSettings([...completion, completion[1]]), /Duplicate past los/);
 });
 
+test("identifies the modifier table by its unique headers despite title formatting or placement", () => {
+  for (const title of ["Openness\nCompletion Modifier", "Openness  Completion Modifier", "OpennessCompletionModifier", "New completion table name"]) {
+    const parsed = parseCompletionSettings([
+      [title], [], ...modifiers.slice(1).map((row) => ["", "", ...row]),
+    ]);
+    assert.equal(parsed.opennessCompletionModifiers.length, 9);
+    assert.equal(parsed.opennessCompletionModifiers.at(-1)?.maxOpen, null);
+  }
+  const withoutTitle = modifiers.slice(1).map((row) => [...row]);
+  withoutTitle[0] = ["Open Score", "min\nopen", "MAX OPEN", "min_adjust", "maxAdjust"];
+  assert.equal(parseCompletionSettings(withoutTitle).opennessCompletionModifiers.length, 9);
+});
+
+test("does not confuse the QB Decision Table headers with modifier headers", () => {
+  const qbTable = [["QB Decision Table"], ["Open Score", "perceived max", "Label", "Base Notice", "Notice if Primary"],
+    ["0–10", 10, "Erased", "NA", "NA"]];
+  assert.deepEqual(parseCompletionSettings(qbTable).opennessCompletionModifiers, []);
+  assert.equal(parseCompletionSettings([...qbTable, ...modifiers.slice(1)]).opennessCompletionModifiers.length, 9);
+});
+
 test("adjacent parsers stop before the final openness modifier table without a blank separator", () => {
   assert.equal(parseTimeToThrowSettings([
     ["time_to_Throw"], ["Min", "Max", "Avg", "Pct"], [0, 1, 0.5, "100%"], ...modifiers,
