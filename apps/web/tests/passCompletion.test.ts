@@ -5,7 +5,7 @@ import { parseAccuracySettings } from "../../api/src/services/accuracySettings.t
 import { calculateThrowCompletion as calculateCompletion, getBaseCompletion, getOpennessCompletionAdjustment } from "../src/components/league/gameplay/engine/passCompletion.ts";
 
 const calculateThrowCompletion = (settings: Parameters<typeof calculateCompletion>[0], target: Parameters<typeof calculateCompletion>[1], throwTime: number) =>
-  calculateCompletion(settings, target, throwTime, 50, () => 0.5);
+  calculateCompletion(settings, target, throwTime, 50, 50, () => 0.5);
 
 const parsed = parseCompletionSettings([
   ["Completion Pct", "past los", "base completion"],
@@ -16,7 +16,8 @@ const parsed = parseCompletionSettings([
   ["40-49", 40, 49, -7, -4], ["50–59", 50, 59, -3, 1], ["60–69", 60, 69, 1, 3],
   ["70–79", 70, 79, 3, 6], ["80–89", 80, 89, 7, 11], ["90–100", 90, -1, 12, 20],
 ]);
-const settings = { ...parsed, accuracyModifiers: parseAccuracySettings([["Accuracy Mod"], ["Throw Type", "MIN", "MAX"],
+const settings = { ...parsed, handsImpactByOpenness: [{ label: "Neutral", minOpen: 0, maxOpen: null, handsImpact: 0 }],
+  accuracyModifiers: parseAccuracySettings([["Accuracy Mod"], ["Throw Type", "MIN", "MAX"],
   ["Perfect", 10, 20], ["Accurate", 5, 9], ["Close", -4, 4], ["Catchable", -9, -5], ["Off Target", -20, -10]]), curves: { Break: [
   { time: 0.25, openness: 5 }, { time: 0.5, openness: 20 }, { time: 0.75, openness: 40 }, { time: 1, openness: 60 },
 ] } };
@@ -64,12 +65,27 @@ test("completion chances are bounded and missing Settings fail explicitly", () =
 });
 
 test("stores the accuracy throw type and adds its adjustment before bounding the total", () => {
-  const rolls = [0, 0.5];
-  const result = calculateCompletion(settings, target, 1.4, 50, () => rolls.shift()!);
+  const rolls = [0, 0.5, 0.5];
+  const result = calculateCompletion(settings, target, 1.4, 50, 50, () => rolls.shift()!);
   assert.equal(result.throwType, "Perfect");
   assert.equal(result.accuracyAdjustment, 15);
   assert.equal(result.accuracyRoll, 0);
   assert.ok(Math.abs(result.pct - 59) < 1e-10);
   assert.equal(result.throwTypeChances.length, 5);
+  assert.equal(rolls.length, 0);
+});
+
+test("weights the sampled hands effect by actual openness and adds it to the raw completion total", () => {
+  const config = { ...settings, handsImpactByOpenness: [
+    { label: "40-49", minOpen: 40, maxOpen: 49, handsImpact: 1 },
+    { label: "90+", minOpen: 90, maxOpen: null, handsImpact: 0.25 },
+  ] };
+  const rolls = [0, 0.5, 0.37];
+  const result = calculateCompletion(config, target, 1.4, 50, 50, () => rolls.shift()!);
+  assert.ok(Math.abs(result.actualOpenness - 43) < 1e-10);
+  assert.equal(result.handsImpactMultiplier, 1); // perceived score is 200 and must not select 25%.
+  assert.equal(result.handsEffectMod, result.handsMin + 0.37 * (result.handsMax - result.handsMin));
+  assert.equal(result.handsAdjustment, result.handsEffectMod);
+  assert.equal(result.pct, result.baseCompletion + result.opennessAdjustment + result.accuracyAdjustment + result.handsAdjustment);
   assert.equal(rolls.length, 0);
 });

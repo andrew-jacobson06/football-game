@@ -350,7 +350,8 @@ export function runPassPlayPipeline(
     recordPassPhase(state, "throw-to-receiver", `${target.player}: ${state.throwCompletion.airYards} air yards, ` +
       `actual openness ${state.throwCompletion.actualOpenness.toFixed(2)}, base completion ${state.throwCompletion.baseCompletion}% ` +
       `+ openness adjustment ${state.throwCompletion.opennessAdjustment.toFixed(2)} ` +
-      `+ ${state.throwCompletion.throwType} accuracy adjustment ${state.throwCompletion.accuracyAdjustment.toFixed(2)} = ${state.throwCompletion.pct.toFixed(2)}%.`);
+      `+ ${state.throwCompletion.throwType} accuracy adjustment ${state.throwCompletion.accuracyAdjustment.toFixed(2)} ` +
+      `+ hands adjustment ${state.throwCompletion.handsAdjustment.toFixed(2)} = ${state.throwCompletion.pct.toFixed(2)}%.`);
   }
   return state;
 }
@@ -547,11 +548,14 @@ export function determineCompletionPct(
   if (!ctx.settings.routeOpennessSettings) throw new Error("Missing route openness Settings tables.");
   const qb = byName(ctx, qbName);
   const qbAccuracy = Number(qb?.accuracy ?? qb?.Accuracy ?? 50);
+  const receiver = byName(ctx, target.player);
+  const receiverHands = Number(receiver?.hands ?? receiver?.Hands ?? 50);
   return calculateThrowCompletion({ ...ctx.settings.routeOpennessSettings,
     completionTable: ctx.settings.completionTable ?? [],
     opennessCompletionModifiers: ctx.settings.opennessCompletionModifiers ?? [],
     accuracyModifiers: ctx.settings.accuracyModifiers ?? [],
-  }, target, throwTime, qbAccuracy);
+    handsImpactByOpenness: ctx.settings.handsImpactByOpenness ?? [],
+  }, target, throwTime, qbAccuracy, receiverHands);
 }
 export function calcYAC(
   ctx: EngineContext,

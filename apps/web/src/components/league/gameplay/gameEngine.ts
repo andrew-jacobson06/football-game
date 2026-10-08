@@ -41,6 +41,7 @@ export { calculateReadDefenseModifier, runUnpressuredReadLoop, getPrimaryNoticeC
 export type { PassReadLoopState, QBDecisionRow } from "./engine/passReadLoop";
 export { calculateThrowCompletion, getBaseCompletion, getOpennessCompletionAdjustment } from "./engine/passCompletion";
 export { getThrowTypeChances, rollQBAccuracy } from "./engine/qbAccuracy";
+export { calculateHandsEffectRange, rollReceiverHands } from "./engine/receiverHands";
 export {
   punt,
   kickFG,

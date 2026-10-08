@@ -5,6 +5,7 @@ import { parseRouteCatalogSettings } from "../services/routeCatalogSettings.js";
 import { parseQBDecisionSettings } from "../services/qbDecisionSettings.js";
 import { parseCompletionSettings } from "../services/completionSettings.js";
 import { parseAccuracySettings } from "../services/accuracySettings.js";
+import { parseHandsImpactSettings } from "../services/handsSettings.js";
 import {
   appendSheetRow,
   batchUpdateSheetValues,
@@ -256,6 +257,7 @@ async function getFrontendSettingsFromSheet() {
     tackleTable: settingRows(rows, "Tackle_").map((r) => ({ label: r[0], yardageCap: Number(r[1]), DL: Number(r[2]) || 0, LB: Number(r[3]) || 0, DBS: Number(r[4]) || 0 })).sort((a,b)=>a.yardageCap-b.yardageCap),
     ...parseCompletionSettings([headers, ...rows]),
     accuracyModifiers: parseAccuracySettings([headers, ...rows]),
+    handsImpactByOpenness: parseHandsImpactSettings([headers, ...rows]),
     ...parseRouteCatalogSettings([headers, ...rows]),
     routeInfo: settingRows(rows, "RouteInfo").map((r) => ({
       label: String(r[0]),
