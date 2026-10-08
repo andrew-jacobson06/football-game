@@ -40,6 +40,7 @@ export { calculateBaseOpenness, getRouteBaseOpenness, getSkillBasedOpennessMod,
 export { calculateReadDefenseModifier, runUnpressuredReadLoop, getPrimaryNoticeChance, getBaseNoticeChance } from "./engine/passReadLoop";
 export type { PassReadLoopState, QBDecisionRow } from "./engine/passReadLoop";
 export { calculateThrowCompletion, getBaseCompletion, getOpennessCompletionAdjustment } from "./engine/passCompletion";
+export { getThrowTypeChances, rollQBAccuracy } from "./engine/qbAccuracy";
 export {
   punt,
   kickFG,

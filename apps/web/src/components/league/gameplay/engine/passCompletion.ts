@@ -1,10 +1,12 @@
 import { getRouteOpenness, type RouteOpennessSettings, type RouteWithPhaseOpenness } from "./routeOpenness";
+import { rollQBAccuracy, type AccuracyModRow } from "./qbAccuracy";
 
 export type CompletionDepthRow = { label?: string; pastLos: number; baseCompletion: number };
 export type OpennessCompletionRow = { label: string; minOpen: number; maxOpen: number | null; minAdjust: number; maxAdjust: number };
 export type PassCompletionSettings = Pick<RouteOpennessSettings, "curves"> & {
   completionTable: readonly CompletionDepthRow[];
   opennessCompletionModifiers: readonly OpennessCompletionRow[];
+  accuracyModifiers: readonly AccuracyModRow[];
 };
 
 export function getBaseCompletion(table: readonly CompletionDepthRow[], airYards: number) {
@@ -32,10 +34,14 @@ export function calculateThrowCompletion(
   settings: PassCompletionSettings,
   target: RouteWithPhaseOpenness & { TTO: number; curveType: string; airYards: number },
   throwTime: number,
+  qbAccuracy: number,
+  random: () => number = Math.random,
 ) {
   const baseCompletion = getBaseCompletion(settings.completionTable, target.airYards);
   const { openness: actualOpenness } = getRouteOpenness(settings, target, throwTime);
   const { opennessAdjustment, opennessBand } = getOpennessCompletionAdjustment(settings.opennessCompletionModifiers, actualOpenness);
+  const accuracy = rollQBAccuracy(qbAccuracy, settings.accuracyModifiers, random);
   return { throwTime, airYards: target.airYards, baseCompletion, actualOpenness,
-    opennessAdjustment, opennessBand, pct: Math.max(0, Math.min(100, baseCompletion + opennessAdjustment)) };
+    opennessAdjustment, opennessBand, ...accuracy,
+    pct: Math.max(0, Math.min(100, baseCompletion + opennessAdjustment + accuracy.accuracyAdjustment)) };
 }
