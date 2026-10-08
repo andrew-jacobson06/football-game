@@ -68,6 +68,12 @@ export function runUnpressuredReadLoop(
         readDefenseAdjustment, perceivedOpenness: route.openness + readDefenseAdjustment };
     });
     state.snapshots.push({ currentTime: state.currentTime, currentRead: state.currentRead, receivers });
+    console.log(`[Pass Engine] QB look at ${state.currentTime.toFixed(2)}s`, {
+      currentTime: state.currentTime,
+      currentRead: state.currentRead,
+      currentReadPlayer: currentRoute.player,
+      receivers,
+    });
     if (state.currentTime >= timeToThrow) break;
     if (state.currentTime < currentRoute.TTO) continue;
     const perceivedOpenness = receivers.find((receiver) => receiver.player === currentRoute.player)!.perceivedOpenness;
