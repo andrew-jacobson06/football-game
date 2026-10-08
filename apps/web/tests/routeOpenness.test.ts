@@ -179,3 +179,17 @@ test("declining all reads produces a throw-away rather than a fallback target or
   assert.equal(result.game.BallOn, game.BallOn);
   assert.equal(result.game.Down, 2);
 });
+
+test("a base-notice throw is handed to the pass pipeline before the read is ready", (t) => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => 0.5);
+  const context = { ...ctx, settings: { ...ctx.settings,
+    qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 100, noticeIfPrimary: 0 }] } };
+  const state = runPassPlayPipeline(game, context, "QB", options);
+  assert.equal(state.decision, "throw");
+  assert.equal(state.target?.player, "Receiver");
+  assert.equal(state.readLoop?.currentTime, 0.25);
+  assert.ok(state.readLoop!.currentTime < Number(state.target?.TTO));
+  assert.equal(state.readLoop?.decisions[0].noticeType, "base");
+});

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { calculateReadDefenseModifier, runUnpressuredReadLoop, getPrimaryNoticeChance } from "../src/components/league/gameplay/engine/passReadLoop.ts";
+import { parseQBDecisionSettings } from "../../api/src/services/qbDecisionSettings.ts";
 
 const settings = { curves: { Break: [{ time: 0.5, openness: 20 }, { time: 1, openness: 60 }] },
   qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 0, noticeIfPrimary: 100 }] };
@@ -98,4 +99,73 @@ test("checks time budget before each full quarter step, including non-quarter bu
   assert.equal(runUnpressuredReadLoop(settings, [], 2, 50).stopReason, "no-routes");
   assert.throws(() => runUnpressuredReadLoop(settings, routes, Infinity, 50), /time to throw/);
   assert.throws(() => calculateReadDefenseModifier(NaN), /read defense/);
+});
+
+const earlySettings = {
+  curves: { First: [{ time: 0, openness: 33 }], Second: [{ time: 0, openness: 21 }], Third: [{ time: 0, openness: 38 }] },
+  qbDecisionTable: parseQBDecisionSettings([
+    ["QB Decision Table"], ["Open Score", "perceived max", "Label", "What it means on the field", "Base Notice", "Notice if Primary"],
+    ["0–10", 10, "Erased", "", "NA", "NA"], ["11–20", 20, "Blanketed", "", "NA", "NA"],
+    ["21–35", 35, "Covered", "", "NA", 5], ["36–49", 49, "Tight window", "", "NA", 15],
+    ["50–59", 59, "Slightly open", "", 5, 45], ["60–69", 69, "Open", "", 30, 67],
+    ["70–79", 79, "Clearly open", "", 45, 75], ["80–89", 89, "Very open", "", 80, 89],
+    ["90–100", 1000, "Wide open", "", 90, 99],
+  ]),
+};
+// Deliberately shuffled so early checks must respect the configured reads.
+const earlyRoutes = [
+  { player: "WR3", curveType: "Third", TTO: 2, phaseOpenness: [] },
+  { player: "WR1", curveType: "First", TTO: 2, phaseOpenness: [] },
+  { player: "WR2", curveType: "Second", TTO: 2, phaseOpenness: [] },
+];
+const earlyReads = { WR1: "1", WR2: "2", WR3: "3" };
+
+test("the supplied 56/44/61 example checks base notice in read order and skips NA without a roll", () => {
+  const rolls = [0, 0, 0, 0.05, 0.29999];
+  const state = runUnpressuredReadLoop(earlySettings, earlyRoutes, 3, 0, earlyReads, () => {
+    assert.ok(rolls.length, "Unexpected roll (possibly an NA band)");
+    return rolls.shift()!;
+  });
+  assert.equal(rolls.length, 0);
+  assert.equal(state.currentTime, 0.25);
+  assert.equal(state.currentRead, 1);
+  assert.equal(state.targetPlayer, "WR3");
+  assert.deepEqual(state.decisions.map(({ player, perceivedOpenness, noticeChance, noticeType, throw: madeThrow }) =>
+    ({ player, perceivedOpenness, noticeChance, noticeType, madeThrow })), [
+    { player: "WR1", perceivedOpenness: 56, noticeChance: 5, noticeType: "base", madeThrow: false },
+    { player: "WR3", perceivedOpenness: 61, noticeChance: 30, noticeType: "base", madeThrow: true },
+  ]);
+});
+
+test("the first successful base check stops later checks", () => {
+  const rolls = [0, 0, 0, 0.04999];
+  const state = runUnpressuredReadLoop(earlySettings, earlyRoutes, 3, 0, earlyReads, () => {
+    assert.ok(rolls.length, "Later receivers should not be rolled after a throw");
+    return rolls.shift()!;
+  });
+  assert.equal(state.targetPlayer, "WR1");
+  assert.equal(state.decisions.length, 1);
+});
+
+test("failed base checks keep the current read and advance by only the next quarter step", () => {
+  const rolls = [0, 0, 0, 0.05, 0.3, 0, 0, 0, 0.9, 0.1];
+  const state = runUnpressuredReadLoop(earlySettings, earlyRoutes, 3, 0, earlyReads, () => rolls.shift()!);
+  assert.deepEqual(state.snapshots.map(({ currentTime, currentRead }) => ({ currentTime, currentRead })), [
+    { currentTime: 0.25, currentRead: 1 }, { currentTime: 0.5, currentRead: 1 },
+  ]);
+  assert.equal(state.targetPlayer, "WR3");
+  assert.ok(state.decisions.every((decision) => decision.noticeType === "base" && decision.readDelay === undefined));
+  assert.equal(rolls.length, 0);
+});
+
+test("ready reads still use primary notice and no base checks occur after time expires", () => {
+  const ready = earlyRoutes.map((route) => ({ ...route, TTO: 0.25 }));
+  const rolls = [0, 0, 0, 0.4]; // 40 beats primary 45, but would fail base 5.
+  const state = runUnpressuredReadLoop(earlySettings, ready, 3, 0, earlyReads, () => rolls.shift()!);
+  assert.equal(state.targetPlayer, "WR1");
+  assert.equal(state.decisions[0].noticeType, "primary");
+  assert.equal(state.decisions[0].noticeChance, 45);
+  const expired = runUnpressuredReadLoop(earlySettings, earlyRoutes, 0.25, 0, earlyReads, () => 0);
+  assert.equal(expired.decisions.length, 0);
+  assert.equal(expired.targetPlayer, undefined);
 });
