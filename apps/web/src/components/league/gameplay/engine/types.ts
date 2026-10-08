@@ -99,6 +99,7 @@ export type FrontendSettings = Record<string, unknown> & {
   handsImpactByOpenness?: import("./receiverHands").HandsImpactRow[];
   jumpEffects?: import("./receiverJump").JumpEffectRow[];
   jumpAirYards?: import("./receiverJump").JumpAirYardsRow[];
+  jumpRoutes?: import("./receiverJump").JumpRouteRow[];
   routeTypeAirYards?: RouteDepthRange[];
   routesByDepth?: Record<string, string[]>;
   routeInfo?: unknown[];

@@ -17,6 +17,8 @@ const rows = [
   ["Wide open / busted", 90, -1, "0%", "0%", "0%", "0%", "0%"],
   ["JUMP Based on Air yards"], ["Air Yards", "Jump Chance Multiplier"],
   ["EndZone", 1.35], [5, 0.25], [10, 0.5], [100, 1],
+  ["JUMP Based on Route"], ["Route", "Jump Chance Multiplier"],
+  ["Fade", "x1.5"], ["Corner", "x1.2"], ["Go", "x1.1"], ["Post", "x1.075"], ["ALL ELSE", "x1"],
 ];
 
 test("loads both supplied jump tables without separators and with the last table at EOF", () => {
@@ -27,14 +29,26 @@ test("loads both supplied jump tables without separators and with the last table
   assert.equal(parsed.jumpEffects[8].maxOpen, null);
   assert.deepEqual(parsed.jumpAirYards, [{ airYards: "EndZone", multiplier: 1.35 }, { airYards: 5, multiplier: 0.25 },
     { airYards: 10, multiplier: 0.5 }, { airYards: 100, multiplier: 1 }]);
+  assert.deepEqual(parsed.jumpRoutes, [{ route: "Fade", multiplier: 1.5 }, { route: "Corner", multiplier: 1.2 },
+    { route: "Go", multiplier: 1.1 }, { route: "Post", multiplier: 1.075 }, { route: "ALL ELSE", multiplier: 1 }]);
 });
 
 test("missing tables stay absent and malformed values fail with their Settings row", () => {
-  assert.deepEqual(parseJumpSettings([]), { jumpEffects: [], jumpAirYards: [] });
+  assert.deepEqual(parseJumpSettings([]), { jumpEffects: [], jumpAirYards: [], jumpRoutes: [] });
   const changed = rows.map((row) => [...row]);
   changed[2][3] = "bad";
   assert.throws(() => parseJumpSettings(changed), /Perfect jump multiplier at Settings row 3/);
   assert.throws(() => parseJumpSettings([rows[11], rows[12], [5, 0.25]]), /EndZone/);
+});
+
+test("route multipliers are read dynamically, with numeric and x-prefixed values", () => {
+  const table = [["JUMP Based on Route"], ["Route", "Jump Chance Multiplier"],
+    ["Custom Route", 2.25], ["Fade", "X1.8"], ["ALL ELSE", "×1.05"]];
+  const parsed = parseJumpSettings(table);
+  assert.deepEqual(parsed.jumpRoutes, [{ route: "Custom Route", multiplier: 2.25 },
+    { route: "Fade", multiplier: 1.8 }, { route: "ALL ELSE", multiplier: 1.05 }]);
+  assert.throws(() => parseJumpSettings(table.slice(0, -1)), /ALL ELSE/);
+  assert.throws(() => parseJumpSettings([table[0], table[1], ["Fade", "bad"], table[4]]), /row 3/);
 });
 
 test("neighboring parsers stop at jump tables", () => {

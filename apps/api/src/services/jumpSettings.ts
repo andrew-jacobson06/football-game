@@ -58,5 +58,24 @@ export function parseJumpSettings(rows: unknown[][]) {
     if (!jumpAirYards.some((row) => row.airYards === "EndZone") || !jumpAirYards.some((row) => typeof row.airYards === "number"))
       throw new Error("JUMP Based on Air yards needs EndZone and numeric depth rows.");
   }
-  return { jumpEffects, jumpAirYards };
+  const routeHeader = header("JUMP Based on Route", ["Route", "Jump Chance Multiplier"]);
+  const jumpRoutes: Array<{ route: string; multiplier: number }> = [];
+  if (routeHeader.index >= 0) {
+    const titles = ["JUMP EFFECT (accuracy+coverage)", "JUMP Based on Air yards", "JUMP Based on Route",
+      "Hands impact based on openness", "Accuracy Mod", "Openness Completion Modifier", "QB Decision Table",
+      "Completion Pct", "AirYards", "RouteTreeDetails", "Curve Type Openness", "Phase", "baseTTO", "BaseImpact Calcs", "time_to_Throw"];
+    for (let index = routeHeader.index + 1; index < rows.length; index++) {
+      const row = rows[index];
+      const route = String(row[routeHeader.columns[0]] ?? "").trim();
+      if (!route || titles.some((title) => key(title) === key(route))) break;
+      const raw = String(row[routeHeader.columns[1]] ?? "").trim().replace(/^[x×]\s*/i, "");
+      const multiplier = number(raw, "jump route multiplier", index);
+      if (multiplier < 0 || jumpRoutes.some((entry) => key(entry.route) === key(route)))
+        throw new Error(`Invalid jump route multiplier at Settings row ${index + 1}.`);
+      jumpRoutes.push({ route, multiplier });
+    }
+    if (!jumpRoutes.some((row) => key(row.route) === "allelse"))
+      throw new Error("JUMP Based on Route needs an ALL ELSE row.");
+  }
+  return { jumpEffects, jumpAirYards, jumpRoutes };
 }

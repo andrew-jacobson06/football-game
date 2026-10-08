@@ -19,11 +19,12 @@ const parsed = parseCompletionSettings([
 const settings = { ...parsed, handsImpactByOpenness: [{ label: "Neutral", minOpen: 0, maxOpen: null, handsImpact: 0 }],
   jumpEffects: [{ label: "Neutral", minOpen: 0, maxOpen: null, multipliers: { Perfect: 0, Accurate: 0, Close: 0, Catchable: 0, "Off Target": 0 } }],
   jumpAirYards: [{ airYards: "EndZone" as const, multiplier: 1.35 }, { airYards: 5, multiplier: 0.25 }, { airYards: 10, multiplier: 0.5 }, { airYards: 100, multiplier: 1 }],
+  jumpRoutes: [{ route: "ALL ELSE", multiplier: 1 }],
   accuracyModifiers: parseAccuracySettings([["Accuracy Mod"], ["Throw Type", "MIN", "MAX"],
   ["Perfect", 10, 20], ["Accurate", 5, 9], ["Close", -4, 4], ["Catchable", -9, -5], ["Off Target", -20, -10]]), curves: { Break: [
   { time: 0.25, openness: 5 }, { time: 0.5, openness: 20 }, { time: 0.75, openness: 40 }, { time: 1, openness: 60 },
 ] } };
-const target = { player: "WR", airYards: 8, TTO: 2, curveType: "Break", perceivedOpenness: 200,
+const target = { player: "WR", routeType: "Dig", airYards: 8, TTO: 2, curveType: "Break", perceivedOpenness: 200,
   phaseOpenness: [{ start: 0, end: 2, duration: 2, phaseImpact: 10 }] };
 
 test("depth bands use inclusive upper bounds and current Settings values", () => {
@@ -93,18 +94,19 @@ test("weights the sampled hands effect by actual openness and adds it to the raw
 });
 
 test("jump is weighted by actual openness, the stored throw type and end-zone status", () => {
-  const config = { ...settings, jumpEffects: [
+  const config = { ...settings, jumpRoutes: [{ route: "Fade", multiplier: 1.5 }, { route: "ALL ELSE", multiplier: 1 }], jumpEffects: [
     { label: "40-49", minOpen: 40, maxOpen: 49, multipliers: { Perfect: 0.25, Accurate: 0.33, Close: 0.7, Catchable: 1, "Off Target": 0.03 } },
     { label: "90+", minOpen: 90, maxOpen: null, multipliers: { Perfect: 0, Accurate: 0, Close: 0, Catchable: 0, "Off Target": 0 } },
   ] };
   const rolls = [0, 0.5, 0.5, 0.37];
-  const result = calculateCompletion(config, target, 1.4, 50, 50, 50, 8, () => rolls.shift()!);
+  const result = calculateCompletion(config, { ...target, routeType: "Fade" }, 1.4, 50, 50, 50, 8, () => rolls.shift()!);
   assert.equal(result.throwType, "Perfect");
   assert.equal(result.jumpEffectMultiplier, 0.25);
   assert.equal(result.jumpAirYardsMultiplier, 1.35);
   assert.equal(result.isEndZoneThrow, true);
   assert.equal(result.jumpMod, result.jumpMin + 0.37 * (result.jumpMax - result.jumpMin));
-  assert.equal(result.jumpAdjustment, result.jumpMod * 0.25 * 1.35);
+  assert.equal(result.jumpRouteMultiplier, 1.5);
+  assert.equal(result.jumpAdjustment, result.jumpMod * 0.25 * 1.35 * 1.5);
   assert.equal(result.pct, result.baseCompletion + result.opennessAdjustment + result.accuracyAdjustment + result.handsAdjustment + result.jumpAdjustment);
   assert.equal(rolls.length, 0);
 });

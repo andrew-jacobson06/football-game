@@ -1,6 +1,16 @@
 import type { ThrowType } from "./qbAccuracy";
 export type JumpEffectRow = { label: string; minOpen: number; maxOpen: number | null; multipliers: Record<ThrowType, number> };
 export type JumpAirYardsRow = { airYards: number | "EndZone"; multiplier: number };
+export type JumpRouteRow = { route: string; multiplier: number };
+
+export function getJumpRouteMultiplier(table: readonly JumpRouteRow[], route: string) {
+  const key = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
+  const row = table.find((row) => key(row.route) === key(route))
+    ?? table.find((row) => key(row.route) === "all else");
+  if (!row || !Number.isFinite(row.multiplier) || row.multiplier < 0)
+    throw new Error(`Missing or invalid JUMP Based on Route setting for ${route}.`);
+  return row.multiplier;
+}
 
 export function calculateJumpRange(jump: number) {
   if (!Number.isFinite(jump) || jump < 0 || jump > 100) throw new Error("Receiver jump must be between 0 and 100.");
@@ -14,7 +24,8 @@ export function calculateJumpRange(jump: number) {
 
 export function rollReceiverJump(
   jump: number, actualOpenness: number, throwType: ThrowType, airYards: number, yardsToGoal: number,
-  effects: readonly JumpEffectRow[], airTable: readonly JumpAirYardsRow[], random: () => number = Math.random,
+  effects: readonly JumpEffectRow[], airTable: readonly JumpAirYardsRow[], route: string,
+  routeTable: readonly JumpRouteRow[], random: () => number = Math.random,
 ) {
   const { jumpMin, jumpMax } = calculateJumpRange(jump);
   if (!Number.isFinite(actualOpenness) || !Number.isFinite(airYards) || airYards < 0 || !Number.isFinite(yardsToGoal) || yardsToGoal < 0)
@@ -30,8 +41,9 @@ export function rollReceiverJump(
     : depths.find((row) => airYards <= row.airYards) ?? depths.at(-1);
   if (!Number.isFinite(jumpEffectMultiplier) || !airBand || !Number.isFinite(airBand.multiplier))
     throw new Error("Missing or invalid jump multiplier in Settings.");
+  const jumpRouteMultiplier = getJumpRouteMultiplier(routeTable, route);
   const jumpMod = jumpMin + random() * (jumpMax - jumpMin);
   return { receiverJump: jump, jumpMin, jumpMax, jumpMod, jumpOpennessBand: band.label,
-    jumpEffectMultiplier, jumpAirYardsMultiplier: airBand.multiplier, isEndZoneThrow,
-    jumpAdjustment: jumpMod * jumpEffectMultiplier * airBand.multiplier };
+    jumpEffectMultiplier, jumpAirYardsMultiplier: airBand.multiplier, jumpRouteMultiplier, isEndZoneThrow,
+    jumpAdjustment: jumpMod * jumpEffectMultiplier * airBand.multiplier * jumpRouteMultiplier };
 }

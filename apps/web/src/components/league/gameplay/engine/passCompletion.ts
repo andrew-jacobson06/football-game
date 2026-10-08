@@ -1,7 +1,7 @@
 import { getRouteOpenness, type RouteOpennessSettings, type RouteWithPhaseOpenness } from "./routeOpenness";
 import { rollQBAccuracy, type AccuracyModRow } from "./qbAccuracy";
 import { rollReceiverHands, type HandsImpactRow } from "./receiverHands";
-import { rollReceiverJump, type JumpEffectRow, type JumpAirYardsRow } from "./receiverJump";
+import { rollReceiverJump, type JumpEffectRow, type JumpAirYardsRow, type JumpRouteRow } from "./receiverJump";
 
 export type CompletionDepthRow = { label?: string; pastLos: number; baseCompletion: number };
 export type OpennessCompletionRow = { label: string; minOpen: number; maxOpen: number | null; minAdjust: number; maxAdjust: number };
@@ -12,6 +12,7 @@ export type PassCompletionSettings = Pick<RouteOpennessSettings, "curves"> & {
   handsImpactByOpenness: readonly HandsImpactRow[];
   jumpEffects: readonly JumpEffectRow[];
   jumpAirYards: readonly JumpAirYardsRow[];
+  jumpRoutes: readonly JumpRouteRow[];
 };
 
 export function getBaseCompletion(table: readonly CompletionDepthRow[], airYards: number) {
@@ -37,7 +38,7 @@ export function getOpennessCompletionAdjustment(table: readonly OpennessCompleti
 
 export function calculateThrowCompletion(
   settings: PassCompletionSettings,
-  target: RouteWithPhaseOpenness & { TTO: number; curveType: string; airYards: number },
+  target: RouteWithPhaseOpenness & { TTO: number; curveType: string; airYards: number; routeType: string },
   throwTime: number,
   qbAccuracy: number,
   receiverHands: number,
@@ -51,7 +52,7 @@ export function calculateThrowCompletion(
   const accuracy = rollQBAccuracy(qbAccuracy, settings.accuracyModifiers, random);
   const hands = rollReceiverHands(receiverHands, actualOpenness, settings.handsImpactByOpenness, random);
   const jump = rollReceiverJump(receiverJump, actualOpenness, accuracy.throwType, target.airYards, yardsToGoal,
-    settings.jumpEffects, settings.jumpAirYards, random);
+    settings.jumpEffects, settings.jumpAirYards, target.routeType, settings.jumpRoutes, random);
   return { throwTime, airYards: target.airYards, baseCompletion, actualOpenness,
     opennessAdjustment, opennessBand, ...accuracy, ...hands, ...jump,
     pct: Math.max(0, Math.min(100, baseCompletion + opennessAdjustment + accuracy.accuracyAdjustment + hands.handsAdjustment + jump.jumpAdjustment)) };

@@ -561,6 +561,7 @@ export function determineCompletionPct(
     handsImpactByOpenness: ctx.settings.handsImpactByOpenness ?? [],
     jumpEffects: ctx.settings.jumpEffects ?? [],
     jumpAirYards: ctx.settings.jumpAirYards ?? [],
+    jumpRoutes: ctx.settings.jumpRoutes ?? [],
   }, target, throwTime, qbAccuracy, receiverHands, receiverJump, yardsToGoal);
 }
 export function calcYAC(

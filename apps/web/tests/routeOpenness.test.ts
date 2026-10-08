@@ -119,6 +119,7 @@ const ctx: EngineContext = {
     handsImpactByOpenness: [{ label: "All", minOpen: 0, maxOpen: null, handsImpact: 0.5 }],
     jumpEffects: [{ label: "All", minOpen: 0, maxOpen: null, multipliers: { Perfect: 0.05, Accurate: 0.05, Close: 0.1, Catchable: 0.15, "Off Target": 0 } }],
     jumpAirYards: [{ airYards: "EndZone", multiplier: 1.35 }, { airYards: 5, multiplier: 0.25 }, { airYards: 10, multiplier: 0.5 }, { airYards: 100, multiplier: 1 }],
+    jumpRoutes: [{ route: "ALL ELSE", multiplier: 1 }],
     accuracyModifiers: [{ throwType: "Perfect", min: 10, max: 20 }, { throwType: "Accurate", min: 5, max: 9 },
       { throwType: "Close", min: -4, max: 4 }, { throwType: "Catchable", min: -9, max: -5 }, { throwType: "Off Target", min: -20, max: -10 }],
     qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 0, noticeIfPrimary: 100 }] }, historyLength: 0,
