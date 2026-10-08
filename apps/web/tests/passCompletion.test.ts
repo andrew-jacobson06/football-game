@@ -1,7 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseCompletionSettings } from "../../api/src/services/completionSettings.ts";
-import { calculateThrowCompletion, getBaseCompletion, getOpennessCompletionAdjustment } from "../src/components/league/gameplay/engine/passCompletion.ts";
+import { parseAccuracySettings } from "../../api/src/services/accuracySettings.ts";
+import { calculateThrowCompletion as calculateCompletion, getBaseCompletion, getOpennessCompletionAdjustment } from "../src/components/league/gameplay/engine/passCompletion.ts";
+
+const calculateThrowCompletion = (settings: Parameters<typeof calculateCompletion>[0], target: Parameters<typeof calculateCompletion>[1], throwTime: number) =>
+  calculateCompletion(settings, target, throwTime, 50, () => 0.5);
 
 const parsed = parseCompletionSettings([
   ["Completion Pct", "past los", "base completion"],
@@ -12,7 +16,8 @@ const parsed = parseCompletionSettings([
   ["40-49", 40, 49, -7, -4], ["50–59", 50, 59, -3, 1], ["60–69", 60, 69, 1, 3],
   ["70–79", 70, 79, 3, 6], ["80–89", 80, 89, 7, 11], ["90–100", 90, -1, 12, 20],
 ]);
-const settings = { ...parsed, curves: { Break: [
+const settings = { ...parsed, accuracyModifiers: parseAccuracySettings([["Accuracy Mod"], ["Throw Type", "MIN", "MAX"],
+  ["Perfect", 10, 20], ["Accurate", 5, 9], ["Close", -4, 4], ["Catchable", -9, -5], ["Off Target", -20, -10]]), curves: { Break: [
   { time: 0.25, openness: 5 }, { time: 0.5, openness: 20 }, { time: 0.75, openness: 40 }, { time: 1, openness: 60 },
 ] } };
 const target = { player: "WR", airYards: 8, TTO: 2, curveType: "Break", perceivedOpenness: 200,
@@ -56,4 +61,15 @@ test("completion chances are bounded and missing Settings fail explicitly", () =
   assert.equal(calculateThrowCompletion(low, { ...target, phaseOpenness: [] }, 1).pct, 0);
   assert.throws(() => getBaseCompletion([], 8), /Missing Completion Pct/);
   assert.throws(() => getOpennessCompletionAdjustment([], 60), /Missing Openness Completion Modifier/);
+});
+
+test("stores the accuracy throw type and adds its adjustment before bounding the total", () => {
+  const rolls = [0, 0.5];
+  const result = calculateCompletion(settings, target, 1.4, 50, () => rolls.shift()!);
+  assert.equal(result.throwType, "Perfect");
+  assert.equal(result.accuracyAdjustment, 15);
+  assert.equal(result.accuracyRoll, 0);
+  assert.ok(Math.abs(result.pct - 59) < 1e-10);
+  assert.equal(result.throwTypeChances.length, 5);
+  assert.equal(rolls.length, 0);
 });
