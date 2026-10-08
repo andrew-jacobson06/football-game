@@ -259,3 +259,49 @@ test("the scramble option resolves a QB run rather than a sack or pass", (t) => 
   assert.equal(result.play.playtype, "Run");
   assert.equal(result.play.player, "QB");
 });
+
+function completionContext(airYards: number): EngineContext {
+  return { ...ctx, settings: { ...ctx.settings,
+    routeTypeAirYards: [{ routeType: "Quick", minAirYards: airYards, maxAirYards: airYards }],
+    completionTable: [{ pastLos: 110, baseCompletion: 100 }],
+    opennessCompletionModifiers: [{ label: "All", minOpen: 0, maxOpen: null, minAdjust: 0, maxAdjust: 0 }],
+    accuracyModifiers: ctx.settings.accuracyModifiers!.map((row) => ({ ...row, min: 0, max: 0 })),
+    handsImpactByOpenness: [{ label: "All", minOpen: 0, maxOpen: null, handsImpact: 0 }],
+    jumpEffects: [{ label: "All", minOpen: 0, maxOpen: null, multipliers: { Perfect: 0, Accurate: 0, Close: 0, Catchable: 0, "Off Target": 0 } }],
+  } };
+}
+
+test("27-yard end-zone passes from the 15 credit and log only 15 yards for either possession", (t) => {
+  const debug = t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => 0.5);
+  const context = completionContext(27);
+  for (const possession of ["Home", "Away"] as const) {
+    const offenseContext = possession === "Home" ? context : { ...context, players: context.players.map((player) => ({ ...player,
+      team: player.team === "Home" ? "Away" : "Home" })) };
+    const result = passPlay({ ...game, Possession: possession, BallOn: possession === "Home" ? 85 : 15 }, offenseContext, options);
+    assert.equal(result.play.result, "Touchdown");
+    assert.equal(result.play.yards, 15);
+    assert.equal(result.play.airyards, 15);
+    assert.equal(result.play.newballon, possession === "Home" ? 100 : 0);
+    const completion = debug.mock.calls.filter((call) => call.arguments[0] === "[Pass Engine] Completion check").at(-1)!.arguments[1];
+    assert.equal(completion.throwCompletion.airYards, 27); // Physical depth remains an input to completion.
+    const outcome = debug.mock.calls.filter((call) => call.arguments[0] === "[Pass Engine] Pass outcome").at(-1)!.arguments[1];
+    assert.equal(outcome.yards, 15);
+    assert.equal(outcome.airYards, 15);
+  }
+});
+
+test("yards after catch stop at the goal line, while ordinary pass gains remain intact", (t) => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => 0.5);
+  const context = completionContext(12);
+  const midfield = passPlay(game, context, options);
+  assert.ok(Number(midfield.play.yards) > 15);
+  assert.equal(midfield.play.airyards, 12);
+  const redZone = passPlay({ ...game, BallOn: 85 }, context, options);
+  assert.equal(redZone.play.result, "Touchdown");
+  assert.equal(redZone.play.yards, 15);
+  assert.equal(redZone.play.airyards, 12);
+});
