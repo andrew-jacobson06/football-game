@@ -37,8 +37,8 @@ export {
 } from "./engine/passEngine";
 export { calculateBaseOpenness, getRouteBaseOpenness, getSkillBasedOpennessMod,
   getRouteOpenness, getCurrentRouteOpenness } from "./engine/routeOpenness";
-export { calculateReadDefenseModifier, runUnpressuredReadLoop } from "./engine/passReadLoop";
-export type { PassReadLoopState } from "./engine/passReadLoop";
+export { calculateReadDefenseModifier, runUnpressuredReadLoop, getPrimaryNoticeChance } from "./engine/passReadLoop";
+export type { PassReadLoopState, QBDecisionRow } from "./engine/passReadLoop";
 export {
   punt,
   kickFG,

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { calculateRouteOpennessInputs, calculateRoutePhaseImpacts, type RouteOpennessSettings } from "../src/components/league/gameplay/engine/routeOpenness.ts";
-import { assignRoutes, runPassPlayPipeline } from "../src/components/league/gameplay/engine/passEngine.ts";
+import { assignRoutes, runPassPlayPipeline, passPlay } from "../src/components/league/gameplay/engine/passEngine.ts";
 import type { LeagueGame } from "../src/components/league/types.ts";
 import type { EngineContext, PlayCallOptions } from "../src/components/league/gameplay/engine/types.ts";
 
@@ -113,7 +113,8 @@ const game: LeagueGame = { GameId: 1, Home: "Home", Away: "Away", Possession: "H
 const ctx: EngineContext = {
   players: [{ name: "Lineman", team: "Away", defPos: "DL" }, receiver, defender],
   settings: { routeOpennessSettings: settings, timeToThrowRanges: [{ min: 2, max: 2, percentage: 100 }],
-    routeTypeAirYards: [{ routeType: "Quick", minAirYards: 1, maxAirYards: 2 }], routesByDepth: { Quick: ["Flat"] } }, historyLength: 0,
+    routeTypeAirYards: [{ routeType: "Quick", minAirYards: 1, maxAirYards: 2 }], routesByDepth: { Quick: ["Flat"] },
+    qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 0, noticeIfPrimary: 100 }] }, historyLength: 0,
 };
 const options: PlayCallOptions = { formation: { WR1: "Receiver" }, routes: { Receiver: "Flat" }, routeDepths: { Receiver: "Quick" }, defense: [{ player: "Corner", position: "DB1", align: "WR1" }] };
 
@@ -142,8 +143,9 @@ test("pass pipeline retains calculation inputs for later openness graphs", (t) =
   assert.equal(state.opennessTrajectory[0].opennessInputs, route.opennessInputs);
   assert.equal(state.readLoop?.currentRead, 1);
   assert.equal(state.readLoop?.currentTime, 1);
-  assert.equal(state.readLoop?.stopReason, "read-ready");
-  assert.deepEqual(state.readLoop?.snapshots.map((snapshot) => snapshot.currentTime), [0.25, 0.5, 0.75]);
+  assert.equal(state.readLoop?.stopReason, "throw");
+  assert.equal(state.target?.player, "Receiver");
+  assert.deepEqual(state.readLoop?.snapshots.map((snapshot) => snapshot.currentTime), [0.25, 0.5, 0.75, 1]);
   const perceived = state.readLoop!.snapshots[0].receivers[0];
   assert.equal(perceived.player, "Receiver");
   assert.equal(perceived.openness, perceived.baseOpenness + perceived.skillBasedOpennessMod);
@@ -160,4 +162,20 @@ test("an unblocked blitz skips the unpressured read loop", (t) => {
   assert.deepEqual(state.pressure, ["Blitzer"]);
   assert.equal(state.readLoop, undefined);
   assert.ok(state.log.some((message) => message.includes("Unpressured read loop skipped")));
+});
+
+test("declining all reads produces a throw-away rather than a fallback target or sack", (t) => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(Math, "random", () => 0.5);
+  const context = { ...ctx, settings: { ...ctx.settings,
+    qbDecisionTable: [{ perceivedMax: 1000, label: "Unavailable", baseNotice: null, noticeIfPrimary: null }] } };
+  const state = runPassPlayPipeline(game, context, "QB", options);
+  assert.equal(state.readLoop?.stopReason, "reads-exhausted");
+  assert.equal(state.readLoop?.decisions[0].noticeChance, 0);
+  assert.equal(state.target, undefined);
+  assert.equal(state.decision, "throw-away");
+  const result = passPlay(game, context, options);
+  assert.equal(result.text, "Pass: Incomplete");
+  assert.equal(result.game.BallOn, game.BallOn);
+  assert.equal(result.game.Down, 2);
 });
