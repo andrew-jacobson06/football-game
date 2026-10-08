@@ -3,7 +3,8 @@ const key = (value: unknown) => String(value ?? "").trim().toLowerCase();
 
 /** Read the workbook tables wherever they are placed, including offset columns. */
 export function parseRouteOpennessSettings(rows: unknown[][]) {
-  function table(title: string, aliases: string[] = [], validHeader: (row: unknown[], column: number) => boolean = () => true) {
+  function table(title: string, aliases: string[] = [], validHeader: (row: unknown[], column: number) => boolean = () => true,
+    allowedRows?: readonly string[]) {
     let rowIndex = -1, column = -1;
     for (const name of [title, ...aliases]) {
       rowIndex = rows.findIndex((row) => row.some((cell, index) => key(cell) === key(name) && validHeader(row, index)));
@@ -12,23 +13,28 @@ export function parseRouteOpennessSettings(rows: unknown[][]) {
         break;
       }
     }
-    if (rowIndex < 0) return { header: [] as unknown[], rows: [] as unknown[][] };
+    if (rowIndex < 0) return { header: [] as unknown[], rows: [] as unknown[][], rowNumbers: [] as number[] };
     const data: unknown[][] = [];
-    for (const row of rows.slice(rowIndex + 1)) {
-      const cells = row.slice(column);
+    const rowNumbers: number[] = [];
+    for (let index = rowIndex + 1; index < rows.length; index++) {
+      const cells = rows[index].slice(column);
       if (!key(cells[0])) {
         if (data.length) break;
         continue;
       }
       if (titles.some((name) => key(name) === key(cells[0]))) break;
+      // Base impacts have four named traits. Unrelated Settings rows are not
+      // impact records, even when a new table has no blank separator or known title.
+      if (allowedRows && !allowedRows.some((name) => key(name) === key(cells[0]))) break;
       data.push(cells);
+      rowNumbers.push(index + 1);
     }
-    return { header: rows[rowIndex].slice(column), rows: data };
+    return { header: rows[rowIndex].slice(column), rows: data, rowNumbers };
   }
-  function number(value: unknown, label: string) {
+  function number(value: unknown, label: string, context = "") {
     const parsed = Number(String(value ?? "").trim().replace(/%$/, ""));
     if (value == null || String(value).trim() === "" || !Number.isFinite(parsed))
-      throw new Error(`Invalid ${label} in route openness Settings.`);
+      throw new Error(`Invalid ${label} in route openness Settings${context} (value=${JSON.stringify(value ?? "")}).`);
     return parsed;
   }
   // Do not mistake RouteTreeDetails' new Curve Type column for the curve table.
@@ -37,7 +43,7 @@ export function parseRouteOpennessSettings(rows: unknown[][]) {
   const phases = table("Phase");
   const routes = table("RouteTreeDetails");
   const depths = table("baseTTO");
-  const impacts = table("BaseImpact Calcs");
+  const impacts = table("BaseImpact Calcs", [], () => true, ["Speed", "Accel", "Route/Coverage", "Size"]);
   const curveTypeColumn = routes.header.findIndex((value) => key(value) === "curve type");
   return {
     curves: Object.fromEntries(curves.rows.map((row) => [String(row[0]).trim(),
@@ -58,9 +64,10 @@ export function parseRouteOpennessSettings(rows: unknown[][]) {
         Break: number(row[5], "break percentage"), Sustain: number(row[6], "sustain percentage") },
     }])),
     baseTTO: Object.fromEntries(depths.rows.map((row) => [String(row[1]).trim(), number(row[2], "base TTO")])),
-    baseImpacts: Object.fromEntries(impacts.rows.map((row) => [String(row[0]).trim(), {
-      base: number(row[1], "impact base"), max: number(row[2], "impact maximum"),
-      diffWeight: number(row[3], "impact difference weight"),
+    baseImpacts: Object.fromEntries(impacts.rows.map((row, index) => [String(row[0]).trim(), {
+      base: number(row[1], "impact base", ` at row ${impacts.rowNumbers[index]} for ${String(row[0]).trim()}`),
+      max: number(row[2], "impact maximum", ` at row ${impacts.rowNumbers[index]} for ${String(row[0]).trim()}`),
+      diffWeight: number(row[3], "impact difference weight", ` at row ${impacts.rowNumbers[index]} for ${String(row[0]).trim()}`),
     }])),
   };
 }
