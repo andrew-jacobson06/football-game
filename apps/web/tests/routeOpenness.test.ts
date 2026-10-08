@@ -114,6 +114,8 @@ const ctx: EngineContext = {
   players: [{ name: "Lineman", team: "Away", defPos: "DL" }, receiver, defender],
   settings: { routeOpennessSettings: settings, timeToThrowRanges: [{ min: 2, max: 2, percentage: 100 }],
     routeTypeAirYards: [{ routeType: "Quick", minAirYards: 1, maxAirYards: 2 }], routesByDepth: { Quick: ["Flat"] },
+    completionTable: [{ pastLos: 0, baseCompletion: 75 }, { pastLos: 3, baseCompletion: 70 }],
+    opennessCompletionModifiers: [{ label: "All", minOpen: 0, maxOpen: null, minAdjust: -30, maxAdjust: 20 }],
     qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 0, noticeIfPrimary: 100 }] }, historyLength: 0,
 };
 const options: PlayCallOptions = { formation: { WR1: "Receiver" }, routes: { Receiver: "Flat" }, routeDepths: { Receiver: "Quick" }, defense: [{ player: "Corner", position: "DB1", align: "WR1" }] };
@@ -192,4 +194,8 @@ test("a base-notice throw is handed to the pass pipeline before the read is read
   assert.equal(state.readLoop?.currentTime, 0.25);
   assert.ok(state.readLoop!.currentTime < Number(state.target?.TTO));
   assert.equal(state.readLoop?.decisions[0].noticeType, "base");
+  assert.equal(state.throwCompletion?.throwTime, 0.25);
+  assert.equal(state.throwCompletion?.baseCompletion, 70);
+  assert.equal(state.throwCompletion?.actualOpenness, state.readLoop?.snapshots[0].receivers[0].openness);
+  assert.notEqual(state.throwCompletion?.actualOpenness, state.readLoop?.snapshots[0].receivers[0].perceivedOpenness);
 });
