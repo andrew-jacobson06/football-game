@@ -172,13 +172,16 @@ test("an unblocked blitz skips the unpressured read loop", (t) => {
   assert.ok(state.log.some((message) => message.includes("Unpressured read loop skipped")));
 });
 
-test("declining all reads produces a throw-away rather than a fallback target or sack", (t) => {
+test("declining all reads continues to the deadline and rolls the throw-away option", (t) => {
   t.mock.method(console, "debug", () => {});
   t.mock.method(Math, "random", () => 0.5);
   const context = { ...ctx, settings: { ...ctx.settings,
     qbDecisionTable: [{ perceivedMax: 1000, label: "Unavailable", baseNotice: null, noticeIfPrimary: null }] } };
   const state = runPassPlayPipeline(game, context, "QB", options);
-  assert.equal(state.readLoop?.stopReason, "reads-exhausted");
+  assert.equal(state.readLoop?.stopReason, "time-to-throw");
+  assert.equal(state.readLoop?.currentTime, 2);
+  assert.equal(state.readLoop?.currentRead, null);
+  assert.ok(state.readLoop!.snapshots.length > 1);
   assert.equal(state.readLoop?.decisions[0].noticeChance, 0);
   assert.equal(state.target, undefined);
   assert.equal(state.decision, "throw-away");
@@ -224,4 +227,35 @@ test("end-zone jump detection respects both possession directions", (t) => {
     assert.equal(state.throwCompletion?.isEndZoneThrow, true);
     assert.equal(state.throwCompletion?.jumpAirYardsMultiplier, 1.35);
   }
+});
+
+test("forced deadline throws reach completion with the expiration timestamp", (t) => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => 0.25);
+  const context = { ...ctx, settings: { ...ctx.settings,
+    qbDecisionTable: [{ perceivedMax: 1000, label: "No notice", baseNotice: null, noticeIfPrimary: null }] } };
+  const state = runPassPlayPipeline(game, context, "QB", options);
+  assert.equal(state.readLoop?.expirationDecision?.action, "force-throw");
+  assert.equal(state.decision, "throw");
+  assert.equal(state.target?.player, "Receiver");
+  assert.equal(state.throwCompletion?.throwTime, 2);
+});
+
+test("the scramble option resolves a QB run rather than a sack or pass", (t) => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => 0.9);
+  const context = { ...ctx, players: [...ctx.players, { name: "QB", team: "Home", position: "QB", speed: 60, acceleration: 60, vision: 100 },
+      { name: "Blocker", team: "Home", runBlocking: 100, passProtect: 50 },
+      { name: "Rusher", team: "Away", defPos: "DL", runStop: 10, passRush: 50 }],
+    settings: { ...ctx.settings, qbDecisionTable: [{ perceivedMax: 1000, label: "No notice", baseNotice: null, noticeIfPrimary: null }] } };
+  const call = { ...options, formation: { ...options.formation, QB: "QB", LT: "Blocker" },
+    defense: [...options.defense!, { player: "Rusher", position: "DL1", align: "LT" }] };
+  const state = runPassPlayPipeline(game, context, "QB", call);
+  assert.equal(state.decision, "scramble");
+  assert.equal(state.throwCompletion, undefined);
+  const result = passPlay(game, context, call);
+  assert.equal(result.play.playtype, "Run");
+  assert.equal(result.play.player, "QB");
 });

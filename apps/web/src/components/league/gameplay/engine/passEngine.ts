@@ -30,7 +30,7 @@ import {
   weightedChoose,
 } from "./utils";
 import { buildResult } from "./playLogger";
-import { checkForFumble, determineTackler } from "./runEngine";
+import { checkForFumble, determineTackler, runPlay } from "./runEngine";
 import { calculateTimeToThrow } from "./timeToThrow";
 import { calculateRouteOpennessInputs, calculateRoutePhaseImpacts } from "./routeOpenness";
 import { routeDepthBounds } from "./routeCatalog";
@@ -325,21 +325,23 @@ export function runPassPlayPipeline(
   recordPassPhase(state, "openness-trajectory", "Receiver openness trajectory stub completed.");
 
   // 10. Begin unpressured reads using the stored route curves and phase impacts.
-  if (state.pressure.length === 0 && !state.instantPressure && routes.length > 0) {
+  if (state.pressure.length === 0 && !state.instantPressure) {
     state.readLoop = runUnpressuredReadLoop(
       { ...ctx.settings.routeOpennessSettings!, qbDecisionTable: ctx.settings.qbDecisionTable ?? [] }, routes, state.finalTimeToThrow,
       trait(byName(ctx, qbName), "readDefense"), options.reads,
     );
   }
   recordPassPhase(state, "qb-read-cycle", state.readLoop
-    ? `Unpressured read ${state.readLoop.currentRead} paused at ${state.readLoop.currentTime.toFixed(2)} seconds (${state.readLoop.stopReason}); ${state.readLoop.snapshots.length} perceived-openness snapshots recorded.`
-    : "Unpressured read loop skipped for pressure or no routes.");
+    ? `${state.readLoop.currentRead === null ? "Unpressured all-receiver scan" : `Unpressured read ${state.readLoop.currentRead}`} ended at ${state.readLoop.currentTime.toFixed(2)} seconds (${state.readLoop.stopReason}); ${state.readLoop.snapshots.length} perceived-openness snapshots recorded.`
+    : "Unpressured read loop skipped for pressure.");
 
   // 11-12. Unpressured throws use the read-loop decision; pressure keeps its existing fallback.
   state.target = state.readLoop
     ? openness.find((route) => route.player === state.readLoop!.targetPlayer)
     : choosePassTarget(ctx, qbName, openness, options);
-  state.decision = state.target ? "throw" : "throw-away";
+  state.decision = state.readLoop
+    ? state.readLoop.decision === "pending" ? "throw-away" : state.readLoop.decision
+    : state.target ? "throw" : "throw-away";
   recordPassPhase(state, "qb-decision", `QB decision selected ${state.decision}.`);
 
   // 13. Stop at the boundary where completion/incompletion logic will eventually begin.
@@ -636,6 +638,10 @@ export function passPlay(
   const passState = runPassPlayPipeline(game, ctx, qbName, options);
   if (passState.decision === "sack")
     return handleSack(game, ctx, qbName, options);
+  if (passState.decision === "scramble") {
+    console.log("[Pass Engine] QB tucks and runs", { quarterback: qbName, time: passState.readLoop?.currentTime });
+    return runPlay(game, ctx, { ...options, runner: qbName, blitz: false });
+  }
   const target = passState.target as NonNullable<
     ReturnType<typeof choosePassTarget>
   > | undefined;
