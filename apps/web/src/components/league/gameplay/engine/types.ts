@@ -97,6 +97,9 @@ export type FrontendSettings = Record<string, unknown> & {
   opennessCompletionModifiers?: import("./passCompletion").OpennessCompletionRow[];
   accuracyModifiers?: import("./qbAccuracy").AccuracyModRow[];
   handsImpactByOpenness?: import("./receiverHands").HandsImpactRow[];
+  jumpEffects?: import("./receiverJump").JumpEffectRow[];
+  jumpAirYards?: import("./receiverJump").JumpAirYardsRow[];
+  jumpRoutes?: import("./receiverJump").JumpRouteRow[];
   routeTypeAirYards?: RouteDepthRange[];
   routesByDepth?: Record<string, string[]>;
   routeInfo?: unknown[];

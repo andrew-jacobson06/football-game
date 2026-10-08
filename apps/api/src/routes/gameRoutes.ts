@@ -6,6 +6,7 @@ import { parseQBDecisionSettings } from "../services/qbDecisionSettings.js";
 import { parseCompletionSettings } from "../services/completionSettings.js";
 import { parseAccuracySettings } from "../services/accuracySettings.js";
 import { parseHandsImpactSettings } from "../services/handsSettings.js";
+import { parseJumpSettings } from "../services/jumpSettings.js";
 import {
   appendSheetRow,
   batchUpdateSheetValues,
@@ -258,6 +259,7 @@ async function getFrontendSettingsFromSheet() {
     ...parseCompletionSettings([headers, ...rows]),
     accuracyModifiers: parseAccuracySettings([headers, ...rows]),
     handsImpactByOpenness: parseHandsImpactSettings([headers, ...rows]),
+    ...parseJumpSettings([headers, ...rows]),
     ...parseRouteCatalogSettings([headers, ...rows]),
     routeInfo: settingRows(rows, "RouteInfo").map((r) => ({
       label: String(r[0]),
