@@ -70,3 +70,32 @@ test("uses current workbook values and rejects malformed numeric data", () => {
   updated[14][2] = "invalid";
   assert.throws(() => parseRouteOpennessSettings(updated), /base TTO/);
 });
+
+test("base impacts stop before any adjacent table, even one with an unknown title", () => {
+  const impactRows = tables.slice(16, 21);
+  for (const nextTable of [
+    ["QB Decision Table", "", ""],
+    ["Open Score", "perceived max", "Label"],
+    ["Another new settings table", "not numeric", "not numeric"],
+  ]) {
+    const settings = parseRouteOpennessSettings([
+      ...impactRows, nextTable, ["0–10", 10, "Erased", "", "NA", "NA"],
+    ].map((row) => ["", "", ...row]));
+    assert.deepEqual(Object.keys(settings.baseImpacts), ["Speed", "Accel", "Route/Coverage", "Size"]);
+    assert.deepEqual(settings.baseImpacts.Speed, { base: 5, max: 10, diffWeight: 0.25 });
+  }
+});
+
+test("invalid real impact values still throw with the trait, workbook row, and value", () => {
+  for (const [column, label] of [[1, "impact base"], [2, "impact maximum"], [3, "impact difference weight"]] as const) {
+    const changed = tables.slice(16, 21).map((row) => [...row]);
+    changed[1][column] = "bad input";
+    const rows = [...Array.from({ length: 170 }, () => []), ...changed];
+    assert.throws(() => parseRouteOpennessSettings(rows), (error: Error) => {
+      assert.match(error.message, new RegExp(label));
+      assert.match(error.message, /row 172 for Speed/);
+      assert.match(error.message, /value="bad input"/);
+      return true;
+    });
+  }
+});
