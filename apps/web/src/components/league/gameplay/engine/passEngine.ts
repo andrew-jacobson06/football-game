@@ -655,6 +655,13 @@ export function passPlay(
   });
   const outcome = target ? determinePassOutcome(ctx, qbName, target, pct)
     : { completed: false, intercepted: false, yards: 0, airYards: 0, caughtBy: undefined };
+  if (outcome.completed) {
+    const yardsToGoal = game.Possession === "Home" ? 100 - n(game.BallOn) : n(game.BallOn);
+    // Throw depth still drives completion inputs; credited air yards and gain
+    // stop at the goal line, including any yards after the catch.
+    outcome.airYards = Math.min(outcome.airYards, yardsToGoal);
+    outcome.yards = Math.min(outcome.yards, yardsToGoal);
+  }
   const rawYards = outcome.intercepted ? 0 : outcome.yards;
   const newBall = advanceBall(game, rawYards);
   const td = outcome.completed && isTouchdown(game, newBall);
