@@ -35,6 +35,7 @@ import { calculateTimeToThrow } from "./timeToThrow";
 import { calculateRouteOpennessInputs, calculateRoutePhaseImpacts } from "./routeOpenness";
 import { routeDepthBounds } from "./routeCatalog";
 import { runUnpressuredReadLoop } from "./passReadLoop";
+import { calculateThrowCompletion } from "./passCompletion";
 
 /**
  * Creates the shared state carried through the pass-play pipeline. The fields
@@ -236,6 +237,7 @@ function recordPassPhase(
     routes: state.routes.map((route) => ({ ...route })),
     opennessTrajectory: state.opennessTrajectory.map((route) => ({ ...route })),
     readLoop: state.readLoop,
+    throwCompletion: state.throwCompletion,
     target: state.target ? { ...state.target } : undefined,
     decision: state.decision,
   });
@@ -341,8 +343,14 @@ export function runPassPlayPipeline(
   recordPassPhase(state, "qb-decision", `QB decision selected ${state.decision}.`);
 
   // 13. Stop at the boundary where completion/incompletion logic will eventually begin.
-  if (state.decision === "throw")
-    recordPassPhase(state, "throw-to-receiver", "ThrowToReceiver handoff stub reached.");
+  if (state.target) {
+    const target = state.target as NonNullable<ReturnType<typeof choosePassTarget>>;
+    state.throwCompletion = determineCompletionPct(ctx, qbName, target,
+      state.readLoop?.currentTime ?? state.finalTimeToThrow);
+    recordPassPhase(state, "throw-to-receiver", `${target.player}: ${state.throwCompletion.airYards} air yards, ` +
+      `actual openness ${state.throwCompletion.actualOpenness.toFixed(2)}, base completion ${state.throwCompletion.baseCompletion}% ` +
+      `+ openness adjustment ${state.throwCompletion.opennessAdjustment.toFixed(2)} = ${state.throwCompletion.pct.toFixed(2)}%.`);
+  }
   return state;
 }
 
@@ -531,23 +539,15 @@ export function choosePassTarget(
 }
 export function determineCompletionPct(
   ctx: EngineContext,
-  qbName: string,
+  _qbName: string,
   target: NonNullable<ReturnType<typeof choosePassTarget>>,
+  throwTime: number,
 ) {
-  const qb = byName(ctx, qbName),
-    rec = byName(ctx, target.player),
-    def = byName(ctx, target.defender);
-  let pct =
-    72 -
-    target.airYards * 1.7 +
-    (trait(qb, "accuracy") - 50) / 2 +
-    target.separation * 8 +
-    (trait(rec, "hands") - 50) / 3 -
-    trait(def, "defStars", 0) / 8;
-  if (target.airYards > 20 && Math.random() * 100 < trait(qb, "armStrength"))
-    pct += 8;
-  if (Math.random() * 100 < trait(rec, "offStars")) pct += 5;
-  return { pct: Math.max(5, Math.min(95, pct)), log: [] as string[] };
+  if (!ctx.settings.routeOpennessSettings) throw new Error("Missing route openness Settings tables.");
+  return calculateThrowCompletion({ ...ctx.settings.routeOpennessSettings,
+    completionTable: ctx.settings.completionTable ?? [],
+    opennessCompletionModifiers: ctx.settings.opennessCompletionModifiers ?? [],
+  }, target, throwTime);
 }
 export function calcYAC(
   ctx: EngineContext,
@@ -625,11 +625,12 @@ export function passPlay(
     ReturnType<typeof choosePassTarget>
   > | undefined;
   if (!target && passState.decision !== "throw-away") return handleSack(game, ctx, qbName, options);
-  const pct = target ? determineCompletionPct(ctx, qbName, target).pct : 0;
+  const pct = passState.throwCompletion?.pct ?? 0;
   console.debug("[Pass Engine] Completion check", {
     quarterback: qbName,
     target: { ...target },
     completionChance: pct,
+    throwCompletion: passState.throwCompletion,
   });
   const outcome = target ? determinePassOutcome(ctx, qbName, target, pct)
     : { completed: false, intercepted: false, yards: 0, airYards: 0, caughtBy: undefined };

@@ -3,6 +3,7 @@ import { parseTimeToThrowSettings } from "../services/timeToThrowSettings.js";
 import { parseRouteOpennessSettings } from "../services/routeOpennessSettings.js";
 import { parseRouteCatalogSettings } from "../services/routeCatalogSettings.js";
 import { parseQBDecisionSettings } from "../services/qbDecisionSettings.js";
+import { parseCompletionSettings } from "../services/completionSettings.js";
 import {
   appendSheetRow,
   batchUpdateSheetValues,
@@ -252,8 +253,8 @@ async function getFrontendSettingsFromSheet() {
       .filter((r) => Number.isFinite(r.percentage) && Number.isFinite(r.minYards) && Number.isFinite(r.maxYards)),
     staminaDrains,
     tackleTable: settingRows(rows, "Tackle_").map((r) => ({ label: r[0], yardageCap: Number(r[1]), DL: Number(r[2]) || 0, LB: Number(r[3]) || 0, DBS: Number(r[4]) || 0 })).sort((a,b)=>a.yardageCap-b.yardageCap),
-    completionTable: settingRows(rows, "airYards_Completion_").map((r) => ({ label: r[0], pastLos: Number(r[1]), baseCompletion: Number(r[2]), percentage: Number(r[3]) })),
-    ...routeCatalog,
+    ...parseCompletionSettings([headers, ...rows]),
+    ...parseRouteCatalogSettings([headers, ...rows]),
     routeInfo: settingRows(rows, "RouteInfo").map((r) => ({
       label: String(r[0]),
       routeType: String(r[1]),

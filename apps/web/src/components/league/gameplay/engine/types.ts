@@ -93,7 +93,8 @@ export type FrontendSettings = Record<string, unknown> & {
   drainSettings?: Record<string, number>;
   tackleTable?: unknown[];
   tackleSettings?: unknown[];
-  completionTable?: unknown[];
+  completionTable?: import("./passCompletion").CompletionDepthRow[];
+  opennessCompletionModifiers?: import("./passCompletion").OpennessCompletionRow[];
   routeTypeAirYards?: RouteDepthRange[];
   routesByDepth?: Record<string, string[]>;
   routeInfo?: unknown[];
@@ -154,6 +155,7 @@ export type PassPlayState = {
   opennessTrajectory: Array<Record<string, unknown>>;
   readLoop?: import("./passReadLoop").PassReadLoopState;
   target?: Record<string, unknown>;
+  throwCompletion?: ReturnType<typeof import("./passCompletion").calculateThrowCompletion>;
   decision: PassPlayDecision;
 };
 export type PassLineConfrontationResult = {
