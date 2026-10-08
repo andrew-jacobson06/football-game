@@ -2,6 +2,7 @@ import { Router } from "express";
 import { parseTimeToThrowSettings } from "../services/timeToThrowSettings.js";
 import { parseRouteOpennessSettings } from "../services/routeOpennessSettings.js";
 import { parseRouteCatalogSettings } from "../services/routeCatalogSettings.js";
+import { parseQBDecisionSettings } from "../services/qbDecisionSettings.js";
 import {
   appendSheetRow,
   batchUpdateSheetValues,
@@ -261,6 +262,7 @@ async function getFrontendSettingsFromSheet() {
     timeNeededToThrow: settingRows(rows, "TNTT_").map((r) => ({ label: r[0], qbRead: String(r[1]), lt10: Number(r[2]), tenTo20: Number(r[3]), twentyOnePlus: Number(r[4]) })),
     timeToThrowRanges: parseTimeToThrowSettings([headers, ...rows]),
     routeOpennessSettings: parseRouteOpennessSettings([headers, ...rows]),
+    qbDecisionTable: parseQBDecisionSettings([headers, ...rows]),
     completionSeparationAdjustment: settingRows(rows, "separation_").map((r) => ({ label: r[0], separation: Number(r[1]), catchPctChange: Number(r[2]) })),
     yacBySeparation,
     sackLossTable: settingRows(rows, "SackLoss_").map((r) => ({ label: r[0], pct: Number(r[1]), max: Number(r[2]), min: Number(r[3]) })),

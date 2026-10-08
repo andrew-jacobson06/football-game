@@ -1,8 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calculateReadDefenseModifier, runUnpressuredReadLoop } from "../src/components/league/gameplay/engine/passReadLoop.ts";
+import { calculateReadDefenseModifier, runUnpressuredReadLoop, getPrimaryNoticeChance } from "../src/components/league/gameplay/engine/passReadLoop.ts";
 
-const settings = { curves: { Break: [{ time: 0.5, openness: 20 }, { time: 1, openness: 60 }] } };
+const settings = { curves: { Break: [{ time: 0.5, openness: 20 }, { time: 1, openness: 60 }] },
+  qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 0, noticeIfPrimary: 100 }] };
 const routes = ["WR1", "WR2"].map((player) => ({ player, TTO: 1, curveType: "Break",
   phaseOpenness: [{ start: 0, end: 1, duration: 1, phaseImpact: 8 }] }));
 
@@ -12,13 +13,58 @@ test("starts at zero/read one, advances by quarters, and stops when the read rea
   assert.equal(state.currentRead, 1);
   assert.equal(state.currentReadPlayer, "WR1");
   assert.equal(state.currentTime, 1);
-  assert.equal(state.stopReason, "read-ready");
-  assert.deepEqual(state.snapshots.map((snapshot) => snapshot.currentTime), [0.25, 0.5, 0.75]);
-  assert.equal(rolls, 6);
+  assert.equal(state.stopReason, "throw");
+  assert.equal(state.targetPlayer, "WR1");
+  assert.deepEqual(state.snapshots.map((snapshot) => snapshot.currentTime), [0.25, 0.5, 0.75, 1]);
+  assert.equal(rolls, 9);
   assert.deepEqual(state.snapshots[0].receivers[0], {
     player: "WR1", baseOpenness: 10, skillBasedOpennessMod: 2, openness: 12,
     readDefenseAdjustment: 23, perceivedOpenness: 35,
   });
+});
+
+test("72 openness uses 67 primary notice, with a strict decimal roll boundary", () => {
+  const table = [
+    { perceivedMax: 69, label: "Open", baseNotice: 20, noticeIfPrimary: 50 },
+    { perceivedMax: 79, label: "Clearly open", baseNotice: 35, noticeIfPrimary: 67 },
+    { perceivedMax: 1000, label: "Wide open", baseNotice: 90, noticeIfPrimary: 99 },
+  ];
+  const config = { curves: { Break: [{ time: 0, openness: 49 }] }, qbDecisionTable: table };
+  const receiver = { player: "WR", TTO: 0.25, curveType: "Break", phaseOpenness: [] };
+  for (const [roll, shouldThrow] of [[0.66999, true], [0.67, false]] as const) {
+    const rolls = [0, roll, 0];
+    const state = runUnpressuredReadLoop(config, [receiver], 2, 0, {}, () => rolls.shift()!);
+    assert.equal(state.decisions[0].perceivedOpenness, 72);
+    assert.equal(state.decisions[0].noticeChance, 67);
+    assert.equal(state.decisions[0].throw, shouldThrow);
+  }
+  assert.equal(getPrimaryNoticeChance(table, 69.1).chance, 67);
+  assert.equal(getPrimaryNoticeChance(table, 2000).chance, 99);
+  assert.equal(getPrimaryNoticeChance([{ ...table[0], noticeIfPrimary: null }], -20).chance, 0);
+});
+
+test("a declined throw advances read, adds the random delay, then restarts with a quarter step", () => {
+  const config = { curves: settings.curves,
+    qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 0, noticeIfPrimary: 50 }] };
+  const receivers = routes.map((route) => ({ ...route, TTO: 0.25 }));
+  for (const delayRoll of [0, 0.999999]) {
+    const rolls = [0, 0, 0.9, delayRoll, 0, 0, 0.1];
+    const state = runUnpressuredReadLoop(config, receivers, 2, 0, { WR2: "1", WR1: "2" }, () => rolls.shift()!);
+    assert.equal(state.decisions[0].player, "WR2");
+    assert.equal(state.decisions[0].throw, false);
+    assert.equal(state.decisions[0].readDelay, 0.05 + delayRoll * 0.25);
+    assert.equal(state.decisions[1].currentTime, 0.5 + state.decisions[0].readDelay!);
+    assert.equal(state.currentRead, 2);
+    assert.equal(state.targetPlayer, "WR1");
+  }
+});
+
+test("no decision after budget expiration; unavailable table fails when a decision is needed", () => {
+  const ready = [{ ...routes[0], TTO: 0.25 }];
+  const state = runUnpressuredReadLoop(settings, ready, 0.25, 0, {}, () => 0);
+  assert.equal(state.decisions.length, 0);
+  assert.equal(state.stopReason, "time-to-throw");
+  assert.throws(() => runUnpressuredReadLoop({ ...settings, qbDecisionTable: [] }, ready, 2, 0, {}, () => 0), /Missing QB Decision Table/);
 });
 
 test("each receiver gets an independent sign at each time without changing actual openness", () => {

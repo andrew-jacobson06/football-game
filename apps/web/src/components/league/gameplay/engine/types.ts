@@ -100,6 +100,7 @@ export type FrontendSettings = Record<string, unknown> & {
   timeNeededToThrow?: unknown[];
   timeToThrowRanges?: TimeToThrowRange[];
   routeOpennessSettings?: RouteOpennessSettings;
+  qbDecisionTable?: import("./passReadLoop").QBDecisionRow[];
   timeNeededToOpen?: unknown[];
   completionSeparationAdjustment?: unknown[];
   yacBySeparation?: Record<string, unknown>;

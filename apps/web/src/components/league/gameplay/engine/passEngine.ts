@@ -325,7 +325,7 @@ export function runPassPlayPipeline(
   // 10. Begin unpressured reads using the stored route curves and phase impacts.
   if (state.pressure.length === 0 && !state.instantPressure && routes.length > 0) {
     state.readLoop = runUnpressuredReadLoop(
-      ctx.settings.routeOpennessSettings!, routes, state.finalTimeToThrow,
+      { ...ctx.settings.routeOpennessSettings!, qbDecisionTable: ctx.settings.qbDecisionTable ?? [] }, routes, state.finalTimeToThrow,
       trait(byName(ctx, qbName), "readDefense"), options.reads,
     );
   }
@@ -333,10 +333,12 @@ export function runPassPlayPipeline(
     ? `Unpressured read ${state.readLoop.currentRead} paused at ${state.readLoop.currentTime.toFixed(2)} seconds (${state.readLoop.stopReason}); ${state.readLoop.snapshots.length} perceived-openness snapshots recorded.`
     : "Unpressured read loop skipped for pressure or no routes.");
 
-  // 11-12. Retain the existing target fallback until the read loop's decisions are built.
-  state.target = choosePassTarget(ctx, qbName, openness, options);
+  // 11-12. Unpressured throws use the read-loop decision; pressure keeps its existing fallback.
+  state.target = state.readLoop
+    ? openness.find((route) => route.player === state.readLoop!.targetPlayer)
+    : choosePassTarget(ctx, qbName, openness, options);
   state.decision = state.target ? "throw" : "throw-away";
-  recordPassPhase(state, "qb-decision", `QB decision stub selected ${state.decision}.`);
+  recordPassPhase(state, "qb-decision", `QB decision selected ${state.decision}.`);
 
   // 13. Stop at the boundary where completion/incompletion logic will eventually begin.
   if (state.decision === "throw")
@@ -622,14 +624,15 @@ export function passPlay(
   const target = passState.target as NonNullable<
     ReturnType<typeof choosePassTarget>
   > | undefined;
-  if (!target) return handleSack(game, ctx, qbName, options);
-  const pct = determineCompletionPct(ctx, qbName, target).pct;
+  if (!target && passState.decision !== "throw-away") return handleSack(game, ctx, qbName, options);
+  const pct = target ? determineCompletionPct(ctx, qbName, target).pct : 0;
   console.debug("[Pass Engine] Completion check", {
     quarterback: qbName,
     target: { ...target },
     completionChance: pct,
   });
-  const outcome = determinePassOutcome(ctx, qbName, target, pct);
+  const outcome = target ? determinePassOutcome(ctx, qbName, target, pct)
+    : { completed: false, intercepted: false, yards: 0, airYards: 0, caughtBy: undefined };
   const rawYards = outcome.intercepted ? 0 : outcome.yards;
   const newBall = advanceBall(game, rawYards);
   const td = outcome.completed && isTouchdown(game, newBall);
@@ -656,7 +659,7 @@ export function passPlay(
               : "Normal";
   console.debug("[Pass Engine] Pass outcome", {
     quarterback: qbName,
-    target: target.player,
+    target: target?.player,
     completionChance: pct,
     ...outcome,
     result,
@@ -706,7 +709,7 @@ export function passPlay(
     updated,
     "Pass",
     qbName,
-    target.player,
+    target?.player ?? "",
     rawYards,
     tackler,
     result,
