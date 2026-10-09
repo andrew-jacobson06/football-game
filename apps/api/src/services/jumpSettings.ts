@@ -63,6 +63,7 @@ export function parseJumpSettings(rows: unknown[][]) {
   if (routeHeader.index >= 0) {
     const titles = ["JUMP EFFECT (accuracy+coverage)", "JUMP Based on Air yards", "JUMP Based on Route",
       "Hands impact based on openness", "Accuracy Mod", "Openness Completion Modifier", "QB Decision Table",
+      "YAC Basis by airyards and openness", "YAC multiplier by throw type",
       "Completion Pct", "AirYards", "RouteTreeDetails", "Curve Type Openness", "Phase", "baseTTO", "BaseImpact Calcs", "time_to_Throw"];
     for (let index = routeHeader.index + 1; index < rows.length; index++) {
       const row = rows[index];
