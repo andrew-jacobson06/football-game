@@ -55,3 +55,16 @@ test("neighboring parsers stop at jump tables", () => {
   assert.equal(parseTimeToThrowSettings([["time_to_Throw"], ["Min", "Max", "Avg", "Pct"], [0, 1, 0.5, "100%"], ...rows]).length, 1);
   assert.deepEqual(Object.keys(parseRouteOpennessSettings([["Curve Type Openness", 0.25], ["Quick", 20], ...rows]).curves), ["Quick"]);
 });
+
+test("jump route multipliers stop at either adjacent YAC matrix, including Settings row 284", () => {
+  for (const title of ["YAC Basis by airyards and openness", "YAC multiplier by throw type"]) {
+    // Reproduce a new table immediately after ALL ELSE, without a blank separator.
+    const sheet = [...Array.from({ length: 283 - rows.length }, () => []), ...rows,
+      [title], ["", 39, 49, 59], [-1, 1.5, 3, 4.3]];
+    for (const offset of [0, 2]) {
+      const parsed = parseJumpSettings(sheet.map((row) => [...Array(offset).fill(""), ...row]));
+      assert.equal(parsed.jumpRoutes.length, 5);
+      assert.deepEqual(parsed.jumpRoutes.at(-1), { route: "ALL ELSE", multiplier: 1 });
+    }
+  }
+});
