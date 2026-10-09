@@ -39,6 +39,7 @@ export { calculateBaseOpenness, getRouteBaseOpenness, getSkillBasedOpennessMod,
   getRouteOpenness, getCurrentRouteOpenness } from "./engine/routeOpenness";
 export { calculateReadDefenseModifier, runUnpressuredReadLoop, getPrimaryNoticeChance, getBaseNoticeChance } from "./engine/passReadLoop";
 export { chooseTimeExpiredAction } from "./engine/passReadLoop";
+export { rollReceiverYAC, buildYACRanges, calculateYACSpeedBuffs } from "./engine/receiverYAC";
 export type { PassReadLoopState, QBDecisionRow } from "./engine/passReadLoop";
 export { calculateThrowCompletion, getBaseCompletion, getOpennessCompletionAdjustment } from "./engine/passCompletion";
 export { getThrowTypeChances, rollQBAccuracy } from "./engine/qbAccuracy";
