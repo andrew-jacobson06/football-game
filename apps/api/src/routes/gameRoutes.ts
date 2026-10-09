@@ -7,6 +7,7 @@ import { parseCompletionSettings } from "../services/completionSettings.js";
 import { parseAccuracySettings } from "../services/accuracySettings.js";
 import { parseHandsImpactSettings } from "../services/handsSettings.js";
 import { parseJumpSettings } from "../services/jumpSettings.js";
+import { parseYACSettings } from "../services/yacSettings.js";
 import {
   appendSheetRow,
   batchUpdateSheetValues,
@@ -260,6 +261,7 @@ async function getFrontendSettingsFromSheet() {
     accuracyModifiers: parseAccuracySettings([headers, ...rows]),
     handsImpactByOpenness: parseHandsImpactSettings([headers, ...rows]),
     ...parseJumpSettings([headers, ...rows]),
+    ...parseYACSettings([headers, ...rows]),
     ...parseRouteCatalogSettings([headers, ...rows]),
     routeInfo: settingRows(rows, "RouteInfo").map((r) => ({
       label: String(r[0]),

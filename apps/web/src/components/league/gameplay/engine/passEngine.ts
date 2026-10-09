@@ -36,6 +36,7 @@ import { calculateRouteOpennessInputs, calculateRoutePhaseImpacts } from "./rout
 import { routeDepthBounds } from "./routeCatalog";
 import { runUnpressuredReadLoop } from "./passReadLoop";
 import { calculateThrowCompletion } from "./passCompletion";
+import { rollReceiverYAC } from "./receiverYAC";
 
 /**
  * Creates the shared state carried through the pass-play pipeline. The fields
@@ -588,17 +589,29 @@ export function determinePassOutcome(
   qbName: string,
   target: NonNullable<ReturnType<typeof choosePassTarget>>,
   completionPct: number,
+  throwCompletion?: ReturnType<typeof calculateThrowCompletion>,
 ) {
   const completionRoll = Math.random() * 100;
-  if (completionRoll <= completionPct)
+  if (completionRoll <= completionPct) {
+    const receiver = byName(ctx, target.player);
+    // Only completed catches use the new matrices. Actual openness 90+ keeps
+    // the existing YAC method; perceived openness never enters this calculation.
+    const yacDetails = throwCompletion && throwCompletion.actualOpenness < 90
+      ? rollReceiverYAC(target.airYards, throwCompletion.actualOpenness, throwCompletion.throwType,
+        Number(receiver?.speed ?? receiver?.Speed ?? 50), ctx.settings.yacBasis ?? [], ctx.settings.yacThrowMultipliers ?? [])
+      : { method: "legacy" as const, yac: calcYAC(ctx, target.player, target.separation) };
+    console.debug("[Pass Engine] YAC calculation", { receiver: target.player, airYards: target.airYards,
+      actualOpenness: throwCompletion?.actualOpenness, throwType: throwCompletion?.throwType, ...yacDetails });
     return {
       completed: true,
       intercepted: false,
-      yards: target.airYards + calcYAC(ctx, target.player, target.separation),
+      yards: target.airYards + yacDetails.yac,
+      yacDetails,
       airYards: target.airYards,
       caughtBy: target.player,
       completionRoll,
     };
+  }
   const qb = byName(ctx, qbName),
     def = byName(ctx, target.defender);
   const intChance = Math.max(
@@ -653,7 +666,7 @@ export function passPlay(
     completionChance: pct,
     throwCompletion: passState.throwCompletion,
   });
-  const outcome = target ? determinePassOutcome(ctx, qbName, target, pct)
+  const outcome = target ? determinePassOutcome(ctx, qbName, target, pct, passState.throwCompletion)
     : { completed: false, intercepted: false, yards: 0, airYards: 0, caughtBy: undefined };
   if (outcome.completed) {
     const yardsToGoal = game.Possession === "Home" ? 100 - n(game.BallOn) : n(game.BallOn);

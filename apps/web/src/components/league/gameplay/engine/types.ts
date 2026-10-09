@@ -100,6 +100,8 @@ export type FrontendSettings = Record<string, unknown> & {
   jumpEffects?: import("./receiverJump").JumpEffectRow[];
   jumpAirYards?: import("./receiverJump").JumpAirYardsRow[];
   jumpRoutes?: import("./receiverJump").JumpRouteRow[];
+  yacBasis?: import("./receiverYAC").YACBasisRow[];
+  yacThrowMultipliers?: import("./receiverYAC").YACThrowRow[];
   routeTypeAirYards?: RouteDepthRange[];
   routesByDepth?: Record<string, string[]>;
   routeInfo?: unknown[];

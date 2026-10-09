@@ -1,4 +1,4 @@
-const titles = ["JUMP Based on Route", "JUMP EFFECT (accuracy+coverage)", "JUMP Based on Air yards", "Hands impact based on openness", "Accuracy Mod", "Completion Pct", "Openness Completion Modifier", "QB Decision Table", "Curve Type Openness", "Curve Type", "Phase", "RouteTreeDetails", "baseTTO", "BaseImpact Calcs", "Route", "Routes", "AirYards", "time_to_Throw"];
+const titles = ["YAC Basis by airyards and openness", "YAC multiplier by throw type", "JUMP Based on Route", "JUMP EFFECT (accuracy+coverage)", "JUMP Based on Air yards", "Hands impact based on openness", "Accuracy Mod", "Completion Pct", "Openness Completion Modifier", "QB Decision Table", "Curve Type Openness", "Curve Type", "Phase", "RouteTreeDetails", "baseTTO", "BaseImpact Calcs", "Route", "Routes", "AirYards", "time_to_Throw"];
 const key = (value: unknown) => String(value ?? "").trim().toLowerCase();
 
 /** Read the workbook tables wherever they are placed, including offset columns. */

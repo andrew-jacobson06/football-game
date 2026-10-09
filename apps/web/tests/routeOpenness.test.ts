@@ -120,6 +120,9 @@ const ctx: EngineContext = {
     jumpEffects: [{ label: "All", minOpen: 0, maxOpen: null, multipliers: { Perfect: 0.05, Accurate: 0.05, Close: 0.1, Catchable: 0.15, "Off Target": 0 } }],
     jumpAirYards: [{ airYards: "EndZone", multiplier: 1.35 }, { airYards: 5, multiplier: 0.25 }, { airYards: 10, multiplier: 0.5 }, { airYards: 100, multiplier: 1 }],
     jumpRoutes: [{ route: "ALL ELSE", multiplier: 1 }],
+    yacBasis: [{ maxAirYards: 100, openness: [{ maxOpen: 89, basis: 10 }] }],
+    yacThrowMultipliers: (["Perfect", "Accurate", "Close", "Catchable", "Off Target"] as const)
+      .map((throwType) => ({ throwType, depths: [{ maxAirYards: 100, multiplier: 1 }] })),
     accuracyModifiers: [{ throwType: "Perfect", min: 10, max: 20 }, { throwType: "Accurate", min: 5, max: 9 },
       { throwType: "Close", min: -4, max: 4 }, { throwType: "Catchable", min: -9, max: -5 }, { throwType: "Off Target", min: -20, max: -10 }],
     qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 0, noticeIfPrimary: 100 }] }, historyLength: 0,
@@ -270,6 +273,29 @@ function completionContext(airYards: number): EngineContext {
     jumpEffects: [{ label: "All", minOpen: 0, maxOpen: null, multipliers: { Perfect: 0, Accurate: 0, Close: 0, Catchable: 0, "Off Target": 0 } }],
   } };
 }
+
+test("completed catches use stored throw quality and actual openness; 90+ retains legacy YAC", (t) => {
+  const debug = t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => 0.5);
+  const context = completionContext(8);
+  passPlay(game, context, options);
+  const completion = debug.mock.calls.find((call) => call.arguments[0] === "[Pass Engine] Completion check")!.arguments[1].throwCompletion;
+  const yac = debug.mock.calls.find((call) => call.arguments[0] === "[Pass Engine] YAC calculation")!.arguments[1];
+  assert.equal(yac.method, "settings");
+  assert.equal(yac.actualOpenness, completion.actualOpenness);
+  assert.equal(yac.throwType, completion.throwType);
+  assert.equal(yac.baseYAC, 10);
+  context.settings.routeOpennessSettings = { ...context.settings.routeOpennessSettings!,
+    curves: { ...context.settings.routeOpennessSettings!.curves,
+      Quick: context.settings.routeOpennessSettings!.curves.Quick.map((point) => ({ ...point, openness: 200 })) } };
+  context.settings.yacBasis = [];
+  context.settings.yacThrowMultipliers = [];
+  passPlay(game, context, options);
+  const legacy = debug.mock.calls.filter((call) => call.arguments[0] === "[Pass Engine] YAC calculation").at(-1)!.arguments[1];
+  assert.ok(legacy.actualOpenness >= 90);
+  assert.equal(legacy.method, "legacy");
+});
 
 test("27-yard end-zone passes from the 15 credit and log only 15 yards for either possession", (t) => {
   const debug = t.mock.method(console, "debug", () => {});
