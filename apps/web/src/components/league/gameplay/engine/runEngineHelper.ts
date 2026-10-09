@@ -180,7 +180,7 @@ export function performVisionCheck(
   const allDlWon = totalBattles > 0 && dlWins === totalBattles;
 
   // Vision starts from the runner trait plus the line result; the clamp keeps the target in percent-roll bounds.
-  const rawVisionTarget = runnerVision * 0.19 + 75 + runBlockingModifier;
+  const rawVisionTarget = (runnerVision * 0.19) + 70 + runBlockingModifier;
 
   const visionTarget = Math.max(0, Math.min(100, rawVisionTarget));
 

@@ -154,7 +154,7 @@ export function runPlay(
     (battle) => battle.winner === "DL",
   ).length;
   // More OL wins make the runner's vision target easier; more DL wins make the hole harder to find.
-  const runBlockingModifier = (olWins - dlWins) * 10;
+  const runBlockingModifier = (olWins *10) - (dlWins * 15);
 
   // Second phase: the runner either reads the blocking and gets past the defensive line, or misses the hole into backfield trouble.
   const visionCheck = performVisionCheck(
