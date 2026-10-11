@@ -9,6 +9,7 @@ import {
   parseInteger,
 } from "./leagueMappers";
 import { driveEndYard, driveYardsFromSpots } from "./driveSummary";
+import { playFlag } from "./gameplay/engine/playLogger";
 import {
   getFrontendSettings,
   getGameState,
@@ -651,7 +652,9 @@ function calcStats(history: Play[]) {
     const type = str(playField(p, "PlayType", "playtype"));
     const result = str(playField(p, "Result", "ResultCategory", "result"));
     const desc = str(playField(p, "Description", "description"));
-    const isSack = desc === "Sack" || result === "Sack";
+    const isSack = playFlag(playField(p, "isSack", "issack"), desc === "Sack" || result === "Sack");
+    const isComplete = !isSack && playFlag(playField(p, "isComplete", "iscomplete"),
+      !["Incomplete", "Incompletion", "Interception"].includes(result));
     const y = num(playField(p, "Yards", "yards"));
     const player = str(playField(p, "Player", "player"));
     const qb = str(playField(p, "Passer", "Player", "player"));
@@ -700,9 +703,7 @@ function calcStats(history: Play[]) {
           s.sackYds = (s.sackYds || 0) + y;
         } else {
           s.attempts = (s.attempts || 0) + 1;
-          if (
-            !["Incomplete", "Incompletion", "Interception"].includes(result)
-          ) {
+          if (isComplete) {
             s.completions = (s.completions || 0) + 1;
             s.yards += y;
             if (result === "Touchdown") s.tds = (s.tds || 0) + 1;
@@ -713,7 +714,7 @@ function calcStats(history: Play[]) {
       if (receiver && !isSack) {
         const s = get(recs, receiver, team);
         s.targets = (s.targets || 0) + 1;
-        if (!["Incomplete", "Incompletion", "Interception"].includes(result)) {
+        if (isComplete) {
           s.receptions = (s.receptions || 0) + 1;
           s.yards += y;
           s.long = Math.max(s.long || 0, y);

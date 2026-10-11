@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { calculateRouteOpennessInputs, calculateRoutePhaseImpacts, type RouteOpennessSettings } from "../src/components/league/gameplay/engine/routeOpenness.ts";
-import { assignRoutes, runPassPlayPipeline, passPlay } from "../src/components/league/gameplay/engine/passEngine.ts";
+import { assignRoutes, runPassPlayPipeline, passPlay, handleSack } from "../src/components/league/gameplay/engine/passEngine.ts";
 import type { LeagueGame } from "../src/components/league/types.ts";
 import type { EngineContext, PlayCallOptions } from "../src/components/league/gameplay/engine/types.ts";
 
@@ -310,6 +310,9 @@ test("27-yard end-zone passes from the 15 credit and log only 15 yards for eithe
     assert.equal(result.play.yards, 15);
     assert.equal(result.play.airyards, 15);
     assert.equal(result.play.newballon, possession === "Home" ? 100 : 0);
+    assert.equal(result.play.isSack, false);
+    assert.equal(result.play.isComplete, true);
+    assert.equal(result.play.yac, 0);
     const completion = debug.mock.calls.filter((call) => call.arguments[0] === "[Pass Engine] Completion check").at(-1)!.arguments[1];
     assert.equal(completion.throwCompletion.airYards, 27); // Physical depth remains an input to completion.
     const outcome = debug.mock.calls.filter((call) => call.arguments[0] === "[Pass Engine] Pass outcome").at(-1)!.arguments[1];
@@ -330,4 +333,45 @@ test("yards after catch stop at the goal line, while ordinary pass gains remain 
   assert.equal(redZone.play.result, "Touchdown");
   assert.equal(redZone.play.yards, 15);
   assert.equal(redZone.play.airyards, 12);
+  assert.equal(redZone.play.yac, 3);
+  assert.equal(midfield.play.yac, Number(midfield.play.yards) - 12);
+});
+
+test("sacks retain their definitive flag for normal losses, turnovers, safeties and fumbles", (t) => {
+  t.mock.method(Math, "random", () => 0.5);
+  const context = { ...ctx, players: [...ctx.players.filter((player) => player.defPos !== "DL"),
+    { name: "QB", team: "Home", position: "QB" }, { name: "Sacker", team: "Away", defPos: "DL", sackChance: 100 }] };
+  for (const [call, expected] of [[game, "Sack"], [{ ...game, Down: 4 }, "TO on Downs"],
+    [{ ...game, BallOn: 1 }, "Safety"]] as const) {
+    const result = handleSack(call, context, "QB", options);
+    assert.equal(result.play.result, expected);
+    assert.equal(result.play.isSack, true);
+    assert.equal(result.play.isComplete, false);
+    assert.equal(result.play.defenseresult, "Sack");
+    assert.equal(result.play.yac, 0);
+  }
+  t.mock.method(Math, "random", () => 0);
+  const fumbleContext = { ...context, players: context.players.map((player) => player.name === "Sacker" ? { ...player, strip: 100 } : player) };
+  const fumble = handleSack(game, fumbleContext, "QB", options);
+  assert.equal(fumble.play.result, "Fumble");
+  assert.equal(fumble.play.isSack, true);
+  assert.equal(fumble.play.isComplete, false);
+});
+
+test("pass plays retain resolved line matchups and win/loss counts in history", (t) => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => 0.5);
+  const context = completionContext(8);
+  context.players = [...context.players, { name: "OL", team: "Home", passProtect: 60 },
+    { name: "DL", team: "Away", passRush: 60 }];
+  const call = { ...options, formation: { ...options.formation, LT: "OL" },
+    defense: [...options.defense!, { player: "DL", position: "DL1", align: "LT" as const }] };
+  const result = passPlay(game, context, call);
+  assert.deepEqual(result.play.lineMatchups, [{ slot: "LT", offensePlayer: "OL", defensePlayer: "DL", winner: "OL" }]);
+  assert.equal(result.play.olWins, 1);
+  assert.equal(result.play.olLosses, 0);
+  assert.equal(result.play.dlWins, 0);
+  assert.equal(result.play.dlLosses, 1);
+  assert.equal(result.play.isComplete, true);
 });
