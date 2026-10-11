@@ -4,6 +4,7 @@ import { PlayerImage } from "../players/PlayerImage";
 import { AppSelect } from "../ui/AppSelect";
 import type { Player } from "../players/types";
 import type { LeagueGame, LeagueTeam } from "./types";
+import { hasSeasonActivity, seasonStatField, seasonStatValue } from "./seasonStats";
 
 type StatsView = "Player" | "Team";
 type PlayerProfileTab = "Overview" | "News" | "Stats" | "Bio" | "Splits" | "Game Log";
@@ -17,9 +18,9 @@ type ProfileStat = { label: string; value: string; rankValue: (row: PlayerStats)
 type TeamTotal = { team: LeagueTeam; rows: PlayerStats[]; gp: number; passing: number; rushing: number; total: number; points: number; pointsAllowed: number; sacks: number; interceptions: number; fumbleRecoveries: number; takeaways: number; interceptionsThrown: number; fumblesLost: number; giveaways: number; turnoverDiff: number; allowedPassing: number; allowedRushing: number; allowed: number };
 
 const OFFENSE: Category[] = [
-  { title: "PASSING", label: "YDS", fields: ["Passing Yards", "Pass Yards", "PassYards"], positions: ["QB"] },
+  { title: "PASSING", label: "YDS", fields: ["Passing Yards", "Pass Yards", "PassYards"] },
   { title: "RUSHING", label: "YDS", fields: ["Yards", "Rushing Yards", "Rush Yards"] },
-  { title: "RECEIVING", label: "YDS", fields: ["Receiving Yards", "Rec Yards", "RecYards"], positions: ["WR", "TE", "RB"] },
+  { title: "RECEIVING", label: "YDS", fields: ["Receiving Yards", "Rec Yards", "RecYards"] },
 ];
 const DEFENSE: Category[] = [
   { title: "TACKLES", label: "TOT", fields: ["Tackles", "Total Tackles", "TOT"] },
@@ -52,22 +53,19 @@ const RUSHING_COLUMNS: StatColumn[] = [
 const PASSING_COLUMNS: StatColumn[] = [
   { label: "GP", fields: ["GP", "Games Played", "Games"] }, { label: "CMP", fields: ["Completions", "Pass Completions", "CMP"] }, { label: "ATT", fields: ["Passing Attempts", "Pass Attempts", "ATT"] },
   { label: "CMP%", fields: ["Completion Percentage"], value: (row) => { const attempts = statValue(row, ["Passing Attempts", "Pass Attempts", "ATT"]); return attempts ? statValue(row, ["Completions", "Pass Completions", "CMP"]) / attempts * 100 : 0; }, display: (row) => `${columnValue(row, PASSING_COLUMNS[3]).toFixed(1)}%` },
-  { label: "YDS", fields: ["Passing Yards", "Pass Yards", "PassYards"] }, { label: "AVG", fields: ["Passing Average", "Yards Per Attempt"] }, { label: "YDS/G", fields: ["Passing Yards Per Game"] }, { label: "LNG", fields: ["Passing Long", "Pass Long", "LNG"] }, { label: "TD", fields: ["Passing TD", "Pass TD", "TD Passes"] }, { label: "INT", fields: ["Interceptions Thrown", "Pass INT"] }, { label: "SACK", fields: ["Sacked", "Times Sacked"] }, { label: "SYL", fields: ["Sack Yards Lost", "SYL"] }, { label: "QBR", fields: ["QBR"] }, { label: "RTG", fields: ["Passer Rating", "Rating", "RTG"] },
+  { label: "YDS", fields: ["Passing Yards", "Pass Yards", "PassYards"] }, { label: "AVG", fields: ["Passing Average", "Yards Per Attempt"], value: (row) => statValue(row, ["Passing Attempts"]) ? statValue(row, ["Passing Yards"]) / statValue(row, ["Passing Attempts"]) : 0, display: (row) => columnValue(row, PASSING_COLUMNS[5]).toFixed(1) }, { label: "YDS/G", fields: ["Passing Yards Per Game"] }, { label: "LNG", fields: ["Passing Long", "Pass Long", "LNG"] }, { label: "TD", fields: ["Passing TD", "Pass TD", "TD Passes"] }, { label: "INT", fields: ["Interceptions Thrown", "Pass INT"] }, { label: "SACK", fields: ["Sacked", "Times Sacked"] }, { label: "SYL", fields: ["Sack Yards Lost", "SYL"] }, { label: "QBR", fields: ["QBR"] }, { label: "RTG", fields: ["Passer Rating", "Rating", "RTG"] },
 ];
 const RECEIVING_COLUMNS: StatColumn[] = [
-  { label: "GP", fields: ["GP", "Games Played", "Games"] }, { label: "REC", fields: ["Receptions", "REC"] }, { label: "TGTS", fields: ["Targets", "Receiving Targets"] }, { label: "YDS", fields: ["Receiving Yards", "Rec Yards", "RecYards"] }, { label: "AVG", fields: ["Receiving Average", "Yards Per Reception"] }, { label: "TD", fields: ["Receiving TD", "Rec TD"] }, { label: "LNG", fields: ["Receiving Long", "Rec Long"] }, { label: "BIG", fields: ["Big Receptions", "BIG"] }, { label: "YDS/G", fields: ["Receiving Yards Per Game"] }, { label: "FUM", fields: ["Fum", "Fumbles"] }, { label: "LST", fields: ["Fum Lost", "Fumbles Lost"] }, { label: "YAC", fields: ["Yards After Catch", "YAC"] }, { label: "FD", fields: ["Receiving First Downs", "Rec First Downs", "First Down"] },
+  { label: "GP", fields: ["GP", "Games Played", "Games"] }, { label: "REC", fields: ["Receptions", "REC"] }, { label: "TGTS", fields: ["Targets", "Receiving Targets"] }, { label: "YDS", fields: ["Receiving Yards", "Rec Yards", "RecYards"] }, { label: "AVG", fields: ["Receiving Average", "Yards Per Reception"], value: (row) => statValue(row, ["Receptions"]) ? statValue(row, ["Receiving Yards"]) / statValue(row, ["Receptions"]) : 0, display: (row) => columnValue(row, RECEIVING_COLUMNS[4]).toFixed(1) }, { label: "TD", fields: ["Receiving TD", "Rec TD"] }, { label: "LNG", fields: ["Receiving Long", "Rec Long"] }, { label: "BIG", fields: ["Big Receptions", "BIG"] }, { label: "YDS/G", fields: ["Receiving Yards Per Game"] }, { label: "FUM", fields: ["Receiving Fumbles", "Rec Fumbles"] }, { label: "LST", fields: ["Receiving Fumbles Lost", "Rec Fumbles Lost"] }, { label: "YAC", fields: ["Yards After Catch", "YAC"] }, { label: "FD", fields: ["Receiving First Downs", "Rec First Downs"] },
 ];
 
 const normalized = (value: unknown) => String(value ?? "").trim().toLowerCase().replace(/%/g, "percentage").replace(/[^a-z0-9]/g, "");
 const number = (value: unknown) => Number(String(value ?? 0).replace(/,/g, "")) || 0;
 function statValue(row: PlayerStats, fields: string[]) {
-  const wanted = new Set(fields.map(normalized));
-  const match = Object.entries(row).find(([field]) => wanted.has(normalized(field)));
-  return number(match?.[1]);
+  return seasonStatValue(row, fields);
 }
 function displayStat(row: PlayerStats, fields: readonly string[]) {
-  const wanted = new Set(fields.map(normalized));
-  return String(Object.entries(row).find(([field]) => wanted.has(normalized(field)))?.[1] || "0");
+  return String(seasonStatField(row, fields) ?? "0");
 }
 function profileStat(row: PlayerStats, label: string, fields: string[]): ProfileStat {
   return { label, value: displayStat(row, fields), rankValue: (candidate) => statValue(candidate, fields) };
@@ -183,7 +181,7 @@ function LeaderTable({ category, leaders, loading, error, onComplete, onPlayer, 
         <td className="stat-value">{leader.value.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
       </tr>)}</tbody>
     </table>
-    {onComplete && !loading && !error && leaders.length > 0 && <div className="complete-link"><button type="button" onClick={onComplete}>Complete Leaders</button></div>}
+    {onComplete && !loading && !error && <div className="complete-link"><button type="button" onClick={onComplete}>Complete Leaders</button></div>}
   </section>;
 }
 
@@ -353,6 +351,7 @@ export function LeagueStats({ teams, games = [], onTeam, requestedPlayer = null,
   const isOffenseComplete = completeView === "passing" || completeView === "rushing" || completeView === "receiving" || completeView === "blocking";
   const completeRows = stats.filter((row) => {
     if (filter && !normalized(row.Player).includes(normalized(filter))) return false;
+    if (completeView === "receiving" || completeView === "passing") return hasSeasonActivity(row, completeView);
     return completeColumns.slice(1).some((column) => columnValue(row, column) > 0);
   }).sort((a, b) => {
     if (completeSort.column === "RK") {
