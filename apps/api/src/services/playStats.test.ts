@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { aggregatePlayStats } from "./playStats.js";
+import { aggregatePlayStats, passPlayFacts } from "./playStats.js";
 
 test("aggregates every team-page stat family from play history", () => {
   const stats = aggregatePlayStats([
@@ -23,4 +23,25 @@ test("aggregates every team-page stat family from play history", () => {
   assert.equal(stats.get("edge")?.Sacks, 1);
   assert.equal(stats.get("corner")?.Interceptions, 1);
   assert.equal(stats.get("corner")?.["Fumble Recoveries"], 1);
+});
+
+test("explicit sack/completion flags take precedence and stored YAC counts toward receiving totals", () => {
+  const stats = aggregatePlayStats([
+    ...["Safety", "Fumble", "TO on Downs"].map((result) => ({ gameid: 1, playtype: "Pass", player: "QB", receiver: "", result, yards: -5, tackler: "Edge", isSack: "TRUE", isComplete: "FALSE" })),
+    { gameid: 1, playtype: "Pass", player: "QB", receiver: "WR", result: "Fumble", yards: 15, airyards: 10, YAC: 3, isSack: false, isComplete: true },
+    { gameid: 1, playtype: "Pass", player: "QB", receiver: "WR", result: "Normal", yards: 0, isComplete: false },
+    { gameid: 1, playtype: "Pass", player: "QB", receiver: "WR", result: "Interception", yards: 0, isComplete: false },
+    { gameid: 1, playtype: "Pass", player: "QB", receiver: "", result: "Incomplete", yards: 0, isComplete: false },
+    { gameid: 1, playtype: "Run", player: "QB", yards: 8, isComplete: false },
+  ]);
+  assert.equal(stats.get("qb")?.["Passing Attempts"], 4);
+  assert.equal(stats.get("qb")?.Completions, 1);
+  assert.equal(stats.get("qb")?.Sacked, 3);
+  assert.equal(stats.get("qb")?.["Sack Yards Lost"], 15);
+  assert.equal(stats.get("wr")?.Receptions, 1);
+  assert.equal(stats.get("wr")?.Targets, 3);
+  assert.equal(stats.get("wr")?.["Yards After Catch"], 3);
+  assert.equal(stats.get("edge")?.Sacks, 3);
+  assert.deepEqual(passPlayFacts({ playtype: "Pass", result: "First Down", isComplete: "" }), { isSack: false, isComplete: true });
+  assert.deepEqual(passPlayFacts({ playtype: "Pass", result: "Sack", isSack: "FALSE", isComplete: 0 }), { isSack: false, isComplete: false });
 });

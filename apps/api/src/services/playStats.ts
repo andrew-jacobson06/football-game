@@ -10,6 +10,19 @@ const text = (play: PlayRow, ...fields: string[]) => {
 
 type Totals = { games: Set<string>; [field: string]: number | Set<string> };
 
+/** New flags are authoritative; blank flags on legacy rows use the old result text. */
+export function passPlayFacts(play: PlayRow) {
+  const flag = (field: string) => {
+    const value = text(play, field).toLowerCase();
+    return ["true", "yes", "1"].includes(value) ? true : ["false", "no", "0"].includes(value) ? false : undefined;
+  };
+  const result = [text(play, "result", "resultcategory"), text(play, "description"), text(play, "defenseresult")].join(" ");
+  const isSack = flag("isSack") ?? /sack/i.test(result);
+  const isComplete = /pass/i.test(text(play, "playtype")) && !isSack &&
+    (flag("isComplete") ?? !/incomplete|incompletion|interception/i.test(result));
+  return { isSack, isComplete };
+}
+
 /** Builds the season totals used by team pages directly from PlayHistory. */
 export function aggregatePlayStats(plays: PlayRow[]) {
   const players = new Map<string, Totals>();
@@ -39,9 +52,8 @@ export function aggregatePlayStats(plays: PlayRow[]) {
     const recoveredBy = text(play, "recoveredby", "recovered by");
     const isTouchdown = /touchdown|\btd\b/.test(`${result} ${description}`);
     const isFumble = /fumble/.test(`${result} ${description} ${defenseResult}`);
-    const isSack = /sack/.test(`${result} ${description} ${defenseResult}`);
+    const { isSack, isComplete } = passPlayFacts(play);
     const isInterception = /interception/.test(`${result} ${description} ${defenseResult}`);
-    const isIncomplete = /incomplete|incompletion/.test(`${result} ${description}`);
     const firstDown = number(text(play, "newdown", "new down")) === 1 || /first down/.test(description);
 
     if (/run|rush/.test(type) && actor) {
@@ -62,7 +74,7 @@ export function aggregatePlayStats(plays: PlayRow[]) {
       if (isSack) { add(stats, "Sacked"); add(stats, "Sack Yards Lost", Math.abs(yards)); }
       else {
         add(stats, "Passing Attempts");
-        if (!isIncomplete && !isInterception) {
+        if (isComplete) {
           add(stats, "Completions"); add(stats, "Passing Yards", yards);
           stats["Passing Long"] = Math.max(value(stats, "Passing Long"), yards);
           if (isTouchdown) add(stats, "Passing TD");
@@ -74,13 +86,14 @@ export function aggregatePlayStats(plays: PlayRow[]) {
     if (/pass/.test(type) && receiver && !isSack) {
       const stats = get(receiver);
       add(stats, "Targets");
-      if (!isIncomplete && !isInterception) {
+      if (isComplete) {
         add(stats, "Receptions"); add(stats, "Receiving Yards", yards);
         stats["Receiving Long"] = Math.max(value(stats, "Receiving Long"), yards);
         if (yards >= 20) add(stats, "Big Receptions");
         if (isTouchdown) add(stats, "Receiving TD");
         if (firstDown) add(stats, "Receiving First Downs");
-        add(stats, "Yards After Catch", Math.max(0, yards - airYards));
+        const storedYAC = text(play, "yac");
+        add(stats, "Yards After Catch", storedYAC !== "" ? number(storedYAC) : yards - airYards);
       }
       if (isFumble) { add(stats, "Receiving Fumbles"); if (normalize(recoveredBy) !== normalize(receiver)) add(stats, "Receiving Fumbles Lost"); }
     }

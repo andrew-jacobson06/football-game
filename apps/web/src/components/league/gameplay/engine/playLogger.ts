@@ -2,6 +2,12 @@ import type { LeagueGame } from "../../types";
 import type { NormalizedOutcome, PlayKind } from "./types";
 import { n } from "./utils";
 
+/** Sheet flags can arrive as booleans, numbers, or Google Sheets TRUE/FALSE text. */
+export function playFlag(value: unknown, legacy: boolean) {
+  const flag = String(value ?? "").trim().toLowerCase();
+  return ["true", "yes", "1"].includes(flag) ? true : ["false", "no", "0"].includes(flag) ? false : legacy;
+}
+
 export function determinePlayOutcome(
   result: string,
   playType: PlayKind,
@@ -112,7 +118,24 @@ export function logPlayToDB(
     description: normalized.description,
     desc: normalized.description,
     recoveredby: extra.recoveredby ?? "",
+    // Resolution can override these flags when a sack also causes a fumble,
+    // safety, or turnover on downs. The final result is a separate fact.
+    isSack: result === "Sack",
+    isComplete: playtype === "Pass" && !["Sack", "Incomplete", "Interception"].includes(result) && Boolean(receiver),
+    yac: 0,
     airyards: extra.airyards ?? (playtype === "Pass" ? yards : 0),
+    lineMatchups: [],
+    olWins: 0,
+    olLosses: 0,
+    dlWins: 0,
+    dlLosses: 0,
+    leadblocker: "",
+    jukes: 0,
+    trucks: 0,
+    brokenTackles: 0,
+    stopReason: "",
+    runLog: [],
+    fatigueRecovery: [],
     newdown: game.Down,
     newdist: game.Distance,
     // Preserve where the final play actually ended; the live game state has

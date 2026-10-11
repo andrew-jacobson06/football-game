@@ -437,7 +437,7 @@ export function handleSack(
     playerName(sacker, "NA"),
     result,
     ctx.historyLength,
-    { airyards: 0, recoveredby: fumble.recoveredBy },
+    { airyards: 0, recoveredby: fumble.recoveredBy, isSack: true, isComplete: false, yac: 0, defenseresult: "Sack" },
   );
 }
 export function assignRoutes(
@@ -649,8 +649,20 @@ export function passPlay(
     choose(byPosition(ctx, offenseTeam(game), "QB"));
   const qbName = playerName(qb, `${offenseTeam(game)} QB`);
   const passState = runPassPlayPipeline(game, ctx, qbName, options);
+  const lineMatchups = passState.lineConfrontation.map((battle) => ({
+    slot: battle.slot, offensePlayer: battle.offensiveLineman, defensePlayer: battle.defensiveLineman, winner: battle.winner,
+  }));
+  const olWins = lineMatchups.filter((battle) => battle.winner === "OL").length;
+  const dlWins = lineMatchups.length - olWins;
+  const passMetadata = { lineMatchups, olWins, olLosses: dlWins, dlWins, dlLosses: olWins,
+    stopReason: passState.decision === "sack" ? "Sack" : passState.readLoop?.stopReason ?? passState.decision };
+  const sackResult = () => {
+    const result = handleSack(game, ctx, qbName, options);
+    Object.assign(result.play, passMetadata);
+    return result;
+  };
   if (passState.decision === "sack")
-    return handleSack(game, ctx, qbName, options);
+    return sackResult();
   if (passState.decision === "scramble") {
     console.log("[Pass Engine] QB tucks and runs", { quarterback: qbName, time: passState.readLoop?.currentTime });
     return runPlay(game, ctx, { ...options, runner: qbName, blitz: false });
@@ -658,7 +670,7 @@ export function passPlay(
   const target = passState.target as NonNullable<
     ReturnType<typeof choosePassTarget>
   > | undefined;
-  if (!target && passState.decision !== "throw-away") return handleSack(game, ctx, qbName, options);
+  if (!target && passState.decision !== "throw-away") return sackResult();
   const pct = passState.throwCompletion?.pct ?? 0;
   console.debug("[Pass Engine] Completion check", {
     quarterback: qbName,
@@ -757,6 +769,11 @@ export function passPlay(
     result,
     ctx.historyLength,
     {
+      ...passMetadata,
+      isSack: false,
+      isComplete: outcome.completed,
+      // Store credited YAC after goal-line caps, rather than the uncapped roll.
+      yac: outcome.completed ? outcome.yards - outcome.airYards : 0,
       airyards: outcome.airYards,
       recoveredby: outcome.intercepted
         ? String(outcome.caughtBy ?? "Defense")

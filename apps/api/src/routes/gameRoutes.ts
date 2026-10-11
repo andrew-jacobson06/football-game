@@ -14,7 +14,9 @@ import {
   readSheetObjects,
   readSheetValues,
 } from "../services/sheets.js";
-import { aggregatePlayStats } from "../services/playStats.js";
+import { aggregatePlayStats, passPlayFacts } from "../services/playStats.js";
+import { playValueForHeader, sheetSafe } from "../services/playHistory.js";
+import { parsePlayerStats } from "../services/playerStats.js";
 
 export const gameRoutes = Router();
 
@@ -148,7 +150,7 @@ async function getTeamPlayers(teamAbbrev: string) {
   const [assignments, players, playerStats, jerseys, playHistory] = await Promise.all([
     readSheetObjects("PlayerTeams!A1:B"),
     readSheetObjects("Players!A1:AM"),
-    readSheetObjects("PlayerStats!A1:AJ"),
+    getPlayerSeasonStats(),
     getTeamJerseys("Away Jersey Crop"),
     sheetRows("PlayHistory"),
   ]);
@@ -343,68 +345,6 @@ async function getPlayHistory(gameId: string) {
   result.sort((a,b) => (Number(a.QTR ?? a.Qtr ?? 0) - Number(b.QTR ?? b.Qtr ?? 0)) || (parseTime(b.Time) - parseTime(a.Time)));
   return result;
 }
-function playValueForHeader(play: Record<string, unknown>, header: string) {
-  const direct = play[header];
-  if (direct !== undefined) return direct;
-
-  const normalized = normHeader(header);
-  const aliases: Record<string, string[]> = {
-    gameid: ["gameid"],
-    playid: ["playid"],
-    time: ["time"],
-    qtr: ["qtr", "quarter"],
-    quarter: ["qtr", "quarter"],
-    possession: ["possession"],
-    down: ["down"],
-    distance: ["distance"],
-    ballon: ["ballon"],
-    playtype: ["playtype"],
-    player: ["player"],
-    receiver: ["receiver"],
-    yards: ["yards"],
-    defensepredicted: ["defensepredicted"],
-    predictioncorrect: ["predictioncorrect"],
-    tackler: ["tackler"],
-    result: ["result"],
-    defenseresult: ["defenseresult"],
-    turnover: ["turnover"],
-    turnoverflag: ["turnover"],
-    description: ["description", "desc"],
-    recoveredby: ["recoveredby"],
-    airyards: ["airyards"],
-    newdown: ["newdown"],
-    newdist: ["newdist"],
-    newdistance: ["newdist"],
-    newballon: ["newballon"],
-    drivestart: ["drivestart"],
-    homescore: ["homescore"],
-    awayscore: ["awayscore"],
-    lineMatchups: ["lineMatchups", "linematchups"],
-    linematchups: ["lineMatchups", "linematchups"],
-    olwins: ["olWins", "olwins"],
-    ollosses: ["olLosses", "ollosses"],
-    dlwins: ["dlWins", "dlwins"],
-    dllosses: ["dlLosses", "dllosses"],
-    leadblocker: ["leadblocker", "leadBlocker"],
-    jukes: ["jukes"],
-    trucks: ["trucks"],
-    brokentackles: ["brokenTackles", "brokentackles"],
-    stopreason: ["stopReason", "stopreason"],
-    runlog: ["runLog", "runlog"],
-    fatiguerecovery: ["fatigueRecovery", "fatiguerecovery"],
-  };
-
-  for (const key of aliases[normalized] ?? [normalized]) {
-    if (play[key] !== undefined) return play[key];
-  }
-
-  return "";
-}
-function sheetSafe(value: unknown) {
-  if (Array.isArray(value) || (value && typeof value === "object")) return JSON.stringify(value);
-  if (typeof value === "boolean") return value;
-  return value ?? "";
-}
 function gameStateUpdates(headers: string[], rowIndex: number, game: Record<string, unknown>) {
   const updates: Record<string, unknown> = { Qtr: game.quarter, Time: game.time, Down: game.down, Distance: game.distance, BallOn: game.ballOn, HomeScore: game.homeScore, AwayScore: game.awayScore, DriveStart: game.driveStart, Previous: game.previous, Possession: game.possession, HomeTimeouts: game.homeTimeouts, AwayTimeouts: game.awayTimeouts };
   return Object.entries(updates).flatMap(([key, value]) => {
@@ -484,7 +424,10 @@ async function savePlayAndGameWithRetry(data: Record<string, unknown>, gameId: s
 
 gameRoutes.get("/health", (_req, res) => res.json({ ok: true, app: "football-game-api", message: "API is running" }));
 gameRoutes.get("/players", async (_req, res, next) => { try { res.json({ players: await getPlayersWithTeamJerseys() }); } catch (e) { next(e); } });
-gameRoutes.get("/player-stats", async (_req, res, next) => { try { res.json({ playerStats: await readSheetObjects("PlayerStats!A1:AJ") }); } catch (e) { next(e); } });
+async function getPlayerSeasonStats() {
+  return parsePlayerStats(await readSheetValues("PlayerStats!A1:ZZ"));
+}
+gameRoutes.get("/player-stats", async (_req, res, next) => { try { res.json({ playerStats: await getPlayerSeasonStats() }); } catch (e) { next(e); } });
 gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
   try {
     const [gamesSheet, historySheet, playerTeams] = await Promise.all([
@@ -569,10 +512,11 @@ gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
       const isPass = (play: Row) => /pass/i.test(String(cell(play, playType)));
       const result = (play: Row) => String(cell(play, playResult));
       const passingPlays = plays.filter((play) => isNamed(play, playPlayer) && isPass(play));
-      const passingAttempts = passingPlays.filter((play) => !/sack/i.test(result(play)));
-      const completions = passingAttempts.filter((play) => !/incomplete|interception/i.test(result(play)));
+      const facts = (play: Row) => passPlayFacts(objectFrom(historySheet.headers, play));
+      const passingAttempts = passingPlays.filter((play) => !facts(play).isSack);
+      const completions = passingAttempts.filter((play) => facts(play).isComplete);
       const receivingPlays = plays.filter((play) => isNamed(play, playReceiver) && isPass(play));
-      const receptions = receivingPlays.filter((play) => !/incomplete|interception/i.test(result(play)));
+      const receptions = receivingPlays.filter((play) => facts(play).isComplete);
       const fumblePlays = plays.filter((play) => (isNamed(play, playPlayer) || isNamed(play, playReceiver)) && /fumble/i.test(result(play)));
       const tackles = plays.filter((play) => isNamed(play, playTackler));
       const defensiveResult = (play: Row) => String(cell(play, playDefenseResult) || cell(play, playResult));
@@ -585,7 +529,7 @@ gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
         result: `${teamScore > opponentScore ? "W" : teamScore < opponentScore ? "L" : "T"} ${teamScore}-${opponentScore}`,
         carries: rushingPlays.length, yards: yards.reduce((sum, value) => sum + value, 0), touchdowns,
         long: Math.max(0, ...yards), date: String(cell(game, date)),
-        passing: { completions: completions.length, attempts: passingAttempts.length, yards: passYards.reduce((sum, value) => sum + value, 0), touchdowns: completions.filter((play) => /touchdown|\btd\b/i.test(result(play))).length, interceptions: passingAttempts.filter((play) => /interception/i.test(result(play))).length, long: Math.max(0, ...passYards), sacks: passingPlays.filter((play) => /sack/i.test(result(play))).length },
+        passing: { completions: completions.length, attempts: passingAttempts.length, yards: passYards.reduce((sum, value) => sum + value, 0), touchdowns: completions.filter((play) => /touchdown|\btd\b/i.test(result(play))).length, interceptions: passingAttempts.filter((play) => /interception/i.test(result(play))).length, long: Math.max(0, ...passYards), sacks: passingPlays.filter((play) => facts(play).isSack).length },
         rushing: { carries: rushingPlays.length, yards: yards.reduce((sum, value) => sum + value, 0), touchdowns, long: Math.max(0, ...yards) },
         receiving: { receptions: receptions.length, targets: receivingPlays.length, yards: receivingYards.reduce((sum, value) => sum + value, 0), touchdowns: receptions.filter((play) => /touchdown|\btd\b/i.test(result(play))).length, long: Math.max(0, ...receivingYards), firstDowns: 0 },
         fumbles: { total: fumblePlays.length, lost: fumblePlays.filter((play) => /lost|turnover/i.test(result(play))).length },
