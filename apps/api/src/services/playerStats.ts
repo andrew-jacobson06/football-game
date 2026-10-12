@@ -14,6 +14,7 @@ export function parsePlayerStats(values: unknown[][]) {
   };
   return values.slice(1).filter((row) => String(row[0] ?? "").trim()).map((row) => {
     const record: Record<string, string> = {};
+    const canonicalValues = new Map<string, string>();
     const seen = new Map<string, number>();
     headers.forEach((header, index) => {
       if (!header.trim()) return;
@@ -24,8 +25,10 @@ export function parsePlayerStats(values: unknown[][]) {
       // Keep every workbook value, including the two INT and Sacks columns.
       record[occurrence === 1 ? header : `${header} ${occurrence}`] = value;
       const canonical = name === "sacks" ? (occurrence === 1 ? "Sacks" : "Sacked") : aliases[name];
-      if (canonical && !(canonical in record && occurrence > 1)) record[canonical] = value;
+      if (canonical && !canonicalValues.has(canonical)) canonicalValues.set(canonical, value);
     });
+    // Explicit descriptive columns win over aliases regardless of column order.
+    for (const [canonical, value] of canonicalValues) if (!(canonical in record)) record[canonical] = value;
     const number = (field: string) => Number(record[field]?.replace(/,/g, "")) || 0;
     if (!record["Completion Percentage"]) record["Completion Percentage"] = String(number("Passing Attempts") ? number("Completions") / number("Passing Attempts") * 100 : 0);
     if (!record["Passing Average"]) record["Passing Average"] = String(number("Passing Attempts") ? number("Passing Yards") / number("Passing Attempts") : 0);

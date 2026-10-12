@@ -17,8 +17,15 @@ const aliases = [
 
 export function seasonStatField(row: StatRow, fields: readonly string[]) {
   const names = fields.map(normalized);
+  const entries = Object.entries(row).filter(([, value]) => value !== "" && value != null);
+  // Prefer the requested canonical field before sheet aliases. A raw Rec="0"
+  // must not hide Receptions="5" just because Rec appears first in the object.
+  for (const name of names) {
+    const exact = entries.find(([field]) => normalized(field) === name);
+    if (exact) return exact[1];
+  }
   const wanted = new Set(names.flatMap((name) => aliases.find((group) => group.includes(name)) ?? [name]));
-  return Object.entries(row).find(([field, value]) => wanted.has(normalized(field)) && value !== "" && value != null)?.[1];
+  return entries.find(([field]) => wanted.has(normalized(field)))?.[1];
 }
 
 export function seasonStatValue(row: StatRow, fields: readonly string[]) {

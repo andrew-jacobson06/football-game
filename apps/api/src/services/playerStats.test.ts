@@ -25,3 +25,15 @@ test("zeroes, blanks and existing descriptive headers are preserved", () => {
   assert.equal(stats["Passing Average"], "0");
   assert.deepEqual(parsePlayerStats([]), []);
 });
+
+test("explicit receiving totals win over compact alias columns in either order", () => {
+  for (const values of [
+    [["Player", "Receptions", "Receiving Yards", "Rec", "RecYds"], ["Koala", 5, 58, 0, 0]],
+    [["Player", "Rec", "RecYds", "Receptions", "Receiving Yards"], ["Koala", 0, 0, 5, 58]],
+  ]) {
+    const [row] = parsePlayerStats(values);
+    assert.equal(row.Receptions, "5");
+    assert.equal(row["Receiving Yards"], "58");
+    assert.equal(row["Receiving Average"], "11.6");
+  }
+});
