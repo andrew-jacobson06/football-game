@@ -34,3 +34,12 @@ test("canonical API rows and raw sheet rows produce the same descending yardage 
     assert.equal(seasonStatValue(receiving[0], ["Receiving TD"]), 2);
   }
 });
+
+test("zero-valued raw aliases cannot hide populated canonical receiving totals", () => {
+  const row = { Rec: "0", Tgt: "0", RecYds: "0", RecTD: "0", YAC: "0",
+    Receptions: "5", Targets: "8", "Receiving Yards": "58", "Receiving TD": "1", "Yards After Catch": "12" };
+  assert.equal(seasonStatValue(row, ["Receptions", "REC"]), 5);
+  assert.equal(seasonStatValue(row, ["Receiving Yards", "Rec Yards", "RecYards"]), 58);
+  assert.equal(seasonStatValue(row, ["Yards After Catch", "YAC"]), 12);
+  assert.equal(hasSeasonActivity(row, "receiving"), true);
+});
