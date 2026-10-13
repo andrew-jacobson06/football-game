@@ -243,3 +243,38 @@ test("after reads are exhausted, base notice can throw without another primary r
   assert.ok(state.decisions.slice(2).every((decision) => decision.currentRead === null && decision.readDelay === undefined));
   assert.equal(state.expirationDecision, undefined);
 });
+
+test("an unready second read gets the first base-notice roll and appears first in the scan log", (t) => {
+  const log = t.mock.method(console, "log", () => {});
+  const config = { curves: settings.curves,
+    qbDecisionTable: [{ perceivedMax: 1000, label: "Notice", baseNotice: 50, noticeIfPrimary: 0 }] };
+  const waiting = [routes[0], routes[1], { ...routes[1], player: "WR3" }]
+    .map((route, index) => ({ ...route, TTO: index === 0 ? 0.25 : 2 }));
+  const rolls = [0, 0, 0, 0.9, 0, 0, 0, 0, 0.1];
+  const state = runUnpressuredReadLoop(config, waiting, 3, 0, {}, () => {
+    assert.ok(rolls.length, "Only the current read should receive a notice roll after it succeeds");
+    return rolls.shift()!;
+  });
+  assert.equal(state.currentRead, 2);
+  assert.equal(state.targetPlayer, "WR2");
+  assert.deepEqual(state.decisions.map((decision) => [decision.player, decision.noticeType]), [["WR1", "primary"], ["WR2", "base"]]);
+  const scan = log.mock.calls.find((call) => call.arguments[0] === "[Pass Engine] QB base notice scan")!.arguments[1];
+  assert.deepEqual(scan.receivers.map((receiver) => receiver.player), ["WR2", "WR1", "WR3"]);
+  assert.deepEqual(scan.receivers.map((receiver) => receiver.rollMade), [true, false, false]);
+  assert.equal(rolls.length, 0);
+});
+
+test("an unready third read is checked first, with the other reads retaining their order", (t) => {
+  const log = t.mock.method(console, "log", () => {});
+  const config = { curves: settings.curves,
+    qbDecisionTable: [{ perceivedMax: 1000, label: "Notice", baseNotice: 50, noticeIfPrimary: 0 }] };
+  const waiting = [routes[0], routes[1], { ...routes[1], player: "WR3" }]
+    .map((route, index) => ({ ...route, TTO: index === 2 ? 2 : 0.25 }));
+  const state = runUnpressuredReadLoop(config, waiting, 1.5, 0, {}, () => 0.9);
+  const scans = log.mock.calls.filter((call) => call.arguments[0] === "[Pass Engine] QB base notice scan");
+  assert.ok(scans.length > 0);
+  for (const scan of scans) assert.deepEqual(scan.arguments[1].receivers.map((receiver) => receiver.player), ["WR3", "WR1", "WR2"]);
+  assert.deepEqual(state.decisions.filter((decision) => decision.noticeType === "base").slice(0, 3)
+    .map((decision) => decision.player), ["WR3", "WR1", "WR2"]);
+  assert.deepEqual(waiting.map((route) => route.player), ["WR1", "WR2", "WR3"]);
+});

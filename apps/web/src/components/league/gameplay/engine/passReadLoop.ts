@@ -98,7 +98,12 @@ export function runUnpressuredReadLoop(
     if (state.currentTime >= timeToThrow) break;
     if (!currentRoute || state.currentTime < currentRoute.TTO) {
       // While waiting for this read, an open receiver can attract the QB's notice.
-      const noticeChecks = orderedReads.map((route) => {
+      // Give the current read first chance, then preserve the other reads' order.
+      // With no current read, scan the original read order as before.
+      const scanRoutes = currentRoute
+        ? [currentRoute, ...orderedReads.filter((route) => route !== currentRoute)]
+        : orderedReads;
+      const noticeChecks = scanRoutes.map((route) => {
         const perceivedOpenness = receivers.find((receiver) => receiver.player === route.player)!.perceivedOpenness;
         const { label, chance } = getBaseNoticeChance(settings.qbDecisionTable, perceivedOpenness);
         return { player: route.player, perceivedOpenness, label, noticeChance: chance,
