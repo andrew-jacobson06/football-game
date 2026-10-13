@@ -1,6 +1,6 @@
 import type { LeagueGame } from "../../types";
 import type { EngineContext, PlayCallOptions } from "./types";
-import { advanceQuarter, applyHalftimeRules, kickoffSpot, n, randomInt, switchPoss } from "./utils";
+import { advanceQuarter, applyHalftimeRules, kickoffSpot, n, nextDownDistance, randomInt, switchPoss } from "./utils";
 import { buildResult } from "./playLogger";
 
 export function punt(game: LeagueGame, ctx: EngineContext) {
@@ -137,12 +137,14 @@ export function handleTimeout(game: LeagueGame, ctx: EngineContext) {
 }
 export function spikeBall(game: LeagueGame, ctx: EngineContext) {
   const clock = advanceQuarter(game, 1);
+  const next = nextDownDistance(game, 0);
   const updated = applyHalftimeRules(game, {
     ...game,
     Qtr: clock.qtr,
     Time: clock.time,
-    Down: Math.min(4, n(game.Down) + 1),
-    Distance: game.Distance,
+    Down: next.down,
+    Distance: next.distance,
+    Possession: next.turnover ? switchPoss(game) : game.Possession,
   });
   return buildResult(
     game,
@@ -152,7 +154,7 @@ export function spikeBall(game: LeagueGame, ctx: EngineContext) {
     "",
     0,
     "",
-    "Incomplete",
+    next.turnover ? "TO on Downs" : "Incomplete",
     ctx.historyLength,
   );
 }
@@ -165,12 +167,17 @@ export function kneel(
   const clock = advanceQuarter(game, 40);
   const ball =
     game.Possession === "Home" ? n(game.BallOn) - 1 : n(game.BallOn) + 1;
+  const next = nextDownDistance(game, -1, ball);
   const updated = applyHalftimeRules(game, {
     ...game,
+    HomeScore: n(game.HomeScore) + (next.safety && game.Possession === "Away" ? 2 : 0),
+    AwayScore: n(game.AwayScore) + (next.safety && game.Possession === "Home" ? 2 : 0),
     Qtr: clock.qtr,
     Time: clock.time,
-    Down: Math.min(4, n(game.Down) + 1),
-    BallOn: ball,
+    Down: next.down,
+    Distance: next.distance,
+    BallOn: next.ballOn,
+    Possession: next.turnover ? switchPoss(game) : game.Possession,
   });
   return buildResult(
     game,
@@ -180,7 +187,7 @@ export function kneel(
     "",
     -1,
     "",
-    "Kneel",
+    next.safety ? "Safety" : next.turnover ? "TO on Downs" : "Kneel",
     ctx.historyLength,
   );
 }

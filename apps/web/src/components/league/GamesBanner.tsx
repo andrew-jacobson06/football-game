@@ -55,7 +55,7 @@ export function GamesBanner({ games, currentWeek, onHome, onSelectGame }: GamesB
             >
               <div className="banner-game__meta">
                 <span>{final ? "FINAL" : `Q${game.Qtr} · ${formatClock(game.Time)}`}</span>
-                {!final && <span>{formatDownDistance(game.Down, game.Distance)} · Ball on {formatBallOnForPoss(game.BallOn, game.Possession)}</span>}
+                {!final && <span>{formatDownDistance(game.Down, game.Distance, game.BallOn, game.Possession)} · Ball on {formatBallOnForPoss(game.BallOn, game.Possession)}</span>}
               </div>
               <div>
                 <img src={game.AwayLogo || "/favicon.svg"} alt="" />

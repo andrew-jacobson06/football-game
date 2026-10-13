@@ -72,7 +72,7 @@ export function LeagueSchedule({ games, currentWeek, onSelectGame }: { games: Le
             </div>
             <div className="schedule-game__action">
               <div className="schedule-game__situation">
-                {final ? <strong>FINAL</strong> : unstarted ? <strong>PRE-GAME</strong> : <><strong>{formatDownDistance(game.Down, game.Distance)}</strong><span>Ball on {formatBallOnForPoss(game.BallOn, game.Possession)}</span><small>Q{game.Qtr} · {formatClock(game.Time)}</small></>}
+                {final ? <strong>FINAL</strong> : unstarted ? <strong>PRE-GAME</strong> : <><strong>{formatDownDistance(game.Down, game.Distance, game.BallOn, game.Possession)}</strong><span>Ball on {formatBallOnForPoss(game.BallOn, game.Possession)}</span><small>Q{game.Qtr} · {formatClock(game.Time)}</small></>}
               </div>
               <button type="button" onClick={() => onSelectGame(game)}>Gamecast <b>›</b></button>
             </div>

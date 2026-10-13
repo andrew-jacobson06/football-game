@@ -701,7 +701,7 @@ export function passPlay(
   const result = outcome.intercepted
     ? "Interception"
     : !outcome.completed
-      ? "Incomplete"
+      ? next.turnover ? "TO on Downs" : "Incomplete"
       : td
         ? "Touchdown"
         : safety

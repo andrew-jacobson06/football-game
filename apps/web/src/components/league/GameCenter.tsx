@@ -558,6 +558,8 @@ function PlayByPlayTab({
                 (playField(play, "Down", "down") as string | number) ?? 1,
                 (playField(play, "Distance", "distance") as string | number) ??
                   10,
+                playField(play, "BallOn", "ballon") as string | number | undefined,
+                str(playField(play, "Possession", "possession")),
               );
               const spot = playSpot(play);
               return (
@@ -2062,7 +2064,7 @@ export function GameCenter({
             <div className="info-block">
               <div className="info-label">DOWN:</div>
               <div className="info-value">
-                {formatDownDistance(currentGame.Down, currentGame.Distance)}
+                {formatDownDistance(currentGame.Down, currentGame.Distance, currentGame.BallOn, currentGame.Possession)}
               </div>
             </div>
             <div className="info-block">
