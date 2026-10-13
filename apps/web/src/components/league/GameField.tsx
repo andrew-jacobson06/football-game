@@ -1868,27 +1868,7 @@ export default function GameField({
           )}
         </div>
       </div>
-      <div className="caption" id="caption" ref={captionRef}>
-        Paste a play animation JSON below, or load the example.
-      </div>
-      <div className="controls">
-        <button className="jbutton" type="button" onClick={loadExampleJson}>
-          Load Example JSON
-        </button>
-        <button className="jbutton" type="button" onClick={runJsonFromBox}>
-          Run JSON Play
-        </button>
-        <button className="jbutton" type="button" onClick={resetCurrentPlan}>
-          Reset Current Play
-        </button>
-      </div>
-      <textarea
-        id="jsonInput"
-        ref={jsonInputRef}
-        spellCheck={false}
-        placeholder="Paste PlayAnimationPlan JSON here..."
-      />
-      <div className="error-box" id="errorBox" ref={errorBoxRef} />
+     
     </div>
   );
 }
