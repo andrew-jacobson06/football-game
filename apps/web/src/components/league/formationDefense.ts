@@ -17,7 +17,7 @@ function teamOf(p: Player) {
 function trait(p: Player | undefined, key: string) {
   return Number(p?.[key] ?? p?.[key[0].toUpperCase() + key.slice(1)] ?? 0);
 }
-function dbCoverageScore(p: Player) {
+function coverageScore(p: Player) {
   return (
     trait(p, "coverage") +
     trait(p, "readQB") +
@@ -32,6 +32,7 @@ function dbCoverageScore(p: Player) {
  * position group, ranks DBs by coverage, Read QB, speed, and acceleration
  * with defensive stars as the tiebreaker, aligns coverage to receivers, aligns
  * linemen to blockers, and fills any remaining spots with linebackers/safeties.
+ * WR/TE players at LT/RT receive first priority for LB/DL coverage matchups.
  */
 export function buildDefense(
   game: LeagueGame,
@@ -56,19 +57,44 @@ export function buildDefense(
       )
       .sort(
         (a, b) =>
-          dbCoverageScore(b) - dbCoverageScore(a) ||
+          coverageScore(b) - coverageScore(a) ||
           trait(b, "defStars") - trait(a, "defStars"),
       );
   const dbs = byDbCoverage(),
     dls = by("DL", "size"),
     lbs = by("LB"),
     safeties = by("S");
-  const protectedLb = lbs[0];
+  const byName = (playerName?: string) =>
+    players.find((p) => nameOf(p) === playerName);
+  const byOffStars = (a: FormationSlot, b: FormationSlot) =>
+    trait(byName(formation[b]), "offStars") -
+    trait(byName(formation[a]), "offStars");
+  const wrs = WR_SLOTS.filter((s) => formation[s]).sort(byOffStars);
+  const ol = OL_SLOTS.filter((s) => formation[s]).sort(byOffStars);
+  const selectedDefenders = new Set<Player>();
+
+  // A WR/TE at either tackle is a route runner. Reserve the strongest available
+  // LB/DL coverage matchup first, using the same score and tiebreaker as DBs.
+  // Two route runners are handled in Off Stars order, just like the other slots.
+  const tackleCoverage = new Map<FormationSlot, Player>();
+  const coverageCandidates = [...lbs, ...dls].sort((a, b) =>
+    coverageScore(b) - coverageScore(a) || trait(b, "defStars") - trait(a, "defStars"));
+  ol.filter((slot) => ["LT", "RT"].includes(slot) &&
+    ["TE", "WR"].includes(str(byName(formation[slot])?.position ?? byName(formation[slot])?.Pos).toUpperCase()))
+    .forEach((slot) => {
+      const defender = coverageCandidates.shift();
+      if (defender) {
+        tackleCoverage.set(slot, defender);
+        selectedDefenders.add(defender);
+      }
+    });
+
+  // The normal fallback rules now operate on the remaining defenders.
+  const protectedLb = lbs.find((p) => !selectedDefenders.has(p));
   const reserveProtectedLb = (p: Player) => p !== protectedLb;
   const lbCoverageFallbacks = lbs.filter(reserveProtectedLb);
   const lbLineFallbacks = [...lbCoverageFallbacks].reverse();
   const dbLineFallbacks = [...dbs].reverse();
-  const selectedDefenders = new Set<Player>();
   const linebackerRoleDefenders = new Set<Player>();
   const take = (arrs: Player[][]) => {
     for (const arr of arrs) {
@@ -101,14 +127,7 @@ export function buildDefense(
     if (dbFallback) return dbFallback;
     return take([lbs]);
   };
-  const byName = (playerName?: string) =>
-    players.find((p) => nameOf(p) === playerName);
-  // Saved receivers and linemen are ranked by offensive stars so the best DB coverage-score defenders and biggest DLs match the best WRs/OLs.
-  const byOffStars = (a: FormationSlot, b: FormationSlot) =>
-    trait(byName(formation[b]), "offStars") -
-    trait(byName(formation[a]), "offStars");
-  const wrs = WR_SLOTS.filter((s) => formation[s]).sort(byOffStars);
-  const ol = OL_SLOTS.filter((s) => formation[s]).sort(byOffStars);
+  // The other slots retain their usual ranked DB coverage and DL size matchups.
   const out: DefensiveAssignment[] = [];
   wrs.forEach((slot, i) =>
     out.push({
@@ -120,7 +139,7 @@ export function buildDefense(
   ol.forEach((slot, i) =>
     out.push({
       position: `DL${i + 1}`,
-      player: nameOf(takeLineDefender() ?? {}),
+      player: nameOf(tackleCoverage.get(slot) ?? takeLineDefender() ?? {}),
       align: slot,
     }),
   );
