@@ -6,6 +6,7 @@ import type {
   PlayCallOptions,
 } from "./types";
 import { defenseTeam, offenseTeam, playerName } from "./utils";
+import { formatDownDistance } from "../../leagueMappers";
 import type {
   DlSwipeResult,
   RunLaneTargetResult,
@@ -98,7 +99,7 @@ const scoreText = (game: LeagueGame) =>
   `${String(game.Home ?? "HOME")} ${Number(game.HomeScore) || 0} | ${String(game.Away ?? "AWAY")} ${Number(game.AwayScore) || 0}`;
 
 const situationText = (game: LeagueGame) =>
-  `Q${game.Qtr} ${game.Time} - ${game.Down} & ${game.Distance} - Ball on ${game.BallOn}`;
+  `Q${game.Qtr} ${game.Time} - ${formatDownDistance(game.Down, game.Distance, game.BallOn, game.Possession)} - Ball on ${game.BallOn}`;
 
 export type RunAnimationPlan = {
   meta: Record<string, unknown>;

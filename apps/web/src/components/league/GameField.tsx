@@ -1440,25 +1440,6 @@ export default function GameField({
       captionRef.current.textContent =
         "Example JSON loaded. Click “Run JSON Play”.";
   }, [clearError]);
-  const runJsonFromBox = () => {
-    clearError();
-    try {
-      const raw = jsonInputRef.current?.value.trim() || "";
-      if (!raw) throw new Error("Paste a PlayAnimationPlan JSON first.");
-      void runAnimationPlan(validatePlan(JSON.parse(raw)));
-    } catch (error) {
-      console.error(error);
-      showError(error instanceof Error ? error.message : String(error));
-    }
-  };
-  const resetCurrentPlan = () => {
-    if (!currentPlanRef.current) {
-      if (captionRef.current)
-        captionRef.current.textContent = "No current plan loaded.";
-      return;
-    }
-    resetAnimationScene(currentPlanRef.current);
-  };
   useEffect(() => {
     if (!formationMode) return;
     stopFootballFollow();

@@ -92,6 +92,11 @@ export function applyHalftimeRules<T extends LeagueGame>(
   previous: LeagueGame,
   updated: T,
 ): T {
+  // Possession changes start a new series, regardless of the previous down,
+  // distance or final result (including interceptions and lost fumbles).
+  if (updated.Possession !== previous.Possession) {
+    updated = { ...updated, Down: 1, Distance: 10 };
+  }
   if (Number(previous.Qtr) !== 2 || Number(updated.Qtr) !== 3) return updated;
 
   const openingPossession = previous.OpeningPossession;

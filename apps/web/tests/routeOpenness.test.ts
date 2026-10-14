@@ -375,3 +375,58 @@ test("pass plays retain resolved line matchups and win/loss counts in history", 
   assert.equal(result.play.dlLosses, 1);
   assert.equal(result.play.isComplete, true);
 });
+
+test("fourth-down incompletions log turnovers and reset the receiving team's series", (t) => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => 0.5);
+  const context = completionContext(1);
+  context.settings.completionTable = [{ pastLos: 110, baseCompletion: 0 }];
+  const result = passPlay({ ...game, Down: 4, Distance: 7 }, context, options);
+  assert.equal(result.play.result, "TO on Downs");
+  assert.equal(result.play.isComplete, false);
+  assert.equal(result.play.turnover, "Yes");
+  assert.equal(result.game.Possession, "Away");
+  assert.equal(result.game.Down, 1);
+  assert.equal(result.game.Distance, 10);
+  assert.equal(result.game.BallOn, game.BallOn);
+  assert.equal(result.play.newdown, 1);
+  assert.equal(result.play.newdist, 10);
+});
+
+test("interceptions before fourth down reset down/distance and preserve the interception result", (t) => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => 0.1);
+  const context = completionContext(1);
+  context.settings.completionTable = [{ pastLos: 110, baseCompletion: 0 }];
+  context.players = context.players.map((player) => player.name === defender.name ? { ...player, ballHawk: 100, readQB: 100 } : player);
+  const result = passPlay({ ...game, Down: 2, Distance: 7 }, context, options);
+  assert.equal(result.play.result, "Interception");
+  assert.equal(result.game.Possession, "Away");
+  assert.equal(result.game.Down, 1);
+  assert.equal(result.game.Distance, 10);
+  assert.equal(result.play.newdown, 1);
+  assert.equal(result.play.newdist, 10);
+});
+
+test("a lost sack fumble resets the new offense, while an offensive recovery keeps its series", (t) => {
+  const rolls = [0, 0, 0, 0, 0, 0];
+  t.mock.method(Math, "random", () => rolls.shift() ?? 0.5);
+  const context = { ...ctx, players: [...ctx.players.filter((player) => player.defPos !== "DL"),
+    { name: "QB", team: "Home", position: "QB" }, { name: "Sacker", team: "Away", defPos: "DL", sackChance: 100, strip: 100 }] };
+  const previous = { ...game, Down: 2, Distance: 7 };
+  const lost = handleSack(previous, context, "QB", options);
+  assert.equal(lost.play.result, "Fumble");
+  assert.equal(lost.play.recoveredby, "Sacker");
+  assert.equal(lost.game.Possession, "Away");
+  assert.equal(lost.game.Down, 1);
+  assert.equal(lost.game.Distance, 10);
+  rolls.push(0, 0, 0, 0, 0, 0.9);
+  const recovered = handleSack(previous, context, "QB", options);
+  assert.equal(recovered.play.result, "Fumble");
+  assert.equal(recovered.play.recoveredby, "QB");
+  assert.equal(recovered.game.Possession, "Home");
+  assert.equal(recovered.game.Down, 3);
+  assert.equal(recovered.game.Distance, 8);
+});

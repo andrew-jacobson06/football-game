@@ -34,10 +34,16 @@ export function formatQuarter(qtr: string | number): string {
 export function formatDownDistance(
   down: string | number,
   distance: string | number,
+  ballOn?: string | number,
+  possession?: string,
 ): string {
   const d = parseInteger(down, 1);
   const suffix = d === 1 ? "st" : d === 2 ? "nd" : d === 3 ? "rd" : "th";
-  return `${d}${suffix} & ${distance}`;
+  const yard = Number(ballOn);
+  const yardsToGoal = possession === "Home" ? 100 - yard : possession === "Away" ? yard : NaN;
+  const goalToGo = Number.isFinite(yard) && yard >= 0 && yard <= 100 &&
+    yardsToGoal > 0 && Number(distance) >= yardsToGoal;
+  return `${d}${suffix} & ${goalToGo ? "Goal" : distance}`;
 }
 
 export function formatBallOnForPoss(
