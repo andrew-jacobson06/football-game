@@ -125,72 +125,6 @@
   margin-bottom: 0;
 }
 
-/* Size the contents from the same viewport-height budget as their containers. */
-#gameUI .game-sticky-header .scoreboard {
-  --scoreboard-height: clamp(64px, 15dvh, 120px);
-  height: var(--scoreboard-height);
-  max-height: 120px;
-  min-height: 0;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: clamp(2px, 0.7vw, 10px);
-  padding: 2px clamp(3px, 1vw, 12px);
-  box-sizing: border-box;
-  color: var(--text-primary);
-  background: var(--surface-raised);
-  border-color: var(--border-color);
-  box-shadow: 0 2px 8px var(--shadow-color);
-}
-
-#gameUI .scoreboard .team-block {
-  min-width: 0;
-  min-height: 0;
-  gap: clamp(2px, 0.7vw, 10px);
-}
-
-#gameUI .scoreboard .team-info {
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  justify-content: center;
-  gap: calc(var(--scoreboard-height) * 0.015);
-}
-
-#gameUI .scoreboard .team-logo {
-  width: min(100%, calc(var(--scoreboard-height) * 0.32));
-  height: calc(var(--scoreboard-height) * 0.32);
-  max-height: calc(var(--scoreboard-height) * 0.32);
-  flex-shrink: 0;
-}
-
-#gameUI .scoreboard .team-name {
-  max-width: 100%;
-  font-size: clamp(10px, min(1.8vw, calc(var(--scoreboard-height) * 0.18)), 18px);
-  line-height: 1.05;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-
-#gameUI .scoreboard .team-record {
-  font-size: clamp(9px, min(1.4vw, calc(var(--scoreboard-height) * 0.12)), 14px);
-  line-height: 1;
-}
-
-#gameUI .scoreboard .score-section { margin: 0; min-width: 0; }
-#gameUI .scoreboard .score-row { gap: 2px; line-height: 1; white-space: nowrap; }
-#gameUI .scoreboard .team-score {
-  font-size: clamp(18px, min(5.5vw, calc(var(--scoreboard-height) * 0.48)), 56px) !important;
-  line-height: 1;
-}
-#gameUI .scoreboard .football-icon {
-  font-size: clamp(12px, min(2vw, calc(var(--scoreboard-height) * 0.25)), 24px);
-  line-height: 1;
-}
-#gameUI .scoreboard .timeouts { gap: clamp(2px, 0.5vw, 6px); margin-top: calc(var(--scoreboard-height) * 0.07); }
-#gameUI .scoreboard .timeout-dot { width: clamp(4px, calc(var(--scoreboard-height) * 0.06), 7px); height: clamp(4px, calc(var(--scoreboard-height) * 0.06), 7px); }
-#gameUI .scoreboard .center-info { min-width: 0; padding: 0 3px; gap: calc(var(--scoreboard-height) * 0.04); }
-#gameUI .scoreboard .quarter { font-size: clamp(10px, min(2vw, calc(var(--scoreboard-height) * 0.14)), 16px); line-height: 1; }
-#gameUI .scoreboard .clock { font-size: clamp(14px, min(3.5vw, calc(var(--scoreboard-height) * 0.25)), 28px); line-height: 1; white-space: nowrap; }
-
 #gameUI .game-sticky-header .tabs {
   --game-tab-height: clamp(28px, 5dvh, 40px);
   display: grid;
@@ -215,21 +149,84 @@
 }
 #gameUI .game-sticky-header .tab-button.active { color: var(--accent-red); }
 
-@media (max-width: 480px) {
-  /* Put scores below each identity on phones instead of squeezing the name
-     between the logo and score. Every identity and timeout stays visible. */
-  #gameUI .scoreboard .team-block { display: grid; grid-template-rows: minmax(0, 1fr) auto; justify-items: center; gap: 2px; }
-  #gameUI .scoreboard .team-info { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 1px 3px; align-content: center; }
-  #gameUI .scoreboard .team-logo { grid-row: 1 / 3; width: calc(var(--scoreboard-height) * 0.28); height: calc(var(--scoreboard-height) * 0.28); }
-  #gameUI .scoreboard .team-name { grid-column: 2; align-self: end; font-size: clamp(9px, min(3vw, calc(var(--scoreboard-height) * 0.14)), 16px); }
-  #gameUI .scoreboard .team-record { grid-column: 2; align-self: start; }
-  #gameUI .scoreboard .score-section { flex-direction: row; gap: 4px; }
-  #gameUI .scoreboard .timeouts { margin-top: 0; }
-}
-
 @media (max-width: 720px) {
   .game-sticky-header { top: 76px; }
 }
 
 .play-outcome--touchdown { color: var(--accent-green); font-weight: 700; }
 .play-outcome--turnover { color: var(--accent-red); font-weight: 700; }
+
+/* Sheet-provided colors decorate only the corners; theme tokens control the
+   surface and text. Keep all content inside the previous 120px height budget. */
+#gameUI .game-scoreboard {
+  --scoreboard-height: clamp(64px, 15dvh, 120px);
+  height: var(--scoreboard-height);
+  max-height: 120px;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: clamp(8px, 2vw, 28px);
+  padding: min(8px, calc(var(--scoreboard-height) * 0.07)) clamp(8px, 2vw, 28px);
+  box-sizing: border-box;
+  color: var(--text-primary);
+  background-color: var(--surface-raised);
+  background-image:
+    radial-gradient(ellipse at top left, color-mix(in srgb, var(--scoreboard-home-color) 65%, transparent), transparent 65%),
+    radial-gradient(ellipse at top right, color-mix(in srgb, var(--scoreboard-away-color) 65%, transparent), transparent 65%);
+  background-size: min(32%, 380px) 100%;
+  background-position: left top, right top;
+  background-repeat: no-repeat;
+  border-color: var(--border-color);
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
+.game-scoreboard__team {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "logo identity score" "logo meta score";
+  align-items: center;
+  gap: 2px clamp(4px, 1vw, 16px);
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+.game-scoreboard__team--away { grid-template-columns: auto minmax(0, 1.3fr) minmax(0, 1fr); grid-template-areas: "score identity logo" "score meta logo"; }
+.game-scoreboard__logo { grid-area: logo; justify-self: start; width: min(86px, calc(var(--scoreboard-height) * 0.72)); max-width: 100%; height: min(86px, calc(var(--scoreboard-height) * 0.72)); max-height: 100%; object-fit: contain; }
+.game-scoreboard__team--away .game-scoreboard__logo { justify-self: end; }
+.game-scoreboard__logo--fallback { display: grid; place-items: center; color: var(--text-secondary); font-weight: 800; font-size: clamp(10px, 2vw, 18px); }
+.game-scoreboard__identity { grid-area: identity; min-width: 0; align-self: end; text-align: right; }
+.game-scoreboard__name { font-size: clamp(10px, min(1.35vw, calc(var(--scoreboard-height) * 0.18)), 20px); font-weight: 700; line-height: 1.05; overflow-wrap: anywhere; }
+.game-scoreboard__abbreviation { display: none; }
+.game-scoreboard__meta { grid-area: meta; align-self: start; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 0; }
+.game-scoreboard__team--away .game-scoreboard__identity { text-align: left; }
+.game-scoreboard__team--away .game-scoreboard__meta { align-items: flex-start; }
+.game-scoreboard__record { font-size: clamp(9px, min(1.2vw, calc(var(--scoreboard-height) * 0.12)), 14px); line-height: 1; color: var(--text-secondary); white-space: nowrap; }
+.game-scoreboard__timeouts { display: flex; gap: 3px; }
+.game-scoreboard__timeout { width: clamp(3px, calc(var(--scoreboard-height) * 0.04), 5px); height: clamp(3px, calc(var(--scoreboard-height) * 0.04), 5px); border: 1px solid var(--text-secondary); border-radius: 50%; }
+.game-scoreboard__timeout--available { background: var(--text-secondary); }
+.game-scoreboard__score-line { grid-area: score; display: flex; align-items: center; gap: 3px; color: var(--text-primary); white-space: nowrap; }
+.game-scoreboard__team--away .game-scoreboard__score-line { flex-direction: row-reverse; }
+.game-scoreboard__score-line--trailing { color: var(--text-secondary); }
+.game-scoreboard__score { font-size: clamp(24px, min(4.5vw, calc(var(--scoreboard-height) * 0.52)), 56px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.game-scoreboard__possession { width: 0; height: 0; border-block: clamp(3px, 0.4vw, 5px) solid transparent; border-right: clamp(4px, 0.5vw, 6px) solid var(--text-primary); }
+.game-scoreboard__team--away .game-scoreboard__possession { border-right: 0; border-left: clamp(4px, 0.5vw, 6px) solid var(--text-primary); }
+.game-scoreboard__status { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: clamp(44px, 7vw, 90px); gap: 4px; text-align: center; color: var(--text-primary); }
+.game-scoreboard__period { font-size: clamp(11px, min(1.5vw, calc(var(--scoreboard-height) * 0.17)), 18px); font-weight: 700; line-height: 1; }
+.game-scoreboard__clock { font-size: clamp(14px, min(2vw, calc(var(--scoreboard-height) * 0.22)), 24px); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+
+@media (max-width: 720px) {
+  #gameUI .game-scoreboard { gap: 8px; padding-inline: 8px; background-size: 48% 100%; }
+  .game-scoreboard__team, .game-scoreboard__team--away { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "logo score" "identity meta"; column-gap: 4px; }
+  .game-scoreboard__team--away { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "score logo" "meta identity"; }
+  .game-scoreboard__logo { justify-self: center; width: calc(var(--scoreboard-height) * 0.48); height: calc(var(--scoreboard-height) * 0.48); }
+  .game-scoreboard__team--away .game-scoreboard__logo { justify-self: center; }
+  .game-scoreboard__identity, .game-scoreboard__team--away .game-scoreboard__identity { align-self: start; text-align: center; }
+  .game-scoreboard__name { display: none; }
+  .game-scoreboard__abbreviation { display: block; text-decoration: none; font-size: clamp(10px, min(3.2vw, calc(var(--scoreboard-height) * 0.16)), 16px); font-weight: 700; line-height: 1; }
+  .game-scoreboard__meta, .game-scoreboard__team--away .game-scoreboard__meta { align-items: center; }
+  .game-scoreboard__score-line { justify-self: center; }
+  .game-scoreboard__score { font-size: clamp(22px, min(9vw, calc(var(--scoreboard-height) * 0.48)), 52px); }
+  .game-scoreboard__record { font-size: clamp(9px, min(2.6vw, calc(var(--scoreboard-height) * 0.12)), 13px); }
+  .game-scoreboard__status { min-width: 44px; min-height: 0; align-self: stretch; padding-bottom: calc(var(--scoreboard-height) * 0.14 + 6px); box-sizing: border-box; }
+  .game-scoreboard__period { font-size: clamp(11px, min(3.3vw, calc(var(--scoreboard-height) * 0.17)), 16px); }
+  .game-scoreboard__clock { font-size: clamp(13px, min(3.5vw, calc(var(--scoreboard-height) * 0.22)), 20px); }
+}
