@@ -1797,7 +1797,7 @@ export function GameCenter({
         ← Back
       </button>
       <div className="game-sticky-header">
-        <GameScoreboard game={currentGame} />
+        <GameScoreboard game={currentGame} home={homeTeamDetails} away={awayTeamDetails} />
         {/* <div className="spectate-control">
           <label className="spectate-switch">
             <input
