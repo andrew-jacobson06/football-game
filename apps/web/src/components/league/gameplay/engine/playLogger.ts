@@ -73,6 +73,7 @@ export function logPlayToDB(
   extra: Record<string, unknown> = {},
 ) {
   const updatedState = game as unknown as Record<string, unknown>;
+  const endedHalf = Number(prev.Qtr) === 2 && Number(game.Qtr) === 3 && updatedState.EndOfHalf === true;
   const normalized = determinePlayOutcome(
     result,
     playtype,
@@ -142,8 +143,8 @@ export function logPlayToDB(
     // already moved the ball to the receiving team's 25 for the third quarter.
     newballon:
       scoringEndBallOn ??
-      (updatedState.EndOfHalf ? updatedState.HalfEndBallOn : game.BallOn),
-    endofhalf: updatedState.EndOfHalf ? "Yes" : "",
+      (endedHalf ? updatedState.HalfEndBallOn : game.BallOn),
+    endofhalf: endedHalf ? "Yes" : "",
     drivestart:
       (prev as unknown as Record<string, unknown>).DriveStart ?? prev.BallOn,
     homescore: game.HomeScore,

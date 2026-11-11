@@ -18,7 +18,7 @@ test("every possession change resets down and distance without altering the turn
     assert.equal(result.BallOn, 43);
     assert.equal(previous.Down, 2);
     assert.equal(previous.Distance, 7);
-    assert.deepEqual(applyHalftimeRules(previous, { ...previous, Down: 3, Distance: 12 }), { ...previous, Down: 3, Distance: 12 });
+    assert.deepEqual(applyHalftimeRules(previous, { ...previous, Down: 3, Distance: 12 }), { ...previous, Down: 3, Distance: 12, DriveStart: previous.BallOn });
   }
 });
 
