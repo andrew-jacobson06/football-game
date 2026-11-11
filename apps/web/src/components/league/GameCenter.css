@@ -125,6 +125,108 @@
   margin-bottom: 0;
 }
 
+/* Size the contents from the same viewport-height budget as their containers. */
+#gameUI .game-sticky-header .scoreboard {
+  --scoreboard-height: clamp(64px, 15dvh, 120px);
+  height: var(--scoreboard-height);
+  max-height: 120px;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: clamp(2px, 0.7vw, 10px);
+  padding: 2px clamp(3px, 1vw, 12px);
+  box-sizing: border-box;
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  border-color: var(--border-color);
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+#gameUI .scoreboard .team-block {
+  min-width: 0;
+  min-height: 0;
+  gap: clamp(2px, 0.7vw, 10px);
+}
+
+#gameUI .scoreboard .team-info {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  justify-content: center;
+  gap: calc(var(--scoreboard-height) * 0.015);
+}
+
+#gameUI .scoreboard .team-logo {
+  width: min(100%, calc(var(--scoreboard-height) * 0.32));
+  height: calc(var(--scoreboard-height) * 0.32);
+  max-height: calc(var(--scoreboard-height) * 0.32);
+  flex-shrink: 0;
+}
+
+#gameUI .scoreboard .team-name {
+  max-width: 100%;
+  font-size: clamp(10px, min(1.8vw, calc(var(--scoreboard-height) * 0.18)), 18px);
+  line-height: 1.05;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+#gameUI .scoreboard .team-record {
+  font-size: clamp(9px, min(1.4vw, calc(var(--scoreboard-height) * 0.12)), 14px);
+  line-height: 1;
+}
+
+#gameUI .scoreboard .score-section { margin: 0; min-width: 0; }
+#gameUI .scoreboard .score-row { gap: 2px; line-height: 1; white-space: nowrap; }
+#gameUI .scoreboard .team-score {
+  font-size: clamp(18px, min(5.5vw, calc(var(--scoreboard-height) * 0.48)), 56px) !important;
+  line-height: 1;
+}
+#gameUI .scoreboard .football-icon {
+  font-size: clamp(12px, min(2vw, calc(var(--scoreboard-height) * 0.25)), 24px);
+  line-height: 1;
+}
+#gameUI .scoreboard .timeouts { gap: clamp(2px, 0.5vw, 6px); margin-top: calc(var(--scoreboard-height) * 0.07); }
+#gameUI .scoreboard .timeout-dot { width: clamp(4px, calc(var(--scoreboard-height) * 0.06), 7px); height: clamp(4px, calc(var(--scoreboard-height) * 0.06), 7px); }
+#gameUI .scoreboard .center-info { min-width: 0; padding: 0 3px; gap: calc(var(--scoreboard-height) * 0.04); }
+#gameUI .scoreboard .quarter { font-size: clamp(10px, min(2vw, calc(var(--scoreboard-height) * 0.14)), 16px); line-height: 1; }
+#gameUI .scoreboard .clock { font-size: clamp(14px, min(3.5vw, calc(var(--scoreboard-height) * 0.25)), 28px); line-height: 1; white-space: nowrap; }
+
+#gameUI .game-sticky-header .tabs {
+  --game-tab-height: clamp(28px, 5dvh, 40px);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  height: var(--game-tab-height);
+  max-height: 40px;
+  min-height: 0;
+  overflow: visible;
+  border-color: var(--border-color);
+}
+#gameUI .game-sticky-header .tab-button {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 1px clamp(2px, 1vw, 10px);
+  font-size: clamp(10px, min(3.4vw, calc(var(--game-tab-height) * 0.44)), 15px) !important;
+  line-height: 1.1;
+  border-bottom-width: 2px;
+  white-space: normal;
+  color: var(--text-secondary);
+  background: var(--surface-raised);
+}
+#gameUI .game-sticky-header .tab-button.active { color: var(--accent-red); }
+
+@media (max-width: 480px) {
+  /* Put scores below each identity on phones instead of squeezing the name
+     between the logo and score. Every identity and timeout stays visible. */
+  #gameUI .scoreboard .team-block { display: grid; grid-template-rows: minmax(0, 1fr) auto; justify-items: center; gap: 2px; }
+  #gameUI .scoreboard .team-info { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 1px 3px; align-content: center; }
+  #gameUI .scoreboard .team-logo { grid-row: 1 / 3; width: calc(var(--scoreboard-height) * 0.28); height: calc(var(--scoreboard-height) * 0.28); }
+  #gameUI .scoreboard .team-name { grid-column: 2; align-self: end; font-size: clamp(9px, min(3vw, calc(var(--scoreboard-height) * 0.14)), 16px); }
+  #gameUI .scoreboard .team-record { grid-column: 2; align-self: start; }
+  #gameUI .scoreboard .score-section { flex-direction: row; gap: 4px; }
+  #gameUI .scoreboard .timeouts { margin-top: 0; }
+}
+
 @media (max-width: 720px) {
   .game-sticky-header { top: 76px; }
 }
