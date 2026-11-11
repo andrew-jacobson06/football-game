@@ -92,10 +92,17 @@ export function applyHalftimeRules<T extends LeagueGame>(
   previous: LeagueGame,
   updated: T,
 ): T {
+  // These describe one transition, not persistent game state. Spreading the
+  // previous snapshot must not mark every later play as an end-of-half play.
+  updated = { ...updated };
+  delete (updated as unknown as Record<string, unknown>).EndOfHalf;
+  delete (updated as unknown as Record<string, unknown>).HalfEndBallOn;
   // Possession changes start a new series, regardless of the previous down,
   // distance or final result (including interceptions and lost fumbles).
   if (updated.Possession !== previous.Possession) {
-    updated = { ...updated, Down: 1, Distance: 10 };
+    updated = { ...updated, Down: 1, Distance: 10, DriveStart: updated.BallOn };
+  } else if ((previous as unknown as Record<string, unknown>).DriveStart == null) {
+    updated = { ...updated, DriveStart: previous.BallOn };
   }
   if (Number(previous.Qtr) !== 2 || Number(updated.Qtr) !== 3) return updated;
 

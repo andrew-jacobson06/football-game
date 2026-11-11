@@ -109,3 +109,25 @@
 @media (max-width: 700px) {
   .pregame-team-grid { grid-template-columns: 1fr; }
 }
+.game-sticky-header {
+  position: sticky;
+  top: 88px;
+  z-index: 400;
+  isolation: isolate;
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+#gameUI .game-sticky-header .scoreboard,
+#gameUI .game-sticky-header .tabs {
+  position: static;
+  margin-bottom: 0;
+}
+
+@media (max-width: 720px) {
+  .game-sticky-header { top: 76px; }
+}
+
+.play-outcome--touchdown { color: var(--accent-green); font-weight: 700; }
+.play-outcome--turnover { color: var(--accent-red); font-weight: 700; }

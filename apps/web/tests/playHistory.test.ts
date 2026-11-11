@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { playValueForHeader, sheetSafe } from "../../api/src/services/playHistory.ts";
 import { logPlayToDB, playFlag } from "../src/components/league/gameplay/engine/playLogger.ts";
+import { applyHalftimeRules } from "../src/components/league/gameplay/engine/utils.ts";
 
 const headers = "gameid|playid|time|qtr|possession|down|distance|ballon|playtype|player|receiver|yards|defensepredicted|predictioncorrect|tackler|result|isSack|defenseresult|turnover|description|recoveredby|isComplete|airyards|YAC|newdown|newdist|newballon|drivestart|homescore|awayscore|lineMatchups|olWins|olLosses|dlWins|dlLosses|leadblocker|jukes|trucks|brokentackles|stopReason|runlog|fatigueRecovery".split("|");
 const game = { GameId: 1, Home: "Home", Away: "Away", HomeScore: 0, AwayScore: 0, Time: 600, Qtr: 1, Down: 1, Distance: 10, BallOn: 30, Possession: "Home" };
@@ -37,4 +38,19 @@ test("run and special-team plays have explicit false flags and zero YAC", () => 
   assert.equal(playFlag("FALSE", true), false);
   assert.equal(playFlag("TRUE", false), true);
   assert.equal(playFlag("", true), true); // Old rows retain their result-based behavior.
+});
+
+test("halftime markers and its ending spot do not leak into later play records", () => {
+  const previous = { ...game, Qtr: 2, Time: 1, OpeningPossession: "Home" };
+  const halftime = applyHalftimeRules(previous, { ...previous, Qtr: 3, Time: 900, BallOn: 43 });
+  const lastOfHalf = logPlayToDB(previous, halftime, "Run", "Runner", "", 13, "DB", "Normal", 0);
+  assert.equal(lastOfHalf.endofhalf, "Yes");
+  assert.equal(lastOfHalf.newballon, 43);
+  const next = applyHalftimeRules(halftime, { ...halftime, BallOn: 71, Time: 870 });
+  const firstOfNextHalf = logPlayToDB(halftime, next, "Run", "Runner", "", 4, "DB", "Normal", 1);
+  assert.equal(firstOfNextHalf.endofhalf, "");
+  assert.equal(firstOfNextHalf.newballon, 71);
+  const stale = logPlayToDB(halftime, { ...halftime, BallOn: 71 }, "Run", "Runner", "", 4, "DB", "Normal", 1);
+  assert.equal(stale.endofhalf, "");
+  assert.equal(stale.newballon, 71);
 });
