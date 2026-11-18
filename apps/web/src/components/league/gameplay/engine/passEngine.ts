@@ -154,64 +154,103 @@ function linemanPickupScore(player: PlayerTrait | undefined) {
   return trait(player, "passProtect") + trait(player, "offStars") ** 2;
 }
 
-/** Selects and resolves one of the linebackers on the field independently from the normal line clash. */
+/** Trace the original weighted draw without consuming a second random number. */
+function chooseBlitzPlayer(players: PlayerTrait[], weight: (player: PlayerTrait) => number, singleWithoutRoll = false) {
+  let draw: number | null = null;
+  const candidates = players.map((player) => ({ player: playerName(player), weight: Math.max(0, weight(player)) }));
+  const totalWeight = candidates.reduce((sum, candidate) => sum + candidate.weight, 0);
+  const selected = singleWithoutRoll && players.length === 1 ? players[0] : weightedChoose(players, weight, () => {
+    const value = Math.random();
+    draw = value;
+    return value;
+  });
+  return { selected, candidates, totalWeight, roll: draw === null ? null : draw * 100,
+    weightedRoll: draw === null ? null : draw * totalWeight };
+}
+
+/** Every reached or skipped blitz check is visible without changing its rolls. */
 export function resolvePassBlitz(
   ctx: EngineContext,
   options: PlayCallOptions,
 ): PassBlitzResult | undefined {
   if (!options.blitz) return undefined;
+  const skipped = (stage: string, reason: string) => console.log(`[Pass Blitz] ${stage}`, { checked: false, roll: null, reason });
+  const finish = (result: PassBlitzResult) => {
+    console.log("[Pass Blitz] Result", { ...result,
+      outcome: result.lineBlocked ? "blocked-by-line" : result.backBlocked ? "blocked-by-back"
+        : result.instantSack ? "instant-sack" : "quarterback-pressured" });
+    return result;
+  };
   const linebackers = (options.defense ?? [])
     .map((defender) => byName(ctx, defender.player))
-    .filter(
-      (player): player is PlayerTrait =>
-        Boolean(player) &&
-        String(player?.defPos ?? player?.DefPos).toUpperCase() === "LB",
-    );
-  const rusher = weightedChoose(linebackers, passBlitzSelectionWeight);
-  if (!rusher) return undefined;
+    .filter((player): player is PlayerTrait => Boolean(player) &&
+      String(player?.defPos ?? player?.DefPos).toUpperCase() === "LB");
+  const { selected: rusher, ...rusherSelection } = chooseBlitzPlayer(linebackers, passBlitzSelectionWeight);
+  console.log("[Pass Blitz] Linebacker selection", { ...rusherSelection, selected: rusher ? playerName(rusher) : null,
+    weightFormula: "(passRush / 2)^2" });
+  if (!rusher) {
+    for (const stage of ["Gap selection", "Lineman selection", "Line pickup", "Back pickup", "Instant sack check"]) skipped(stage, "no-eligible-linebacker");
+    console.log("[Pass Blitz] Result", { outcome: "no-eligible-linebacker", blitzCalled: true });
+    return undefined;
+  }
 
   const selectedGap = choose(PASS_BLITZ_GAPS);
-  const adjacent = selectedGap.blockers
-    .map((slot) => byName(ctx, options.formation?.[slot]))
+  console.log("[Pass Blitz] Gap selection", { gap: selectedGap.gap,
+    availableGaps: PASS_BLITZ_GAPS.map((gap) => gap.gap), adjacentSlots: selectedGap.blockers });
+  const adjacent = selectedGap.blockers.map((slot) => byName(ctx, options.formation?.[slot]))
     .filter((player): player is PlayerTrait => Boolean(player));
-  const lineman = adjacent.length === 1
-    ? adjacent[0]
-    : weightedChoose(adjacent, linemanPickupScore);
+  const { selected: lineman, ...lineSelection } = chooseBlitzPlayer(adjacent, linemanPickupScore, true);
+  console.log("[Pass Blitz] Lineman selection", { ...lineSelection, selected: lineman ? playerName(lineman) : null,
+    selectionMode: adjacent.length === 1 ? "only-adjacent-lineman" : "weighted",
+    weightFormula: "passProtect + offStars^2" });
   const lineThreshold = lineman
     ? trait(lineman, "passProtect") / 1.2 + trait(lineman, "offStars") ** 2 -
       (trait(rusher, "passRush") / 10 + trait(rusher, "defStars") ** 2 / 2)
     : Number.NEGATIVE_INFINITY;
-  const lineBlocked = Boolean(lineman) && Math.random() * 100 <= lineThreshold;
-  const base = {
-    gap: selectedGap.gap,
-    rusher: playerName(rusher),
+  const lineRoll = lineman ? Math.random() * 100 : null;
+  const lineBlocked = lineRoll !== null && lineRoll <= lineThreshold;
+  console.log("[Pass Blitz] Line pickup", { checked: Boolean(lineman), blocker: lineman ? playerName(lineman) : null,
+    passProtect: lineman ? trait(lineman, "passProtect") : null, offStars: lineman ? trait(lineman, "offStars") : null,
+    passRush: trait(rusher, "passRush"), defStars: trait(rusher, "defStars"),
+    threshold: lineman ? lineThreshold : null, comparison: "<=", roll: lineRoll, blocked: lineBlocked,
+    reason: lineman ? "checked" : "no-adjacent-lineman" });
+  const base = { gap: selectedGap.gap, rusher: playerName(rusher),
     pickedUpBy: lineBlocked ? playerName(lineman) : undefined,
-    lineBlocked,
-    backBlocked: false,
-    quarterbackPressured: false,
-    instantSack: false,
-  };
-  if (lineBlocked) return base;
+    lineBlocked, backBlocked: false, quarterbackPressured: false, instantSack: false };
+  if (lineBlocked) {
+    skipped("Back pickup", "blocked-by-line");
+    skipped("Instant sack check", "blocked-by-line");
+    return finish(base);
+  }
 
   const backs = (["RB1", "RB2"] as FormationSlot[])
     .map((slot) => byName(ctx, options.formation?.[slot]))
     .filter((player): player is PlayerTrait => Boolean(player))
     .sort((a, b) => trait(b, "passProtect") - trait(a, "passProtect"));
   const back = backs[0];
-  if (back) {
-    const backBlocked = Math.random() * 100 <= trait(back, "passProtect");
-    if (backBlocked)
-      return {
-        ...base,
-        pickedUpBy: playerName(back),
-        backBlocked: true,
-      };
+  const backRoll = back ? Math.random() * 100 : null;
+  const backThreshold = back ? trait(back, "passProtect") : null;
+  const backBlocked = backRoll !== null && backThreshold !== null && backRoll <= backThreshold;
+  console.log("[Pass Blitz] Back pickup", { checked: Boolean(back),
+    candidates: backs.map((player) => ({ player: playerName(player), passProtect: trait(player, "passProtect") })),
+    blocker: back ? playerName(back) : null, threshold: backThreshold, comparison: "<=", roll: backRoll, blocked: backBlocked,
+    reason: back ? "checked" : "no-back-in-formation" });
+  if (backBlocked) {
+    skipped("Instant sack check", "blocked-by-back");
+    return finish({ ...base, pickedUpBy: playerName(back), backBlocked: true });
   }
 
   const quarterback = byName(ctx, options.formation?.QB);
-  const instantSack = quarterback !== undefined && Math.random() * 100 <
-    passBlitzInstantSackChance(rusher, quarterback);
-  return { ...base, quarterbackPressured: !instantSack, instantSack };
+  const sackChance = quarterback ? passBlitzInstantSackChance(rusher, quarterback) : null;
+  const sackRoll = quarterback ? Math.random() * 100 : null;
+  const instantSack = sackRoll !== null && sackChance !== null && sackRoll < sackChance;
+  console.log("[Pass Blitz] Instant sack check", { checked: Boolean(quarterback),
+    quarterback: quarterback ? playerName(quarterback) : null, rusher: playerName(rusher),
+    linebackerTraits: { passRush: trait(rusher, "passRush"), tackling: trait(rusher, "tackling"), defStars: trait(rusher, "defStars") },
+    quarterbackTraits: quarterback ? { readDefense: trait(quarterback, "readDefense"), juke: trait(quarterback, "juke"), poise: trait(quarterback, "poise") } : null,
+    threshold: sackChance, comparison: "<", roll: sackRoll, instantSack,
+    reason: quarterback ? "checked" : "no-quarterback-in-formation" });
+  return finish({ ...base, quarterbackPressured: !instantSack, instantSack });
 }
 
 function recordPassPhase(
@@ -259,6 +298,10 @@ export function runPassPlayPipeline(
   const defensiveCall = resolveDefensivePlayCall(options);
   state.blitz = defensiveCall.blitz;
   state.blitzRoll = defensiveCall.blitzRoll;
+  // Use console.log so the decision is visible at the default console level,
+  // including no-blitz calls. Logging never consumes an additional roll.
+  console.log("[Pass Engine] Blitz roll", { roll: state.blitzRoll ?? null,
+    threshold: 30, blitzCalled: state.blitz, source: options.blitz === undefined ? "random" : "provided" });
   state.blitzResult = resolvePassBlitz(ctx, { ...options, ...defensiveCall });
   if (state.blitzResult) {
     if (state.blitzResult.quarterbackPressured)

@@ -31,7 +31,7 @@ test("each new snap gets a fresh call; a supplied call is reused without consumi
 
 test("an automatic pass blitz reaches the existing blitz response; 30 calls no blitz", (t) => {
   t.mock.method(console, "debug", () => {});
-  t.mock.method(console, "log", () => {});
+  const log = t.mock.method(console, "log", () => {});
   const context: EngineContext = { players: [
     { name: "QB", team: "Home", position: "QB", readDefense: 50, juke: 50, poise: 50 },
     { name: "LB", team: "Away", defPos: "LB", passRush: 100, tackling: 100, defStars: 100 },
@@ -43,11 +43,17 @@ test("an automatic pass blitz reaches the existing blitz response; 30 calls no b
   assert.equal(blitz.blitzRoll, 0.299999 * 100);
   assert.equal(blitz.blitzResult?.rusher, "LB");
   assert.equal(blitz.decision, "sack");
+  const called = log.mock.calls.find((call) => call.arguments[0] === "[Pass Engine] Blitz roll")!.arguments[1];
+  assert.equal(called.roll, 0.299999 * 100);
+  assert.equal(called.blitzCalled, true);
   t.mock.method(Math, "random", () => 0.3);
   const noBlitz = runPassPlayPipeline(game, context, "QB", options);
   assert.equal(noBlitz.blitz, false);
   assert.equal(noBlitz.blitzRoll, 30);
   assert.equal(noBlitz.blitzResult, undefined);
+  const declined = log.mock.calls.filter((call) => call.arguments[0] === "[Pass Engine] Blitz roll").at(-1)!.arguments[1];
+  assert.equal(declined.roll, 30);
+  assert.equal(declined.blitzCalled, false);
 });
 
 const runContext: EngineContext = { players: [
@@ -57,15 +63,16 @@ const runContext: EngineContext = { players: [
 ], settings: { timeToThrowRanges: [{ min: 2, max: 2, percentage: 100 }] }, historyLength: 0 };
 const runOptions: PlayCallOptions = { runner: "QB", formation: { QB: "QB", LT: "Blocker" }, defense: [{ player: "Rusher", position: "DL1", align: "LT" }] };
 
-test("a run rolls and records its defensive call", (t) => {
+test("a called run skips the blitz roll even when its first random draw is below 30", (t) => {
   t.mock.method(console, "debug", () => {});
-  t.mock.method(console, "log", () => {});
+  const log = t.mock.method(console, "log", () => {});
   let first = true;
   t.mock.method(Math, "random", () => { if (first) { first = false; return 0.299999; } return 0.9; });
   const result = runPlay(game, runContext, runOptions);
-  assert.equal(result.play.blitz, true);
-  assert.equal(result.play.blitzRoll, 0.299999 * 100);
-  assert.ok(result.play.runLog.some((entry) => entry.includes("Defensive call: blitz")));
+  assert.equal(result.play.blitz, false);
+  assert.equal(result.play.blitzRoll, undefined);
+  assert.ok(result.play.runLog.includes("Blitz roll skipped for run play."));
+  assert.ok(log.mock.calls.every((call) => call.arguments[0] !== "[Pass Engine] Blitz roll"));
 });
 
 test("a pass that becomes a scramble retains its original call instead of rerolling", (t) => {

@@ -1,6 +1,6 @@
 import type { PlayCallOptions } from "./types";
 
-/** Temporary coaching placeholder: one unrounded 0–100 decimal roll per snap.
+/** Temporary coaching placeholder: one unrounded 0–100 decimal roll per pass snap.
  * Replace this decision with game-state/coaching logic when it is available.
  * An existing call is reused so continuations (such as scrambles) never reroll.
  */
