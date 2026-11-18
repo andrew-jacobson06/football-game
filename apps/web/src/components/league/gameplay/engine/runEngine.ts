@@ -1,4 +1,5 @@
 import type { LeagueGame } from "../../types";
+import { resolveDefensivePlayCall } from "./defensivePlayCall";
 import type { EngineContext, PlayCallOptions } from "./types";
 import { buildResult } from "./playLogger";
 import {
@@ -139,6 +140,12 @@ export function runPlay(
   }
 
   const runState = createRunPlayState(runnerName);
+  const defensiveCall = resolveDefensivePlayCall(options);
+  // Record the run's coaching call here; run-blitz response rules can consume
+  // this same decision later without rolling a second time.
+  console.debug("[Run Engine] Defensive call", defensiveCall);
+  runState.log.push(`Defensive call: ${defensiveCall.blitz ? "blitz" : "no blitz"}` +
+    (defensiveCall.blitzRoll === undefined ? "." : ` (roll ${defensiveCall.blitzRoll}).`));
 
   // First phase: every trench slot resolves independently so the later vision check knows whether lanes are open or collapsed.
   const lineWinLossArray = performLineWinLoss(
@@ -553,6 +560,7 @@ export function runPlay(
     result,
     ctx.historyLength,
     {
+      ...defensiveCall,
       recoveredby: fumble.recoveredBy,
       runLog: runState.log,
       stopReason: runState.stopReason ?? "",

@@ -62,6 +62,7 @@ const ctx: EngineContext = {
   settings: { timeToThrowRanges: ranges }, historyLength: 0,
 };
 const options: PlayCallOptions = {
+  blitz: false,
   formation: { LT: "OL" }, defense: [{ player: "DL", position: "DL1", align: "LT" }],
 };
 

@@ -31,6 +31,7 @@ import {
 } from "./utils";
 import { buildResult } from "./playLogger";
 import { checkForFumble, determineTackler, runPlay } from "./runEngine";
+import { resolveDefensivePlayCall } from "./defensivePlayCall";
 import { calculateTimeToThrow } from "./timeToThrow";
 import { calculateRouteOpennessInputs, calculateRoutePhaseImpacts } from "./routeOpenness";
 import { routeDepthBounds } from "./routeCatalog";
@@ -224,6 +225,7 @@ function recordPassPhase(
     message,
     quarterback: state.qb,
     blitz: state.blitz,
+    blitzRoll: state.blitzRoll,
     blitzResult: state.blitzResult ? { ...state.blitzResult } : undefined,
     lineConfrontation: state.lineConfrontation.map((matchup) => ({
       ...matchup,
@@ -253,9 +255,11 @@ export function runPassPlayPipeline(
 ) {
   const state = createPassPlayState(qbName);
 
-  // 1. A coaching call is false today, but the snap is ready for the coaching engine.
-  state.blitz = options.blitz === true;
-  state.blitzResult = resolvePassBlitz(ctx, options);
+  // 1. Temporary pre-snap coaching decision: <30 blitzes; >=30 does not.
+  const defensiveCall = resolveDefensivePlayCall(options);
+  state.blitz = defensiveCall.blitz;
+  state.blitzRoll = defensiveCall.blitzRoll;
+  state.blitzResult = resolvePassBlitz(ctx, { ...options, ...defensiveCall });
   if (state.blitzResult) {
     if (state.blitzResult.quarterbackPressured)
       state.pressure.push(state.blitzResult.rusher);
@@ -655,6 +659,7 @@ export function passPlay(
   const olWins = lineMatchups.filter((battle) => battle.winner === "OL").length;
   const dlWins = lineMatchups.length - olWins;
   const passMetadata = { lineMatchups, olWins, olLosses: dlWins, dlWins, dlLosses: olWins,
+    blitz: passState.blitz, blitzRoll: passState.blitzRoll,
     stopReason: passState.decision === "sack" ? "Sack" : passState.readLoop?.stopReason ?? passState.decision };
   const sackResult = () => {
     const result = handleSack(game, ctx, qbName, options);
@@ -665,7 +670,7 @@ export function passPlay(
     return sackResult();
   if (passState.decision === "scramble") {
     console.log("[Pass Engine] QB tucks and runs", { quarterback: qbName, time: passState.readLoop?.currentTime });
-    return runPlay(game, ctx, { ...options, runner: qbName, blitz: false });
+    return runPlay(game, ctx, { ...options, runner: qbName, blitz: passState.blitz, blitzRoll: passState.blitzRoll });
   }
   const target = passState.target as NonNullable<
     ReturnType<typeof choosePassTarget>

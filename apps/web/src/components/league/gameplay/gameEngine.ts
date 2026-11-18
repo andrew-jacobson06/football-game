@@ -19,6 +19,7 @@ export {
   fumbleCheck,
   checkForFumble,
 } from "./engine/runEngine";
+export { resolveDefensivePlayCall } from "./engine/defensivePlayCall";
 export {
   passPlay,
   determineTimeToThrow,
