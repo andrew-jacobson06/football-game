@@ -39,8 +39,9 @@ export type PlayCallOptions = {
   runner?: string;
   clockMode?: ClockMode;
   defense?: DefensiveAssignment[];
-  /** Set by the future defensive coaching engine when it calls a pass blitz. */
+  /** Reuse a pre-snap decision; otherwise the temporary coaching roll decides. */
   blitz?: boolean;
+  blitzRoll?: number;
 };
 export type PlayerTrait = Record<string, unknown>;
 export type RunThreshold = {
@@ -149,6 +150,7 @@ export type PassPlayState = {
   phases: PassPlayPhase[];
   log: string[];
   blitz: boolean;
+  blitzRoll?: number;
   blitzResult?: PassBlitzResult;
   lineConfrontation: PassLineConfrontationResult[];
   /** Sum of all line-confrontation adjustments, retained for the time-to-throw calculation. */
