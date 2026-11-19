@@ -365,7 +365,16 @@ export function runPassPlayPipeline(
   }
 
   // 8-9. Existing route/separation helpers temporarily populate the route shells.
-  const routes = assignRoutes(game, ctx, options);
+  let routeOptions = options;
+  const blockingBack = state.blitzResult?.backBlocked ? state.blitzResult.pickedUpBy : undefined;
+  if (blockingBack && options.routes?.[blockingBack] && options.routes[blockingBack] !== "No Route") {
+    // Cancel the pickup back's route before any route rolls or QB scans. Copy
+    // the call so the saved route plan remains available on the next snap.
+    const { [blockingBack]: removedRoute, ...remainingRoutes } = options.routes;
+    routeOptions = { ...options, routes: remainingRoutes };
+    console.log("[Pass Blitz] Route removed", { player: blockingBack, route: removedRoute, reason: "back-picked-up-blitz" });
+  }
+  const routes = assignRoutes(game, ctx, routeOptions);
   state.routes = routes;
   recordPassPhase(state, "routes-available", "Receiver route timing, phase windows, trait contests, and phase impacts calculated.");
   const openness = determineSeparation(ctx, routes, state.finalTimeToThrow);
