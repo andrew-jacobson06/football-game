@@ -33,9 +33,10 @@ import { buildResult } from "./playLogger";
 import { checkForFumble, determineTackler, runPlay } from "./runEngine";
 import { resolveDefensivePlayCall } from "./defensivePlayCall";
 import { calculateTimeToThrow } from "./timeToThrow";
-import { calculateRouteOpennessInputs, calculateRoutePhaseImpacts } from "./routeOpenness";
+import { calculateRouteOpennessInputs, calculateRoutePhaseImpacts, getCurrentRouteOpenness } from "./routeOpenness";
 import { routeDepthBounds } from "./routeCatalog";
-import { runUnpressuredReadLoop } from "./passReadLoop";
+import { resolveQBPressureHit } from "./qbPressure";
+import { calculateReadDefenseModifier, runUnpressuredReadLoop } from "./passReadLoop";
 import { calculateThrowCompletion } from "./passCompletion";
 import { rollReceiverYAC } from "./receiverYAC";
 
@@ -272,6 +273,8 @@ function recordPassPhase(
     })),
     timeToThrowLineModifier: state.timeToThrowLineModifier,
     pressure: [...state.pressure],
+    pressureHit: state.pressureHit,
+    sacker: state.sacker,
     instantPressure: state.instantPressure,
     pocketFormed: state.pocketFormed,
     baseTimeToThrow: state.baseTimeToThrow,
@@ -314,6 +317,7 @@ export function runPassPlayPipeline(
     );
     if (state.blitzResult.instantSack) {
       state.decision = "sack";
+      state.sacker = state.blitzResult.rusher;
       recordPassPhase(state, "qb-chase", "The unblocked blitzer reached the empty backfield for an immediate sack.");
       return state;
     }
@@ -321,22 +325,14 @@ export function runPassPlayPipeline(
     recordPassPhase(state, "blitz-check", state.blitz ? "No linebacker was available to blitz." : "No blitz was called.");
   }
 
-  // 2. Only a pressure-free play reaches the normal line confrontation.
-  if (state.pressure.length === 0) {
-    state.lineConfrontation = resolvePassLineConfrontation(ctx, options);
-    state.timeToThrowLineModifier = state.lineConfrontation.reduce(
-      (total, matchup) => total + matchup.timeToThrowModifier,
-      0,
-    );
-    recordPassPhase(
-      state,
-      "line-clash",
-      `The line completed ${state.lineConfrontation.length * 3} contests; ` +
-        `the stored time-to-throw modifier is ${state.timeToThrowLineModifier.toFixed(2)}.`,
-    );
-  } else {
-    recordPassPhase(state, "line-clash", "Existing pressure bypassed the line confrontation.");
-  }
+  // Unblocked blitzes still resolve line contests for the QB-hit weights.
+  // Preserve their existing timing: no OL/DL time modifier under instant pressure.
+  state.lineConfrontation = resolvePassLineConfrontation(ctx, options);
+  state.timeToThrowLineModifier = state.instantPressure ? 0 : state.lineConfrontation.reduce(
+    (total, matchup) => total + matchup.timeToThrowModifier, 0);
+  recordPassPhase(state, "line-clash",
+    `The line completed ${state.lineConfrontation.length * 3} contests; ` +
+    `time-to-throw modifier ${state.timeToThrowLineModifier.toFixed(2)}.`);
 
   // 3-4. With the instant checks complete, a pocket forms.
   state.pocketFormed = true;
@@ -356,13 +352,19 @@ export function runPassPlayPipeline(
   recordPassPhase(state, "final-time-to-throw",
     `${timing.baseTimeToThrow.toFixed(2)} + ${state.timeToThrowLineModifier.toFixed(2)} = ` +
     `${state.finalTimeToThrow.toFixed(2)} seconds to throw.`);
-  if (state.finalTimeToThrow < 0) {
-    state.instantPressure = true;
-    state.decision = "sack";
-    recordPassPhase(state, "qb-chase", "Line pressure exhausted the QB's time to throw.");
-    recordPassPhase(state, "pressure-response", "Pressure response stub selected a sack.");
-    return state;
+  if (state.finalTimeToThrow < 0) state.instantPressure = true;
+  if (state.instantPressure || state.pressure.length) {
+    state.pressureHit = resolveQBPressureHit(state.lineConfrontation, state.blitzResult);
+    console.log("[Pass Engine] QB pressure hit", state.pressureHit);
+    state.decision = state.pressureHit.action;
+    if (state.pressureHit.hitter) state.pressure = [state.pressureHit.hitter];
+    if (state.decision === "sack") state.sacker = state.pressureHit.hitter;
+    recordPassPhase(state, "pressure-response", state.pressureHit.hit
+      ? `${state.pressureHit.hitter} hits the QB: ${state.decision}.`
+      : `QB avoids the hit: ${state.decision}.`);
+    if (state.decision !== "throw") return state;
   }
+  const throwTime = Math.max(0, state.finalTimeToThrow);
 
   // 8-9. Existing route/separation helpers temporarily populate the route shells.
   let routeOptions = options;
@@ -377,7 +379,7 @@ export function runPassPlayPipeline(
   const routes = assignRoutes(game, ctx, routeOptions);
   state.routes = routes;
   recordPassPhase(state, "routes-available", "Receiver route timing, phase windows, trait contests, and phase impacts calculated.");
-  const openness = determineSeparation(ctx, routes, state.finalTimeToThrow);
+  const openness = determineSeparation(ctx, routes, throwTime);
   state.opennessTrajectory = openness;
   recordPassPhase(state, "openness-trajectory", "Receiver openness trajectory stub completed.");
 
@@ -392,10 +394,11 @@ export function runPassPlayPipeline(
     ? `${state.readLoop.currentRead === null ? "Unpressured all-receiver scan" : `Unpressured read ${state.readLoop.currentRead}`} ended at ${state.readLoop.currentTime.toFixed(2)} seconds (${state.readLoop.stopReason}); ${state.readLoop.snapshots.length} perceived-openness snapshots recorded.`
     : "Unpressured read loop skipped for pressure.");
 
-  // 11-12. Unpressured throws use the read-loop decision; pressure keeps its existing fallback.
+  // Forced throws use the legacy weighted target under a blitz, or current perceived openness otherwise.
   state.target = state.readLoop
     ? openness.find((route) => route.player === state.readLoop!.targetPlayer)
-    : choosePassTarget(ctx, qbName, openness, options);
+    : state.blitz ? choosePassTarget(ctx, qbName, openness, options)
+      : choosePressureTarget(ctx, qbName, openness, throwTime);
   state.decision = state.readLoop
     ? state.readLoop.decision === "pending" ? "throw-away" : state.readLoop.decision
     : state.target ? "throw" : "throw-away";
@@ -405,7 +408,7 @@ export function runPassPlayPipeline(
   if (state.target) {
     const target = state.target as NonNullable<ReturnType<typeof choosePassTarget>>;
     state.throwCompletion = determineCompletionPct(ctx, qbName, target,
-      state.readLoop?.currentTime ?? state.finalTimeToThrow, game);
+      state.readLoop?.currentTime ?? throwTime, game);
     recordPassPhase(state, "throw-to-receiver", `${target.player}: ${state.throwCompletion.airYards} air yards, ` +
       `actual openness ${state.throwCompletion.actualOpenness.toFixed(2)}, base completion ${state.throwCompletion.baseCompletion}% ` +
       `+ openness adjustment ${state.throwCompletion.opennessAdjustment.toFixed(2)} ` +
@@ -429,11 +432,12 @@ export function handleSack(
   ctx: EngineContext,
   qbName: string,
   options: PlayCallOptions = {},
+  sackerName?: string,
 ) {
   const rushers = teamPlayers(ctx, defenseTeam(game)).filter((p) =>
     ["DL", "LB"].includes(String(p.defPos ?? "").toUpperCase()),
   );
-  const sacker = weightedChoose(rushers, (p) => trait(p, "sackChance"));
+  const creditedSacker = sackerName ?? playerName(weightedChoose(rushers, (p) => trait(p, "sackChance")), "NA");
   const loss = Math.max(
     1,
     Math.floor(Math.random() * 9) +
@@ -443,7 +447,7 @@ export function handleSack(
   const yards = -loss;
   const newBall = advanceBall(game, yards);
   const safety = isSafety(game, newBall);
-  const fumble = checkForFumble(ctx, qbName, playerName(sacker, "NA"));
+  const fumble = checkForFumble(ctx, qbName, creditedSacker);
   const next = nextDownDistance(game, yards, newBall);
   let hs = n(game.HomeScore),
     as = n(game.AwayScore);
@@ -490,7 +494,7 @@ export function handleSack(
     qbName,
     "",
     yards,
-    playerName(sacker, "NA"),
+    creditedSacker,
     result,
     ctx.historyLength,
     { airyards: 0, recoveredby: fumble.recoveredBy, isSack: true, isComplete: false, yac: 0, defenseresult: "Sack" },
@@ -598,6 +602,20 @@ export function choosePassTarget(
       10 - r.airYards / 3 + readVal + (readOk ? r.separation * 3 : 0),
     );
   });
+}
+/** Non-blitz pressure forces a throw to the most perceived-open receiver now. */
+export function choosePressureTarget(
+  ctx: EngineContext, qbName: string,
+  routes: ReturnType<typeof determineSeparation>, time: number,
+  random: () => number = Math.random,
+) {
+  const modifier = calculateReadDefenseModifier(trait(byName(ctx, qbName), "readDefense"));
+  const receivers = getCurrentRouteOpenness(ctx.settings.routeOpennessSettings!, routes, time)
+    .map((route) => ({ ...route, perceivedOpenness: route.openness + modifier * (random() < 0.5 ? 1 : -1) }));
+  const target = receivers.reduce<typeof receivers[number] | undefined>((best, route) =>
+    !best || route.perceivedOpenness > best.perceivedOpenness ? route : best, undefined);
+  console.log("[Pass Engine] Pressure forced throw", { time, receivers, target: target?.player });
+  return target;
 }
 export function determineCompletionPct(
   ctx: EngineContext,
@@ -714,7 +732,7 @@ export function passPlay(
     blitz: passState.blitz, blitzRoll: passState.blitzRoll,
     stopReason: passState.decision === "sack" ? "Sack" : passState.readLoop?.stopReason ?? passState.decision };
   const sackResult = () => {
-    const result = handleSack(game, ctx, qbName, options);
+    const result = handleSack(game, ctx, qbName, options, passState.sacker);
     Object.assign(result.play, passMetadata);
     return result;
   };
@@ -722,7 +740,7 @@ export function passPlay(
     return sackResult();
   if (passState.decision === "scramble") {
     console.log("[Pass Engine] QB tucks and runs", { quarterback: qbName, time: passState.readLoop?.currentTime });
-    return runPlay(game, ctx, { ...options, runner: qbName, blitz: passState.blitz, blitzRoll: passState.blitzRoll });
+    return runPlay(game, ctx, { ...options, runner: qbName, qbScramble: true, blitz: passState.blitz, blitzRoll: passState.blitzRoll });
   }
   const target = passState.target as NonNullable<
     ReturnType<typeof choosePassTarget>

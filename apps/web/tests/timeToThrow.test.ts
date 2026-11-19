@@ -80,9 +80,9 @@ test("pipeline finishes all line rolls before selecting the base time and applie
   assert.equal(rolls.length, 0);
 });
 
-test("negative adjusted time follows the existing sack response before choosing routes", (t) => {
+test("negative adjusted time can select a hit and sack before choosing routes", (t) => {
   t.mock.method(console, "debug", () => {});
-  const rolls = [0, 0.5, 0, 0.5, 0, 0.5, 0, 0];
+  const rolls = [0, 0.5, 0, 0.5, 0, 0.5, 0, 0, .1, .5, .5];
   t.mock.method(Math, "random", () => rolls.shift() ?? 0.5);
   const state = runPassPlayPipeline(game, ctx, "QB", options);
   assert.equal(state.timeToThrowLineModifier, -0.75);
