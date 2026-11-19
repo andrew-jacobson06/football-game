@@ -430,3 +430,82 @@ test("a lost sack fumble resets the new offense, while an offensive recovery kee
   assert.equal(recovered.game.Down, 3);
   assert.equal(recovered.game.Distance, 8);
 });
+
+function blitzRouteContext(pickupSlot: "RB1" | "RB2" = "RB1") {
+  const otherSlot = pickupSlot === "RB1" ? "RB2" : "RB1";
+  const context: EngineContext = { ...ctx, players: [...ctx.players,
+    { name: "QB", team: "Home", position: "QB", readDefense: 100, juke: 100, poise: 100 },
+    { ...receiver, name: "Blocking Back", position: "RB", passProtect: 100 },
+    { ...receiver, name: "Other Back", position: "RB", passProtect: 10 },
+    { ...defender, name: "Blocking Back Corner" }, { ...defender, name: "Other Back Corner" },
+    { name: "Blitzer", team: "Away", defPos: "LB", passRush: 1, tackling: 1, defStars: 1 },
+  ] };
+  const call: PlayCallOptions = { ...options, blitz: true,
+    formation: { QB: "QB", WR1: "Receiver", [pickupSlot]: "Blocking Back", [otherSlot]: "Other Back" },
+    routes: { Receiver: "Flat", "Blocking Back": "Flat", "Other Back": "Flat" },
+    routeDepths: { Receiver: "Quick", "Blocking Back": "Quick", "Other Back": "Quick" },
+    reads: { "Blocking Back": "1", Receiver: "2", "Other Back": "3" },
+    defense: [...options.defense!,
+      { player: "Blocking Back Corner", position: "DB2", align: pickupSlot },
+      { player: "Other Back Corner", position: "DB3", align: otherSlot },
+      { player: "Blitzer", position: "LB1", align: "QB" }],
+  };
+  return { context, call };
+}
+
+test("a successful RB1 or RB2 blitz pickup cancels only that back's route and QB eligibility for this snap", (t) => {
+  t.mock.method(console, "debug", () => {});
+  const log = t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => 0.5);
+  for (const slot of ["RB1", "RB2"] as const) {
+    const { context, call } = blitzRouteContext(slot);
+    const saved = structuredClone(call);
+    const state = runPassPlayPipeline(game, context, "QB", call);
+    assert.equal(state.blitzResult?.backBlocked, true);
+    assert.equal(state.blitzResult?.pickedUpBy, "Blocking Back");
+    assert.deepEqual(state.routes.map((route) => route.player), ["Receiver", "Other Back"]);
+    assert.deepEqual(state.opennessTrajectory.map((route) => route.player), ["Receiver", "Other Back"]);
+    assert.ok(state.readLoop!.snapshots.every((snapshot) => snapshot.receivers.every((route) => route.player !== "Blocking Back")));
+    assert.ok(state.readLoop!.decisions.every((decision) => decision.player !== "Blocking Back"));
+    assert.equal(state.readLoop!.currentReadPlayer, "Receiver");
+    assert.equal(state.target?.player, "Receiver");
+    assert.deepEqual(call, saved);
+  }
+  assert.ok(log.mock.calls.some((call) => call.arguments[0] === "[Pass Blitz] Route removed" && call.arguments[1].player === "Blocking Back"));
+});
+
+test("backs retain their routes on no blitz, failed back pickup, or a pickup by the line", (t) => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => 0.5);
+  const { context, call } = blitzRouteContext();
+  const noBlitz = runPassPlayPipeline(game, context, "QB", { ...call, blitz: false });
+  assert.deepEqual(noBlitz.routes.map((route) => route.player), ["Receiver", "Blocking Back", "Other Back"]);
+
+  const weakBacks = { ...context, players: context.players.map((player) => player.name === "Blocking Back" ? { ...player, passProtect: 10 }
+    : player.name === "Other Back" ? { ...player, passProtect: 5 } : player) };
+  const failed = runPassPlayPipeline(game, weakBacks, "QB", call);
+  assert.equal(failed.blitzResult?.backBlocked, false);
+  assert.deepEqual(failed.routes.map((route) => route.player), ["Receiver", "Blocking Back", "Other Back"]);
+
+  t.mock.method(Math, "random", () => 0.05);
+  const protectedLine = { ...context, players: [...context.players, { name: "Blocker", team: "Home", passProtect: 100, offStars: 100 }] };
+  const linePickup = runPassPlayPipeline(game, protectedLine, "QB", { ...call, formation: { ...call.formation, LT: "Blocker" } });
+  assert.equal(linePickup.blitzResult?.lineBlocked, true);
+  assert.equal(linePickup.blitzResult?.backBlocked, false);
+  assert.deepEqual(linePickup.routes.map((route) => route.player), ["Receiver", "Blocking Back", "Other Back"]);
+});
+
+test("cancelling the only scheduled route leaves no eligible targets and does not mutate the saved plan", (t) => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => 0.5);
+  const { context, call } = blitzRouteContext();
+  call.routes = { "Blocking Back": "Flat" };
+  const state = runPassPlayPipeline(game, context, "QB", call);
+  assert.deepEqual(state.routes, []);
+  assert.deepEqual(state.opennessTrajectory, []);
+  assert.equal(state.readLoop?.currentRead, null);
+  assert.equal(state.target, undefined);
+  assert.deepEqual(call.routes, { "Blocking Back": "Flat" });
+});
