@@ -14,11 +14,11 @@ export function clamp(value: number, min: number, max: number) {
 export function choose<T>(items: T[]) {
   return items[Math.max(0, randomInt(0, items.length - 1))];
 }
-export function weightedChoose<T>(items: T[], weight: (item: T) => number) {
+export function weightedChoose<T>(items: T[], weight: (item: T) => number, random: () => number = Math.random) {
   const total = items.reduce((sum, item) => sum + Math.max(0, weight(item)), 0);
   if (!items.length) return undefined;
-  if (total <= 0) return choose(items);
-  let roll = Math.random() * total;
+  if (total <= 0) return items[Math.max(0, Math.floor(random() * items.length))];
+  let roll = random() * total;
   return (
     items.find((item) => {
       roll -= Math.max(0, weight(item));

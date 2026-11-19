@@ -1,5 +1,4 @@
 import type { LeagueGame } from "../../types";
-import { resolveDefensivePlayCall } from "./defensivePlayCall";
 import type { EngineContext, PlayCallOptions } from "./types";
 import { buildResult } from "./playLogger";
 import {
@@ -140,12 +139,13 @@ export function runPlay(
   }
 
   const runState = createRunPlayState(runnerName);
-  const defensiveCall = resolveDefensivePlayCall(options);
-  // Record the run's coaching call here; run-blitz response rules can consume
-  // this same decision later without rolling a second time.
-  console.debug("[Run Engine] Defensive call", defensiveCall);
-  runState.log.push(`Defensive call: ${defensiveCall.blitz ? "blitz" : "no blitz"}` +
-    (defensiveCall.blitzRoll === undefined ? "." : ` (roll ${defensiveCall.blitzRoll}).`));
+  // Runs never roll for a blitz. A scramble may retain the call already made
+  // on its original pass snap, without making another coaching decision.
+  const defensiveCall = { blitz: options.blitz ?? false, blitzRoll: options.blitzRoll };
+  console.log("[Run Engine] Defensive call", { ...defensiveCall,
+    reason: options.blitzRoll === undefined ? "run-no-blitz-roll" : "continued-pass-call" });
+  runState.log.push(options.blitzRoll === undefined ? "Blitz roll skipped for run play."
+    : `Pass blitz call retained: ${defensiveCall.blitz ? "blitz" : "no blitz"} (roll ${options.blitzRoll}).`);
 
   // First phase: every trench slot resolves independently so the later vision check knows whether lanes are open or collapsed.
   const lineWinLossArray = performLineWinLoss(

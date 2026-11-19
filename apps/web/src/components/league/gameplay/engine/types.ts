@@ -39,7 +39,7 @@ export type PlayCallOptions = {
   runner?: string;
   clockMode?: ClockMode;
   defense?: DefensiveAssignment[];
-  /** Reuse a pre-snap decision; otherwise the temporary coaching roll decides. */
+  /** Reuse a pass snap's decision; otherwise the temporary pass-only coaching roll decides. */
   blitz?: boolean;
   blitzRoll?: number;
 };
