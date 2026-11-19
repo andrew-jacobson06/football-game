@@ -37,6 +37,8 @@ export type PlayCallOptions = {
   routeDepths?: Record<string, string>;
   reads?: Record<string, string>;
   runner?: string;
+  /** A pass-play tuck and run; negative gains are sacks. */
+  qbScramble?: boolean;
   clockMode?: ClockMode;
   defense?: DefensiveAssignment[];
   /** Reuse a pass snap's decision; otherwise the temporary pass-only coaching roll decides. */
@@ -156,6 +158,8 @@ export type PassPlayState = {
   /** Sum of all line-confrontation adjustments, retained for the time-to-throw calculation. */
   timeToThrowLineModifier: number;
   pressure: string[];
+  sacker?: string;
+  pressureHit?: ReturnType<typeof import("./qbPressure").resolveQBPressureHit>;
   instantPressure: boolean;
   pocketFormed: boolean;
   baseTimeToThrow: number | null;

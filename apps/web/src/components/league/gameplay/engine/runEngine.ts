@@ -481,6 +481,7 @@ export function runPlay(
       : fumbleCheck(ctx, runnerName, tackler);
   const next = nextDownDistance(game, yards, newBall);
   // Final result priority mirrors football outcomes: scoring, turnover events, then first down or normal play.
+  const scrambleSack = options.qbScramble === true && yards < 0;
   const result = td
     ? "Touchdown"
     : safety
@@ -491,7 +492,7 @@ export function runPlay(
           ? "TO on Downs"
           : yards >= n(game.Distance)
             ? "First Down"
-            : "Normal";
+            : scrambleSack ? "Sack" : "Normal";
   let hs = n(game.HomeScore),
     as = n(game.AwayScore);
   if (td) {
@@ -552,7 +553,7 @@ export function runPlay(
   const playResult = buildResult(
     game,
     updated,
-    "Run",
+    scrambleSack ? "Pass" : "Run",
     runnerName,
     "",
     yards,
@@ -561,9 +562,10 @@ export function runPlay(
     ctx.historyLength,
     {
       ...defensiveCall,
+      ...(scrambleSack ? { isSack: true, isComplete: false, airyards: 0, yac: 0, defenseresult: "Sack" } : {}),
       recoveredby: fumble.recoveredBy,
       runLog: runState.log,
-      stopReason: runState.stopReason ?? "",
+      stopReason: scrambleSack ? "Sack" : runState.stopReason ?? "",
       lineMatchups,
       olWins,
       olLosses: dlWins,

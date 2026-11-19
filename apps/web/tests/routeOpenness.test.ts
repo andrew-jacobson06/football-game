@@ -172,7 +172,9 @@ test("an unblocked blitz skips the unpressured read loop", (t) => {
     defense: [...options.defense!, { player: "Blitzer", position: "LB1" }] });
   assert.deepEqual(state.pressure, ["Blitzer"]);
   assert.equal(state.readLoop, undefined);
-  assert.ok(state.log.some((message) => message.includes("Unpressured read loop skipped")));
+  assert.equal(state.decision, "sack");
+  assert.equal(state.sacker, "Blitzer");
+  assert.equal(state.pressureHit?.hitter, "Blitzer");
 });
 
 test("declining all reads continues to the deadline and rolls the throw-away option", (t) => {
@@ -484,6 +486,9 @@ test("backs retain their routes on no blitz, failed back pickup, or a pickup by 
 
   const weakBacks = { ...context, players: context.players.map((player) => player.name === "Blocking Back" ? { ...player, passProtect: 10 }
     : player.name === "Other Back" ? { ...player, passProtect: 5 } : player) };
+  // Keep this route-retention case on the new 10% forced-throw branch.
+  const failedRolls = [.5, .5, .5, .5, .5, .5, .5, .15];
+  t.mock.method(Math, "random", () => failedRolls.shift() ?? .5);
   const failed = runPassPlayPipeline(game, weakBacks, "QB", call);
   assert.equal(failed.blitzResult?.backBlocked, false);
   assert.deepEqual(failed.routes.map((route) => route.player), ["Receiver", "Blocking Back", "Other Back"]);
@@ -508,4 +513,28 @@ test("cancelling the only scheduled route leaves no eligible targets and does no
   assert.equal(state.readLoop?.currentRead, null);
   assert.equal(state.target, undefined);
   assert.deepEqual(call.routes, { "Blocking Back": "Flat" });
+});
+
+test("non-blitz pressure can throw away or force a throw without a negative-time openness error", (t) => {
+  t.mock.method(console, "log", () => {});
+  t.mock.method(console, "debug", () => {});
+  const context = completionContext(1);
+  context.players = [...context.players, { name: "OL", team: "Home", passProtect: 1 },
+    { name: "DL", team: "Away", passRush: 100 }];
+  context.settings.timeToThrowRanges = [{ min: 0, max: 0, percentage: 100 }];
+  const call: PlayCallOptions = { ...options, formation: { ...options.formation, C: "OL" },
+    defense: [...options.defense!, { player: "DL", position: "DL1", align: "C" }] };
+  for (const [responseRoll, expected] of [[.05, "throw-away"], [.15, "throw"]] as const) {
+    // Six line rolls, two timing rolls, one weighted-hit draw, then response.
+    const rolls = [...Array(9).fill(.5), responseRoll];
+    t.mock.method(Math, "random", () => rolls.shift() ?? .5);
+    const state = runPassPlayPipeline(game, context, "QB", call);
+    assert.equal(state.decision, expected);
+    assert.equal(state.pressureHit?.hitter, "DL");
+    assert.equal(state.readLoop, undefined);
+    if (expected === "throw") {
+      assert.equal(state.target?.player, "Receiver");
+      assert.ok(state.throwCompletion);
+    } else assert.equal(state.target, undefined);
+  }
 });
