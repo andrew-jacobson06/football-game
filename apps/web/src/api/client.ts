@@ -46,6 +46,16 @@ export async function getPlayerStats(): Promise<{
 }> {
   return getJson("/player-stats", "Failed to load player stats");
 }
+export type TeamDefenseStats = {
+  team: string;
+  gamesPlayed: number;
+  passingYardsAllowed: number;
+  rushingYardsAllowed: number;
+  totalYardsAllowed: number;
+};
+export async function getTeamDefenseStats(): Promise<{ teamDefenseStats: TeamDefenseStats[] }> {
+  return getJson("/team-defense-stats", "Failed to load game-specific defensive yardage");
+}
 export type PlayerGame = {
   gameId: string;
   opponent: string;

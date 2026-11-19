@@ -17,6 +17,7 @@ import {
 import { aggregatePlayStats, passPlayFacts } from "../services/playStats.js";
 import { playValueForHeader, sheetSafe } from "../services/playHistory.js";
 import { parsePlayerStats } from "../services/playerStats.js";
+import { aggregateTeamDefenseStats } from "../services/teamDefenseStats.js";
 
 export const gameRoutes = Router();
 
@@ -541,6 +542,12 @@ gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
 });
 gameRoutes.get("/player-traits", async (_req, res, next) => { try { res.json({ players: await getPlayerTraitsFromSheet() }); } catch (e) { next(e); } });
 gameRoutes.get("/teams", async (_req, res, next) => { try { res.json({ teams: await getTeamsFromSheet() }); } catch (e) { next(e); } });
+gameRoutes.get("/team-defense-stats", async (_req, res, next) => {
+  try {
+    const [teams, games, history] = await Promise.all([getTeamsFromSheet(), getGamesList(), sheetRows("PlayHistory")]);
+    res.json({ teamDefenseStats: aggregateTeamDefenseStats(teams, games, history.rows.map((row) => objectFrom(history.headers, row))) });
+  } catch (e) { next(e); }
+});
 gameRoutes.get("/standings", async (_req, res, next) => { try { res.json({ standings: await getStandingsFromSheet() }); } catch (e) { next(e); } });
 gameRoutes.get("/teams/:team/players", async (req, res, next) => { try { res.json({ players: await getTeamPlayers(req.params.team) }); } catch (e) { next(e); } });
 gameRoutes.get("/games", async (_req, res, next) => { try { res.json({ games: await getGamesList() }); } catch (e) { next(e); } });
