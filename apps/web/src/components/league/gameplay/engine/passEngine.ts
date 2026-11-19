@@ -356,18 +356,13 @@ export function runPassPlayPipeline(
   if (state.instantPressure || state.pressure.length) {
     state.pressureHit = resolveQBPressureHit(state.lineConfrontation, state.blitzResult);
     console.log("[Pass Engine] QB pressure hit", state.pressureHit);
-    if (state.pressureHit.hitter && state.pressureHit.action) {
-      state.pressure = [state.pressureHit.hitter];
-      state.decision = state.pressureHit.action;
-      if (state.decision === "sack") state.sacker = state.pressureHit.hitter;
-      recordPassPhase(state, "pressure-response", `${state.pressureHit.hitter} hits the QB: ${state.decision}.`);
-      if (state.decision !== "throw") return state;
-    } else if (state.finalTimeToThrow < 0) {
-      // No eligible hitter: preserve the previous negative-time sack fallback.
-      state.decision = "sack";
-      recordPassPhase(state, "pressure-response", "No eligible hitter; previous pressure fallback selected a sack.");
-      return state;
-    }
+    state.decision = state.pressureHit.action;
+    if (state.pressureHit.hitter) state.pressure = [state.pressureHit.hitter];
+    if (state.decision === "sack") state.sacker = state.pressureHit.hitter;
+    recordPassPhase(state, "pressure-response", state.pressureHit.hit
+      ? `${state.pressureHit.hitter} hits the QB: ${state.decision}.`
+      : `QB avoids the hit: ${state.decision}.`);
+    if (state.decision !== "throw") return state;
   }
   const throwTime = Math.max(0, state.finalTimeToThrow);
 

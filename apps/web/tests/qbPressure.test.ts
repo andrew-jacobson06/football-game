@@ -14,7 +14,7 @@ const randomSequence = (...values: number[]) => () => { assert.ok(values.length,
 test("hit selection uses all DL contest wins and exact weighted boundaries", () => {
   const matches = [matchup("none", 0), matchup("one", 1), matchup("two", 2), matchup("three", 3)];
   for (const [roll, expected] of [[0, "one"], [3 / 39, "two"], [12 / 39, "three"], [.999, "three"]] as const) {
-    const hit = resolveQBPressureHit(matches, undefined, randomSequence(roll, .5));
+    const hit = resolveQBPressureHit(matches, undefined, randomSequence(0, roll, .5));
     assert.deepEqual(hit.candidates, [{ player: "one", weight: 3 }, { player: "two", weight: 9 }, { player: "three", weight: 27 }]);
     assert.equal(hit.totalWeight, 39);
     assert.equal(hit.hitter, expected);
@@ -23,18 +23,19 @@ test("hit selection uses all DL contest wins and exact weighted boundaries", () 
 
 test("blitzer contributes 40/30/20 and a zero-win line preserves the fallback", () => {
   for (const [call, expected] of [[blitz(), 40], [blitz(false, true), 30], [blitz(true), 20]] as const) {
-    const hit = resolveQBPressureHit([matchup("DL", 0)], call, randomSequence(.5, .5));
+    const hit = resolveQBPressureHit([matchup("DL", 0)], call, randomSequence(0, .5, .5));
     assert.deepEqual(hit.candidates, [{ player: "LB", weight: expected }]);
     assert.equal(hit.hitter, "LB");
   }
-  const empty = resolveQBPressureHit([matchup("DL", 0)], undefined, () => { throw new Error("must not roll without candidates"); });
-  assert.equal(empty.action, undefined);
+  const empty = resolveQBPressureHit([matchup("DL", 0)], undefined, randomSequence(.5, .5));
+  assert.equal(empty.hit, false);
+  assert.equal(empty.action, "throw-away");
   assert.equal(empty.hitter, undefined);
 });
 
 test("hit response boundaries are 10% throw away, 10% force throw, 80% sack", () => {
   for (const [roll, expected] of [[0, "throw-away"], [.09999, "throw-away"], [.1, "throw"], [.19999, "throw"], [.2, "sack"], [.99999, "sack"]] as const)
-    assert.equal(resolveQBPressureHit([matchup("DL", 1)], undefined, randomSequence(0, roll)).action, expected);
+    assert.equal(resolveQBPressureHit([matchup("DL", 1)], undefined, randomSequence(0, 0, roll)).action, expected);
 });
 
 const game = { GameId: "test", Home: "A", Away: "B", Possession: "Home", BallOn: 50, Down: 1, Distance: 10, Qtr: 1, Time: "15:00", HomeScore: 0, AwayScore: 0 } as unknown as LeagueGame;
@@ -47,7 +48,7 @@ const makeContext = (): EngineContext => ({ players: [
 const call = { formation: { QB: "QB", C: "OL" }, defense: [{ player: "DL", align: "C" }, { player: "LB", align: "LB1" }] } as const;
 
 test("unblocked blitz resolves DL contests before the hit; chosen LB receives sack credit", (t) => {
-  t.mock.method(Math, "random", () => .99);
+  t.mock.method(Math, "random", () => .5);
   t.mock.method(console, "log", () => {});
   t.mock.method(console, "debug", () => {});
   const options = { ...call, defense: [...call.defense], blitz: true } as any;
@@ -77,7 +78,8 @@ test("instant blitz sack credits its LB and skips line contests and pressure dra
 });
 
 test("non-blitz negative-time pressure hits with the winning DL and credits his sack", (t) => {
-  t.mock.method(Math, "random", () => .5);
+  const draws = [...Array(8).fill(.5), .1, .5, .5];
+  t.mock.method(Math, "random", () => draws.shift() ?? .5);
   t.mock.method(console, "log", () => {});
   t.mock.method(console, "debug", () => {});
   const options = { ...call, defense: [...call.defense], blitz: false } as any;
@@ -85,6 +87,7 @@ test("non-blitz negative-time pressure hits with the winning DL and credits his 
   assert.ok(state.finalTimeToThrow! < 0);
   assert.equal(state.pressureHit?.hitter, "DL");
   assert.equal(state.decision, "sack");
+  draws.push(...Array(8).fill(.5), .1, .5, .5);
   assert.equal(passPlay(game, makeContext(), options).play.tackler, "DL");
 });
 
@@ -148,4 +151,49 @@ test("a scramble stopped at the line stays a rush rather than a sack", (t) => {
   assert.equal(result.play.yards, 0);
   assert.equal(result.play.playtype, "Run");
   assert.equal(result.play.isSack, false);
+});
+
+test("the supplied 63-point example hits below 63 and avoids the hit at 63", () => {
+  const matches = [matchup("three", 3), matchup("one", 1), matchup("other", 1)];
+  const hit = resolveQBPressureHit(matches, blitz(false, true), randomSequence(.62999, .99, .9));
+  assert.equal(hit.totalWeight, 63);
+  assert.equal(hit.hitChance, 63);
+  assert.equal(hit.hit, true);
+  assert.equal(hit.hitter, "LB");
+  const missed = resolveQBPressureHit(matches, blitz(false, true), randomSequence(.63, .5));
+  assert.equal(missed.hit, false);
+  assert.equal(missed.hitter, undefined);
+  assert.equal(missed.roll, null);
+  assert.equal(missed.action, "throw-away");
+});
+
+test("avoiding a hit uses 50% force throw, 25% throw away, 25% scramble", () => {
+  for (const [roll, action] of [[0, "throw"], [.49999, "throw"], [.5, "throw-away"], [.74999, "throw-away"], [.75, "scramble"], [.999, "scramble"]] as const) {
+    const result = resolveQBPressureHit([matchup("DL", 3)], undefined, randomSequence(.99, roll));
+    assert.equal(result.hit, false);
+    assert.equal(result.hitter, undefined);
+    assert.equal(result.action, action);
+  }
+});
+
+test("summed scores of 100 or more always hit without changing attribution weights", () => {
+  const result = resolveQBPressureHit([matchup("A", 3), matchup("B", 3), matchup("C", 3)], blitz(), randomSequence(.9999, .9999, .9));
+  assert.equal(result.totalWeight, 121);
+  assert.equal(result.hitChance, 100);
+  assert.equal(result.hit, true);
+  assert.equal(result.hitter, "LB");
+});
+
+test("non-hit negative-time pressure can throw away or scramble without a sack", (t) => {
+  t.mock.method(console, "log", () => {});
+  t.mock.method(console, "debug", () => {});
+  for (const [response, action] of [[.5, "throw-away"], [.75, "scramble"]] as const) {
+    const draws = [...Array(8).fill(.5), .99, response];
+    t.mock.method(Math, "random", () => draws.shift() ?? .5);
+    const state = runPassPlayPipeline(game, makeContext(), "QB", { ...call, defense: [...call.defense], blitz: false } as any);
+    assert.ok(state.finalTimeToThrow! < 0);
+    assert.equal(state.pressureHit?.hit, false);
+    assert.equal(state.decision, action);
+    assert.equal(state.sacker, undefined);
+  }
 });

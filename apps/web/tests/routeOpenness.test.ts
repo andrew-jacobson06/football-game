@@ -165,7 +165,8 @@ test("pass pipeline retains calculation inputs for later openness graphs", (t) =
 
 test("an unblocked blitz skips the unpressured read loop", (t) => {
   t.mock.method(console, "debug", () => {});
-  t.mock.method(Math, "random", () => 0.99);
+  const rolls = [.99, .99, .99, .99, 0, .5, .99];
+  t.mock.method(Math, "random", () => rolls.shift() ?? .99);
   const blitzContext = { ...ctx, players: [...ctx.players,
     { name: "Blitzer", team: "Away", defPos: "LB", passRush: 60, tackling: 60, defStars: 1 }] };
   const state = runPassPlayPipeline(game, blitzContext, "QB", { ...options, blitz: true,
@@ -524,13 +525,13 @@ test("non-blitz pressure can throw away or force a throw without a negative-time
   context.settings.timeToThrowRanges = [{ min: 0, max: 0, percentage: 100 }];
   const call: PlayCallOptions = { ...options, formation: { ...options.formation, C: "OL" },
     defense: [...options.defense!, { player: "DL", position: "DL1", align: "C" }] };
-  for (const [responseRoll, expected] of [[.05, "throw-away"], [.15, "throw"]] as const) {
-    // Six line rolls, two timing rolls, one weighted-hit draw, then response.
-    const rolls = [...Array(9).fill(.5), responseRoll];
+  for (const [hitRoll, responseRoll, expected] of [[.1, .05, "throw-away"], [.1, .15, "throw"], [.99, .1, "throw"]] as const) {
+    // Six line rolls, two timing rolls, hit check, attribution, then response.
+    const rolls = [...Array(8).fill(.5), hitRoll, ...(hitRoll < .27 ? [.5] : []), responseRoll];
     t.mock.method(Math, "random", () => rolls.shift() ?? .5);
     const state = runPassPlayPipeline(game, context, "QB", call);
     assert.equal(state.decision, expected);
-    assert.equal(state.pressureHit?.hitter, "DL");
+    assert.equal(state.pressureHit?.hitter, hitRoll < .27 ? "DL" : undefined);
     assert.equal(state.readLoop, undefined);
     if (expected === "throw") {
       assert.equal(state.target?.player, "Receiver");
