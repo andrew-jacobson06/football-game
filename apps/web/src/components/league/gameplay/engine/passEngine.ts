@@ -38,7 +38,7 @@ import { routeDepthBounds } from "./routeCatalog";
 import { resolveQBPressureHit } from "./qbPressure";
 import { calculateReadDefenseModifier, runUnpressuredReadLoop } from "./passReadLoop";
 import { calculateThrowCompletion } from "./passCompletion";
-import { rollPassInterception } from "./passInterception";
+import { rollPassInterception, rollIncompletePassInterception } from "./passInterception";
 import { rollReceiverYAC } from "./receiverYAC";
 
 /**
@@ -703,9 +703,18 @@ export function determinePassOutcome(
       deflected: false,
     };
   }
+  const incompleteInterceptionCheck = rollIncompletePassInterception(
+    Number(defender.ballHawk ?? defender.BallHawk ?? 50), throwCompletion.throwType,
+    ctx.settings.pickAccuracyMultipliers ?? [],
+  );
+  console.log("[Pass Engine] Incomplete pass interception check", {
+    defender: target.defender, receiver: target.player, ...incompleteInterceptionCheck,
+  });
   return {
     completed: false,
-    intercepted: false,
+    intercepted: incompleteInterceptionCheck.intercepted,
+    caughtBy: incompleteInterceptionCheck.intercepted ? target.defender : undefined,
+    incompleteInterceptionCheck,
     yards: 0,
     airYards: target.airYards,
     completionRoll,

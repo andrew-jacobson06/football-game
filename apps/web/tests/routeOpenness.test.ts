@@ -562,3 +562,24 @@ test("non-blitz pressure can throw away or force a throw without a negative-time
     } else assert.equal(state.target, undefined);
   }
 });
+
+test("a secondary interception credits the guarding DB and resets possession/down/distance", t => {
+  t.mock.method(console, "log", () => {});
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(Math, "random", () => .5);
+  const context = completionContext(1);
+  context.settings.completionTable = [{ pastLos: 110, baseCompletion: 0 }];
+  // Prevent the initial route jump and guarantee a pick after the ball-hawk gate.
+  context.settings.dbBeatWRAccuracyMultipliers = context.settings.dbBeatWRAccuracyMultipliers!.map(row=>({ ...row, multiplier: 0 }));
+  context.settings.pickAccuracyMultipliers = context.settings.pickAccuracyMultipliers!.map(row=>({ ...row, multiplier: 1000 }));
+  context.players = context.players.map(player=>player.name === "Corner" ? { ...player, ballHawk: 99 } : player);
+  const result = passPlay({ ...game, Down: 2, Distance: 7 }, context, options);
+  assert.equal(result.play.result, "Interception");
+  assert.equal(result.play.tackler, "Corner");
+  assert.equal(result.play.recoveredby, "Corner");
+  assert.equal(result.play.isComplete, false);
+  assert.equal(result.play.defenseresult, "Interception");
+  assert.equal(result.game.Possession, "Away");
+  assert.equal(result.game.Down, 1);
+  assert.equal(result.game.Distance, 10);
+});

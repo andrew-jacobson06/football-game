@@ -47,3 +47,26 @@ export function rollPassInterception(readQB: number, ballHawk: number, actualOpe
   return { actualOpenness, throwType, readQB, ballHawk, baseBeatWRtoBall, accuracyMultiplier, beatWRtoBall, beatRoll,
     beatsWRtoBall, basePickPctChance, pickAccuracyMultiplier, pickPctChance, pickRoll, intercepted, deflected: beatsWRtoBall && !intercepted };
 }
+
+/** Second opportunity: only a non-jumped, incomplete Close-or-worse throw reaches this check. */
+export function rollIncompletePassInterception(ballHawk: number, throwType: ThrowType,
+  pickMultipliers: readonly InterceptionAccuracyMultiplier[], random: () => number = Math.random,
+) {
+  if (!Number.isFinite(ballHawk)) throw new Error("Invalid DB ballHawk trait.");
+  const result = { ballHawk, throwType, intercepted: false,
+    ballHawkChance: null as number | null, ballHawkRoll: null as number | null, passedBallHawkCheck: false,
+    basePickPctChance: null as number | null, pickAccuracyMultiplier: null as number | null,
+    pickPctChance: null as number | null, pickRoll: null as number | null };
+  // Accurate/Perfect incompletions consume no ball-hawk or pick rolls.
+  if (throwType === "Perfect" || throwType === "Accurate") return { ...result, reason: "accurate-or-better" };
+  result.ballHawkChance = Math.max(0, Math.min(100, (ballHawk / 12) ** 2));
+  result.ballHawkRoll = random() * 100;
+  result.passedBallHawkCheck = result.ballHawkRoll < result.ballHawkChance;
+  if (!result.passedBallHawkCheck) return { ...result, reason: "ball-hawk-check-failed" };
+  result.basePickPctChance = pickBaseChance(ballHawk);
+  result.pickAccuracyMultiplier = multiplier(pickMultipliers, throwType, "Pick Multiplier based on accuracy");
+  result.pickPctChance = Math.max(0, Math.min(100, result.basePickPctChance * result.pickAccuracyMultiplier));
+  result.pickRoll = random() * 100;
+  result.intercepted = result.pickRoll < result.pickPctChance;
+  return { ...result, reason: result.intercepted ? "intercepted" : "pick-roll-failed" };
+}
