@@ -37,6 +37,7 @@ import { calculateRouteOpennessInputs, calculateRoutePhaseImpacts } from "./rout
 import { routeDepthBounds } from "./routeCatalog";
 import { runUnpressuredReadLoop } from "./passReadLoop";
 import { calculateThrowCompletion } from "./passCompletion";
+import { rollPassInterception } from "./passInterception";
 import { rollReceiverYAC } from "./receiverYAC";
 
 /**
@@ -642,11 +643,25 @@ export function calcYAC(
 }
 export function determinePassOutcome(
   ctx: EngineContext,
-  qbName: string,
+  _qbName: string,
   target: NonNullable<ReturnType<typeof choosePassTarget>>,
   completionPct: number,
   throwCompletion?: ReturnType<typeof calculateThrowCompletion>,
 ) {
+  if (!throwCompletion) throw new Error("Missing throw accuracy/openness for interception check.");
+  const defender = byName(ctx, target.defender);
+  if (!defender) throw new Error(`Missing target defender: ${target.defender}.`);
+  const interceptionCheck = rollPassInterception(
+    Number(defender.readQB ?? defender.ReadQB ?? 50), Number(defender.ballHawk ?? defender.BallHawk ?? 50),
+    throwCompletion.actualOpenness, throwCompletion.throwType,
+    ctx.settings.dbBeatWRAccuracyMultipliers ?? [], ctx.settings.pickAccuracyMultipliers ?? [],
+  );
+  console.log("[Pass Engine] DB route jump", { defender: target.defender, receiver: target.player, ...interceptionCheck });
+  if (interceptionCheck.beatsWRtoBall) return {
+    completed: false, intercepted: interceptionCheck.intercepted, deflected: interceptionCheck.deflected,
+    defender: target.defender, yards: 0, airYards: target.airYards,
+    caughtBy: interceptionCheck.intercepted ? target.defender : undefined, completionRoll: null, interceptionCheck,
+  };
   const completionRoll = Math.random() * 100;
   if (completionRoll <= completionPct) {
     const receiver = byName(ctx, target.player);
@@ -666,33 +681,18 @@ export function determinePassOutcome(
       airYards: target.airYards,
       caughtBy: target.player,
       completionRoll,
+      interceptionCheck,
+      deflected: false,
     };
   }
-  const qb = byName(ctx, qbName),
-    def = byName(ctx, target.defender);
-  const intChance = Math.max(
-    1,
-    (trait(def, "ballHawk") +
-      trait(def, "readQB") -
-      trait(qb, "accuracy") -
-      trait(qb, "readDefense")) /
-      8,
-  );
-  if (Math.random() * 100 < intChance)
-    return {
-      completed: false,
-      intercepted: true,
-      yards: calcYAC(ctx, target.defender || "", target.separation),
-      airYards: target.airYards,
-      caughtBy: target.defender || "Defense",
-      completionRoll,
-    };
   return {
     completed: false,
     intercepted: false,
     yards: 0,
     airYards: target.airYards,
     completionRoll,
+    interceptionCheck,
+    deflected: false,
   };
 }
 export function passPlay(
@@ -736,7 +736,7 @@ export function passPlay(
     throwCompletion: passState.throwCompletion,
   });
   const outcome = target ? determinePassOutcome(ctx, qbName, target, pct, passState.throwCompletion)
-    : { completed: false, intercepted: false, yards: 0, airYards: 0, caughtBy: undefined };
+    : { completed: false, intercepted: false, yards: 0, airYards: 0, caughtBy: undefined, deflected: false, defender: undefined };
   if (outcome.completed) {
     const yardsToGoal = game.Possession === "Home" ? 100 - n(game.BallOn) : n(game.BallOn);
     // Throw depth still drives completion inputs; credited air yards and gain
@@ -751,8 +751,8 @@ export function passPlay(
   const tackler =
     outcome.completed && !td
       ? determineTackler(ctx, defenseTeam(game), rawYards)
-      : outcome.intercepted
-        ? String(outcome.caughtBy ?? "Defense")
+      : outcome.intercepted || outcome.deflected
+        ? String(outcome.caughtBy ?? target?.defender ?? "Defense")
         : "NA";
   const next = nextDownDistance(game, rawYards, newBall);
   const result = outcome.intercepted
@@ -829,6 +829,7 @@ export function passPlay(
       ...passMetadata,
       isSack: false,
       isComplete: outcome.completed,
+      ...(outcome.deflected ? { defenseresult: "Deflection", isDeflected: true } : {}),
       // Store credited YAC after goal-line caps, rather than the uncapped roll.
       yac: outcome.completed ? outcome.yards - outcome.airYards : 0,
       airyards: outcome.airYards,

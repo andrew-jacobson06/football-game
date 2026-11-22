@@ -88,7 +88,9 @@ export function playText(play: Play, game?: LeagueGame): string {
       result === "Incomplete" ||
       !playFlag(playField(play, "isComplete"), true)
     ) {
-      text = `${player} pass intended for ${receiver}. Incomplete.`;
+      text = /deflection/i.test(String(playField(play, "defenseresult")))
+        ? `${player} pass intended for ${receiver}. Deflected by ${tackler}. Incomplete.`
+        : `${player} pass intended for ${receiver}. Incomplete.`;
     } else {
       text = `${player} pass to ${receiver}`;
       if (!isTouchdown)

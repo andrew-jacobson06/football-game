@@ -4,6 +4,7 @@ import { parseRouteOpennessSettings } from "../services/routeOpennessSettings.js
 import { parseRouteCatalogSettings } from "../services/routeCatalogSettings.js";
 import { parseQBDecisionSettings } from "../services/qbDecisionSettings.js";
 import { parseCompletionSettings } from "../services/completionSettings.js";
+import { parseInterceptionSettings } from "../services/interceptionSettings.js";
 import { parseAccuracySettings } from "../services/accuracySettings.js";
 import { parseHandsImpactSettings } from "../services/handsSettings.js";
 import { parseJumpSettings } from "../services/jumpSettings.js";
@@ -261,6 +262,7 @@ async function getFrontendSettingsFromSheet() {
     tackleTable: settingRows(rows, "Tackle_").map((r) => ({ label: r[0], yardageCap: Number(r[1]), DL: Number(r[2]) || 0, LB: Number(r[3]) || 0, DBS: Number(r[4]) || 0 })).sort((a,b)=>a.yardageCap-b.yardageCap),
     ...parseCompletionSettings([headers, ...rows]),
     accuracyModifiers: parseAccuracySettings([headers, ...rows]),
+    ...parseInterceptionSettings([headers, ...rows]),
     handsImpactByOpenness: parseHandsImpactSettings([headers, ...rows]),
     ...parseJumpSettings([headers, ...rows]),
     ...parseYACSettings([headers, ...rows]),
@@ -518,8 +520,8 @@ gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
       const receivingPlays = plays.filter((play) => isNamed(play, playReceiver) && isPass(play));
       const receptions = receivingPlays.filter((play) => facts(play).isComplete);
       const fumblePlays = plays.filter((play) => (isNamed(play, playPlayer) || isNamed(play, playReceiver)) && /fumble/i.test(result(play)));
-      const tackles = plays.filter((play) => isNamed(play, playTackler));
       const defensiveResult = (play: Row) => String(cell(play, playDefenseResult) || cell(play, playResult));
+      const tackles = plays.filter((play) => isNamed(play, playTackler) && !/deflection|interception/i.test(defensiveResult(play)));
       const matchupRows = plays.flatMap((play) => lineMatchups(play)).filter((matchup) => isPlayer(matchup.defensePlayer));
       const interceptions = plays.filter((play) => isNamed(play, playRecoveredBy) && /interception/i.test(defensiveResult(play)));
       const values = (rows: Row[]) => rows.map((play) => asNumber(cell(play, playYards)));

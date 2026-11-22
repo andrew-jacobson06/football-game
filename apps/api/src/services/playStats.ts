@@ -19,7 +19,7 @@ export function passPlayFacts(play: PlayRow) {
   const result = [text(play, "result", "resultcategory"), text(play, "description"), text(play, "defenseresult")].join(" ");
   const isSack = flag("isSack") ?? /sack/i.test(result);
   const isComplete = /pass/i.test(text(play, "playtype")) && !isSack &&
-    (flag("isComplete") ?? !/incomplete|incompletion|interception/i.test(result));
+    (flag("isComplete") ?? !/incomplete|incompletion|interception|deflection/i.test(result));
   return { isSack, isComplete };
 }
 
@@ -53,6 +53,7 @@ export function aggregatePlayStats(plays: PlayRow[]) {
     const isTouchdown = /touchdown|\btd\b/.test(`${result} ${description}`);
     const isFumble = /fumble/.test(`${result} ${description} ${defenseResult}`);
     const { isSack, isComplete } = passPlayFacts(play);
+    const isDeflection = /deflection/.test(defenseResult);
     const isInterception = /interception/.test(`${result} ${description} ${defenseResult}`);
     const firstDown = number(text(play, "newdown", "new down")) === 1 || /first down/.test(description);
 
@@ -98,7 +99,8 @@ export function aggregatePlayStats(plays: PlayRow[]) {
       if (isFumble) { add(stats, "Receiving Fumbles"); if (normalize(recoveredBy) !== normalize(receiver)) add(stats, "Receiving Fumbles Lost"); }
     }
 
-    if (tackler && normalize(tackler) !== "na") {
+    if (isDeflection && tackler && normalize(tackler) !== "na") add(get(tackler), "Passes Defended");
+    if (tackler && normalize(tackler) !== "na" && !isDeflection && !isInterception) {
       const stats = get(tackler);
       add(stats, "Tackles"); add(stats, "Solo Tackles");
       if (yards < 0 || isSack || /tfl|tackle for loss/.test(defenseResult)) add(stats, "TFL");
