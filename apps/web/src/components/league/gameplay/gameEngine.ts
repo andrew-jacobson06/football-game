@@ -38,7 +38,7 @@ export {
 } from "./engine/passEngine";
 export { calculateBaseOpenness, getRouteBaseOpenness, getSkillBasedOpennessMod,
   getRouteOpenness, getCurrentRouteOpenness } from "./engine/routeOpenness";
-export { calculateReadDefenseModifier, runUnpressuredReadLoop, getPrimaryNoticeChance, getBaseNoticeChance } from "./engine/passReadLoop";
+export { calculateReadDefenseModifier, runUnpressuredReadLoop, getReadNoticeChance, rankQBReads } from "./engine/passReadLoop";
 export { chooseTimeExpiredAction } from "./engine/passReadLoop";
 export { rollReceiverYAC, buildYACRanges, calculateYACSpeedBuffs } from "./engine/receiverYAC";
 export type { PassReadLoopState, QBDecisionRow } from "./engine/passReadLoop";

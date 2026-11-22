@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getPlayerGames, getPlayers, getPlayerStats, type PlayerGame, type PlayerStats } from "../../api/client";
+import { getPlayerGames, getPlayers, getPlayerStats, getTeamDefenseStats, type PlayerGame, type PlayerStats, type TeamDefenseStats } from "../../api/client";
 import { PlayerImage } from "../players/PlayerImage";
 import { AppSelect } from "../ui/AppSelect";
 import type { Player } from "../players/types";
@@ -260,8 +260,9 @@ function TeamCompleteTable({ mode, rows, onBack, onMode, onTeam }: { mode: "tota
       return [kickAtt, kickYds, kickAtt ? kickYds / kickAtt : 0, sum(["Kick Return Long", "KR LNG"]), sum(["Kick Return TD", "KR TD"]), puntAtt, puntYds, puntAtt ? puntYds / puntAtt : 0, sum(["Punt Return Long", "PR LNG"]), sum(["Punt Return TD", "PR TD"]), sum(["Punt Fair Catches", "Fair Catches", "FC"])];
     }
     if (mode === "turnovers") return [row.turnoverDiff, row.interceptions, row.fumbleRecoveries, row.takeaways, row.interceptionsThrown, row.fumblesLost, row.giveaways];
-    if (defensive) return [row.allowed, row.allowed / row.gp, row.allowedPassing, row.allowedPassing / row.gp, row.allowedRushing, row.allowedRushing / row.gp, row.pointsAllowed, row.pointsAllowed / row.gp];
-    return [row.total, row.total / row.gp, row.passing, row.passing / row.gp, row.rushing, row.rushing / row.gp, row.points, row.points / row.gp];
+    const perGame = (total: number) => row.gp ? total / row.gp : 0;
+    if (defensive) return [row.allowed, perGame(row.allowed), row.allowedPassing, perGame(row.allowedPassing), row.allowedRushing, perGame(row.allowedRushing), row.pointsAllowed, perGame(row.pointsAllowed)];
+    return [row.total, perGame(row.total), row.passing, perGame(row.passing), row.rushing, perGame(row.rushing), row.points, perGame(row.points)];
   };
   const changeSort = (column: string) => setSort((current) => ({ column, direction: current.column === column && current.direction === "desc" ? "asc" : "desc" }));
   const sortedRows = [...rows].sort((a, b) => {
@@ -281,6 +282,7 @@ export function LeagueStats({ teams, games = [], onTeam, requestedPlayer = null,
   const [activeView, setActiveView] = useState<StatsView>("Player");
   const [stats, setStats] = useState<PlayerStats[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [teamDefenseStats, setTeamDefenseStats] = useState<TeamDefenseStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [completeView, setCompleteView] = useState<CompleteView>(null);
@@ -289,7 +291,7 @@ export function LeagueStats({ teams, games = [], onTeam, requestedPlayer = null,
   const [entrySortColumn, setEntrySortColumn] = useState("YDS");
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(requestedPlayer);
 
-  useEffect(() => { Promise.all([getPlayerStats(), getPlayers()]).then(([statsResult, playersResult]) => { setStats(statsResult.playerStats); setPlayers(playersResult.players); }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load statistics")).finally(() => setLoading(false)); }, []);
+  useEffect(() => { Promise.all([getPlayerStats(), getPlayers(), getTeamDefenseStats()]).then(([statsResult, playersResult, defenseResult]) => { setStats(statsResult.playerStats); setPlayers(playersResult.players); setTeamDefenseStats(defenseResult.teamDefenseStats); }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load statistics")).finally(() => setLoading(false)); }, []);
 
   const statsPlayers = useMemo(() => players.map((player) => {
     const team = teams.find((candidate) => [candidate.Abbrev, candidate.Team, candidate.Name]
@@ -299,32 +301,20 @@ export function LeagueStats({ teams, games = [], onTeam, requestedPlayer = null,
   const playerByName = useMemo(() => new Map(statsPlayers.map((player) => [normalized(player.Name), player])), [statsPlayers]);
   const teamByKey = useMemo(() => new Map(teams.flatMap((team) => [team.Abbrev, team.Team, team.Name].filter(Boolean).map((value) => [normalized(value), team] as const))), [teams]);
   const teamTotals = useMemo<TeamTotal[]>(() => {
-    const offense = new Map<string, { passing: number; rushing: number }>();
     const rowsForTeam = (team: LeagueTeam) => {
       const keys = [team.Abbrev, team.Team, team.Name].filter(Boolean).map(normalized);
       return stats.filter((row) => keys.includes(normalized(playerByName.get(normalized(row.Player))?.Team)));
     };
-    teams.forEach((team) => {
-      const rows = rowsForTeam(team);
-      offense.set(normalized(team.Abbrev || team.Team || team.Name), {
-        passing: rows.reduce((n, row) => n + statValue(row, ["Passing Yards", "Pass Yards", "PassYards"]), 0),
-        rushing: rows.reduce((n, row) => n + statValue(row, ["Yards", "Rushing Yards", "Rush Yards"]), 0),
-      });
-    });
-    const findTeam = (key: unknown) => teams.find((team) => [team.Abbrev, team.Team, team.Name].some((value) => normalized(value) === normalized(key)));
     return teams.map((team) => {
       const keys = [team.Abbrev, team.Team, team.Name].filter(Boolean).map(normalized);
       const rows = rowsForTeam(team);
       const sum = (fields: string[]) => rows.reduce((total, row) => total + statValue(row, fields), 0);
       const passing = sum(["Passing Yards", "Pass Yards", "PassYards"]);
       const rushing = sum(["Yards", "Rushing Yards", "Rush Yards"]);
-      const completedGames = games.filter((game) => String(game.Qtr).toUpperCase() === "FINAL" && [game.Home, game.Away].some((value) => keys.includes(normalized(value))));
-      const opponents = completedGames
-        .map((game) => findTeam(keys.includes(normalized(game.Home)) ? game.Away : game.Home))
-        .filter((value): value is LeagueTeam => Boolean(value));
-      // Defensive yardage is the offense produced by each opponent in games this team actually played.
-      const allowedPassing = opponents.reduce((n, opponent) => n + (offense.get(normalized(opponent.Abbrev || opponent.Team || opponent.Name))?.passing || 0), 0);
-      const allowedRushing = opponents.reduce((n, opponent) => n + (offense.get(normalized(opponent.Abbrev || opponent.Team || opponent.Name))?.rushing || 0), 0);
+      const completedGames = games.filter((game) => /^(FINAL|F)$/i.test(String(game.Qtr).trim()) && [game.Home, game.Away].some((value) => keys.includes(normalized(value))));
+      const defense = teamDefenseStats.find((row) => keys.includes(normalized(row.team)));
+      const allowedPassing = defense?.passingYardsAllowed ?? 0;
+      const allowedRushing = defense?.rushingYardsAllowed ?? 0;
       const interceptions = sum(["Interceptions", "INT"]);
       const fumbleRecoveries = sum(["Fumble Recoveries", "FR"]);
       const interceptionsThrown = sum(["Interceptions Thrown", "Pass INT"]);
@@ -333,20 +323,20 @@ export function LeagueStats({ teams, games = [], onTeam, requestedPlayer = null,
       const giveaways = interceptionsThrown + fumblesLost;
       const points = completedGames.reduce((total, game) => total + number(keys.includes(normalized(game.Home)) ? game.HomeScore : game.AwayScore), 0) || teamField(team, ["PF", "Points For", "Points"]);
       const pointsAllowed = completedGames.reduce((total, game) => total + number(keys.includes(normalized(game.Home)) ? game.AwayScore : game.HomeScore), 0) || teamField(team, ["PA", "Points Against", "Points Allowed"]);
-      return { team, rows, gp: completedGames.length || teamGames(team), passing, rushing, total: passing + rushing, points, pointsAllowed, sacks: sum(["Sacks", "Sack"]), interceptions, fumbleRecoveries, takeaways, interceptionsThrown, fumblesLost, giveaways, turnoverDiff: takeaways - giveaways, allowedPassing, allowedRushing, allowed: allowedPassing + allowedRushing };
+      return { team, rows, gp: defense?.gamesPlayed ?? (completedGames.length || teamGames(team)), passing, rushing, total: passing + rushing, points, pointsAllowed, sacks: sum(["Sacks", "Sack"]), interceptions, fumbleRecoveries, takeaways, interceptionsThrown, fumblesLost, giveaways, turnoverDiff: takeaways - giveaways, allowedPassing, allowedRushing, allowed: allowedPassing + allowedRushing };
     });
-  }, [teams, games, stats, playerByName]);
+  }, [teams, games, stats, playerByName, teamDefenseStats]);
   const leadersFor = (category: Category): Leader[] => {
     if (activeView === "Player") return stats.map((row) => ({ row, player: playerByName.get(normalized(row.Player)), value: statValue(row, category.fields) })).filter(({ player, value }) => value > 0 && (!category.positions || category.positions.includes(String(player?.Pos || "").toUpperCase()))).sort((a, b) => b.value - a.value).slice(0, 5).map(({ row, player, value }) => ({ name: row.Player, detail: String(player?.Team || ""), player, value }));
     const totals = new Map<string, number>();
     stats.forEach((row) => { const player = playerByName.get(normalized(row.Player)); const key = normalized(player?.Team); if (key) totals.set(key, (totals.get(key) || 0) + statValue(row, category.fields)); });
     return [...totals].filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([key, value]) => { const team = teamByKey.get(key); return { name: team ? teamName(team) : statsPlayers.find((player) => normalized(player.Team) === key)?.Team || key.toUpperCase(), image: String(team?.Logo || ""), value }; });
   };
-  const teamLeadersFor = (category: Category): Leader[] => teamTotals.map((row) => {
+  const teamLeadersFor = (category: Category): Leader[] => teamTotals.filter((row) => category.fields[0] !== "allowed" || row.gp > 0).map((row) => {
     const key = category.fields[0] as "total" | "passing" | "rushing" | "sacks" | "turnoverDiff" | "allowed";
     const raw = row[key] as number;
-    return { name: teamName(row.team), image: String(row.team.Logo || ""), team: row.team, value: ["total", "passing", "rushing", "allowed"].includes(key) ? raw / row.gp : raw };
-  }).filter(({ value }) => value > 0).sort((a, b) => category.title === "YARDS ALLOWED" ? a.value - b.value : b.value - a.value).slice(0, 5);
+    return { name: teamName(row.team), image: String(row.team.Logo || ""), team: row.team, value: ["total", "passing", "rushing", "allowed"].includes(key) ? (row.gp ? raw / row.gp : 0) : raw };
+  }).filter(({ value }) => category.fields[0] === "allowed" || value > 0).sort((a, b) => category.title === "YARDS ALLOWED" ? a.value - b.value : b.value - a.value).slice(0, 5);
   const completeColumns: StatColumn[] = completeView === "passing" ? PASSING_COLUMNS : completeView === "rushing" ? RUSHING_COLUMNS : completeView === "receiving" ? RECEIVING_COLUMNS : completeView === "blocking" ? BLOCKING_COLUMNS : DEFENSIVE_COLUMNS;
   const isOffenseComplete = completeView === "passing" || completeView === "rushing" || completeView === "receiving" || completeView === "blocking";
   const completeRows = stats.filter((row) => {

@@ -127,7 +127,7 @@ const ctx: EngineContext = {
       .map((throwType) => ({ throwType, depths: [{ maxAirYards: 100, multiplier: 1 }] })),
     accuracyModifiers: [{ throwType: "Perfect", min: 10, max: 20 }, { throwType: "Accurate", min: 5, max: 9 },
       { throwType: "Close", min: -4, max: 4 }, { throwType: "Catchable", min: -9, max: -5 }, { throwType: "Off Target", min: -20, max: -10 }],
-    qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 0, noticeIfPrimary: 100 }] }, historyLength: 0,
+    qbDecisionTable: [{ perceivedMax: 1000, label: "Test", secondReadNotice: 0, thirdReadNotice: 0, fourthReadNotice: 0, noticeIfPrimary: 100 }] }, historyLength: 0,
 };
 const options: PlayCallOptions = { blitz: false, formation: { WR1: "Receiver" }, routes: { Receiver: "Flat" }, routeDepths: { Receiver: "Quick" }, defense: [{ player: "Corner", position: "DB1", align: "WR1" }] };
 
@@ -155,10 +155,10 @@ test("pass pipeline retains calculation inputs for later openness graphs", (t) =
   assert.equal(state.opennessTrajectory[0].phaseImpacts, route.phaseImpacts);
   assert.equal(state.opennessTrajectory[0].opennessInputs, route.opennessInputs);
   assert.equal(state.readLoop?.currentRead, 1);
-  assert.equal(state.readLoop?.currentTime, 1);
+  assert.equal(state.readLoop?.currentTime, 0.25);
   assert.equal(state.readLoop?.stopReason, "throw");
   assert.equal(state.target?.player, "Receiver");
-  assert.deepEqual(state.readLoop?.snapshots.map((snapshot) => snapshot.currentTime), [0.25, 0.5, 0.75, 1]);
+  assert.deepEqual(state.readLoop?.snapshots.map((snapshot) => snapshot.currentTime), [0.25]);
   const perceived = state.readLoop!.snapshots[0].receivers[0];
   assert.equal(perceived.player, "Receiver");
   assert.equal(perceived.openness, perceived.baseOpenness + perceived.skillBasedOpennessMod);
@@ -167,21 +167,24 @@ test("pass pipeline retains calculation inputs for later openness graphs", (t) =
 
 test("an unblocked blitz skips the unpressured read loop", (t) => {
   t.mock.method(console, "debug", () => {});
-  t.mock.method(Math, "random", () => 0.99);
+  const rolls = [.99, .99, .99, .99, 0, .5, .99];
+  t.mock.method(Math, "random", () => rolls.shift() ?? .99);
   const blitzContext = { ...ctx, players: [...ctx.players,
     { name: "Blitzer", team: "Away", defPos: "LB", passRush: 60, tackling: 60, defStars: 1 }] };
   const state = runPassPlayPipeline(game, blitzContext, "QB", { ...options, blitz: true,
     defense: [...options.defense!, { player: "Blitzer", position: "LB1" }] });
   assert.deepEqual(state.pressure, ["Blitzer"]);
   assert.equal(state.readLoop, undefined);
-  assert.ok(state.log.some((message) => message.includes("Unpressured read loop skipped")));
+  assert.equal(state.decision, "sack");
+  assert.equal(state.sacker, "Blitzer");
+  assert.equal(state.pressureHit?.hitter, "Blitzer");
 });
 
 test("declining all reads continues to the deadline and rolls the throw-away option", (t) => {
   t.mock.method(console, "debug", () => {});
   t.mock.method(Math, "random", () => 0.5);
   const context = { ...ctx, settings: { ...ctx.settings,
-    qbDecisionTable: [{ perceivedMax: 1000, label: "Unavailable", baseNotice: null, noticeIfPrimary: null }] } };
+    qbDecisionTable: [{ perceivedMax: 1000, label: "Unavailable", secondReadNotice: null, thirdReadNotice: null, fourthReadNotice: null, noticeIfPrimary: null }] } };
   const state = runPassPlayPipeline(game, context, "QB", options);
   assert.equal(state.readLoop?.stopReason, "time-to-throw");
   assert.equal(state.readLoop?.currentTime, 2);
@@ -201,13 +204,13 @@ test("a base-notice throw is handed to the pass pipeline before the read is read
   t.mock.method(console, "log", () => {});
   t.mock.method(Math, "random", () => 0.5);
   const context = { ...ctx, settings: { ...ctx.settings,
-    qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 100, noticeIfPrimary: 0 }] } };
+    qbDecisionTable: [{ perceivedMax: 1000, label: "Test", secondReadNotice: 100, thirdReadNotice: 100, fourthReadNotice: 100, noticeIfPrimary: 100 }] } };
   const state = runPassPlayPipeline(game, context, "QB", options);
   assert.equal(state.decision, "throw");
   assert.equal(state.target?.player, "Receiver");
   assert.equal(state.readLoop?.currentTime, 0.25);
   assert.ok(state.readLoop!.currentTime < Number(state.target?.TTO));
-  assert.equal(state.readLoop?.decisions[0].noticeType, "base");
+  assert.equal(state.readLoop?.decisions[0].noticeType, "scan");
   assert.equal(state.throwCompletion?.throwTime, 0.25);
   assert.equal(state.throwCompletion?.baseCompletion, 70);
   assert.equal(state.throwCompletion?.actualOpenness, state.readLoop?.snapshots[0].receivers[0].openness);
@@ -239,7 +242,7 @@ test("forced deadline throws reach completion with the expiration timestamp", (t
   t.mock.method(console, "log", () => {});
   t.mock.method(Math, "random", () => 0.25);
   const context = { ...ctx, settings: { ...ctx.settings,
-    qbDecisionTable: [{ perceivedMax: 1000, label: "No notice", baseNotice: null, noticeIfPrimary: null }] } };
+    qbDecisionTable: [{ perceivedMax: 1000, label: "No notice", secondReadNotice: null, thirdReadNotice: null, fourthReadNotice: null, noticeIfPrimary: null }] } };
   const state = runPassPlayPipeline(game, context, "QB", options);
   assert.equal(state.readLoop?.expirationDecision?.action, "force-throw");
   assert.equal(state.decision, "throw");
@@ -254,7 +257,7 @@ test("the scramble option resolves a QB run rather than a sack or pass", (t) => 
   const context = { ...ctx, players: [...ctx.players, { name: "QB", team: "Home", position: "QB", speed: 60, acceleration: 60, vision: 100 },
       { name: "Blocker", team: "Home", runBlocking: 100, passProtect: 50 },
       { name: "Rusher", team: "Away", defPos: "DL", runStop: 10, passRush: 50 }],
-    settings: { ...ctx.settings, qbDecisionTable: [{ perceivedMax: 1000, label: "No notice", baseNotice: null, noticeIfPrimary: null }] } };
+    settings: { ...ctx.settings, qbDecisionTable: [{ perceivedMax: 1000, label: "No notice", secondReadNotice: null, thirdReadNotice: null, fourthReadNotice: null, noticeIfPrimary: null }] } };
   const call = { ...options, formation: { ...options.formation, QB: "QB", LT: "Blocker" },
     defense: [...options.defense!, { player: "Rusher", position: "DL1", align: "LT" }] };
   const state = runPassPlayPipeline(game, context, "QB", call);
@@ -488,6 +491,9 @@ test("backs retain their routes on no blitz, failed back pickup, or a pickup by 
 
   const weakBacks = { ...context, players: context.players.map((player) => player.name === "Blocking Back" ? { ...player, passProtect: 10 }
     : player.name === "Other Back" ? { ...player, passProtect: 5 } : player) };
+  // Keep this route-retention case on the new 10% forced-throw branch.
+  const failedRolls = [.5, .5, .5, .5, .5, .5, .5, .15];
+  t.mock.method(Math, "random", () => failedRolls.shift() ?? .5);
   const failed = runPassPlayPipeline(game, weakBacks, "QB", call);
   assert.equal(failed.blitzResult?.backBlocked, false);
   assert.deepEqual(failed.routes.map((route) => route.player), ["Receiver", "Blocking Back", "Other Back"]);
@@ -530,5 +536,29 @@ test("route-jump deflections persist the guarding DB and remain incompletions on
     assert.equal(result.play.result, down === 4 ? "TO on Downs" : "Incomplete");
     assert.equal(result.game.Possession, down === 4 ? "Away" : "Home");
     if (down === 4) { assert.equal(result.game.Down, 1); assert.equal(result.game.Distance, 10); }
+  }
+});
+
+test("non-blitz pressure can throw away or force a throw without a negative-time openness error", (t) => {
+  t.mock.method(console, "log", () => {});
+  t.mock.method(console, "debug", () => {});
+  const context = completionContext(1);
+  context.players = [...context.players, { name: "OL", team: "Home", passProtect: 1 },
+    { name: "DL", team: "Away", passRush: 100 }];
+  context.settings.timeToThrowRanges = [{ min: 0, max: 0, percentage: 100 }];
+  const call: PlayCallOptions = { ...options, formation: { ...options.formation, C: "OL" },
+    defense: [...options.defense!, { player: "DL", position: "DL1", align: "C" }] };
+  for (const [hitRoll, responseRoll, expected] of [[.1, .05, "throw-away"], [.1, .15, "throw"], [.99, .1, "throw"]] as const) {
+    // Six line rolls, two timing rolls, hit check, attribution, then response.
+    const rolls = [...Array(8).fill(.5), hitRoll, ...(hitRoll < .27 ? [.5] : []), responseRoll];
+    t.mock.method(Math, "random", () => rolls.shift() ?? .5);
+    const state = runPassPlayPipeline(game, context, "QB", call);
+    assert.equal(state.decision, expected);
+    assert.equal(state.pressureHit?.hitter, hitRoll < .27 ? "DL" : undefined);
+    assert.equal(state.readLoop, undefined);
+    if (expected === "throw") {
+      assert.equal(state.target?.player, "Receiver");
+      assert.ok(state.throwCompletion);
+    } else assert.equal(state.target, undefined);
   }
 });

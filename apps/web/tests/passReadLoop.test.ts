@@ -1,280 +1,169 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calculateReadDefenseModifier, runUnpressuredReadLoop, getPrimaryNoticeChance, chooseTimeExpiredAction } from "../src/components/league/gameplay/engine/passReadLoop.ts";
+import { calculateReadDefenseModifier, runUnpressuredReadLoop, getReadNoticeChance, rankQBReads, chooseTimeExpiredAction } from "../src/components/league/gameplay/engine/passReadLoop.ts";
 import { parseQBDecisionSettings } from "../../api/src/services/qbDecisionSettings.ts";
 
-const settings = { curves: { Break: [{ time: 0.5, openness: 20 }, { time: 1, openness: 60 }] },
-  qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 0, noticeIfPrimary: 100 }] };
-const routes = ["WR1", "WR2"].map((player) => ({ player, TTO: 1, curveType: "Break",
-  phaseOpenness: [{ start: 0, end: 1, duration: 1, phaseImpact: 8 }] }));
+const row = (primary = 0, second = 0, third = 0, fourth = 0) => ({ perceivedMax: 1000, label: "Test", noticeIfPrimary: primary, secondReadNotice: second, thirdReadNotice: third, fourthReadNotice: fourth });
+const config = (primary = 0, second = 0, third = 0, fourth = 0) => ({ curves: { Break: [{ time: 0, openness: 50 }] }, qbDecisionTable: [row(primary, second, third, fourth)] });
+const routes = ["WR1", "WR2", "WR3", "WR4"].map((player) => ({ player, TTO: 1, curveType: "Break", phaseOpenness: [] }));
+const sequence = (...values: number[]) => () => { assert.ok(values.length, "Unexpected random draw"); return values.shift()!; };
 
-test("starts at zero/read one, advances by quarters, and stops when the read reaches TTO", () => {
-  let rolls = 0;
-  const state = runUnpressuredReadLoop(settings, routes, 2, 0, {}, () => { rolls++; return 0; });
-  assert.equal(state.currentRead, 1);
-  assert.equal(state.currentReadPlayer, "WR1");
-  assert.equal(state.currentTime, 1);
-  assert.equal(state.stopReason, "throw");
-  assert.equal(state.targetPlayer, "WR1");
-  assert.deepEqual(state.snapshots.map((snapshot) => snapshot.currentTime), [0.25, 0.5, 0.75, 1]);
-  assert.equal(rolls, 9);
-  assert.deepEqual(state.snapshots[0].receivers[0], {
-    player: "WR1", baseOpenness: 10, skillBasedOpennessMod: 2, openness: 12,
-    readDefenseAdjustment: 23, perceivedOpenness: 35,
-  });
+const suppliedTable = parseQBDecisionSettings([
+  ["QB Decision Table"], ["Open Score", "perceived max", "Label", "What it means on the field", "Notice if Primary", "2nd read notice", "3rd notice", "4th notice"],
+  ["0–10", 10, "Erased", "", "NA", "NA", "NA", "NA"],
+  ["11–20", 20, "Blanketed", "", "NA", "NA", "NA", "NA"],
+  ["21–35", 35, "Covered", "", 10, "NA", "NA", "NA"],
+  ["36–49", 49, "Tight", "", 20, 10, "NA", "NA"],
+  ["50–59", 59, "Slightly open", "", 50, 20, 10, "NA"],
+  ["60–69", 69, "Open", "", 80, 30, 20, 5],
+  ["70–79", 79, "Clearly open", "", 90, 50, 40, 15],
+  ["80–89", 89, "Very open", "", 95, 80, 75, 25],
+  ["90–100", 1000, "Wide open", "", 99, 95, 87, 50],
+]);
+
+test("the sheet supplies distinct chances for all four ranks, including decimals and NA", () => {
+  assert.deepEqual([1, 2, 3, 4].map(rank => getReadNoticeChance(suppliedTable, 72, rank).chance), [90, 50, 40, 15]);
+  assert.deepEqual([1, 2, 3, 4].map(rank => getReadNoticeChance(suppliedTable, 56, rank).chance), [50, 20, 10, 0]);
+  assert.equal(getReadNoticeChance(suppliedTable, 69.1, 2).chance, 50);
+  assert.equal(getReadNoticeChance(suppliedTable, -5, 1).chance, 0);
+  assert.equal(getReadNoticeChance(suppliedTable, 2000, 4).chance, 50);
 });
 
-test("72 openness uses 67 primary notice, with a strict decimal roll boundary", () => {
-  const table = [
-    { perceivedMax: 69, label: "Open", baseNotice: 20, noticeIfPrimary: 50 },
-    { perceivedMax: 79, label: "Clearly open", baseNotice: 35, noticeIfPrimary: 67 },
-    { perceivedMax: 1000, label: "Wide open", baseNotice: 90, noticeIfPrimary: 99 },
-  ];
-  const config = { curves: { Break: [{ time: 0, openness: 49 }] }, qbDecisionTable: table };
-  const receiver = { player: "WR", TTO: 0.25, curveType: "Break", phaseOpenness: [] };
-  for (const [roll, shouldThrow] of [[0.66999, true], [0.67, false]] as const) {
-    const rolls = [0, roll, 0];
-    const state = runUnpressuredReadLoop(config, [receiver], 2, 0, {}, () => rolls.shift() ?? 0.5);
-    assert.equal(state.decisions[0].perceivedOpenness, 72);
-    assert.equal(state.decisions[0].noticeChance, 67);
-    assert.equal(state.decisions[0].throw, shouldThrow);
+test("rankings rotate every passed read and all become rank 2 after one cycle", () => {
+  const original = structuredClone(routes);
+  for (const [current, expected] of [[1, ["WR1", "WR2", "WR3", "WR4"]], [2, ["WR2", "WR3", "WR4", "WR1"]], [3, ["WR3", "WR4", "WR1", "WR2"]], [4, ["WR4", "WR1", "WR2", "WR3"]]] as const) {
+    const ranked = rankQBReads(routes, current);
+    assert.deepEqual(ranked.map(({ route }) => route.player), expected);
+    assert.deepEqual(ranked.map(({ readRank }) => readRank), [1, 2, 3, 4]);
   }
-  assert.equal(getPrimaryNoticeChance(table, 69.1).chance, 67);
-  assert.equal(getPrimaryNoticeChance(table, 2000).chance, 99);
-  assert.equal(getPrimaryNoticeChance([{ ...table[0], noticeIfPrimary: null }], -20).chance, 0);
+  assert.deepEqual(rankQBReads(routes, null).map(({ readRank }) => readRank), [2, 2, 2, 2]);
+  assert.deepEqual(routes, original);
 });
 
-test("a declined throw advances read, adds the random delay, then restarts with a quarter step", () => {
-  const config = { curves: settings.curves,
-    qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 0, noticeIfPrimary: 50 }] };
-  const receivers = routes.map((route) => ({ ...route, TTO: 0.25 }));
-  for (const delayRoll of [0, 0.999999]) {
-    const rolls = [0, 0, 0.9, delayRoll, 0, 0, 0.1];
-    const state = runUnpressuredReadLoop(config, receivers, 2, 0, { WR2: "1", WR1: "2" }, () => rolls.shift()!);
-    assert.equal(state.decisions[0].player, "WR2");
-    assert.equal(state.decisions[0].throw, false);
-    assert.equal(state.decisions[0].readDelay, 0.05 + delayRoll * 0.25);
-    assert.equal(state.decisions[1].currentTime, 0.5 + state.decisions[0].readDelay!);
-    assert.equal(state.currentRead, 2);
-    assert.equal(state.targetPlayer, "WR1");
-  }
-});
-
-test("no decision after budget expiration; unavailable table fails when a decision is needed", () => {
-  const ready = [{ ...routes[0], TTO: 0.25 }];
-  const state = runUnpressuredReadLoop(settings, ready, 0.25, 0, {}, () => 0);
-  assert.equal(state.decisions.length, 0);
-  assert.equal(state.stopReason, "time-to-throw");
-  assert.throws(() => runUnpressuredReadLoop({ ...settings, qbDecisionTable: [] }, ready, 2, 0, {}, () => 0), /Missing QB Decision Table/);
-});
-
-test("each receiver gets an independent sign at each time without changing actual openness", () => {
-  const before = structuredClone(routes);
-  const rolls = [0.1, 0.9, 0.9, 0.1];
-  const state = runUnpressuredReadLoop(settings, routes, 0.5, 0, {}, () => rolls.shift()!);
-  assert.deepEqual(state.snapshots.map((snapshot) => snapshot.receivers.map((r) => r.readDefenseAdjustment)), [[23, -23], [-23, 23]]);
-  assert.equal(state.snapshots[0].receivers[1].perceivedOpenness, -11);
-  assert.deepEqual(routes, before);
-  assert.equal(state.stopReason, "time-to-throw");
-});
-
-test("uses the exact polynomial and respects configured read order", () => {
-  const rating = 80;
-  const expected = 0.00000055296676 * rating ** 4 - 0.00014271986272 * rating ** 3 +
-    0.011884760129588 * rating ** 2 - 0.536559194662642 * rating + 23;
-  assert.equal(calculateReadDefenseModifier(rating), expected);
-  const deeper = [routes[0], { ...routes[1], TTO: 2 }];
-  const state = runUnpressuredReadLoop(settings, deeper, 1.5, rating, { WR1: "2", WR2: "1" }, () => 0);
-  assert.equal(state.currentReadPlayer, "WR2");
-  assert.equal(state.snapshots.length, 6);
-  assert.equal(state.snapshots[0].receivers[0].readDefenseAdjustment, expected);
-  assert.equal(runUnpressuredReadLoop(settings, deeper, 0, rating, { WR2: "Primary" }).currentReadPlayer, "WR2");
-});
-
-test("checks time budget before each full quarter step, including non-quarter budgets", () => {
-  const state = runUnpressuredReadLoop(settings, routes, 0.3, 50, {}, () => 0.5);
-  assert.equal(state.currentTime, 0.3);
-  assert.equal(state.snapshots.length, 2);
-  assert.equal(runUnpressuredReadLoop(settings, routes, 0, 50).snapshots[0].currentTime, 0);
-  assert.equal(runUnpressuredReadLoop(settings, [], 2, 50).stopReason, "no-routes");
-  assert.throws(() => runUnpressuredReadLoop(settings, routes, Infinity, 50), /time to throw/);
-  assert.throws(() => calculateReadDefenseModifier(NaN), /read defense/);
-});
-
-const earlySettings = {
-  curves: { First: [{ time: 0, openness: 33 }], Second: [{ time: 0, openness: 21 }], Third: [{ time: 0, openness: 38 }] },
-  qbDecisionTable: parseQBDecisionSettings([
-    ["QB Decision Table"], ["Open Score", "perceived max", "Label", "What it means on the field", "Base Notice", "Notice if Primary"],
-    ["0–10", 10, "Erased", "", "NA", "NA"], ["11–20", 20, "Blanketed", "", "NA", "NA"],
-    ["21–35", 35, "Covered", "", "NA", 5], ["36–49", 49, "Tight window", "", "NA", 15],
-    ["50–59", 59, "Slightly open", "", 5, 45], ["60–69", 69, "Open", "", 30, 67],
-    ["70–79", 79, "Clearly open", "", 45, 75], ["80–89", 89, "Very open", "", 80, 89],
-    ["90–100", 1000, "Wide open", "", 90, 99],
-  ]),
-};
-// Deliberately shuffled so early checks must respect the configured reads.
-const earlyRoutes = [
-  { player: "WR3", curveType: "Third", TTO: 2, phaseOpenness: [] },
-  { player: "WR1", curveType: "First", TTO: 2, phaseOpenness: [] },
-  { player: "WR2", curveType: "Second", TTO: 2, phaseOpenness: [] },
-];
-const earlyReads = { WR1: "1", WR2: "2", WR3: "3" };
-
-test("the supplied 56/44/61 example checks base notice in read order and skips NA without a roll", (t) => {
+test("waiting scans use ranks 1/2/3/4 and stop at the first noticed receiver", (t) => {
   const log = t.mock.method(console, "log", () => {});
-  const rolls = [0, 0, 0, 0.05, 0.29999];
-  const state = runUnpressuredReadLoop(earlySettings, earlyRoutes, 3, 0, earlyReads, () => {
-    assert.ok(rolls.length, "Unexpected roll (possibly an NA band)");
-    return rolls.shift()!;
-  });
-  assert.equal(rolls.length, 0);
-  assert.equal(state.currentTime, 0.25);
-  assert.equal(state.currentRead, 1);
+  const state = runUnpressuredReadLoop(config(50, 30, 20, 10), routes, 2, 0, {}, sequence(0, 0, 0, 0, .8, .3, .19999));
+  assert.equal(state.currentTime, .25);
   assert.equal(state.targetPlayer, "WR3");
-  const scan = log.mock.calls.find((call) => call.arguments[0] === "[Pass Engine] QB base notice scan")!.arguments[1];
-  assert.deepEqual(scan.receivers.map(({ player, rollMade, roll }) => ({ player, rollMade, roll })), [
-    { player: "WR1", rollMade: true, roll: 5 },
-    { player: "WR2", rollMade: false, roll: null },
-    { player: "WR3", rollMade: true, roll: 29.999 },
-  ]);
-  assert.deepEqual(state.decisions.map(({ player, perceivedOpenness, noticeChance, noticeType, throw: madeThrow }) =>
-    ({ player, perceivedOpenness, noticeChance, noticeType, madeThrow })), [
-    { player: "WR1", perceivedOpenness: 56, noticeChance: 5, noticeType: "base", madeThrow: false },
-    { player: "WR3", perceivedOpenness: 61, noticeChance: 30, noticeType: "base", madeThrow: true },
-  ]);
+  assert.deepEqual(state.decisions.map(d => [d.player, d.readRank, d.noticeChance, d.throw]), [["WR1", 1, 50, false], ["WR2", 2, 30, false], ["WR3", 3, 20, true]]);
+  const scan = log.mock.calls.find(call => call.arguments[0] === "[Pass Engine] QB ranked notice scan")!.arguments[1];
+  assert.deepEqual(scan.receivers.map((r: any) => r.rollMade), [true, true, true, false]);
+  assert.deepEqual(state.snapshots[0].receivers.map(r => [r.readRank, r.noticeChance]), [[1, 50], [2, 30], [3, 20], [4, 10]]);
 });
 
-test("the first successful base check stops later checks", () => {
-  const rolls = [0, 0, 0, 0.04999];
-  const state = runUnpressuredReadLoop(earlySettings, earlyRoutes, 3, 0, earlyReads, () => {
-    assert.ok(rolls.length, "Later receivers should not be rolled after a throw");
-    return rolls.shift()!;
-  });
-  assert.equal(state.targetPlayer, "WR1");
-  assert.equal(state.decisions.length, 1);
+test("waiting NA/zero ranks skip notice rolls", () => {
+  const settings = { curves: { Break: [{ time: 0, openness: 33 }] }, qbDecisionTable: suppliedTable };
+  // Perceived openness is 56, giving chances 50/20/10/NA.
+  const state = runUnpressuredReadLoop(settings, routes, .5, 0, {}, sequence(0, 0, 0, 0, .9, .9, .9, 0, 0, 0, 0, .5));
+  assert.deepEqual(state.decisions.map(d => d.readRank), [1, 2, 3]);
+  assert.equal(state.snapshots[0].receivers[3].noticeChance, 0);
+  assert.equal(state.currentTime, .5);
 });
 
-test("failed base checks keep the current read and advance by only the next quarter step", () => {
-  const rolls = [0, 0, 0, 0.05, 0.3, 0, 0, 0, 0.9, 0.1];
-  const state = runUnpressuredReadLoop(earlySettings, earlyRoutes, 3, 0, earlyReads, () => rolls.shift()!);
-  assert.deepEqual(state.snapshots.map(({ currentTime, currentRead }) => ({ currentTime, currentRead })), [
-    { currentTime: 0.25, currentRead: 1 }, { currentTime: 0.5, currentRead: 1 },
-  ]);
-  assert.equal(state.targetPlayer, "WR3");
-  assert.ok(state.decisions.every((decision) => decision.noticeType === "base" && decision.readDelay === undefined));
-  assert.equal(rolls.length, 0);
+test("ready current reads use rank 1 and strict less-than boundaries", () => {
+  const ready = [{ ...routes[0], TTO: .25 }];
+  for (const [roll, throws] of [[.49999, true], [.5, false]] as const) {
+    const values = [0, roll, 0];
+    const state = runUnpressuredReadLoop(config(50), ready, .6, 0, {}, () => values.shift() ?? .5);
+    assert.equal(state.decisions[0].noticeChance, 50);
+    assert.equal(state.decisions[0].readRank, 1);
+    assert.equal(state.decisions[0].throw, throws);
+    assert.equal(state.decisions[0].noticeType, "current");
+  }
 });
 
-test("ready reads still use primary notice and no base checks occur after time expires", () => {
-  const ready = earlyRoutes.map((route) => ({ ...route, TTO: 0.25 }));
-  const rolls = [0, 0, 0, 0.4]; // 40 beats primary 45, but would fail base 5.
-  const state = runUnpressuredReadLoop(earlySettings, ready, 3, 0, earlyReads, () => rolls.shift()!);
-  assert.equal(state.targetPlayer, "WR1");
-  assert.equal(state.decisions[0].noticeType, "primary");
-  assert.equal(state.decisions[0].noticeChance, 45);
-  const expired = runUnpressuredReadLoop(earlySettings, earlyRoutes, 0.25, 0, earlyReads, () => 0);
-  assert.equal(expired.decisions.length, 0);
-  assert.equal(expired.targetPlayer, "WR3");
-  assert.equal(expired.expirationDecision?.action, "force-throw");
+test("declining a read preserves delay and quarter-step timing while rotating the next receiver to rank 1", () => {
+  const ready = routes.slice(0, 2).map(r => ({ ...r, TTO: .25 }));
+  for (const delay of [0, .99999]) {
+    const state = runUnpressuredReadLoop(config(50), ready, 2, 0, { WR2: "1", WR1: "2" }, sequence(0, 0, .9, delay, 0, 0, .1));
+    assert.equal(state.decisions[0].player, "WR2");
+    assert.equal(state.decisions[0].readDelay, .05 + delay * .25);
+    assert.equal(state.decisions[1].currentTime, .5 + state.decisions[0].readDelay!);
+    assert.equal(state.targetPlayer, "WR1");
+    assert.deepEqual(state.snapshots[1].receivers.map(r => [r.player, r.readRank]), [["WR1", 1], ["WR2", 2]]);
+  }
 });
 
-test("after the last read, clears the current read and scans all receivers until expiration", () => {
-  const config = { ...settings, qbDecisionTable: [{ perceivedMax: 1000, label: "No notice", baseNotice: 0, noticeIfPrimary: 0 }] };
-  const ready = routes.map((route) => ({ ...route, TTO: 0.25 }));
-  const state = runUnpressuredReadLoop(config, ready, 2, 0, {}, () => 0.5);
-  assert.equal(state.currentTime, 2);
-  assert.equal(state.stopReason, "time-to-throw");
-  assert.deepEqual(state.decisions.map((decision) => decision.player), ["WR1", "WR2"]);
+test("unready second read rotates previous primary to last, with every chance logged", (t) => {
+  const log = t.mock.method(console, "log", () => {});
+  const waiting = routes.map((r, i) => ({ ...r, TTO: i === 0 ? .25 : 10 }));
+  const state = runUnpressuredReadLoop(config(10, 20, 30, 40), waiting, 1, 0, {}, () => .99);
+  const snapshot = state.snapshots.find(s => s.currentRead === 2)!;
+  assert.deepEqual(snapshot.receivers.map(r => [r.player, r.readRank, r.noticeChance]), [["WR2", 1, 10], ["WR3", 2, 20], ["WR4", 3, 30], ["WR1", 4, 40]]);
+  const scan = log.mock.calls.find(call => call.arguments[0] === "[Pass Engine] QB ranked notice scan")!.arguments[1];
+  assert.deepEqual(scan.receivers.map((r: any) => r.player), ["WR2", "WR3", "WR4", "WR1"]);
+});
+
+test("after all reads pass, every receiver uses second-read notice with no current read", () => {
+  const ready = routes.map(r => ({ ...r, TTO: .25 }));
+  const state = runUnpressuredReadLoop(config(0, 30, 60, 90), ready, 3, 0, {}, () => .5);
   assert.equal(state.currentRead, null);
   assert.equal(state.currentReadPlayer, undefined);
-  assert.ok(state.snapshots.some((snapshot) => snapshot.currentRead === null));
+  assert.deepEqual(state.snapshots.slice(0, 4).map(s => s.receivers.map(r => r.player)), [
+    ["WR1", "WR2", "WR3", "WR4"], ["WR2", "WR3", "WR4", "WR1"],
+    ["WR3", "WR4", "WR1", "WR2"], ["WR4", "WR1", "WR2", "WR3"],
+  ]);
+  const scans = state.snapshots.filter(s => s.currentRead === null);
+  assert.ok(scans.length > 0);
+  assert.ok(scans.every(s => s.receivers.every(r => r.readRank === 2 && r.noticeChance === 30)));
+  assert.ok(state.decisions.filter(d => d.noticeType === "scan").every(d => d.readRank === 2 && d.noticeChance === 30));
+  assert.equal(state.currentTime, 3);
   assert.equal(state.decision, "throw-away");
 });
 
-test("expiration decision has 50/25/25 thresholds with exact boundaries", () => {
-  for (const [roll, action] of [[0, "force-throw"], [0.49999, "force-throw"], [0.5, "throw-away"],
-    [0.74999, "throw-away"], [0.75, "scramble"], [0.99999, "scramble"]] as const)
-    assert.equal(chooseTimeExpiredAction(() => roll).action, action);
-});
-
-test("forced throw selects current perceived openness at the exact deadline", () => {
-  const config = { curves: { High: [{ time: 0, openness: 70 }], Low: [{ time: 0, openness: 60 }] },
-    qbDecisionTable: [{ perceivedMax: 1000, label: "No notice", baseNotice: 0, noticeIfPrimary: 0 }] };
-  const receivers = [{ player: "ActualBest", TTO: 10, curveType: "High", phaseOpenness: [] },
-    { player: "PerceivedBest", TTO: 10, curveType: "Low", phaseOpenness: [] }];
-  // First look favors ActualBest; the deadline look favors PerceivedBest.
-  const rolls = [0, 0.9, 0.9, 0, 0.49];
-  const state = runUnpressuredReadLoop(config, receivers, 0.3, 0, {}, () => rolls.shift()!);
-  assert.equal(state.currentTime, 0.3);
-  assert.equal(state.snapshots.at(-1)?.currentTime, 0.3);
-  assert.equal(state.targetPlayer, "PerceivedBest");
-  assert.equal(state.decision, "throw");
-  assert.equal(state.expirationDecision?.action, "force-throw");
-  assert.equal(rolls.length, 0);
-});
-
-test("a read delay crossing the deadline refreshes openness before the final decision", () => {
-  const config = { ...settings, qbDecisionTable: [{ perceivedMax: 1000, label: "No notice", baseNotice: 0, noticeIfPrimary: 0 }] };
-  const ready = [{ ...routes[0], TTO: 0.25 }];
-  const rolls = [0, 0.9, 0.99, 0, 0.8];
-  const state = runUnpressuredReadLoop(config, ready, 0.4, 0, {}, () => rolls.shift()!);
-  assert.equal(state.currentTime, 0.4);
-  assert.equal(state.snapshots.at(-1)?.currentTime, 0.4);
-  assert.equal(state.decision, "scramble");
-  assert.equal(state.targetPlayer, undefined);
-  assert.equal(rolls.length, 0);
-});
-
-test("after reads are exhausted, base notice can throw without another primary read", () => {
-  const config = { curves: settings.curves,
-    qbDecisionTable: [{ perceivedMax: 1000, label: "Notice", baseNotice: 30, noticeIfPrimary: 0 }] };
-  const ready = routes.map((route) => ({ ...route, TTO: 0.25 }));
-  // Two primary reads decline, then the scan skips WR1 and notices WR2.
-  const rolls = [0, 0, 0.9, 0, 0, 0, 0.9, 0, 0, 0, 0.9, 0.1];
-  const state = runUnpressuredReadLoop(config, ready, 2, 0, {}, () => {
-    assert.ok(rolls.length, "Unexpected additional roll");
-    return rolls.shift()!;
-  });
+test("an exhausted cycle can notice any receiver using the second-read column", () => {
+  const ready = routes.slice(0, 2).map(r => ({ ...r, TTO: .25 }));
+  const state = runUnpressuredReadLoop(config(0, 100), ready, 2, 0, {}, () => .5);
   assert.equal(state.currentRead, null);
-  assert.equal(state.currentReadPlayer, undefined);
-  assert.equal(state.targetPlayer, "WR2");
-  assert.equal(state.decision, "throw");
-  assert.deepEqual(state.decisions.map((decision) => decision.noticeType), ["primary", "primary", "base", "base"]);
-  assert.ok(state.decisions.slice(2).every((decision) => decision.currentRead === null && decision.readDelay === undefined));
+  assert.equal(state.targetPlayer, "WR1");
+  assert.equal(state.decisions.at(-1)?.readRank, 2);
+  assert.equal(state.decisions.at(-1)?.noticeChance, 100);
   assert.equal(state.expirationDecision, undefined);
 });
 
-test("an unready second read gets the first base-notice roll and appears first in the scan log", (t) => {
-  const log = t.mock.method(console, "log", () => {});
-  const config = { curves: settings.curves,
-    qbDecisionTable: [{ perceivedMax: 1000, label: "Notice", baseNotice: 50, noticeIfPrimary: 0 }] };
-  const waiting = [routes[0], routes[1], { ...routes[1], player: "WR3" }]
-    .map((route, index) => ({ ...route, TTO: index === 0 ? 0.25 : 2 }));
-  const rolls = [0, 0, 0, 0.9, 0, 0, 0, 0, 0.1];
-  const state = runUnpressuredReadLoop(config, waiting, 3, 0, {}, () => {
-    assert.ok(rolls.length, "Only the current read should receive a notice roll after it succeeds");
-    return rolls.shift()!;
-  });
-  assert.equal(state.currentRead, 2);
-  assert.equal(state.targetPlayer, "WR2");
-  assert.deepEqual(state.decisions.map((decision) => [decision.player, decision.noticeType]), [["WR1", "primary"], ["WR2", "base"]]);
-  const scan = log.mock.calls.find((call) => call.arguments[0] === "[Pass Engine] QB base notice scan")!.arguments[1];
-  assert.deepEqual(scan.receivers.map((receiver) => receiver.player), ["WR2", "WR1", "WR3"]);
-  assert.deepEqual(scan.receivers.map((receiver) => receiver.rollMade), [true, false, false]);
-  assert.equal(rolls.length, 0);
+test("read ranks follow configured order, not route-array order", () => {
+  const state = runUnpressuredReadLoop(config(), routes, .5, 80, { WR4: "Primary", WR2: "2nd", WR1: "3rd", WR3: "4th" }, () => .5);
+  assert.deepEqual(state.snapshots[0].receivers.map(r => r.player), ["WR4", "WR2", "WR1", "WR3"]);
+  assert.equal(state.currentReadPlayer, "WR4");
 });
 
-test("an unready third read is checked first, with the other reads retaining their order", (t) => {
-  const log = t.mock.method(console, "log", () => {});
-  const config = { curves: settings.curves,
-    qbDecisionTable: [{ perceivedMax: 1000, label: "Notice", baseNotice: 50, noticeIfPrimary: 0 }] };
-  const waiting = [routes[0], routes[1], { ...routes[1], player: "WR3" }]
-    .map((route, index) => ({ ...route, TTO: index === 2 ? 2 : 0.25 }));
-  const state = runUnpressuredReadLoop(config, waiting, 1.5, 0, {}, () => 0.9);
-  const scans = log.mock.calls.filter((call) => call.arguments[0] === "[Pass Engine] QB base notice scan");
-  assert.ok(scans.length > 0);
-  for (const scan of scans) assert.deepEqual(scan.arguments[1].receivers.map((receiver) => receiver.player), ["WR3", "WR1", "WR2"]);
-  assert.deepEqual(state.decisions.filter((decision) => decision.noticeType === "base").slice(0, 3)
-    .map((decision) => decision.player), ["WR3", "WR1", "WR2"]);
-  assert.deepEqual(waiting.map((route) => route.player), ["WR1", "WR2", "WR3"]);
+test("fifth and later receivers use the fourth-rank column until the full cycle ends", () => {
+  assert.deepEqual(rankQBReads([...routes, { ...routes[0], player: "RB" }], 1).map(r => r.readRank), [1, 2, 3, 4, 4]);
+});
+
+test("perceived openness independently changes sign without altering actual openness", () => {
+  const receivers = routes.slice(0, 2);
+  const before = structuredClone(receivers);
+  const state = runUnpressuredReadLoop(config(), receivers, .5, 0, {}, sequence(.1, .9, .9, .1, .5));
+  assert.deepEqual(state.snapshots.map(s => s.receivers.map(r => r.readDefenseAdjustment)), [[23, -23], [-23, 23]]);
+  assert.equal(state.snapshots[0].receivers[0].openness, 50);
+  assert.deepEqual(receivers, before);
+  const x = 80;
+  assert.equal(calculateReadDefenseModifier(x), .00000055296676*x**4-.00014271986272*x**3+.011884760129588*x**2-.536559194662642*x+23);
+});
+
+test("expiration uses 50/25/25 and chooses the most perceived-open receiver at the deadline", () => {
+  for (const [roll, action] of [[0, "force-throw"], [.49999, "force-throw"], [.5, "throw-away"], [.74999, "throw-away"], [.75, "scramble"], [.99999, "scramble"]] as const)
+    assert.equal(chooseTimeExpiredAction(() => roll).action, action);
+  const state = runUnpressuredReadLoop(config(), routes.slice(0, 2), .3, 0, {}, sequence(0, .9, .9, 0, .49));
+  assert.equal(state.currentTime, .3);
+  assert.equal(state.decisions.length, 0);
+  assert.equal(state.targetPlayer, "WR2");
+});
+
+test("read delay crossing the deadline refreshes openness and adds no notice roll", () => {
+  const state = runUnpressuredReadLoop(config(), [{ ...routes[0], TTO: .25 }], .4, 0, {}, sequence(0, .99, 0, .8));
+  assert.equal(state.currentTime, .4);
+  assert.equal(state.snapshots.at(-1)?.currentTime, .4);
+  assert.equal(state.decision, "scramble");
+});
+
+test("invalid settings and timing fail clearly; no-route plays still expire safely", () => {
+  assert.throws(() => runUnpressuredReadLoop({ ...config(), qbDecisionTable: [] }, routes, 1, 0), /Missing QB Decision Table/);
+  assert.throws(() => runUnpressuredReadLoop(config(), routes, Infinity, 0), /time to throw/);
+  assert.throws(() => calculateReadDefenseModifier(NaN), /read defense/);
+  assert.equal(runUnpressuredReadLoop(config(), [], .3, 0, {}, () => .5).stopReason, "no-routes");
+  const state = runUnpressuredReadLoop(config(100), routes, 0, 0, {}, () => .5);
+  assert.equal(state.snapshots[0].currentTime, 0);
+  assert.equal(state.decisions.length, 0);
 });
