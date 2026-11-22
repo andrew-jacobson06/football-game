@@ -45,3 +45,20 @@ test("explicit sack/completion flags take precedence and stored YAC counts towar
   assert.deepEqual(passPlayFacts({ playtype: "Pass", result: "First Down", isComplete: "" }), { isSack: false, isComplete: true });
   assert.deepEqual(passPlayFacts({ playtype: "Pass", result: "Sack", isSack: "FALSE", isComplete: 0 }), { isSack: false, isComplete: false });
 });
+
+test("route-jump deflections and interceptions credit the DB without inventing tackles or completions", () => {
+  const plays = [
+    { gameid: "1", playtype: "Pass", player: "QB", receiver: "WR", yards: 0, result: "Incomplete", defenseresult: "Deflection", tackler: "DB", isComplete: false },
+    { gameid: "1", playtype: "Pass", player: "QB", receiver: "WR", yards: 0, result: "TO on Downs", defenseresult: "Deflection", tackler: "DB", isComplete: false },
+    { gameid: "1", playtype: "Pass", player: "QB", receiver: "WR", yards: 0, result: "Interception", defenseresult: "Interception", tackler: "DB", recoveredby: "DB", isComplete: false },
+  ];
+  const stats = aggregatePlayStats(plays);
+  assert.equal(stats.get("db")?.["Passes Defended"], 2);
+  assert.equal(stats.get("db")?.Interceptions, 1);
+  assert.equal(stats.get("db")?.Tackles ?? 0, 0);
+  assert.equal(stats.get("qb")?.["Passing Attempts"], 3);
+  assert.equal(stats.get("qb")?.["Interceptions Thrown"], 1);
+  assert.equal(stats.get("qb")?.Completions ?? 0, 0);
+  assert.equal(stats.get("wr")?.Targets, 3);
+  assert.equal(stats.get("wr")?.Receptions ?? 0, 0);
+});

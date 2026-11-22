@@ -45,3 +45,9 @@ test("sheet text is escaped and formatting never applies arbitrary attributes or
   assert.ok(!legacy.includes("onmouseover"));
   assert.match(legacy, /play-outcome--turnover/);
 });
+
+test("deflections identify the credited DB in the play description", () => {
+  const description = playText({ playtype: "Pass", player: "QB", receiver: "WR", yards: 0,
+    result: "Incomplete", defenseresult: "Deflection", tackler: "Corner", isComplete: false });
+  assert.match(description, /Deflected by Corner\. Incomplete\./);
+});

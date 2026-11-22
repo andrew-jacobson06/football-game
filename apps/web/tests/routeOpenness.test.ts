@@ -114,6 +114,8 @@ const ctx: EngineContext = {
   players: [{ name: "Lineman", team: "Away", defPos: "DL" }, receiver, defender],
   settings: { routeOpennessSettings: settings, timeToThrowRanges: [{ min: 2, max: 2, percentage: 100 }],
     routeTypeAirYards: [{ routeType: "Quick", minAirYards: 1, maxAirYards: 2 }], routesByDepth: { Quick: ["Flat"] },
+    dbBeatWRAccuracyMultipliers: (["Perfect", "Accurate", "Close", "Catchable", "Off Target"] as const).map(throwType => ({ throwType, multiplier: 0 })),
+    pickAccuracyMultipliers: (["Perfect", "Accurate", "Close", "Catchable", "Off Target"] as const).map(throwType => ({ throwType, multiplier: 0 })),
     completionTable: [{ pastLos: 0, baseCompletion: 75 }, { pastLos: 3, baseCompletion: 70 }],
     opennessCompletionModifiers: [{ label: "All", minOpen: 0, maxOpen: null, minAdjust: -30, maxAdjust: 20 }],
     handsImpactByOpenness: [{ label: "All", minOpen: 0, maxOpen: null, handsImpact: 0.5 }],
@@ -402,7 +404,9 @@ test("interceptions before fourth down reset down/distance and preserve the inte
   t.mock.method(console, "log", () => {});
   t.mock.method(Math, "random", () => 0.1);
   const context = completionContext(1);
-  context.settings.completionTable = [{ pastLos: 110, baseCompletion: 0 }];
+  context.settings.completionTable = [{ pastLos: 110, baseCompletion: 100 }];
+  context.settings.dbBeatWRAccuracyMultipliers = context.settings.dbBeatWRAccuracyMultipliers!.map(row => ({ ...row, multiplier: 1000 }));
+  context.settings.pickAccuracyMultipliers = context.settings.pickAccuracyMultipliers!.map(row => ({ ...row, multiplier: 1000 }));
   context.players = context.players.map((player) => player.name === defender.name ? { ...player, ballHawk: 100, readQB: 100 } : player);
   const result = passPlay({ ...game, Down: 2, Distance: 7 }, context, options);
   assert.equal(result.play.result, "Interception");
@@ -514,6 +518,25 @@ test("cancelling the only scheduled route leaves no eligible targets and does no
   assert.equal(state.readLoop?.currentRead, null);
   assert.equal(state.target, undefined);
   assert.deepEqual(call.routes, { "Blocking Back": "Flat" });
+});
+
+test("route-jump deflections persist the guarding DB and remain incompletions on fourth down", t => {
+  t.mock.method(Math, "random", () => .5);
+  t.mock.method(console, "log", () => {});
+  t.mock.method(console, "debug", () => {});
+  const context = completionContext(1);
+  context.settings.dbBeatWRAccuracyMultipliers = context.settings.dbBeatWRAccuracyMultipliers!.map(row => ({ ...row, multiplier: 1000 }));
+  context.settings.pickAccuracyMultipliers = context.settings.pickAccuracyMultipliers!.map(row => ({ ...row, multiplier: 0 }));
+  for (const down of [1, 4]) {
+    const result = passPlay({ ...game, Down: down, Distance: 7 }, context, options);
+    assert.equal(result.play.isComplete, false);
+    assert.equal(result.play.defenseresult, "Deflection");
+    assert.equal(result.play.tackler, "Corner");
+    assert.equal(result.play.recoveredby, "");
+    assert.equal(result.play.result, down === 4 ? "TO on Downs" : "Incomplete");
+    assert.equal(result.game.Possession, down === 4 ? "Away" : "Home");
+    if (down === 4) { assert.equal(result.game.Down, 1); assert.equal(result.game.Distance, 10); }
+  }
 });
 
 test("non-blitz pressure can throw away or force a throw without a negative-time openness error", (t) => {

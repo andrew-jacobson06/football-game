@@ -98,6 +98,8 @@ export type FrontendSettings = Record<string, unknown> & {
   tackleSettings?: unknown[];
   completionTable?: import("./passCompletion").CompletionDepthRow[];
   opennessCompletionModifiers?: import("./passCompletion").OpennessCompletionRow[];
+  dbBeatWRAccuracyMultipliers?: import("./passInterception").InterceptionAccuracyMultiplier[];
+  pickAccuracyMultipliers?: import("./passInterception").InterceptionAccuracyMultiplier[];
   accuracyModifiers?: import("./qbAccuracy").AccuracyModRow[];
   handsImpactByOpenness?: import("./receiverHands").HandsImpactRow[];
   jumpEffects?: import("./receiverJump").JumpEffectRow[];
