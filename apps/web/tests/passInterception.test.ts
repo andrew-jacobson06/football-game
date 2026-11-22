@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { routeJumpBaseChance, pickBaseChance, rollPassInterception } from "../src/components/league/gameplay/engine/passInterception.ts";
+import { routeJumpBaseChance, pickBaseChance, rollPassInterception, rollIncompletePassInterception } from "../src/components/league/gameplay/engine/passInterception.ts";
 import { determinePassOutcome } from "../src/components/league/gameplay/engine/passEngine.ts";
 import { THROW_TYPES } from "../src/components/league/gameplay/engine/qbAccuracy.ts";
 
@@ -83,9 +83,9 @@ test("a beaten WR causes a deflection when the pick roll fails, even at 100% com
   assert.equal(result.completionRoll, null);
 });
 
-test("a failed completion without a route jump cannot fall back to the old interception roll", t => {
+test("a failed completion stays incomplete when the new ball-hawk gate fails", t => {
   t.mock.method(console, "log", () => {});
-  t.mock.method(Math, "random", seq(.99, .99));
+  t.mock.method(Math, "random", seq(.99, .99, .99));
   const result = determinePassOutcome(ctx, "QB", target, 0, completion);
   assert.equal(result.completed, false);
   assert.equal(result.intercepted, false);
@@ -102,4 +102,88 @@ test("without a route jump the existing completion and YAC path still runs", t =
   assert.equal(result.intercepted, false);
   assert.equal(result.caughtBy, "WR");
   assert.ok(result.yards >= target.airYards);
+});
+
+test("Perfect and Accurate incompletions skip both secondary interception rolls", () => {
+  for (const type of ["Perfect", "Accurate"] as const) {
+    const result = rollIncompletePassInterception(99, type, [], () => { throw new Error("Accurate throws must not roll"); });
+    assert.equal(result.intercepted, false);
+    assert.equal(result.reason, "accurate-or-better");
+    assert.equal(result.ballHawkRoll, null);
+    assert.equal(result.pickRoll, null);
+  }
+});
+
+test("Close, Catchable and Off Target use the exact ball-hawk gate and existing Settings multipliers", () => {
+  for (const type of ["Close", "Catchable", "Off Target"] as const) {
+    const result = rollIncompletePassInterception(99, type, pick, seq(0, 0));
+    close(result.ballHawkChance!, (99/12)**2);
+    close(result.pickPctChance!, pickBaseChance(99)*pick.find(row=>row.throwType===type)!.multiplier);
+    assert.equal(result.intercepted, true);
+  }
+  const changed = rollIncompletePassInterception(81, "Close", [{ throwType: "Close", multiplier: 2 }], seq(0, 0));
+  close(changed.pickPctChance!, pickBaseChance(81)*2);
+});
+
+test("secondary rolls use strict boundaries and a failed ball-hawk check consumes no pick roll", () => {
+  const chance = (81/12)**2;
+  const failedGate = rollIncompletePassInterception(81, "Catchable", [], seq(chance/100));
+  assert.equal(failedGate.passedBallHawkCheck, false);
+  assert.equal(failedGate.intercepted, false);
+  assert.equal(failedGate.pickRoll, null);
+  const failedPick = rollIncompletePassInterception(81, "Catchable", pick, seq(0, pickBaseChance(81)/100));
+  assert.equal(failedPick.passedBallHawkCheck, true);
+  assert.equal(failedPick.intercepted, false);
+  assert.equal(failedPick.reason, "pick-roll-failed");
+  assert.equal(rollIncompletePassInterception(0, "Catchable", pick, seq(0)).intercepted, false);
+});
+
+test("an incomplete eligible throw can be intercepted after the route-jump check fails", t => {
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", seq(.99, .99, 0, 0));
+  const result = determinePassOutcome(ctx, "QB", target, 0, completion);
+  assert.equal(result.interceptionCheck.beatsWRtoBall, false);
+  assert.equal(result.completionRoll, 99);
+  assert.equal(result.intercepted, true);
+  assert.equal(result.caughtBy, "Guard");
+  assert.equal(result.completed, false);
+  assert.equal(result.deflected, false);
+});
+
+test("a failed second pick roll stays incomplete rather than becoming a deflection", t => {
+  t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", seq(.99, .99, 0, .99));
+  const result = determinePassOutcome(ctx, "QB", target, 0, completion);
+  assert.equal(result.intercepted, false);
+  assert.equal(result.deflected, false);
+  assert.equal(result.caughtBy, undefined);
+});
+
+test("even at 90+ openness an incomplete poor throw can use the second interception path", t => {
+  t.mock.method(console, "log", () => {});
+  // Wide-open skips the route-jump draw, followed by completion, gate and pick.
+  t.mock.method(Math, "random", seq(.99, 0, 0));
+  const result = determinePassOutcome(ctx, "QB", target, 0, { ...completion, actualOpenness: 95 });
+  assert.equal(result.interceptionCheck.beatRoll, null);
+  assert.equal(result.intercepted, true);
+  assert.equal(result.caughtBy, "Guard");
+});
+
+test("Accurate and Perfect failed completions consume only jump and completion rolls", t => {
+  t.mock.method(console, "log", () => {});
+  for (const type of ["Perfect", "Accurate"] as const) {
+    t.mock.method(Math, "random", seq(.99, .99));
+    const result = determinePassOutcome(ctx, "QB", target, 0, { ...completion, throwType: type });
+    assert.equal(result.intercepted, false);
+    assert.equal(result.completed, false);
+  }
+});
+
+test("a completed poor throw never runs the second interception path", t => {
+  t.mock.method(console, "log", () => {});
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(Math, "random", () => .5);
+  const result = determinePassOutcome(ctx, "QB", target, 100, { ...completion, actualOpenness: 95 });
+  assert.equal(result.completed, true);
+  assert.equal("incompleteInterceptionCheck" in result, false);
 });
