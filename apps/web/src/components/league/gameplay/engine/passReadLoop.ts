@@ -1,7 +1,7 @@
 import { getCurrentRouteOpenness, type RouteOpennessSettings, type RouteWithPhaseOpenness } from "./routeOpenness";
 
 type ReadRoute = RouteWithPhaseOpenness & { player: string; TTO: number; curveType: string };
-export type QBDecisionRow = { perceivedMax: number; label: string; baseNotice: number | null; noticeIfPrimary: number | null };
+export type QBDecisionRow = { perceivedMax: number; label: string; noticeIfPrimary: number | null; secondReadNotice: number | null; thirdReadNotice: number | null; fourthReadNotice: number | null };
 
 function getNoticeRow(table: readonly QBDecisionRow[], perceivedOpenness: number) {
   if (!Number.isFinite(perceivedOpenness)) throw new Error("Invalid perceived openness.");
@@ -10,14 +10,18 @@ function getNoticeRow(table: readonly QBDecisionRow[], perceivedOpenness: number
   return table.find((row) => perceivedOpenness <= row.perceivedMax) ?? table[table.length - 1];
 }
 
-export function getPrimaryNoticeChance(table: readonly QBDecisionRow[], perceivedOpenness: number) {
+export function getReadNoticeChance(table: readonly QBDecisionRow[], perceivedOpenness: number, rank: number) {
   const row = getNoticeRow(table, perceivedOpenness);
-  return { label: row.label, chance: row.noticeIfPrimary ?? 0 };
+  const chances = [row.noticeIfPrimary, row.secondReadNotice, row.thirdReadNotice, row.fourthReadNotice];
+  return { label: row.label, chance: chances[Math.min(4, Math.max(1, rank)) - 1] ?? 0 };
 }
 
-export function getBaseNoticeChance(table: readonly QBDecisionRow[], perceivedOpenness: number) {
-  const row = getNoticeRow(table, perceivedOpenness);
-  return { label: row.label, chance: row.baseNotice ?? 0 };
+/** Declined reads move behind the remaining reads; after one cycle every rank is 2. */
+export function rankQBReads<T>(reads: readonly T[], currentRead: number | null) {
+  if (currentRead === null) return reads.map((route) => ({ route, readRank: 2 }));
+  const start = currentRead - 1;
+  return [...reads.slice(start), ...reads.slice(0, start)]
+    .map((route, index) => ({ route, readRank: Math.min(4, index + 1) }));
 }
 export type PassReadLoopState = {
   currentTime: number;
@@ -29,13 +33,13 @@ export type PassReadLoopState = {
   expirationDecision?: { roll: number; action: "force-throw" | "throw-away" | "scramble" };
   targetPlayer?: string;
   decisions: Array<{ currentTime: number; currentRead: number | null; player: string;
-    perceivedOpenness: number; label: string; noticeChance: number; roll: number;
-    noticeType: "base" | "primary"; throw: boolean; readDelay?: number }>;
+    perceivedOpenness: number; label: string; noticeChance: number; roll: number | null;
+    noticeType: "scan" | "current"; readRank: number; throw: boolean; readDelay?: number }>;
   snapshots: Array<{
     currentTime: number;
     currentRead: number | null;
     receivers: Array<{ player: string; baseOpenness: number; skillBasedOpennessMod: number;
-      openness: number; readDefenseAdjustment: number; perceivedOpenness: number }>;
+      openness: number; readDefenseAdjustment: number; perceivedOpenness: number; readRank: number; noticeChance: number; label: string }>;
   }>;
 };
 
@@ -57,7 +61,7 @@ function readOrder(value: string | undefined) {
   return Number.isInteger(numeric) && numeric > 0 ? numeric : labels[value ?? ""] ?? Infinity;
 }
 
-/** Check base notice while waiting, then primary notice when the current read is ready. */
+/** Use rotating notice ranks while waiting; the ready current read uses rank 1. */
 export function runUnpressuredReadLoop(
   settings: Pick<RouteOpennessSettings, "curves"> & { qbDecisionTable: readonly QBDecisionRow[] },
   routes: readonly ReadRoute[],
@@ -76,11 +80,15 @@ export function runUnpressuredReadLoop(
   };
   function look() {
     const currentRoute = orderedReads[(state.currentRead ?? 0) - 1];
-    const receivers = getCurrentRouteOpenness(settings, routes, state.currentTime).map((route) => {
+    const rankedReads = rankQBReads(orderedReads, state.currentRead);
+    const receivers = getCurrentRouteOpenness(settings, rankedReads.map(({ route }) => route), state.currentTime).map((route, index) => {
       const readDefenseAdjustment = state.readDefenseModifier * (random() < 0.5 ? 1 : -1);
-      return { player: route.player, baseOpenness: route.baseOpenness,
+      const perceivedOpenness = route.openness + readDefenseAdjustment;
+      const readRank = rankedReads[index].readRank;
+      const { label, chance } = getReadNoticeChance(settings.qbDecisionTable, perceivedOpenness, readRank);
+      return { player: route.player, readRank, label, noticeChance: chance, baseOpenness: route.baseOpenness,
         skillBasedOpennessMod: route.skillBasedOpennessMod, openness: route.openness,
-        readDefenseAdjustment, perceivedOpenness: route.openness + readDefenseAdjustment };
+        readDefenseAdjustment, perceivedOpenness };
     });
     state.snapshots.push({ currentTime: state.currentTime, currentRead: state.currentRead, receivers });
     console.log(`[Pass Engine] QB look at ${state.currentTime.toFixed(2)}s`, {
@@ -97,19 +105,12 @@ export function runUnpressuredReadLoop(
     const receivers = look();
     if (state.currentTime >= timeToThrow) break;
     if (!currentRoute || state.currentTime < currentRoute.TTO) {
-      // While waiting for this read, an open receiver can attract the QB's notice.
-      // Give the current read first chance, then preserve the other reads' order.
-      // With no current read, scan the original read order as before.
-      const scanRoutes = currentRoute
-        ? [currentRoute, ...orderedReads.filter((route) => route !== currentRoute)]
-        : orderedReads;
-      const noticeChecks = scanRoutes.map((route) => {
-        const perceivedOpenness = receivers.find((receiver) => receiver.player === route.player)!.perceivedOpenness;
-        const { label, chance } = getBaseNoticeChance(settings.qbDecisionTable, perceivedOpenness);
-        return { player: route.player, perceivedOpenness, label, noticeChance: chance,
-          rollMade: false, roll: null as number | null, noticed: false,
-          status: chance <= 0 ? "skipped-na-or-zero" : "not-checked" };
-      });
+      // Scan the entire rotated ranking. With no current read, all use rank 2.
+      const noticeChecks = receivers.map(({ player, perceivedOpenness, label, readRank, noticeChance }) => ({
+        player, perceivedOpenness, label, readRank, noticeChance,
+        rollMade: false, roll: null as number | null, noticed: false,
+        status: noticeChance <= 0 ? "skipped-na-or-zero" : "not-checked",
+      }));
       for (const check of noticeChecks) {
         if (check.noticeChance <= 0) continue; // NA/zero bands consume no notice roll.
         const roll = random() * 100;
@@ -120,7 +121,7 @@ export function runUnpressuredReadLoop(
         const decision: PassReadLoopState["decisions"][number] = {
           currentTime: state.currentTime, currentRead: state.currentRead, player: check.player,
           perceivedOpenness: check.perceivedOpenness, label: check.label, noticeChance: check.noticeChance,
-          roll, noticeType: "base", throw: check.noticed,
+          roll, noticeType: "scan", readRank: check.readRank, throw: check.noticed,
         };
         state.decisions.push(decision);
         if (decision.throw) {
@@ -130,19 +131,18 @@ export function runUnpressuredReadLoop(
           break;
         }
       }
-      console.log("[Pass Engine] QB base notice scan", {
+      console.log("[Pass Engine] QB ranked notice scan", {
         currentTime: state.currentTime, currentRead: state.currentRead,
         reason: currentRoute ? "current-read-not-ready" : "no-current-read", receivers: noticeChecks,
       });
       if (state.targetPlayer) break;
       continue;
     }
-    const perceivedOpenness = receivers.find((receiver) => receiver.player === currentRoute.player)!.perceivedOpenness;
-    const { label, chance } = getPrimaryNoticeChance(settings.qbDecisionTable, perceivedOpenness);
-    const roll = random() * 100;
+    const { perceivedOpenness, label, noticeChance: chance, readRank } = receivers.find((receiver) => receiver.player === currentRoute.player)!;
+    const roll = chance > 0 ? random() * 100 : null;
     const decision: PassReadLoopState["decisions"][number] = {
       currentTime: state.currentTime, currentRead: state.currentRead, player: currentRoute.player,
-      perceivedOpenness, label, noticeChance: chance, roll, noticeType: "primary", throw: roll < chance,
+      perceivedOpenness, label, noticeChance: chance, roll, noticeType: "current", readRank, throw: roll !== null && roll < chance,
     };
     state.decisions.push(decision);
     if (decision.throw) {
@@ -153,9 +153,9 @@ export function runUnpressuredReadLoop(
     }
     console.log("[Pass Engine] QB declined current read", {
       currentTime: state.currentTime, currentRead: state.currentRead,
-      receivers: receivers.map((receiver) => ({ player: receiver.player, perceivedOpenness: receiver.perceivedOpenness,
-        noticeChance: receiver.player === currentRoute.player ? chance : null,
-        rollMade: receiver.player === currentRoute.player, roll: receiver.player === currentRoute.player ? roll : null,
+      receivers: receivers.map((receiver) => ({ player: receiver.player, perceivedOpenness: receiver.perceivedOpenness, readRank: receiver.readRank,
+        noticeChance: receiver.noticeChance,
+        rollMade: receiver.player === currentRoute.player && roll !== null, roll: receiver.player === currentRoute.player ? roll : null,
         noticed: false })),
     });
     state.currentRead = state.currentRead! < orderedReads.length ? state.currentRead! + 1 : null;
