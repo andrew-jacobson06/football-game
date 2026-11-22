@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import { ArticleMarkdown } from "./ArticleMarkdown";
 import { getArticles, type LeagueArticle } from "../../api/client";
 import defaultArticleHero from "../../assets/hero.png";
 import { leagueHeadlines } from "./leagueArticles";
 
 function articleExcerpt(article: LeagueArticle) {
   return article.articleMarkdown
+    .replace(/<[^>]*>/g, "")
     .replace(/^#{1,6}\s+/gm, "")
     .replace(/[*_`>[\]()]/g, "")
     .replace(/\s+/g, " ")
@@ -24,7 +25,7 @@ function ArticleView({ article, onBack }: { article: LeagueArticle; onBack: () =
         <p className="article-view__meta">Week {article.week} · {new Date(article.publishedAt).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}</p>
         <h1>{article.title}</h1>
         {article.summary && <p className="article-view__dek">{article.summary}</p>}
-        <div className="article-view__body"><ReactMarkdown>{article.articleMarkdown}</ReactMarkdown></div>
+        <div className="article-view__body"><ArticleMarkdown>{article.articleMarkdown}</ArticleMarkdown></div>
       </div>
     </article>
   );
