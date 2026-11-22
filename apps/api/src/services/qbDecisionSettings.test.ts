@@ -6,35 +6,41 @@ import { parseRouteOpennessSettings } from "./routeOpennessSettings.js";
 
 const rows = [
   ["QB Decision Table"],
-  ["Open Score", "perceived max", "Label", "What it means on the field", "Base Notice", "Notice if Primary"],
-  ["0–10", 10, "Erased", "", "NA", "NA"],
-  ["11–20", 20, "Blanketed", "", "NA", "NA"],
-  ["21–35", 35, "Covered", "", "NA", 5],
-  ["36–49", 49, "Tight window", "", "NA", 15],
-  ["50–59", 59, "Slightly open", "", 5, 30],
-  ["60–69", 69, "Open", "", 20, 50],
-  ["70–79", 79, "Clearly open", "", 35, 67],
-  ["80–89", 89, "Very open", "", 75, 89],
-  ["90–100", 1000, "Wide open / busted", "", 90, 99],
+  ["Open Score", "perceived max", "Label", "What it means on the field", "Notice if Primary", "2nd read notice", "3rd notice", "4th notice"],
+  ["0–10", 10, "Erased", "", "NA", "NA", "NA", "NA"],
+  ["11–20", 20, "Blanketed", "", "NA", "NA", "NA", "NA"],
+  ["21–35", 35, "Covered", "", 10, "NA", "NA", "NA"],
+  ["36–49", 49, "Tight window", "", 20, 10, "NA", "NA"],
+  ["50–59", 59, "Slightly open", "", 50, 20, 10, "NA"],
+  ["60–69", 69, "Open", "", 80, 30, 20, 5],
+  ["70–79", 79, "Clearly open", "", 90, 50, 40, 15],
+  ["80–89", 89, "Very open", "", 95, 80, 75, 25],
+  ["90–100", 1000, "Wide open / busted", "", 99, 95, 87, 50],
 ];
 
-test("loads all decision bands at offset columns and stops at neighboring tables", () => {
+test("loads the supplied four-rank table at offset columns and stops at neighboring tables", () => {
   const table = parseQBDecisionSettings([...rows, ["RouteTreeDetails", "Type", "Timing Mod"]].map((row) => ["", "", ...row]));
   assert.equal(table.length, 9);
-  assert.deepEqual(table[6], { perceivedMax: 79, label: "Clearly open", baseNotice: 35, noticeIfPrimary: 67 });
+  assert.deepEqual(table[6], { perceivedMax: 79, label: "Clearly open", noticeIfPrimary: 90, secondReadNotice: 50, thirdReadNotice: 40, fourthReadNotice: 15 });
   assert.equal(table[0].noticeIfPrimary, null);
+  assert.equal(table[2].secondReadNotice, null);
   assert.equal(table[8].perceivedMax, 1000);
 });
 
-test("accepts percent text and zero; missing or malformed tables fail clearly", () => {
+test("accepts percent text and zero; validates each rank and requires all four headers", () => {
   assert.deepEqual(parseQBDecisionSettings([]), []);
   const changed = structuredClone(rows);
-  changed[8][5] = "67%";
-  changed[4][5] = 0;
+  changed[8][4] = "67%";
+  changed[4][4] = 0;
   assert.equal(parseQBDecisionSettings(changed)[6].noticeIfPrimary, 67);
   assert.equal(parseQBDecisionSettings(changed)[2].noticeIfPrimary, 0);
-  changed[4][5] = 101;
-  assert.throws(() => parseQBDecisionSettings(changed), /notice percentage/);
+  for (const column of [4, 5, 6, 7]) {
+    const invalid = structuredClone(rows);
+    invalid[4][column] = 101;
+    assert.throws(() => parseQBDecisionSettings(invalid), /notice percentage/);
+    invalid[1][column] = "missing";
+    assert.throws(() => parseQBDecisionSettings(invalid), /missing/);
+  }
   assert.throws(() => parseQBDecisionSettings([rows[0]]), /headers/);
   const unordered = structuredClone(rows);
   unordered[3][1] = 10;

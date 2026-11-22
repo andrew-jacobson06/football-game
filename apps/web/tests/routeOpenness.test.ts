@@ -125,7 +125,7 @@ const ctx: EngineContext = {
       .map((throwType) => ({ throwType, depths: [{ maxAirYards: 100, multiplier: 1 }] })),
     accuracyModifiers: [{ throwType: "Perfect", min: 10, max: 20 }, { throwType: "Accurate", min: 5, max: 9 },
       { throwType: "Close", min: -4, max: 4 }, { throwType: "Catchable", min: -9, max: -5 }, { throwType: "Off Target", min: -20, max: -10 }],
-    qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 0, noticeIfPrimary: 100 }] }, historyLength: 0,
+    qbDecisionTable: [{ perceivedMax: 1000, label: "Test", secondReadNotice: 0, thirdReadNotice: 0, fourthReadNotice: 0, noticeIfPrimary: 100 }] }, historyLength: 0,
 };
 const options: PlayCallOptions = { blitz: false, formation: { WR1: "Receiver" }, routes: { Receiver: "Flat" }, routeDepths: { Receiver: "Quick" }, defense: [{ player: "Corner", position: "DB1", align: "WR1" }] };
 
@@ -153,10 +153,10 @@ test("pass pipeline retains calculation inputs for later openness graphs", (t) =
   assert.equal(state.opennessTrajectory[0].phaseImpacts, route.phaseImpacts);
   assert.equal(state.opennessTrajectory[0].opennessInputs, route.opennessInputs);
   assert.equal(state.readLoop?.currentRead, 1);
-  assert.equal(state.readLoop?.currentTime, 1);
+  assert.equal(state.readLoop?.currentTime, 0.25);
   assert.equal(state.readLoop?.stopReason, "throw");
   assert.equal(state.target?.player, "Receiver");
-  assert.deepEqual(state.readLoop?.snapshots.map((snapshot) => snapshot.currentTime), [0.25, 0.5, 0.75, 1]);
+  assert.deepEqual(state.readLoop?.snapshots.map((snapshot) => snapshot.currentTime), [0.25]);
   const perceived = state.readLoop!.snapshots[0].receivers[0];
   assert.equal(perceived.player, "Receiver");
   assert.equal(perceived.openness, perceived.baseOpenness + perceived.skillBasedOpennessMod);
@@ -179,7 +179,7 @@ test("declining all reads continues to the deadline and rolls the throw-away opt
   t.mock.method(console, "debug", () => {});
   t.mock.method(Math, "random", () => 0.5);
   const context = { ...ctx, settings: { ...ctx.settings,
-    qbDecisionTable: [{ perceivedMax: 1000, label: "Unavailable", baseNotice: null, noticeIfPrimary: null }] } };
+    qbDecisionTable: [{ perceivedMax: 1000, label: "Unavailable", secondReadNotice: null, thirdReadNotice: null, fourthReadNotice: null, noticeIfPrimary: null }] } };
   const state = runPassPlayPipeline(game, context, "QB", options);
   assert.equal(state.readLoop?.stopReason, "time-to-throw");
   assert.equal(state.readLoop?.currentTime, 2);
@@ -199,13 +199,13 @@ test("a base-notice throw is handed to the pass pipeline before the read is read
   t.mock.method(console, "log", () => {});
   t.mock.method(Math, "random", () => 0.5);
   const context = { ...ctx, settings: { ...ctx.settings,
-    qbDecisionTable: [{ perceivedMax: 1000, label: "Test", baseNotice: 100, noticeIfPrimary: 0 }] } };
+    qbDecisionTable: [{ perceivedMax: 1000, label: "Test", secondReadNotice: 100, thirdReadNotice: 100, fourthReadNotice: 100, noticeIfPrimary: 100 }] } };
   const state = runPassPlayPipeline(game, context, "QB", options);
   assert.equal(state.decision, "throw");
   assert.equal(state.target?.player, "Receiver");
   assert.equal(state.readLoop?.currentTime, 0.25);
   assert.ok(state.readLoop!.currentTime < Number(state.target?.TTO));
-  assert.equal(state.readLoop?.decisions[0].noticeType, "base");
+  assert.equal(state.readLoop?.decisions[0].noticeType, "scan");
   assert.equal(state.throwCompletion?.throwTime, 0.25);
   assert.equal(state.throwCompletion?.baseCompletion, 70);
   assert.equal(state.throwCompletion?.actualOpenness, state.readLoop?.snapshots[0].receivers[0].openness);
@@ -237,7 +237,7 @@ test("forced deadline throws reach completion with the expiration timestamp", (t
   t.mock.method(console, "log", () => {});
   t.mock.method(Math, "random", () => 0.25);
   const context = { ...ctx, settings: { ...ctx.settings,
-    qbDecisionTable: [{ perceivedMax: 1000, label: "No notice", baseNotice: null, noticeIfPrimary: null }] } };
+    qbDecisionTable: [{ perceivedMax: 1000, label: "No notice", secondReadNotice: null, thirdReadNotice: null, fourthReadNotice: null, noticeIfPrimary: null }] } };
   const state = runPassPlayPipeline(game, context, "QB", options);
   assert.equal(state.readLoop?.expirationDecision?.action, "force-throw");
   assert.equal(state.decision, "throw");
@@ -252,7 +252,7 @@ test("the scramble option resolves a QB run rather than a sack or pass", (t) => 
   const context = { ...ctx, players: [...ctx.players, { name: "QB", team: "Home", position: "QB", speed: 60, acceleration: 60, vision: 100 },
       { name: "Blocker", team: "Home", runBlocking: 100, passProtect: 50 },
       { name: "Rusher", team: "Away", defPos: "DL", runStop: 10, passRush: 50 }],
-    settings: { ...ctx.settings, qbDecisionTable: [{ perceivedMax: 1000, label: "No notice", baseNotice: null, noticeIfPrimary: null }] } };
+    settings: { ...ctx.settings, qbDecisionTable: [{ perceivedMax: 1000, label: "No notice", secondReadNotice: null, thirdReadNotice: null, fourthReadNotice: null, noticeIfPrimary: null }] } };
   const call = { ...options, formation: { ...options.formation, QB: "QB", LT: "Blocker" },
     defense: [...options.defense!, { player: "Rusher", position: "DL1", align: "LT" }] };
   const state = runPassPlayPipeline(game, context, "QB", call);
