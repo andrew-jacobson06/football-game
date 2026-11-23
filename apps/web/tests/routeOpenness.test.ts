@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { aggregatePlayStats } from "../../api/src/services/playStats.ts";
 import assert from "node:assert/strict";
 import { calculateRouteOpennessInputs, calculateRoutePhaseImpacts, type RouteOpennessSettings } from "../src/components/league/gameplay/engine/routeOpenness.ts";
 import { assignRoutes, runPassPlayPipeline, passPlay, handleSack } from "../src/components/league/gameplay/engine/passEngine.ts";
@@ -582,4 +583,107 @@ test("a secondary interception credits the guarding DB and resets possession/dow
   assert.equal(result.game.Possession, "Away");
   assert.equal(result.game.Down, 1);
   assert.equal(result.game.Distance, 10);
+});
+
+
+function postCatchFumbleContext() {
+  const context = completionContext(8);
+  context.players = context.players.filter(player => player.name !== "Lineman")
+    .map(player => player.name === "Receiver" ? { ...player, ballsecurity: 1 }
+      : player.name === "Corner" ? { ...player, strip: 100 } : player);
+  return context;
+}
+
+test("post-YAC defensive recovery retains completion/yardage and credits receiver fumble and defender recovery", t => {
+  t.mock.method(console, "debug", () => {});
+  const logs = t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => .01);
+  const previous = { ...game, Down: 2, Distance: 20 };
+  const result = passPlay(previous, postCatchFumbleContext(), options);
+  assert.equal(result.play.result, "Fumble");
+  assert.equal(result.play.isComplete, true);
+  assert.equal(result.play.isSack, false);
+  assert.equal(result.play.recoveredby, "Corner");
+  assert.equal(result.play.tackler, "Corner");
+  assert.equal(result.play.turnover, "Yes");
+  assert.equal(result.play.defenseresult, "Fumble");
+  assert.equal(Number(result.play.yards), Number(result.play.airyards) + Number(result.play.yac));
+  assert.equal(result.game.BallOn, Number(previous.BallOn) + Number(result.play.yards));
+  assert.equal(result.game.Possession, "Away");
+  assert.equal(result.game.Down, 1);
+  assert.equal(result.game.Distance, 10);
+  const check = logs.mock.calls.filter(call=>call.arguments[0] === "[Pass Engine] Post-catch fumble check");
+  assert.equal(check.length, 1);
+  assert.equal(check[0].arguments[1].yac, result.play.yac);
+  const stats = aggregatePlayStats([result.play]);
+  assert.equal(stats.get(String(result.play.player).toLowerCase().replace(/[^a-z0-9]/g, ""))?.Completions, 1);
+  assert.equal(stats.get("receiver")?.Receptions, 1);
+  assert.equal(stats.get("receiver")?.["Receiving Fumbles"], 1);
+  assert.equal(stats.get("receiver")?.["Receiving Fumbles Lost"], 1);
+  assert.equal(stats.get("corner")?.["Forced Fumbles"], 1);
+  assert.equal(stats.get("corner")?.["Fumble Recoveries"], 1);
+});
+
+test("receiver recovery keeps the completed gain and normal series without marking a turnover", t => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  // A defensive-recovery run locates the final recovery draw without coupling
+  // this test to the number of preceding route/accuracy/YAC random draws.
+  const random = t.mock.method(Math, "random", () => .01);
+  const previous = { ...game, Down: 2, Distance: 20 };
+  passPlay(previous, postCatchFumbleContext(), options);
+  const rolls = [...Array(random.mock.calls.length - 1).fill(.01), .99];
+  t.mock.method(Math, "random", () => { assert.ok(rolls.length); return rolls.shift()!; });
+  const result = passPlay(previous, postCatchFumbleContext(), options);
+  assert.equal(result.play.result, "Fumble");
+  assert.equal(result.play.isComplete, true);
+  assert.equal(result.play.recoveredby, "Receiver");
+  assert.equal(result.play.turnover, "");
+  assert.equal(result.game.Possession, "Home");
+  assert.equal(result.game.Down, 3);
+  assert.equal(result.game.Distance, 20 - Number(result.play.yards));
+  const stats = aggregatePlayStats([result.play]);
+  assert.equal(stats.get("receiver")?.["Receiving Fumbles"], 1);
+  assert.equal(stats.get("receiver")?.["Receiving Fumbles Lost"] ?? 0, 0);
+  assert.equal(rolls.length, 0);
+});
+
+test("fourth-down receiver recovery short of the sticks still turns the ball over on downs", t => {
+  t.mock.method(console, "debug", () => {});
+  t.mock.method(console, "log", () => {});
+  const random = t.mock.method(Math, "random", () => .01);
+  const previous = { ...game, Down: 4, Distance: 20 };
+  passPlay(previous, postCatchFumbleContext(), options);
+  const rolls = [...Array(random.mock.calls.length - 1).fill(.01), .99];
+  t.mock.method(Math, "random", () => rolls.shift()!);
+  const result = passPlay(previous, postCatchFumbleContext(), options);
+  assert.equal(result.play.recoveredby, "Receiver");
+  assert.equal(result.play.turnover, "Yes");
+  assert.equal(result.game.Possession, "Away");
+  assert.equal(result.game.Down, 1);
+  assert.equal(result.game.Distance, 10);
+});
+
+test("touchdowns, safeties, incompletions and interceptions skip the post-catch fumble check", t => {
+  t.mock.method(console, "debug", () => {});
+  const logs = t.mock.method(console, "log", () => {});
+  t.mock.method(Math, "random", () => .5);
+  const context = postCatchFumbleContext();
+  const td = passPlay({ ...game, BallOn: 99 }, context, options);
+  assert.equal(td.play.result, "Touchdown");
+  assert.equal(td.play.recoveredby, "");
+  const incompleteContext = postCatchFumbleContext();
+  incompleteContext.settings.completionTable = [{ pastLos: 110, baseCompletion: 0 }];
+  assert.equal(passPlay(game, incompleteContext, options).play.isComplete, false);
+  const interceptedContext = postCatchFumbleContext();
+  interceptedContext.settings.dbBeatWRAccuracyMultipliers = interceptedContext.settings.dbBeatWRAccuracyMultipliers!.map(row=>({ ...row, multiplier: 1000 }));
+  interceptedContext.settings.pickAccuracyMultipliers = interceptedContext.settings.pickAccuracyMultipliers!.map(row=>({ ...row, multiplier: 1000 }));
+  assert.equal(passPlay(game, interceptedContext, options).play.result, "Interception");
+  const safetyContext = postCatchFumbleContext();
+  safetyContext.settings.routeTypeAirYards = [{ routeType: "Quick", minAirYards: 0, maxAirYards: 0 }];
+  safetyContext.settings.yacBasis = [{ maxAirYards: 100, openness: [{ maxOpen: 89, basis: 0 }] }];
+  // A zero-yard catch at the offense's goal line exercises the safety exclusion.
+  const safety = passPlay({ ...game, BallOn: 0 }, safetyContext, options);
+  assert.equal(safety.play.result, "Safety");
+  assert.ok(!logs.mock.calls.some(call=>call.arguments[0] === "[Pass Engine] Post-catch fumble check"));
 });
