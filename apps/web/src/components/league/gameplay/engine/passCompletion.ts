@@ -16,9 +16,10 @@ export type PassCompletionSettings = Pick<RouteOpennessSettings, "curves"> & {
 };
 
 export function getBaseCompletion(table: readonly CompletionDepthRow[], airYards: number) {
-  if (!Number.isFinite(airYards) || airYards < 0) throw new Error("Invalid throw air yards.");
+  if (!Number.isFinite(airYards)) throw new Error("Invalid throw air yards.");
   const sorted = [...table].sort((a, b) => a.pastLos - b.pastLos);
   if (!sorted.length) throw new Error("Missing Completion Pct table in Settings.");
+  // Negative-depth catches use the first matching row (normally the 0-yard row).
   // past los is the upper bound: 8 air yards uses the 11-yard row.
   return (sorted.find((row) => airYards <= row.pastLos) ?? sorted[sorted.length - 1]).baseCompletion;
 }

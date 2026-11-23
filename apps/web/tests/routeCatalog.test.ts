@@ -35,3 +35,9 @@ test("pass engine samples the entire Settings range and validates route eligibil
   assert.throws(() => assignRoutes(game, ctx, { ...options, routes: { WR: "Go" } }), /not available/);
   assert.deepEqual(assignRoutes(game, ctx, { routes: { WR: "" } }), []);
 });
+
+test("Quick preview preserves the sheet's negative-to-zero range", () => {
+  const range = { routeType: "Quick", minAirYards: -3, maxAirYards: 0 };
+  assert.deepEqual(routeDepthBounds(range, 75), { min: -3, max: 0 });
+  assert.equal(routePreviewDepth(range, 75), -1.5);
+});

@@ -687,3 +687,29 @@ test("touchdowns, safeties, incompletions and interceptions skip the post-catch 
   assert.equal(safety.play.result, "Safety");
   assert.ok(!logs.mock.calls.some(call=>call.arguments[0] === "[Pass Engine] Post-catch fumble check"));
 });
+
+test("Quick screens sample -3 through 0 and resolve completed catches behind the line", t => {
+  t.mock.method(console, "log", () => {});
+  t.mock.method(console, "debug", () => {});
+  const context = completionContext(0);
+  context.settings.routeTypeAirYards = [{ routeType: "Quick", minAirYards: -3, maxAirYards: 0 }];
+  for (const [roll, expected] of [[0, -3], [.25, -2], [.5, -1], [.999, 0]] as const) {
+    t.mock.method(Math, "random", () => roll);
+    assert.equal(assignRoutes(game, context, options)[0].airYards, expected);
+  }
+  // A zero YAC basis isolates the credited negative catch gain.
+  context.settings.routeTypeAirYards = [{ routeType: "Quick", minAirYards: -3, maxAirYards: -3 }];
+  context.settings.yacBasis = [{ maxAirYards: 100, openness: [{ maxOpen: 89, basis: 0 }] }];
+  t.mock.method(Math, "random", () => .5);
+  for (const possession of ["Home", "Away"] as const) {
+    const directionalContext = { ...context, players: context.players.map(player=> possession === "Away"
+      ? { ...player, team: player.team === "Home" ? "Away" : "Home" } : player) };
+    const result = passPlay({ ...game, BallOn: 50, Possession: possession }, directionalContext, options);
+    assert.equal(result.play.isComplete, true);
+    assert.equal(result.play.airyards, -3);
+    assert.equal(result.play.yac, 0);
+    assert.equal(result.play.yards, -3);
+    assert.equal(result.game.BallOn, possession === "Home" ? 47 : 53);
+    assert.equal(result.game.Distance, Number(game.Distance) + 3);
+  }
+});

@@ -28,7 +28,7 @@ export function rollReceiverJump(
   routeTable: readonly JumpRouteRow[], random: () => number = Math.random,
 ) {
   const { jumpMin, jumpMax } = calculateJumpRange(jump);
-  if (!Number.isFinite(actualOpenness) || !Number.isFinite(airYards) || airYards < 0 || !Number.isFinite(yardsToGoal) || yardsToGoal < 0)
+  if (!Number.isFinite(actualOpenness) || !Number.isFinite(airYards) || !Number.isFinite(yardsToGoal) || yardsToGoal < 0)
     throw new Error("Invalid receiver jump throw inputs.");
   if (!effects.length || !airTable.length) throw new Error("Missing jump Settings tables.");
   const sorted = [...effects].sort((a, b) => a.minOpen - b.minOpen);

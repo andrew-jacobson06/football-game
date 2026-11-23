@@ -110,3 +110,13 @@ test("jump is weighted by actual openness, the stored throw type and end-zone st
   assert.equal(result.pct, result.baseCompletion + result.opennessAdjustment + result.accuracyAdjustment + result.handsAdjustment + result.jumpAdjustment);
   assert.equal(rolls.length, 0);
 });
+
+test("negative air yards use the Settings zero-yard completion band", () => {
+  assert.equal(getBaseCompletion(parsed.completionTable, -3), 75);
+  assert.equal(getBaseCompletion(parsed.completionTable, 0), 75);
+  const result = calculateThrowCompletion(settings, { ...target, airYards: -3 }, 1.4);
+  assert.equal(result.airYards, -3);
+  assert.equal(result.baseCompletion, 75);
+  assert.equal(result.jumpAirYardsMultiplier, .25);
+  assert.throws(() => getBaseCompletion(parsed.completionTable, NaN), /Invalid/);
+});
