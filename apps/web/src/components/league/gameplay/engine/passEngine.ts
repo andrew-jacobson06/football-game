@@ -674,14 +674,24 @@ export function determinePassOutcome(
     throwCompletion.actualOpenness, throwCompletion.throwType,
     ctx.settings.dbBeatWRAccuracyMultipliers ?? [], ctx.settings.pickAccuracyMultipliers ?? [],
   );
-  console.log("[Pass Engine] DB route jump", { defender: target.defender, receiver: target.player, ...interceptionCheck });
+  console.log("[Pass Engine] DB route jump", { defender: target.defender, receiver: target.player, ...interceptionCheck,
+    comparison: "<", routeJumpChecked: interceptionCheck.beatRoll !== null,
+    routeJumpSkipReason: interceptionCheck.beatRoll === null ? "openness-90-plus" : null,
+    pickChecked: interceptionCheck.pickRoll !== null,
+    pickSkipReason: interceptionCheck.pickRoll === null ? "receiver-not-beaten" : null });
+  if (interceptionCheck.beatsWRtoBall) console.log("[Interception] Secondary check skipped", {
+    checked: false, roll: null, receiver: target.player, defender: target.defender, reason: "route-jump-resolved" });
   if (interceptionCheck.beatsWRtoBall) return {
     completed: false, intercepted: interceptionCheck.intercepted, deflected: interceptionCheck.deflected,
     defender: target.defender, yards: 0, airYards: target.airYards,
     caughtBy: interceptionCheck.intercepted ? target.defender : undefined, completionRoll: null, interceptionCheck,
   };
   const completionRoll = Math.random() * 100;
+  console.log("[Pass Engine] Completion roll", { quarterback: _qbName, receiver: target.player, threshold: completionPct,
+    roll: completionRoll, comparison: "<=", completed: completionRoll <= completionPct });
   if (completionRoll <= completionPct) {
+    console.log("[Interception] Secondary check skipped", { checked: false, roll: null,
+      receiver: target.player, defender: target.defender, reason: "pass-completed" });
     const receiver = byName(ctx, target.player);
     // Only completed catches use the new matrices. Actual openness 90+ keeps
     // the existing YAC method; perceived openness never enters this calculation.
@@ -709,6 +719,8 @@ export function determinePassOutcome(
   );
   console.log("[Pass Engine] Incomplete pass interception check", {
     defender: target.defender, receiver: target.player, ...incompleteInterceptionCheck,
+    comparison: "<", ballHawkChecked: incompleteInterceptionCheck.ballHawkRoll !== null,
+    pickChecked: incompleteInterceptionCheck.pickRoll !== null,
   });
   return {
     completed: false,
@@ -741,6 +753,7 @@ export function passPlay(
     blitz: passState.blitz, blitzRoll: passState.blitzRoll,
     stopReason: passState.decision === "sack" ? "Sack" : passState.readLoop?.stopReason ?? passState.decision };
   const sackResult = () => {
+    console.log("[Interception] Checks skipped", { checked: false, roll: null, gameId: game.GameId, quarterback: qbName, reason: "sack" });
     const result = handleSack(game, ctx, qbName, options, passState.sacker);
     Object.assign(result.play, passMetadata);
     return result;
@@ -762,6 +775,7 @@ export function passPlay(
     completionChance: pct,
     throwCompletion: passState.throwCompletion,
   });
+  if (!target) console.log("[Interception] Checks skipped", { checked: false, roll: null, gameId: game.GameId, quarterback: qbName, reason: "throw-away" });
   const outcome = target ? determinePassOutcome(ctx, qbName, target, pct, passState.throwCompletion)
     : { completed: false, intercepted: false, yards: 0, airYards: 0, caughtBy: undefined, deflected: false, defender: undefined };
   if (outcome.completed) {
@@ -791,6 +805,9 @@ export function passPlay(
     receiver: target!.player, tackler, airYards: outcome.airYards,
     yac: outcome.yards - outcome.airYards, yards: rawYards, ...fumble,
   });
+  if (!outcome.completed || td || safety) console.log("[Fumble] Check skipped", { checked: false, roll: null,
+    gameId: game.GameId, receiver: target?.player, tackler,
+    reason: td ? "touchdown" : safety ? "safety" : outcome.intercepted ? "interception" : outcome.deflected ? "deflection" : !target ? "throw-away" : "incomplete" });
   const next = nextDownDistance(game, rawYards, newBall);
   const result = outcome.intercepted
     ? "Interception"

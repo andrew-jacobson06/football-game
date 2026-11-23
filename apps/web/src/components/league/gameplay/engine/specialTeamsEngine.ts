@@ -3,7 +3,15 @@ import type { EngineContext, PlayCallOptions } from "./types";
 import { advanceQuarter, applyHalftimeRules, kickoffSpot, n, nextDownDistance, randomInt, switchPoss } from "./utils";
 import { buildResult } from "./playLogger";
 
+/** These simplified plays do not currently run either turnover check. */
+function logSkippedTurnoverChecks(game: LeagueGame, reason: string) {
+  for (const check of ["Interception", "Fumble"]) console.log(`[${check}] Checks skipped`, {
+    gameId: game.GameId, checked: false, roll: null, reason,
+  });
+}
+
 export function punt(game: LeagueGame, ctx: EngineContext) {
+  logSkippedTurnoverChecks(game, "punt");
   const yards = 40;
   const ball = Math.max(
     1,
@@ -40,6 +48,7 @@ export function punt(game: LeagueGame, ctx: EngineContext) {
   );
 }
 export function kickFG(game: LeagueGame, ctx: EngineContext) {
+  logSkippedTurnoverChecks(game, "field-goal-or-extra-point");
   const pendingFGTeam = (game as unknown as Record<string, unknown>)
     .pendingFGTeam as string | undefined;
   const isXp = Boolean(pendingFGTeam);
@@ -83,6 +92,7 @@ export function kickFG(game: LeagueGame, ctx: EngineContext) {
   );
 }
 export function goForTwo(game: LeagueGame, ctx: EngineContext) {
+  logSkippedTurnoverChecks(game, "two-point-conversion");
   const scoring =
     ((game as unknown as Record<string, unknown>).pendingFGTeam as
       string | undefined) || game.Possession;
@@ -118,6 +128,7 @@ export function goForTwo(game: LeagueGame, ctx: EngineContext) {
   );
 }
 export function handleTimeout(game: LeagueGame, ctx: EngineContext) {
+  logSkippedTurnoverChecks(game, "timeout");
   const key = game.Possession === "Home" ? "HomeTimeouts" : "AwayTimeouts";
   const current = Number(
     (game as unknown as Record<string, unknown>)[key] ?? 3,
@@ -136,6 +147,7 @@ export function handleTimeout(game: LeagueGame, ctx: EngineContext) {
   );
 }
 export function spikeBall(game: LeagueGame, ctx: EngineContext) {
+  logSkippedTurnoverChecks(game, "spike");
   const clock = advanceQuarter(game, 1);
   const next = nextDownDistance(game, 0);
   const updated = applyHalftimeRules(game, {
@@ -163,6 +175,7 @@ export function kneel(
   ctx: EngineContext,
   options: PlayCallOptions = {},
 ) {
+  logSkippedTurnoverChecks(game, "kneel");
   void options;
   const clock = advanceQuarter(game, 40);
   const ball =

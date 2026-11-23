@@ -78,29 +78,42 @@ export function fumbleCheck(
 ) {
   const runner = byName(ctx, runnerName);
   const tackler = byName(ctx, tacklerName);
-
-  if (!runner || !tackler || tacklerName === "NA") {
-    return { fumble: false, recoveredBy: "" };
-  }
-
-  const strip = trait(tackler, "strip", 0); // TRAIT USED: Strip
-  const ripChance = Math.pow(strip / 20, 2);
-
-  if (Math.random() * 100 >= ripChance) {
-    return { fumble: false, recoveredBy: "" };
-  }
-
-  const ballSecurity = trait(runner, "ballsecurity", 50); // TRAIT USED: BallSecurity
-  const ballSecurityFailureChance = 27 - Math.pow(ballSecurity / 20, 2);
-
-  if (Math.random() * 100 >= ballSecurityFailureChance) {
-    return { fumble: false, recoveredBy: "" };
-  }
-
-  return {
-    fumble: true,
-    recoveredBy: Math.random() < 0.55 ? tacklerName : runnerName,
+  const log = (stage: string, details: Record<string, unknown>) => console.log(`[Fumble] ${stage}`, { runner: runnerName, tackler: tacklerName, ...details });
+  const skip = (stage: string, reason: string) => log(stage, { checked: false, roll: null, reason });
+  const finish = (fumble: boolean, recoveredBy = "") => {
+    log("Result", { fumble, recoveredBy, lost: fumble && recoveredBy !== runnerName });
+    return { fumble, recoveredBy };
   };
+  if (!runner || !tackler || tacklerName === "NA") {
+    for (const stage of ["Strip check", "Ball security check", "Recovery"]) skip(stage, "missing-runner-or-tackler");
+    return finish(false);
+  }
+
+  const strip = trait(tackler, "strip", 0);
+  const ripChance = Math.pow(strip / 20, 2);
+  const stripRoll = Math.random() * 100;
+  const stripPassed = stripRoll < ripChance;
+  log("Strip check", { checked: true, strip, formula: "(strip / 20)^2", threshold: ripChance, roll: stripRoll, comparison: "<", passed: stripPassed });
+  if (!stripPassed) {
+    skip("Ball security check", "strip-check-failed");
+    skip("Recovery", "no-fumble");
+    return finish(false);
+  }
+
+  const ballSecurity = trait(runner, "ballsecurity", 50);
+  const ballSecurityFailureChance = 27 - Math.pow(ballSecurity / 20, 2);
+  const securityRoll = Math.random() * 100;
+  const securityFailed = securityRoll < ballSecurityFailureChance;
+  log("Ball security check", { checked: true, ballSecurity, formula: "27 - (ballSecurity / 20)^2", threshold: ballSecurityFailureChance, roll: securityRoll, comparison: "<", fumble: securityFailed });
+  if (!securityFailed) {
+    skip("Recovery", "no-fumble");
+    return finish(false);
+  }
+
+  const recoveryRoll = Math.random();
+  const recoveredBy = recoveryRoll < 0.55 ? tacklerName : runnerName;
+  log("Recovery", { checked: true, threshold: 55, roll: recoveryRoll * 100, comparison: "<", defensiveRecovery: recoveryRoll < 0.55, recoveredBy });
+  return finish(true, recoveredBy);
 }
 
 export function checkForFumble(
@@ -138,6 +151,8 @@ export function runPlay(
     throw new Error("No runner available for run play.");
   }
 
+  console.log("[Interception] Checks skipped", { checked: false, roll: null, gameId: game.GameId, quarterback: runnerName,
+    reason: options.qbScramble ? "qb-scramble" : "run-play" });
   const runState = createRunPlayState(runnerName);
   // Runs never roll for a blitz. A scramble may retain the call already made
   // on its original pass snap, without making another coaching decision.
@@ -479,6 +494,8 @@ export function runPlay(
     td || safety
       ? { fumble: false, recoveredBy: "" }
       : fumbleCheck(ctx, runnerName, tackler);
+  if (td || safety) console.log("[Fumble] Check skipped", { checked: false, roll: null, runner: runnerName, tackler,
+    reason: td ? "touchdown" : "safety", gameId: game.GameId });
   const next = nextDownDistance(game, yards, newBall);
   // Final result priority mirrors football outcomes: scoring, turnover events, then first down or normal play.
   const scrambleSack = options.qbScramble === true && yards < 0;
