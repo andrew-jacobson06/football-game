@@ -781,6 +781,16 @@ export function passPlay(
       : outcome.intercepted || outcome.deflected
         ? String(outcome.caughtBy ?? target?.defender ?? "Defense")
         : "NA";
+  // Check once after the catch, YAC, goal-line cap and final tackler are resolved.
+  // A touchdown/safety ends the play before a receiver can fumble.
+  const fumble = outcome.completed && !td && !safety
+    ? checkForFumble(ctx, target!.player, tackler)
+    : { fumble: false, recoveredBy: "" };
+  const fumbleLost = fumble.fumble && fumble.recoveredBy !== target?.player;
+  if (outcome.completed && !td && !safety) console.log("[Pass Engine] Post-catch fumble check", {
+    receiver: target!.player, tackler, airYards: outcome.airYards,
+    yac: outcome.yards - outcome.airYards, yards: rawYards, ...fumble,
+  });
   const next = nextDownDistance(game, rawYards, newBall);
   const result = outcome.intercepted
     ? "Interception"
@@ -790,11 +800,13 @@ export function passPlay(
         ? "Touchdown"
         : safety
           ? "Safety"
-          : next.turnover
-            ? "TO on Downs"
-            : rawYards >= n(game.Distance)
-              ? "First Down"
-              : "Normal";
+          : fumble.fumble
+            ? "Fumble"
+            : next.turnover
+              ? "TO on Downs"
+              : rawYards >= n(game.Distance)
+                ? "First Down"
+                : "Normal";
   console.debug("[Pass Engine] Pass outcome", {
     quarterback: qbName,
     target: target?.player,
@@ -813,7 +825,7 @@ export function passPlay(
     else hs += 2;
   }
   const possession =
-    td || safety || next.turnover || outcome.intercepted
+    td || safety || next.turnover || outcome.intercepted || fumbleLost
       ? switchPoss(game)
       : game.Possession;
   const clock = advanceQuarter(
@@ -827,6 +839,7 @@ export function passPlay(
         "TO on Downs",
         "Interception",
         "Incomplete",
+        "Fumble",
       ].includes(result),
     ),
   );
@@ -836,11 +849,12 @@ export function passPlay(
     AwayScore: as,
     Qtr: clock.qtr,
     Time: clock.time,
-    Down: result === "Incomplete" ? Math.min(4, n(game.Down) + 1) : next.down,
-    Distance: result === "Incomplete" ? game.Distance : next.distance,
+    Down: fumbleLost ? 1 : result === "Incomplete" ? Math.min(4, n(game.Down) + 1) : next.down,
+    Distance: fumbleLost ? 10 : result === "Incomplete" ? game.Distance : next.distance,
     BallOn: result === "Incomplete" ? game.BallOn : next.ballOn,
     Previous: game.BallOn,
     Possession: possession,
+    ...(fumbleLost ? { DriveStart: newBall } : {}),
   });
   return buildResult(
     game,
@@ -862,7 +876,9 @@ export function passPlay(
       airyards: outcome.airYards,
       recoveredby: outcome.intercepted
         ? String(outcome.caughtBy ?? "Defense")
-        : "",
+        : fumble.recoveredBy,
+      // An offensive recovery is a fumble, but not a possession turnover.
+      ...(fumble.fumble ? { turnover: fumbleLost || next.turnover ? "Yes" : "" } : {}),
     },
   );
 }
