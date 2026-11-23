@@ -30,11 +30,17 @@ export function parseRouteCatalogSettings(rows: unknown[][]) {
         if (routeTypeAirYards.length) break;
         continue;
       }
+      // Screens may be caught behind the line: negative air yards are valid.
       const min = row[minColumn], max = row[maxColumn];
       const minAirYards = Number(min), maxAirYards = text(max) === "--" ? null : Number(max);
-      if (!text(min) || !Number.isInteger(minAirYards) || minAirYards < 0 ||
-          (maxAirYards !== null && (!text(max) || !Number.isInteger(maxAirYards) || maxAirYards < minAirYards)))
-        throw new Error(`Invalid AirYards setting at Settings row ${index + 1}: ${routeType}.`);
+      const problem = !text(min) ? "airyards min is blank"
+        : !Number.isInteger(minAirYards) ? "airyards min must be a whole number"
+        : maxAirYards !== null && !text(max) ? "airyards max is blank (use -- for an open-ended range)"
+        : maxAirYards !== null && !Number.isInteger(maxAirYards) ? "airyards max must be a whole number or --"
+        : maxAirYards !== null && maxAirYards < minAirYards ? "airyards max is less than airyards min"
+        : null;
+      if (problem) throw new Error(`Invalid AirYards setting at Settings row ${index + 1}: ${routeType}. ` +
+        `${problem} (min=${JSON.stringify(min ?? "")}, max=${JSON.stringify(max ?? "")}).`);
       const range = { label: text(row[startColumn]), routeType, minAirYards, maxAirYards };
       const existing = depths.get(key(routeType));
       if (existing) {

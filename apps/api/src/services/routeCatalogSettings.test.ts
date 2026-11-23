@@ -119,3 +119,30 @@ test("the supplied nine-depth catalog has one option per depth and the correct r
   assert.deepEqual(result.routesByDepth.Bomb, ["Corner", "Seam", "Fade", "Go", "Post", "Post Corner"]);
   assert.ok(depthNames.every((depth) => result.routesByDepth[depth].length > 0));
 });
+
+test("AirYards validation reports the actual offending bounds and cause", () => {
+  const header = ["AirYards", "routeType", "airyards min", "airyards max"];
+  for (const [min, max, reason] of [["", 2, "min is blank"], [1, "", "max is blank"], [1.5, 2, "min must be a whole number"], [3, 2, "max is less than"], [1, "oops", "max must be a whole number"]] as const) {
+    assert.throws(() => parseRouteCatalogSettings([header, ["range", "Quick", min, max]]), error => {
+      assert.ok(error instanceof Error);
+      assert.ok(error.message.includes("Settings row 2: Quick"));
+      assert.ok(error.message.includes(reason));
+      assert.ok(error.message.includes(`min=${JSON.stringify(min)}, max=${JSON.stringify(max)}`));
+      return true;
+    });
+  }
+});
+
+
+test("loads the updated Settings table including Quick -3 to 0 and Short 0 to 3", () => {
+  const names = ["Quick", "Short", "Short-Mid", "Mid", "Mid-Long", "Long", "Deep", "Shot", "Bomb"];
+  const ranges = [[-3, 0], [0, 3], [4, 7], [8, 12], [13, 19], [20, 25], [26, 30], [31, 39], [40, "--"]];
+  const result = parseRouteCatalogSettings([
+    ["AirYards", "routeType", "airyards min", "airyards max"],
+    ...names.map((name, i) => [`routeType_AirYardsReqd_${name}`, name, ...ranges[i]]),
+    ["Routes", ...names], ["Flat", 1, 1],
+  ]);
+  assert.deepEqual(result.routeTypeAirYards.map(({ minAirYards, maxAirYards }) => [minAirYards, maxAirYards]), [...ranges.slice(0, -1), [40, null]]);
+  assert.deepEqual(result.routesByDepth.Quick, ["Flat"]);
+  assert.deepEqual(result.routesByDepth.Short, ["Flat"]);
+});

@@ -63,3 +63,9 @@ test("route boosts and ALL ELSE use the supplied Settings values without fixed r
   assert.equal(getJumpRouteMultiplier(table, "  fAdE  "), 1.5);
   assert.throws(() => getJumpRouteMultiplier([], "Go"), /Missing/);
 });
+
+test("behind-the-line throws use the shortest jump band rather than being rejected", () => {
+  const result = rollReceiverJump(50, 45, "Close", -3, 75, effects, air, "Flat", routes, () => .5);
+  assert.equal(result.jumpAirYardsMultiplier, .25);
+  assert.equal(result.isEndZoneThrow, false);
+});
