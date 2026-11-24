@@ -273,8 +273,8 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
                 <LeagueStandings teams={standings} games={games} onSelectTeam={setSelectedTeam} />
               </div>
             )}
-            {activeTab === "playoffs" && <div className="league-tab-content active"><LeaguePlayoffs visible={typeof seasonWeek === "string"} teams={teams} games={games} onTeam={setSelectedTeam} onGame={openGame} /></div>}
-            {activeTab === "awards" && <div className="league-tab-content active"><LeagueAwards visible={typeof seasonWeek === "string"} /></div>}
+            {activeTab === "playoffs" && <div className="league-tab-content active"><LeaguePlayoffs postseason={typeof seasonWeek === "string"} teams={teams} games={games} onTeam={setSelectedTeam} onGame={openGame} /></div>}
+            {activeTab === "awards" && <div className="league-tab-content active"><LeagueAwards postseason={typeof seasonWeek === "string"} /></div>}
             {activeTab === "stats" && (
               <div className="league-tab-content active">
                 <LeagueStats key={`${searchedPlayer?.Name || "leaders"}-${searchedPlayer?.Team || ""}`} teams={teams} games={games} onTeam={setSelectedTeam} requestedPlayer={searchedPlayer} onPlayerClose={() => setSearchedPlayer(null)} />
