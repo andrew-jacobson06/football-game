@@ -1,4 +1,4 @@
-import { awardNominees, NOMINEE_AWARDS, OFFENSE_HONORS, DEFENSE_HONORS, type AwardCandidate, type NomineeAwardId } from "./leagueAwards";
+import { awardNominees, NOMINEE_AWARDS, OFFENSE_HONORS, DEFENSE_HONORS, type AwardCandidate, type NomineeAwardId } from "./awardModels";
 
 /** Nominations, voting and selected honors will be supplied by the future awards workflow. */
 export function LeagueAwards({ visible, nominations = {}, firstTeams = {}, defenseByDivision = true }: {
