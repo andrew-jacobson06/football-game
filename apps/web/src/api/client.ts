@@ -1,3 +1,4 @@
+import type { SeasonWeek } from "../components/league/seasonWeeks";
 import type { Player } from "../components/players/types";
 
 const API_BASE_URL = "http://localhost:4000/api";
@@ -125,11 +126,14 @@ export type LeagueArticle = {
 export async function getArticles(): Promise<{ articles: LeagueArticle[] }> {
   return getJson("/articles", "Failed to load league articles");
 }
-export async function getSeason(): Promise<{ week: number }> {
+export async function getSeason(): Promise<{ week: SeasonWeek }> {
   return getJson("/season", "Failed to load the current season week");
 }
-export async function advanceSeason(): Promise<{ ok: boolean; week: number }> {
-  return postJson("/season/advance", {}, "Failed to advance the season week");
+export async function advanceSeason(): Promise<{ ok: boolean; week: SeasonWeek }> {
+  const response = await fetch(`${API_BASE_URL}/season/advance`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Failed to advance the season week");
+  return result;
 }
 export async function getGameState(
   gameId: string | number,

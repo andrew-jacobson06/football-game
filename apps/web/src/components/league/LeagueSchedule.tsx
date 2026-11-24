@@ -1,17 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { LeagueGame } from "./types";
 import { formatBallOnForPoss, formatClock, formatDownDistance } from "./leagueMappers";
 
-const WEEKS = Array.from({ length: 18 }, (_, index) => index + 1);
-
-const gameWeek = (game: LeagueGame, index: number) =>
-  Number(game.Week ?? (index % WEEKS.length) + 1);
+import { SEASON_WEEKS, gameSeasonWeek, seasonWeekLabel, type SeasonWeek } from "./seasonWeeks";
 
 function kickoffParts(game: LeagueGame) {
   const raw = String(game["Kickoff Time"] ?? game.Kickoff ?? "").trim();
   const parsed = new Date(raw);
   if (!raw || Number.isNaN(parsed.getTime())) {
-    return { date: game.Date || `Week ${game.Week || "—"}`, time: raw || "Time TBD" };
+    return { date: game.Date || seasonWeekLabel(gameSeasonWeek(game)), time: raw || "Time TBD" };
   }
   return {
     date: new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" }).format(parsed),
@@ -19,21 +16,27 @@ function kickoffParts(game: LeagueGame) {
   };
 }
 
-export function LeagueSchedule({ games, currentWeek, onSelectGame }: { games: LeagueGame[]; currentWeek: number | null; onSelectGame: (game: LeagueGame) => void }) {
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+export function LeagueSchedule({ games, currentWeek, onSelectGame }: { games: LeagueGame[]; currentWeek: SeasonWeek | null; onSelectGame: (game: LeagueGame) => void }) {
+  const [selectedWeek, setSelectedWeek] = useState<SeasonWeek | null>(null);
+  useEffect(() => { setSelectedWeek(null); }, [currentWeek]);
   const activeWeek = selectedWeek ?? currentWeek ?? 1;
+  const weekNavigation = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = weekNavigation.current, active = nav?.querySelector<HTMLElement>("button.active");
+    if (nav && active) nav.scrollLeft += active.getBoundingClientRect().left - nav.getBoundingClientRect().left - (nav.clientWidth - active.clientWidth) / 2;
+  }, [activeWeek]);
   const weekGames = useMemo(
-    () => games.filter((game, index) => gameWeek(game, index) === activeWeek),
+    () => games.filter((game, index) => gameSeasonWeek(game, index) === activeWeek),
     [activeWeek, games],
   );
   const finalGames = weekGames.filter((game) => String(game.Qtr).toUpperCase() === "FINAL").length;
 
-  const weekLabel = (week: number) => {
-    const game = games.find((item, index) => gameWeek(item, index) === week);
-    if (!game) return `WEEK ${week}`;
+  const weekLabel = (week: SeasonWeek) => {
+    const game = games.find((item, index) => gameSeasonWeek(item, index) === week);
+    if (!game) return seasonWeekLabel(week).toUpperCase();
     const parsed = new Date(String(game["Kickoff Time"] ?? game.Kickoff ?? ""));
     return Number.isNaN(parsed.getTime())
-      ? `WEEK ${week}`
+      ? seasonWeekLabel(week).toUpperCase()
       : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(parsed).toUpperCase();
   };
 
@@ -43,15 +46,15 @@ export function LeagueSchedule({ games, currentWeek, onSelectGame }: { games: Le
         <div><span className="scores-heading__eyebrow">2026 SEASON</span><h1>AFL Scoreboard</h1></div>
         <div className="scores-heading__status"><i /> {finalGames ? `${finalGames} final` : "Games scheduled"}</div>
       </header>
-      <nav className="week-tabs" aria-label="Scoreboard weeks">
-        {WEEKS.map((week) => (
-          <button key={week} type="button" className={activeWeek === week ? "active" : ""} onClick={() => setSelectedWeek(week)}>
-            <span>WEEK {week}</span><small>{weekLabel(week)}</small>
+      <nav ref={weekNavigation} className="week-tabs" aria-label="Scoreboard weeks">
+        {SEASON_WEEKS.map((week) => (
+          <button key={week} data-playoff={typeof week === "string"} type="button" className={activeWeek === week ? "active" : ""} onClick={() => setSelectedWeek(week)}>
+            <span>{seasonWeekLabel(week).toUpperCase()}</span><small>{weekLabel(week)}</small>
           </button>
         ))}
       </nav>
       <section className="week-scoreboard">
-        <div className="week-scoreboard__title"><div><span>WEEK {activeWeek}</span><h2>{finalGames ? "Scores & Results" : "Upcoming Games"}</h2></div><span>{weekGames.length} {weekGames.length === 1 ? "GAME" : "GAMES"}</span></div>
+        <div className="week-scoreboard__title"><div><span>{seasonWeekLabel(activeWeek).toUpperCase()}</span><h2>{finalGames ? "Scores & Results" : "Upcoming Games"}</h2></div><span>{weekGames.length} {weekGames.length === 1 ? "GAME" : "GAMES"}</span></div>
         {weekGames.length ? weekGames.map((game) => {
           const gameStatus = String(game.Qtr ?? "").trim().toUpperCase();
           const final = gameStatus === "FINAL";
@@ -77,7 +80,7 @@ export function LeagueSchedule({ games, currentWeek, onSelectGame }: { games: Le
               <button type="button" onClick={() => onSelectGame(game)}>Gamecast <b>›</b></button>
             </div>
           </article>
-        );}) : <div className="schedule-empty"><strong>No games scheduled yet</strong><span>Check back for the Week {activeWeek} matchup announcement.</span></div>}
+        );}) : <div className="schedule-empty"><strong>No games scheduled yet</strong><span>Check back for the {seasonWeekLabel(activeWeek)} matchup announcement.</span></div>}
       </section>
     </div>
   );

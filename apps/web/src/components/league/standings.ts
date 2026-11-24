@@ -1,4 +1,4 @@
-import type { LeagueGame, LeagueTeam } from "./types";
+import type { LeagueGame, LeagueTeam } from "./types.js";
 
 const normalized = (value: unknown) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 export function standingValue(team: LeagueTeam, ...names: string[]) {
