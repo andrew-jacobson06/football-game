@@ -596,17 +596,20 @@
   white-space: nowrap;
 }
 .standings-table tbody tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--surface-subtle);
 }
 .standings-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--stat-highlight);
 }
+.standings-table td { white-space: nowrap; }
+.standings-diff-positive { color: var(--status-success); }
+.standings-diff-negative { color: var(--accent-red); }
 .standings-table .team-col {
   text-align: left;
   min-width: 250px;
 }
 .standings-table .pct-col {
-  background: rgba(100, 155, 215, 0.12);
+  background: var(--stat-highlight);
 }
 .standings-team {
   display: flex;
