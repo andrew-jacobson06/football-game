@@ -26,6 +26,7 @@ import GameField, { type AnimationPlan } from "./GameField";
 import { GameControls } from "./GameControls";
 import { buildDefense } from "./formationDefense";
 import { GameLog } from "./GameLog";
+import { isPregame, gameAfterToss, type TossSide, type TossChoice } from "./gameStart";
 import { PlayerImage } from "../players/PlayerImage";
 import {
   goForTwo,
@@ -69,12 +70,6 @@ const matchesTeam = (team: LeagueTeam, key: unknown) => {
 };
 const findTeam = (teams: LeagueTeam[], ...keys: unknown[]) =>
   teams.find((team) => keys.some((key) => matchesTeam(team, key)));
-const isPregame = (game: LeagueGame) => {
-  const quarter = String(game.Qtr ?? "").trim().toUpperCase();
-  return !quarter || quarter === "0" || quarter === "UNSTARTED" || quarter === "PREGAME";
-};
-type TossSide = "Heads" | "Tails";
-type TossChoice = "receive" | "kick";
 type TossPhase = "idle" | "call" | "flipping" | "decision" | "saving";
 
 type Play = Record<string, unknown>;
@@ -1565,7 +1560,6 @@ export function GameCenter({
 
   const beginGame = () => {
     if (!isPregame(currentGame)) return;
-    setCurrentGame((current) => ({ ...current, Qtr: 1, Time: 900 }));
     setTossCall(null);
     setTossResult(null);
     setTossError("");
@@ -1598,23 +1592,9 @@ export function GameCenter({
   ) => {
     if (!completedCall || !completedResult) return;
     const homeWon = completedCall === completedResult;
-    const winner = homeWon ? "Home" : "Away";
-    const receivingTeam = winnerChoice === "receive"
-      ? winner
-      : winner === "Home" ? "Away" : "Home";
-    const ballOn = receivingTeam === "Home" ? 25 : 75;
-    const startedGame: LeagueGame = {
-      ...currentGame,
-      Qtr: 1,
-      Time: 900,
-      Down: 1,
-      Distance: 10,
-      BallOn: ballOn,
-      Possession: receivingTeam,
-      OpeningPossession: receivingTeam,
-      DriveStart: ballOn,
-      Previous: ballOn,
-    } as LeagueGame;
+    const startedGame = gameAfterToss(currentGame, completedCall, completedResult, winnerChoice);
+    const receivingTeam = startedGame.Possession;
+    const ballOn = startedGame.BallOn;
     setTossPhase("saving");
     setTossError("");
     try {
@@ -1765,6 +1745,8 @@ export function GameCenter({
     }
   };
   const action = (label: string, options: PlayCallOptions = playOptions) => {
+    // Pregame and an unsaved toss must never enter the regular play pipeline.
+    if (isPregame(currentGame) || tossPhase !== "idle") return;
     if (isSavingPlay || isResettingPlay || playInFlightRef.current) {
       setLog((l) => [
         "Play save in progress; wait for it to finish before snapping again.",
@@ -1866,7 +1848,7 @@ export function GameCenter({
             <>
               <div className="pregame-start">
                 <span>Ready for kickoff?</span>
-                <button className="pregame-start-button" type="button" onClick={beginGame}>
+                <button className="pregame-start-button" type="button" disabled={tossPhase !== "idle"} onClick={beginGame}>
                   Start Game
                 </button>
               </div>
@@ -2069,7 +2051,7 @@ export function GameCenter({
                   onSelectedFormationPlayerChange={setSelectedFormationPlayer}
                   selectedFormationPlayer={selectedFormationPlayer}
                   requestedFormationMode={settingFormation}
-                  disabled={isSavingPlay || isResettingPlay}
+                  disabled={isPregame(currentGame) || tossPhase !== "idle" || isSavingPlay || isResettingPlay}
                   onPassSetupChange={(active) => {
                     setPassSetup(active);
                     setSelectedRoutePlayer("");
