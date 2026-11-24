@@ -2857,3 +2857,5 @@ button.playoff-team-row:hover, button.playoff-team-row:focus-visible { backgroun
 .honor-pending { color: var(--text-secondary); }
 @media (max-width: 1000px) { .playoff-layout { grid-template-columns: repeat(2, minmax(0, 1fr)); } .playoff-division--west { grid-column: 2; } .playoff-national { grid-column: 1 / -1; grid-row: 2; width: min(100%, 460px); justify-self: center; } }
 @media (max-width: 640px) { .playoff-layout, .award-nominees-grid, .honors-grid { grid-template-columns: minmax(0, 1fr); } .playoff-division--east, .playoff-division--west, .playoff-national { grid-column: 1; grid-row: auto; width: 100%; } .playoff-national { order: 1; } .honors-card th, .honors-card td { padding: 12px 10px; } }
+.award-winner { margin: 16px; color: var(--status-success); overflow-wrap: anywhere; }
+.award-candidates { overflow-wrap: anywhere; }
