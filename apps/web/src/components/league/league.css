@@ -2805,7 +2805,15 @@
 .week-tabs button[data-playoff="true"], .schedule-weeks button[data-playoff="true"] { min-width: 210px; flex: 0 0 210px; }
 
 /* Postseason pages share theme tokens and keep bracket cards readable at every size. */
-.postseason-page { max-width: 1440px; margin: 0 auto; padding: clamp(20px, 3vw, 44px); color: var(--text-primary); }
+/* Match the league's red accents, 14px dashboard cards and 8px action controls. */
+.postseason-page {
+  --control-accent: var(--accent-red);
+  --stat-highlight: color-mix(in srgb, var(--accent-red) 12%, transparent);
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: clamp(20px, 3vw, 44px);
+  color: var(--text-primary);
+}
 .postseason-heading { margin-bottom: 30px; }
 .postseason-heading > span { color: var(--control-accent); font-size: .72rem; font-weight: 800; letter-spacing: .13em; }
 .postseason-heading h1 { margin: 8px 0 10px; font-size: clamp(2rem, 4vw, 3.2rem); }
@@ -2815,14 +2823,15 @@
 .playoff-division--west { grid-column: 3; grid-row: 1; }
 .playoff-national { grid-column: 2; grid-row: 1; align-self: center; }
 .playoff-division > h2 { margin: 0 0 18px; font-size: 1.25rem; }
-.playoff-match, .playoff-bye, .playoff-champion, .award-card, .honors-card { background: var(--surface-raised); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
+.playoff-match, .playoff-bye, .playoff-champion, .award-card, .honors-card { background: var(--surface-raised); border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; }
 .playoff-bye { margin-bottom: 22px; }
 .playoff-match > header, .playoff-bye > header { padding: 16px; background: var(--surface-subtle); }
 .playoff-match h3, .playoff-bye h3 { margin: 0 0 5px; font-size: .95rem; }
 .playoff-match header > span, .playoff-bye header > span { color: var(--text-secondary); font-size: .75rem; }
 .playoff-team-row { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 65px; padding: 12px 14px; box-sizing: border-box; color: var(--text-primary); background: transparent; border: 0; border-top: 1px solid var(--border-color); text-align: left; font: inherit; }
 button.playoff-team-row { cursor: pointer; }
-button.playoff-team-row:hover, button.playoff-team-row:focus-visible { background: var(--stat-highlight); }
+button.playoff-team-row:hover { background: var(--stat-highlight); }
+button.playoff-team-row:focus-visible { background: var(--stat-highlight); outline: 2px solid var(--accent-red); outline-offset: -2px; }
 .playoff-team-row img, .playoff-logo-placeholder { flex: 0 0 32px; width: 32px; height: 32px; object-fit: contain; }
 .playoff-logo-placeholder { display: grid; place-items: center; background: var(--surface-subtle); border-radius: 50%; font-size: .65rem; }
 .playoff-seed { color: var(--text-secondary); flex: 0 0 14px; font-size: .8rem; font-weight: 700; }
@@ -2833,7 +2842,8 @@ button.playoff-team-row:hover, button.playoff-team-row:focus-visible { backgroun
 .playoff-score { font-size: 1.1rem; }
 .playoff-advance { padding: 14px; color: var(--text-secondary); text-align: center; font-size: .75rem; }
 .postseason-action { margin: 14px; padding: 9px 14px; border: 1px solid var(--control-border); border-radius: 8px; color: var(--text-primary); background: var(--control-bg); cursor: pointer; font: inherit; font-size: .85rem; font-weight: 700; }
-.postseason-action:hover, .postseason-action:focus-visible { border-color: var(--control-border-hover); background: var(--control-bg-hover); }
+.postseason-action:not(:disabled):hover { border-color: var(--accent-red); background: var(--control-bg-hover); }
+.postseason-action:focus-visible { border-color: var(--accent-red); outline: 3px solid color-mix(in srgb, var(--accent-red) 30%, transparent); outline-offset: 2px; }
 .postseason-action:disabled { opacity: .55; cursor: not-allowed; }
 .playoff-champion { margin-top: 22px; border-color: var(--status-success); }
 .playoff-champion > span { display: block; padding: 16px; color: var(--status-success); font-size: .75rem; font-weight: 800; letter-spacing: .08em; }
