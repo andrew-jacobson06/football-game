@@ -9,5 +9,5 @@ export function awardNominees(id: NomineeAwardId, candidates: readonly AwardCand
   const award = NOMINEE_AWARDS.find(award => award.id === id)!;
   return candidates.filter(candidate => id !== "opoy" || !/\bQB\b|quarterback/i.test(candidate.position)).slice(0, award.limit);
 }
-export const OFFENSE_HONORS = ["QB", "RB", "WR", "WR", "TE", "OL", "OL", "OL", "K"];
-export const DEFENSE_HONORS = ["DB", "DB", "DL", "LB", "LB", "ANY", "ANY"];
+export const OFFENSE_HONORS = ["QB", "RB", "RB", "WR", "WR", "TE", "Blocker", "Blocker", "K"];
+export const DEFENSE_HONORS = ["DB", "DB", "LB", "LB", "DL", "ANY", "ANY", "ANY"];

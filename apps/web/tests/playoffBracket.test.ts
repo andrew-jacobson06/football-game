@@ -34,6 +34,6 @@ test('awards cap nominees at eight/five/five and exclude quarterbacks from OPOY'
  assert.equal(awardNominees('mvp',nominees).length,8);
  assert.equal(awardNominees('dpoy',nominees).length,5);
  const offense=awardNominees('opoy',nominees);assert.equal(offense.length,5);assert.ok(offense.every(c=>!c.position.includes('QB')));
- assert.deepEqual(OFFENSE_HONORS,['QB','RB','WR','WR','TE','OL','OL','OL','K']);
- assert.deepEqual(DEFENSE_HONORS,['DB','DB','DL','LB','LB','ANY','ANY']);
+ assert.deepEqual(OFFENSE_HONORS,['QB','RB','RB','WR','WR','TE','Blocker','Blocker','K']);
+ assert.deepEqual(DEFENSE_HONORS,['DB','DB','LB','LB','DL','ANY','ANY','ANY']);
 });
