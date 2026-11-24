@@ -19,6 +19,8 @@ import { aggregatePlayStats, passPlayFacts } from "../services/playStats.js";
 import { playValueForHeader, sheetSafe } from "../services/playHistory.js";
 import { parsePlayerStats } from "../services/playerStats.js";
 import { parsePlayoffBracket } from "../services/playoffBracket.js";
+import { AwardsError, AWARD_COUNTS, awardsPlayers, parseAwards, type AwardId } from "../services/awards.js";
+import { awardView, prepareAwardNominations, runAwardVote } from "../services/awardsWorkflow.js";
 import { aggregateTeamDefenseStats } from "../services/teamDefenseStats.js";
 
 import { planSeasonAdvance, seasonAdvanceWrites, SeasonProgressionError } from "../services/seasonProgression.js";
@@ -48,6 +50,20 @@ async function getSeasonWeek() {
   }
   return { week, rowNumber: rows.indexOf(weekRow) + 2, valueColumn: valueIndex };
 }
+// Serialize season advancement and awards writes within this API instance.
+let awardsBusy = false;
+async function withAwardsLock<T>(work: () => Promise<T>) {
+  if (awardsBusy) throw new AwardsError("Awards or season advancement is already running. Please wait.");
+  awardsBusy = true;
+  try { return await work(); } finally { awardsBusy = false; }
+}
+async function awardsContext() {
+  const [players, stats, teams, assignments, standings, games] = await Promise.all([
+    readSheetObjects("Players!A1:AM"), getPlayerSeasonStats(), getTeamsFromSheet(),
+    readSheetObjects("PlayerTeams!A1:B"), getStandingsFromSheet(), getGamesList(),
+  ]);
+  return { players: awardsPlayers(players, stats, teams, assignments), standings, games: (games as unknown as LeagueGame[]).filter(g => typeof parseSeasonWeek(g.Week) === "number") };
+}
 async function advanceSeasonWeek() {
   const season = await getSeasonWeek();
   const games = await getGamesList() as unknown as LeagueGame[];
@@ -56,8 +72,15 @@ async function advanceSeasonWeek() {
     : [[], [], []];
   const plan = planSeasonAdvance(season.week, games, standings, teams as LeagueTeam[], bracket);
   const column = String.fromCharCode(65 + season.valueColumn);
-  // One atomic batch stamps only bracket team cells and the Season Week variable.
-  await batchUpdateSheetValues(seasonAdvanceWrites(plan, `Season!${column}${season.rowNumber}`));
+  const updates = seasonAdvanceWrites(plan, `Season!${column}${season.rowNumber}`);
+  if (season.week === 13) {
+    const rows = await readSheetValues("'Awards'!A1:K");
+    const nominations = await prepareAwardNominations(rows, await awardsContext());
+    if (JSON.stringify(await readSheetValues("'Awards'!A1:K")) !== JSON.stringify(rows)) throw new AwardsError("Awards changed while nominations were being generated. No season changes were saved.");
+    updates.unshift(...nominations);
+  }
+  // Names, vote resets, playoff seeds and week advance commit together; Total formulas stay intact.
+  await batchUpdateSheetValues(updates);
   return plan.nextWeek;
 }
 function objectFrom(headers: string[], row: Row) {
@@ -554,6 +577,24 @@ gameRoutes.get("/team-defense-stats", async (_req, res, next) => {
     res.json({ teamDefenseStats: aggregateTeamDefenseStats(teams, games, history.rows.map((row) => objectFrom(history.headers, row))) });
   } catch (e) { next(e); }
 });
+gameRoutes.get("/awards", async (_req, res, next) => {
+  try {
+    if (typeof (await getSeasonWeek()).week === "number") { res.json({ nominations: {}, firstTeams: [] }); return; }
+    const [rows, context] = await Promise.all([readSheetValues("'Awards'!A1:K"), awardsContext()]);
+    res.json(awardView(parseAwards(rows), context.players));
+  } catch (e) { if (e instanceof AwardsError) res.status(400).json({ error:e.message }); else next(e); }
+});
+gameRoutes.post("/awards/:award/vote", async (req, res, next) => {
+  try {
+    const award = String(req.params.award).toUpperCase();
+    if (!Object.hasOwn(AWARD_COUNTS, award)) throw new AwardsError("Unknown award.");
+    const result = await withAwardsLock(async () => {
+      if (typeof (await getSeasonWeek()).week === "number") throw new AwardsError("Awards voting opens after the regular season.");
+      return runAwardVote(award as AwardId, { read:()=>readSheetValues("'Awards'!A1:K"), write:batchUpdateSheetValues, context:awardsContext });
+    });
+    res.json(result);
+  } catch (e) { if (e instanceof AwardsError) res.status(400).json({ error:e.message }); else next(e); }
+});
 gameRoutes.get("/playoff-bracket", async (_req, res, next) => {
   try { res.json({ seeds: parsePlayoffBracket(await readSheetValues("'Playoff Bracket'!A1:C7")) }); } catch (e) { next(e); }
 });
@@ -562,7 +603,7 @@ gameRoutes.get("/teams/:team/players", async (req, res, next) => { try { res.jso
 gameRoutes.get("/games", async (_req, res, next) => { try { res.json({ games: await getGamesList() }); } catch (e) { next(e); } });
 gameRoutes.get("/articles", async (_req, res, next) => { try { res.json({ articles: await getPublishedArticles() }); } catch (e) { next(e); } });
 gameRoutes.get("/season", async (_req, res, next) => { try { res.json({ week: (await getSeasonWeek()).week }); } catch (e) { next(e); } });
-gameRoutes.post("/season/advance", async (_req, res, next) => { try { res.json({ ok: true, week: await advanceSeasonWeek() }); } catch (e) { if (e instanceof SeasonProgressionError) res.status(400).json({ error: e.message }); else next(e); } });
+gameRoutes.post("/season/advance", async (_req, res, next) => { try { res.json({ ok: true, week: await withAwardsLock(advanceSeasonWeek) }); } catch (e) { if (e instanceof SeasonProgressionError || e instanceof AwardsError) res.status(400).json({ error: e.message }); else next(e); } });
 gameRoutes.get("/games/:gameId/state", async (req, res, next) => { try { res.json({ gameState: await getGameState(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/games/:gameId/play-history", async (req, res, next) => { try { res.json({ plays: await getPlayHistory(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/frontend-settings", async (_req, res, next) => { try { res.json(await getFrontendSettingsFromSheet()); } catch (e) { next(e); } });
