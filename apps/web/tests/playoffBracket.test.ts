@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildPlayoffBracket} from '../src/components/league/playoffBracket.ts';
-import {awardNominees,NOMINEE_AWARDS,OFFENSE_HONORS,DEFENSE_HONORS} from '../src/components/league/leagueAwards.ts';
+import {awardNominees,NOMINEE_AWARDS,OFFENSE_HONORS,DEFENSE_HONORS} from '../src/components/league/awardModels.ts';
 import type {LeagueGame} from '../src/components/league/types.ts';
 const seeds=['East','West'].flatMap(division=>[1,2,3].map(seed=>({division,seed,team:division[0]+seed})));
 const teams=seeds.map((s,i)=>({Abbrev:s.team,ID:i+1,Name:s.team+' nickname'}));
