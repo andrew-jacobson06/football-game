@@ -20,6 +20,10 @@ import { playValueForHeader, sheetSafe } from "../services/playHistory.js";
 import { parsePlayerStats } from "../services/playerStats.js";
 import { aggregateTeamDefenseStats } from "../services/teamDefenseStats.js";
 
+import { planSeasonAdvance, seasonAdvanceWrites, SeasonProgressionError } from "../services/seasonProgression.js";
+import { parseSeasonWeek } from "../../../web/src/components/league/seasonWeeks.js";
+import type { LeagueGame, LeagueTeam } from "../../../web/src/components/league/types.js";
+
 export const gameRoutes = Router();
 
 type Row = (string | number | boolean | null | undefined)[];
@@ -37,24 +41,23 @@ async function getSeasonWeek() {
   const variableIndex = headers.findIndex((header) => normHeader(header) === "variable");
   const valueIndex = headers.findIndex((header) => normHeader(header) === "value");
   const weekRow = rows.find((row) => normHeader(cell(row, variableIndex)) === "week");
-  const week = Number(cell(weekRow ?? [], valueIndex));
-  if (variableIndex === -1 || valueIndex === -1 || !weekRow || !Number.isInteger(week) || week < 1) {
-    throw new Error("Season sheet must contain a positive numeric Week variable.");
+  const week = parseSeasonWeek(cell(weekRow ?? [], valueIndex));
+  if (variableIndex === -1 || valueIndex === -1 || !weekRow || week === null) {
+    throw new SeasonProgressionError("Season Week must be 1–13, Divisionals, Divisional Championships, or National Championship.");
   }
   return { week, rowNumber: rows.indexOf(weekRow) + 2, valueColumn: valueIndex };
 }
 async function advanceSeasonWeek() {
   const season = await getSeasonWeek();
-  const { headers, rows } = await sheetRows("Games");
-  const weekIndex = headers.findIndex((header) => normHeader(header) === "week");
-  const quarterIndex = headers.findIndex((header) => ["qtr", "quarter"].includes(normHeader(header)));
-  const currentGames = rows.filter((row) => Number(cell(row, weekIndex)) === season.week);
-  if (!currentGames.length || currentGames.some((row) => String(cell(row, quarterIndex)).trim().toUpperCase() !== "FINAL")) {
-    throw new Error(`Week ${season.week} cannot advance until all of its games are final.`);
-  }
+  const games = await getGamesList() as unknown as LeagueGame[];
+  const [standings, teams, bracket] = season.week === 13
+    ? await Promise.all([getStandingsFromSheet(), getTeamsFromSheet(), readSheetValues("'Playoff Bracket'!A1:C7")])
+    : [[], [], []];
+  const plan = planSeasonAdvance(season.week, games, standings, teams as LeagueTeam[], bracket);
   const column = String.fromCharCode(65 + season.valueColumn);
-  await batchUpdateSheetValues([{ range: `Season!${column}${season.rowNumber}`, values: [[season.week + 1]] }]);
-  return season.week + 1;
+  // One atomic batch stamps only bracket team cells and the Season Week variable.
+  await batchUpdateSheetValues(seasonAdvanceWrites(plan, `Season!${column}${season.rowNumber}`));
+  return plan.nextWeek;
 }
 function objectFrom(headers: string[], row: Row) {
   const obj: Record<string, unknown> = {};
@@ -555,7 +558,7 @@ gameRoutes.get("/teams/:team/players", async (req, res, next) => { try { res.jso
 gameRoutes.get("/games", async (_req, res, next) => { try { res.json({ games: await getGamesList() }); } catch (e) { next(e); } });
 gameRoutes.get("/articles", async (_req, res, next) => { try { res.json({ articles: await getPublishedArticles() }); } catch (e) { next(e); } });
 gameRoutes.get("/season", async (_req, res, next) => { try { res.json({ week: (await getSeasonWeek()).week }); } catch (e) { next(e); } });
-gameRoutes.post("/season/advance", async (_req, res, next) => { try { res.json({ ok: true, week: await advanceSeasonWeek() }); } catch (e) { next(e); } });
+gameRoutes.post("/season/advance", async (_req, res, next) => { try { res.json({ ok: true, week: await advanceSeasonWeek() }); } catch (e) { if (e instanceof SeasonProgressionError) res.status(400).json({ error: e.message }); else next(e); } });
 gameRoutes.get("/games/:gameId/state", async (req, res, next) => { try { res.json({ gameState: await getGameState(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/games/:gameId/play-history", async (req, res, next) => { try { res.json({ plays: await getPlayHistory(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/frontend-settings", async (_req, res, next) => { try { res.json(await getFrontendSettingsFromSheet()); } catch (e) { next(e); } });
