@@ -64,4 +64,7 @@ export type LeagueTeam = Record<string, string | number | undefined> & {
   "Away L"?: string | number;
   "Div W"?: string | number;
   "Div L"?: string | number;
+  "Div T"?: string | number;
+  "Win%"?: string | number;
+  "Div Win%"?: string | number;
 };
