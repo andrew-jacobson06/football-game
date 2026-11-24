@@ -18,6 +18,7 @@ import {
 import { aggregatePlayStats, passPlayFacts } from "../services/playStats.js";
 import { playValueForHeader, sheetSafe } from "../services/playHistory.js";
 import { parsePlayerStats } from "../services/playerStats.js";
+import { parsePlayoffBracket } from "../services/playoffBracket.js";
 import { aggregateTeamDefenseStats } from "../services/teamDefenseStats.js";
 
 import { planSeasonAdvance, seasonAdvanceWrites, SeasonProgressionError } from "../services/seasonProgression.js";
@@ -552,6 +553,9 @@ gameRoutes.get("/team-defense-stats", async (_req, res, next) => {
     const [teams, games, history] = await Promise.all([getTeamsFromSheet(), getGamesList(), sheetRows("PlayHistory")]);
     res.json({ teamDefenseStats: aggregateTeamDefenseStats(teams, games, history.rows.map((row) => objectFrom(history.headers, row))) });
   } catch (e) { next(e); }
+});
+gameRoutes.get("/playoff-bracket", async (_req, res, next) => {
+  try { res.json({ seeds: parsePlayoffBracket(await readSheetValues("'Playoff Bracket'!A1:C7")) }); } catch (e) { next(e); }
 });
 gameRoutes.get("/standings", async (_req, res, next) => { try { res.json({ standings: await getStandingsFromSheet() }); } catch (e) { next(e); } });
 gameRoutes.get("/teams/:team/players", async (req, res, next) => { try { res.json({ players: await getTeamPlayers(req.params.team) }); } catch (e) { next(e); } });
