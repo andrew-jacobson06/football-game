@@ -307,7 +307,7 @@
 .article-view__body p { margin: 0 0 1.35em; }
 .article-view__body a { color: var(--text-link); }
 /* Keep heading logos inline and constrain article photos on narrow screens. */
-.article-view__body img { max-width: 100%; height: auto; object-fit: contain; vertical-align: middle; }
+.article-view__body img { max-width: 100%; height: auto; width: clamp(2.5rem, 4vw, 5rem); object-fit: contain; vertical-align: middle; }
 @media (min-width: 1200px) {
   .news-secondary-grid {
     grid-template-columns: repeat(3, 1fr);
