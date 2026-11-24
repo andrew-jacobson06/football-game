@@ -5,6 +5,8 @@ export const LEAGUE_TABS: Array<{ id: LeagueTab; label: string }> = [
   { id: "scores", label: "Scores" },
   { id: "schedules", label: "Schedule" },
   { id: "standings", label: "Standings" },
+  { id: "playoffs", label: "Playoffs" },
+  { id: "awards", label: "League Awards" },
   { id: "stats", label: "Stats" },
   { id: "draft", label: "Draft" },
 ];

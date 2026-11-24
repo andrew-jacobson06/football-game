@@ -183,3 +183,8 @@ export async function updateGameplaySetting(variable: "Visual_Mode", value: Visu
     "Failed to save game settings",
   );
 }
+
+export type PlayoffSeed = { division: string; seed: number; team: string };
+export async function getPlayoffBracket(): Promise<{ seeds: PlayoffSeed[] }> {
+  return getJson("/playoff-bracket", "Unable to load the playoff bracket.");
+}
