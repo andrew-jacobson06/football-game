@@ -1,0 +1,27 @@
+name: SQLite foundation
+on:
+  pull_request:
+    paths: ['apps/api/**', '.github/workflows/sqlite.yml']
+  push:
+    paths: ['apps/api/**', '.github/workflows/sqlite.yml']
+permissions:
+  contents: read
+jobs:
+  sqlite:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --import tsx --test src/db/database.test.ts
