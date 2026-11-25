@@ -1473,3 +1473,18 @@ textarea {
     filter: hue-rotate(85deg) blur(8px);
   }
 }
+
+/* Neutral National Championship branding; field colors carry league identity in both themes. */
+.team-end--championship {
+  background: #001b4b;
+  color: var(--accent-red);
+  -webkit-text-stroke: 2px #d4af37;
+  paint-order: stroke fill;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+/* The supplied shield image has transparent margins; give it enough space to read at midfield. */
+.field-midfield-logo--championship {
+  width: min(420px, 56vw);
+  height: min(420px, 56vw);
+}

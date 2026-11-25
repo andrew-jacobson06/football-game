@@ -28,6 +28,7 @@ import { buildDefense } from "./formationDefense";
 import { GameLog } from "./GameLog";
 import { isPregame, gameAfterToss, type TossSide, type TossChoice } from "./gameStart";
 import { needsOvertimeToss, overtimeState } from "./overtime";
+import { parseSeasonWeek } from "./seasonWeeks";
 import { PlayerImage } from "../players/PlayerImage";
 import {
   goForTwo,
@@ -1955,6 +1956,7 @@ export function GameCenter({
                   setPlayOptions((current) => ({ ...current, runner }))
                 }
                 onRunSetupClose={() => setRunSetup(false)}
+                neutralChampionship={parseSeasonWeek(currentGame.Week) === "National Championship"}
                 homeLogo={
                   teamValue(homeTeamDetails, "Logo") || currentGame.HomeLogo
                 }
