@@ -15,6 +15,8 @@ export type LeagueGame = {
   Possession: "Home" | "Away" | string;
   /** Team that received the opening kickoff; the other team receives in Q3. */
   OpeningPossession?: "Home" | "Away" | string;
+  /** JSON from the Games sheet or the current decoded overtime lifecycle. */
+  Overtime?: import("./overtime.js").OvertimeState | string;
   Week?: string | number;
   "Kickoff Time"?: string;
   Date?: string;

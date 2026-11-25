@@ -27,6 +27,7 @@ import { GameControls } from "./GameControls";
 import { buildDefense } from "./formationDefense";
 import { GameLog } from "./GameLog";
 import { isPregame, gameAfterToss, type TossSide, type TossChoice } from "./gameStart";
+import { needsOvertimeToss, overtimeState } from "./overtime";
 import { PlayerImage } from "../players/PlayerImage";
 import {
   goForTwo,
@@ -384,15 +385,16 @@ function PlayByPlayTab({
  * is placed in the first quarter so the chart still has meaningful values.
  */
 function scoreByQuarter(history: Play[], game: LeagueGame) {
-  const home = [0, 0, 0, 0];
-  const away = [0, 0, 0, 0];
+  const periods = Math.max(4, Number(game.Qtr) || 0, 4 + (overtimeState(game)?.period ?? 0), ...history.map(p => Number(playField(p, "QTR", "Qtr", "quarter")) || 0));
+  const home = Array(periods).fill(0) as number[];
+  const away = Array(periods).fill(0) as number[];
   let ph = 0;
   let pa = 0;
   history.forEach((p) => {
     const q = parseInteger(playField(p, "QTR", "Qtr", "quarter"), 0);
     const h = num(playField(p, "HomeScore", "homescore"));
     const a = num(playField(p, "AwayScore", "awayscore"));
-    if (q >= 1 && q <= 4) {
+    if (q >= 1 && q <= periods) {
       home[q - 1] += h - ph;
       away[q - 1] += a - pa;
     }
@@ -1289,10 +1291,7 @@ function ScoreChart({ game, history }: { game: LeagueGame; history: Play[] }) {
         <thead>
           <tr>
             <th></th>
-            <th>1</th>
-            <th>2</th>
-            <th>3</th>
-            <th>4</th>
+            {home.map((_, i) => <th key={i}>{i < 4 ? i + 1 : formatQuarter(i + 1)}</th>)}
             <th>T</th>
           </tr>
         </thead>
@@ -1443,6 +1442,10 @@ export function GameCenter({
     resolve: () => void;
   } | null>(null);
   const previousPossessionRef = useRef(currentGame.Possession);
+  const overtime = overtimeState(currentGame);
+  const awaitingOvertime = needsOvertimeToss(currentGame);
+  const awaitingToss = isPregame(currentGame) || awaitingOvertime;
+  const gameIsFinal = /^(FINAL|F)$/i.test(String(currentGame.Qtr));
   const playInFlightRef = useRef(false);
   const ctx = useMemo(
     () => ({ players, settings, historyLength: history.length }),
@@ -1559,7 +1562,7 @@ export function GameCenter({
   }, []);
 
   const beginGame = () => {
-    if (!isPregame(currentGame)) return;
+    if (!awaitingToss) return;
     setTossCall(null);
     setTossResult(null);
     setTossError("");
@@ -1601,7 +1604,8 @@ export function GameCenter({
       await savePlayAndGame(startedGame.GameId, {
         game: {
           gameId: startedGame.GameId,
-          quarter: 1,
+          quarter: startedGame.Qtr,
+          overtime: startedGame.Overtime,
           time: 900,
           down: 1,
           distance: 10,
@@ -1620,7 +1624,7 @@ export function GameCenter({
       setIsGameFieldCollapsed(false);
       setTossPhase("idle");
       setLog((messages) => [
-        `${homeWon ? currentGame.Home : currentGame.Away} won the toss and chose to ${winnerChoice}. ${receivingTeam === "Home" ? currentGame.Home : currentGame.Away} starts at its 25-yard line.`,
+        `${homeWon ? currentGame.Home : currentGame.Away} won the ${overtimeState(startedGame) ? "overtime " : ""}toss and chose to ${winnerChoice}. ${receivingTeam === "Home" ? currentGame.Home : currentGame.Away} starts at its 25-yard line.`,
         ...messages,
       ]);
       onGameUpdate?.(startedGame);
@@ -1685,6 +1689,7 @@ export function GameCenter({
     const gamePayload = {
       gameId: result.game.GameId,
       quarter: result.game.Qtr,
+      overtime: result.game.Overtime,
       time: result.game.Time,
       down: result.game.Down,
       distance: result.game.Distance,
@@ -1746,7 +1751,7 @@ export function GameCenter({
   };
   const action = (label: string, options: PlayCallOptions = playOptions) => {
     // Pregame and an unsaved toss must never enter the regular play pipeline.
-    if (isPregame(currentGame) || tossPhase !== "idle") return;
+    if (awaitingToss || gameIsFinal || tossPhase !== "idle") return;
     if (isSavingPlay || isResettingPlay || playInFlightRef.current) {
       setLog((l) => [
         "Play save in progress; wait for it to finish before snapping again.",
@@ -1844,12 +1849,12 @@ export function GameCenter({
               </div>
             </div>
           </div>
-          {isPregame(currentGame) && (
+          {awaitingToss && (
             <>
               <div className="pregame-start">
-                <span>Ready for kickoff?</span>
+                <span>{awaitingOvertime ? "Tied game — ready for overtime?" : "Ready for kickoff?"}</span>
                 <button className="pregame-start-button" type="button" disabled={tossPhase !== "idle"} onClick={beginGame}>
-                  Start Game
+                  {awaitingOvertime ? `Start ${overtime && overtime.period > 1 ? `${overtime.period}OT` : "OT"}` : "Start Game"}
                 </button>
               </div>
               <PregameMatchup
@@ -1864,7 +1869,7 @@ export function GameCenter({
           {tossPhase !== "idle" && (
             <div className="toss-overlay" role="dialog" aria-modal="true" aria-labelledby="toss-title">
               <section className="toss-dialog">
-                <span className="toss-kicker">Opening coin toss</span>
+                <span className="toss-kicker">{awaitingOvertime ? "Overtime coin toss" : "Opening coin toss"}</span>
                 <h2 id="toss-title">
                   {tossPhase === "call" ? `${currentGame.Home}, make the call` :
                     tossPhase === "flipping" ? "The coin is in the air…" :
@@ -2051,7 +2056,7 @@ export function GameCenter({
                   onSelectedFormationPlayerChange={setSelectedFormationPlayer}
                   selectedFormationPlayer={selectedFormationPlayer}
                   requestedFormationMode={settingFormation}
-                  disabled={isPregame(currentGame) || tossPhase !== "idle" || isSavingPlay || isResettingPlay}
+                  disabled={awaitingToss || gameIsFinal || tossPhase !== "idle" || isSavingPlay || isResettingPlay}
                   onPassSetupChange={(active) => {
                     setPassSetup(active);
                     setSelectedRoutePlayer("");

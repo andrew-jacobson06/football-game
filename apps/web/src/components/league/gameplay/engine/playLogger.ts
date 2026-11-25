@@ -1,6 +1,7 @@
 import type { LeagueGame } from "../../types";
 import type { NormalizedOutcome, PlayKind } from "./types";
 import { n } from "./utils";
+import { resolveOvertime } from "../../overtime";
 
 /** Sheet flags can arrive as booleans, numbers, or Google Sheets TRUE/FALSE text. */
 export function playFlag(value: unknown, legacy: boolean) {
@@ -55,6 +56,7 @@ export function buildGameData(game: LeagueGame, previous: unknown) {
     driveStart: (game as unknown as Record<string, unknown>).DriveStart,
     previous,
     possession: game.Possession,
+    overtime: game.Overtime,
     homeTimeouts: (game as unknown as Record<string, unknown>).HomeTimeouts,
     awayTimeouts: (game as unknown as Record<string, unknown>).AwayTimeouts,
   };
@@ -165,6 +167,7 @@ export function buildResult(
   historyLength: number,
   extra: Record<string, unknown> = {},
 ) {
+  game = resolveOvertime(prev, game, result);
   const play = logPlayToDB(
     prev,
     game,

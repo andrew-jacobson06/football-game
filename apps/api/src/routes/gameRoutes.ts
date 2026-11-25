@@ -11,6 +11,7 @@ import { parseJumpSettings } from "../services/jumpSettings.js";
 import { parseYACSettings } from "../services/yacSettings.js";
 import {
   appendSheetRow,
+  ensureSheetColumns,
   batchUpdateSheetValues,
   readSheetObjects,
   readSheetValues,
@@ -18,6 +19,7 @@ import {
 import { aggregatePlayStats, passPlayFacts } from "../services/playStats.js";
 import { playValueForHeader, sheetSafe } from "../services/playHistory.js";
 import { parsePlayerStats } from "../services/playerStats.js";
+import { overtimeWrites } from "../services/overtimePersistence.js";
 import { parsePlayoffBracket } from "../services/playoffBracket.js";
 import { AwardsError, AWARD_COUNTS, awardsPlayers, parseAwards, type AwardId } from "../services/awards.js";
 import { awardView, prepareAwardNominations, runAwardVote } from "../services/awardsWorkflow.js";
@@ -428,10 +430,15 @@ async function savePlayAndGame(data: Record<string, unknown>, gameId: string) {
   }
 
   if (suppliedGame && gamesSheet) {
-    const game = { ...suppliedGame, gameId: suppliedGame.gameId ?? gameId };
+    const game: Record<string, unknown> = { ...suppliedGame, gameId: suppliedGame.gameId ?? gameId };
     const rowIndex = gamesSheet.rows.findIndex((row) => String(row[0]) === String(game.gameId));
     if (rowIndex === -1) throw new Error(`No row found for gameId: ${game.gameId}`);
     writes.push(...gameStateUpdates(gamesSheet.headers, rowIndex, game));
+    if (game.overtime !== undefined) {
+      const updates = overtimeWrites(gamesSheet.headers, rowIndex, game.overtime);
+      if (!gamesSheet.headers.some(h => h.trim().toLowerCase() === "overtime")) await ensureSheetColumns("Games", gamesSheet.headers.length + 1);
+      writes.push(...updates);
+    }
   }
 
   // One Sheets API write request commits the play row and game snapshot together.
