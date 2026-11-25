@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppSelect } from "../ui/AppSelect";
 import type { LeagueGame } from "./types";
-import { formatBallOnForPoss, formatClock, formatDownDistance } from "./leagueMappers";
+import { formatBallOnForPoss, formatClock, formatQuarter, formatDownDistance } from "./leagueMappers";
 
 import { SEASON_WEEKS, gameSeasonWeek, parseSeasonWeek, seasonWeekLabel, type SeasonWeek } from "./seasonWeeks";
 
@@ -50,7 +50,7 @@ export function GamesBanner({ games, currentWeek, onHome, onSelectGame }: GamesB
               aria-label={`Open gamecast for ${game.Away} at ${game.Home}`}
             >
               <div className="banner-game__meta">
-                <span>{final ? "FINAL" : unstarted ? "PRE-GAME" : `Q${game.Qtr} · ${formatClock(game.Time)}`}</span>
+                <span>{final ? "FINAL" : unstarted ? "PRE-GAME" : `${Number(game.Qtr) >= 5 ? formatQuarter(game.Qtr) : `Q${game.Qtr}`} · ${formatClock(game.Time)}`}</span>
                 {!final && !unstarted && <span>{formatDownDistance(game.Down, game.Distance, game.BallOn, game.Possession)} · Ball on {formatBallOnForPoss(game.BallOn, game.Possession)}</span>}
               </div>
               <div>

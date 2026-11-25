@@ -78,7 +78,7 @@ const administrative = (play: DrivePlay) =>
   /timeout|kickoff/.test(`${typeOf(play)} ${resultOf(play).toLowerCase()}`);
 const scrimmage = (play: DrivePlay) =>
   !kick(play) && !conversion(play) && !administrative(play);
-const half = (qtr: number) => (qtr >= 3 ? 2 : 1);
+const driveSegment = (qtr: number) => (qtr <= 2 ? 1 : qtr <= 4 ? 2 : qtr - 2);
 function seconds(qtr: number, clock: unknown) {
   const remaining = String(clock ?? 0).includes(":")
     ? String(clock)
@@ -167,7 +167,7 @@ export function groupPlaysByDrive(
       !current ||
       current.possession !== possession ||
       current.ended ||
-      half(quarter(current.plays[0])) !== half(quarter(play))
+      driveSegment(quarter(current.plays[0])) !== driveSegment(quarter(play))
     ) {
       const start =
         numeric(historyField(play, "ballon")) ??
@@ -206,9 +206,11 @@ export function groupPlaysByDrive(
     const nextQuarter = next
       ? quarter(next.plays[0])
       : final
-        ? 4
+        ? Math.max(4, ...plays.map(quarter))
         : Number(game.Qtr);
     const endsHalf = quarter(lastFootball) <= 2 && nextQuarter >= 3;
+    const endsPeriod = quarter(lastFootball) >= 4 && nextQuarter > quarter(lastFootball);
+    if (!drive.ended && endsPeriod) { drive.result = quarter(lastFootball) === 4 ? "End of Regulation" : "End of Overtime"; drive.ended = true; }
     // Explicit football outcomes take priority over halftime. Ignore stale
     // endofhalf flags on later plays from older versions of the game.
     if (!drive.ended && endsHalf) {
@@ -234,11 +236,13 @@ export function groupPlaysByDrive(
     drive.yards = driveYardsFromSpots(drive.possession, drive.driveStart, end);
     const endedAt = endsHalf
       ? 1800
-      : next
-        ? elapsed(next.plays[0])
-        : final
-          ? 3600
-          : seconds(Number(game.Qtr), game.Time);
+      : endsPeriod
+        ? quarter(lastFootball) * 900
+        : next
+          ? elapsed(next.plays[0])
+          : final
+            ? seconds(Math.max(4, ...plays.map(quarter)), game.Time)
+            : seconds(Number(game.Qtr), game.Time);
     drive.duration = Math.max(0, endedAt - elapsed(drive.plays[0]));
   });
   return drives;
