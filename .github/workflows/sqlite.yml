@@ -35,3 +35,4 @@ jobs:
       - run: python -m unittest discover -s docs/imports/core -p 'test_*.py' -v
       - run: python -m unittest discover -s docs/imports/season -p 'test_*.py' -v
       - run: python -m unittest discover -s docs/imports/remaining -p 'test_*.py' -v
+      - run: python -m unittest discover -s docs/imports/corrections -p 'test_*.py' -v
