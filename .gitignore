@@ -8,3 +8,10 @@ node_modules/
 # Google service account secrets
 apps/api/secrets/
 service-account.json
+# SQLite databases, WAL/SHM journals and local database backups
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*

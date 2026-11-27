@@ -26,7 +26,9 @@ export function formatClock(secondsOrTime: string | number): string {
 
 export function formatQuarter(qtr: string | number): string {
   if (String(qtr).toUpperCase() === "FINAL") return "FINAL";
+  if (/^(?:\d+)?OT$/i.test(String(qtr))) return String(qtr).toUpperCase();
   const n = parseInteger(qtr, 1);
+  if (n >= 5) return n === 5 ? "OT" : `${n - 4}OT`;
   const suffix = n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th";
   return `${n}${suffix}`;
 }

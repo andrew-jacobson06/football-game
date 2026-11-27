@@ -86,3 +86,15 @@ export async function batchUpdateSheetValues(
 
   return response.data;
 }
+
+/** A new overtime state column must also fit a workbook with a tightly sized grid. */
+export async function ensureSheetColumns(title: string, minimum: number) {
+  const metadata = await sheets.spreadsheets.get({ spreadsheetId: sheetId, fields: "sheets(properties(sheetId,title,gridProperties(columnCount)))" });
+  const properties = metadata.data.sheets?.find(sheet => sheet.properties?.title === title)?.properties;
+  if (properties?.sheetId == null) throw new Error(`Sheet '${title}' not found.`);
+  const current = properties.gridProperties?.columnCount ?? 0;
+  if (current < minimum) await sheetsWriteThrottle.run(() => sheets.spreadsheets.batchUpdate({
+    spreadsheetId: sheetId,
+    requestBody: { requests: [{ appendDimension: { sheetId: properties.sheetId!, dimension: "COLUMNS", length: minimum - current } }] },
+  }));
+}

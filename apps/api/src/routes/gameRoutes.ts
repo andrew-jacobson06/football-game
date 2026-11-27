@@ -11,6 +11,7 @@ import { parseJumpSettings } from "../services/jumpSettings.js";
 import { parseYACSettings } from "../services/yacSettings.js";
 import {
   appendSheetRow,
+  ensureSheetColumns,
   batchUpdateSheetValues,
   readSheetObjects,
   readSheetValues,
@@ -18,7 +19,15 @@ import {
 import { aggregatePlayStats, passPlayFacts } from "../services/playStats.js";
 import { playValueForHeader, sheetSafe } from "../services/playHistory.js";
 import { parsePlayerStats } from "../services/playerStats.js";
+import { overtimeWrites } from "../services/overtimePersistence.js";
+import { parsePlayoffBracket } from "../services/playoffBracket.js";
+import { AwardsError, AWARD_COUNTS, awardsPlayers, parseAwards, type AwardId } from "../services/awards.js";
+import { awardView, prepareAwardNominations, runAwardVote } from "../services/awardsWorkflow.js";
 import { aggregateTeamDefenseStats } from "../services/teamDefenseStats.js";
+
+import { planSeasonAdvance, seasonAdvanceWrites, SeasonProgressionError } from "../services/seasonProgression.js";
+import { parseSeasonWeek } from "../../../web/src/components/league/seasonWeeks.js";
+import type { LeagueGame, LeagueTeam } from "../../../web/src/components/league/types.js";
 
 export const gameRoutes = Router();
 
@@ -37,24 +46,44 @@ async function getSeasonWeek() {
   const variableIndex = headers.findIndex((header) => normHeader(header) === "variable");
   const valueIndex = headers.findIndex((header) => normHeader(header) === "value");
   const weekRow = rows.find((row) => normHeader(cell(row, variableIndex)) === "week");
-  const week = Number(cell(weekRow ?? [], valueIndex));
-  if (variableIndex === -1 || valueIndex === -1 || !weekRow || !Number.isInteger(week) || week < 1) {
-    throw new Error("Season sheet must contain a positive numeric Week variable.");
+  const week = parseSeasonWeek(cell(weekRow ?? [], valueIndex));
+  if (variableIndex === -1 || valueIndex === -1 || !weekRow || week === null) {
+    throw new SeasonProgressionError("Season Week must be 1–13, Divisionals, Divisional Championships, or National Championship.");
   }
   return { week, rowNumber: rows.indexOf(weekRow) + 2, valueColumn: valueIndex };
 }
+// Serialize season advancement and awards writes within this API instance.
+let awardsBusy = false;
+async function withAwardsLock<T>(work: () => Promise<T>) {
+  if (awardsBusy) throw new AwardsError("Awards or season advancement is already running. Please wait.");
+  awardsBusy = true;
+  try { return await work(); } finally { awardsBusy = false; }
+}
+async function awardsContext() {
+  const [players, stats, teams, assignments, standings, games] = await Promise.all([
+    readSheetObjects("Players!A1:AM"), getPlayerSeasonStats(), getTeamsFromSheet(),
+    readSheetObjects("PlayerTeams!A1:B"), getStandingsFromSheet(), getGamesList(),
+  ]);
+  return { players: awardsPlayers(players, stats, teams, assignments), standings, games: (games as unknown as LeagueGame[]).filter(g => typeof parseSeasonWeek(g.Week) === "number") };
+}
 async function advanceSeasonWeek() {
   const season = await getSeasonWeek();
-  const { headers, rows } = await sheetRows("Games");
-  const weekIndex = headers.findIndex((header) => normHeader(header) === "week");
-  const quarterIndex = headers.findIndex((header) => ["qtr", "quarter"].includes(normHeader(header)));
-  const currentGames = rows.filter((row) => Number(cell(row, weekIndex)) === season.week);
-  if (!currentGames.length || currentGames.some((row) => String(cell(row, quarterIndex)).trim().toUpperCase() !== "FINAL")) {
-    throw new Error(`Week ${season.week} cannot advance until all of its games are final.`);
-  }
+  const games = await getGamesList() as unknown as LeagueGame[];
+  const [standings, teams, bracket] = season.week === 13
+    ? await Promise.all([getStandingsFromSheet(), getTeamsFromSheet(), readSheetValues("'Playoff Bracket'!A1:C7")])
+    : [[], [], []];
+  const plan = planSeasonAdvance(season.week, games, standings, teams as LeagueTeam[], bracket);
   const column = String.fromCharCode(65 + season.valueColumn);
-  await batchUpdateSheetValues([{ range: `Season!${column}${season.rowNumber}`, values: [[season.week + 1]] }]);
-  return season.week + 1;
+  const updates = seasonAdvanceWrites(plan, `Season!${column}${season.rowNumber}`);
+  if (season.week === 13) {
+    const rows = await readSheetValues("'Awards'!A1:K");
+    const nominations = await prepareAwardNominations(rows, await awardsContext());
+    if (JSON.stringify(await readSheetValues("'Awards'!A1:K")) !== JSON.stringify(rows)) throw new AwardsError("Awards changed while nominations were being generated. No season changes were saved.");
+    updates.unshift(...nominations);
+  }
+  // Names, vote resets, playoff seeds and week advance commit together; Total formulas stay intact.
+  await batchUpdateSheetValues(updates);
+  return plan.nextWeek;
 }
 function objectFrom(headers: string[], row: Row) {
   const obj: Record<string, unknown> = {};
@@ -401,10 +430,15 @@ async function savePlayAndGame(data: Record<string, unknown>, gameId: string) {
   }
 
   if (suppliedGame && gamesSheet) {
-    const game = { ...suppliedGame, gameId: suppliedGame.gameId ?? gameId };
+    const game: Record<string, unknown> = { ...suppliedGame, gameId: suppliedGame.gameId ?? gameId };
     const rowIndex = gamesSheet.rows.findIndex((row) => String(row[0]) === String(game.gameId));
     if (rowIndex === -1) throw new Error(`No row found for gameId: ${game.gameId}`);
     writes.push(...gameStateUpdates(gamesSheet.headers, rowIndex, game));
+    if (game.overtime !== undefined) {
+      const updates = overtimeWrites(gamesSheet.headers, rowIndex, game.overtime);
+      if (!gamesSheet.headers.some(h => h.trim().toLowerCase() === "overtime")) await ensureSheetColumns("Games", gamesSheet.headers.length + 1);
+      writes.push(...updates);
+    }
   }
 
   // One Sheets API write request commits the play row and game snapshot together.
@@ -550,12 +584,33 @@ gameRoutes.get("/team-defense-stats", async (_req, res, next) => {
     res.json({ teamDefenseStats: aggregateTeamDefenseStats(teams, games, history.rows.map((row) => objectFrom(history.headers, row))) });
   } catch (e) { next(e); }
 });
+gameRoutes.get("/awards", async (_req, res, next) => {
+  try {
+    if (typeof (await getSeasonWeek()).week === "number") { res.json({ nominations: {}, firstTeams: [] }); return; }
+    const [rows, context] = await Promise.all([readSheetValues("'Awards'!A1:K"), awardsContext()]);
+    res.json(awardView(parseAwards(rows), context.players));
+  } catch (e) { if (e instanceof AwardsError) res.status(400).json({ error:e.message }); else next(e); }
+});
+gameRoutes.post("/awards/:award/vote", async (req, res, next) => {
+  try {
+    const award = String(req.params.award).toUpperCase();
+    if (!Object.hasOwn(AWARD_COUNTS, award)) throw new AwardsError("Unknown award.");
+    const result = await withAwardsLock(async () => {
+      if (typeof (await getSeasonWeek()).week === "number") throw new AwardsError("Awards voting opens after the regular season.");
+      return runAwardVote(award as AwardId, { read:()=>readSheetValues("'Awards'!A1:K"), write:batchUpdateSheetValues, context:awardsContext });
+    });
+    res.json(result);
+  } catch (e) { if (e instanceof AwardsError) res.status(400).json({ error:e.message }); else next(e); }
+});
+gameRoutes.get("/playoff-bracket", async (_req, res, next) => {
+  try { res.json({ seeds: parsePlayoffBracket(await readSheetValues("'Playoff Bracket'!A1:C7")) }); } catch (e) { next(e); }
+});
 gameRoutes.get("/standings", async (_req, res, next) => { try { res.json({ standings: await getStandingsFromSheet() }); } catch (e) { next(e); } });
 gameRoutes.get("/teams/:team/players", async (req, res, next) => { try { res.json({ players: await getTeamPlayers(req.params.team) }); } catch (e) { next(e); } });
 gameRoutes.get("/games", async (_req, res, next) => { try { res.json({ games: await getGamesList() }); } catch (e) { next(e); } });
 gameRoutes.get("/articles", async (_req, res, next) => { try { res.json({ articles: await getPublishedArticles() }); } catch (e) { next(e); } });
 gameRoutes.get("/season", async (_req, res, next) => { try { res.json({ week: (await getSeasonWeek()).week }); } catch (e) { next(e); } });
-gameRoutes.post("/season/advance", async (_req, res, next) => { try { res.json({ ok: true, week: await advanceSeasonWeek() }); } catch (e) { next(e); } });
+gameRoutes.post("/season/advance", async (_req, res, next) => { try { res.json({ ok: true, week: await withAwardsLock(advanceSeasonWeek) }); } catch (e) { if (e instanceof SeasonProgressionError || e instanceof AwardsError) res.status(400).json({ error: e.message }); else next(e); } });
 gameRoutes.get("/games/:gameId/state", async (req, res, next) => { try { res.json({ gameState: await getGameState(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/games/:gameId/play-history", async (req, res, next) => { try { res.json({ plays: await getPlayHistory(req.params.gameId) }); } catch (e) { next(e); } });
 gameRoutes.get("/frontend-settings", async (_req, res, next) => { try { res.json(await getFrontendSettingsFromSheet()); } catch (e) { next(e); } });

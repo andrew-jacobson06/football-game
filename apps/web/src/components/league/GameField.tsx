@@ -454,6 +454,7 @@ export default function GameField({
   distance = 10,
   possession = "Home",
   homeLogo,
+  neutralChampionship = false,
   homeTeam,
   homeTeamName,
   homeTeamLocation,
@@ -491,6 +492,7 @@ export default function GameField({
   distance?: string | number;
   possession?: string;
   homeLogo?: string;
+  neutralChampionship?: boolean;
   homeTeam?: string;
   homeTeamName?: string;
   homeTeamLocation?: string;
@@ -539,11 +541,14 @@ export default function GameField({
   const formationRef = useRef(formation);
   const onRoutePlayerSelectRef = useRef(onRoutePlayerSelect);
   const onRunnerSelectRef = useRef(onRunnerSelect);
-  const teamEndStyle = homeTeamPrimaryColor
+  const teamEndStyle = !neutralChampionship && homeTeamPrimaryColor
     ? { background: homeTeamPrimaryColor }
     : undefined;
-  const teamEndTopText = homeTeamName || homeTeam || "HOME";
-  const teamEndBottomText = homeTeamLocation || homeTeam || "HOME";
+  const teamEndTopText = neutralChampionship ? "AFL" : homeTeamName || homeTeam || "HOME";
+  const teamEndBottomText = neutralChampionship ? "AFL" : homeTeamLocation || homeTeam || "HOME";
+  const midfieldLogo = neutralChampionship
+    ? "https://raw.githubusercontent.com/andrew-jacobson06/public-audio/main/afllogo.png"
+    : homeLogo;
 
   const [selectedPlayerMenu, setSelectedPlayerMenu] = useState<{
     player: AnimationPlayer;
@@ -1579,24 +1584,24 @@ export default function GameField({
         >
           <div className="field-title">Dynamic Football Animation View</div>
           <div
-            className="team-end team-end--top"
+            className={`team-end team-end--top${neutralChampionship ? " team-end--championship" : ""}`}
             id="awayEnd"
             style={teamEndStyle}
           >
             {teamEndTopText}
           </div>
           <div
-            className="team-end team-end--bottom"
+            className={`team-end team-end--bottom${neutralChampionship ? " team-end--championship" : ""}`}
             id="homeEnd"
             style={teamEndStyle}
           >
             {teamEndBottomText}
           </div>
-          {homeLogo && (
+          {midfieldLogo && (
             <img
-              className="field-midfield-logo"
-              src={homeLogo}
-              alt="Home team logo at midfield"
+              className={`field-midfield-logo${neutralChampionship ? " field-midfield-logo--championship" : ""}`}
+              src={midfieldLogo}
+              alt={neutralChampionship ? "AFL logo at midfield" : "Home team logo at midfield"}
             />
           )}
           <div className="field-line los-line" id="losLine" />

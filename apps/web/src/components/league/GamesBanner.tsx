@@ -1,28 +1,23 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AppSelect } from "../ui/AppSelect";
 import type { LeagueGame } from "./types";
-import { formatBallOnForPoss, formatClock, formatDownDistance } from "./leagueMappers";
+import { formatBallOnForPoss, formatClock, formatQuarter, formatDownDistance } from "./leagueMappers";
 
-const WEEKS = [1, 2, 3, 4, 5];
-
-const gameWeek = (game: LeagueGame, index: number) =>
-  Number(game.Week ?? (index % WEEKS.length) + 1);
+import { SEASON_WEEKS, gameSeasonWeek, parseSeasonWeek, seasonWeekLabel, type SeasonWeek } from "./seasonWeeks";
 
 type GamesBannerProps = {
   games: LeagueGame[];
-  currentWeek: number | null;
+  currentWeek: SeasonWeek | null;
   onHome: () => void;
   onSelectGame: (game: LeagueGame) => void;
 };
 
 export function GamesBanner({ games, currentWeek, onHome, onSelectGame }: GamesBannerProps) {
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const [selectedWeek, setSelectedWeek] = useState<SeasonWeek | null>(null);
+  useEffect(() => { setSelectedWeek(null); }, [currentWeek]);
   const week = selectedWeek ?? currentWeek ?? 1;
-  const weeks = useMemo(() => {
-    const gameWeeks = games.map(gameWeek).filter(Number.isFinite);
-    return [...new Set([...WEEKS, ...gameWeeks, ...(currentWeek === null ? [] : [currentWeek])])].sort((a, b) => a - b);
-  }, [currentWeek, games]);
-  const weekGames = games.filter((game, index) => gameWeek(game, index) === week);
+  const weeks = SEASON_WEEKS;
+  const weekGames = games.filter((game, index) => gameSeasonWeek(game, index) === week);
 
   return (
     <aside className="games-banner" aria-label="Games this week">
@@ -34,10 +29,10 @@ export function GamesBanner({ games, currentWeek, onHome, onSelectGame }: GamesB
       >
         AFL
       </button>
-      <label className="games-banner__picker">
-        <span>Week</span>
-        <AppSelect containerClassName="app-select--compact" value={week} onChange={(event) => setSelectedWeek(Number(event.target.value))}>
-          {weeks.map((item) => <option key={item} value={item}>Week {item}</option>)}
+      <label className={`games-banner__picker ${typeof week === "string" ? "games-banner__picker--playoffs" : ""}`}>
+        <span>{typeof week === "string" ? "Round" : "Week"}</span>
+        <AppSelect containerClassName="app-select--compact" value={week} onChange={(event) => setSelectedWeek(parseSeasonWeek(event.target.value))}>
+          {weeks.map((item) => <option key={item} value={item}>{seasonWeekLabel(item)}</option>)}
         </AppSelect>
       </label>
       <div className="games-banner__rail">
@@ -45,6 +40,7 @@ export function GamesBanner({ games, currentWeek, onHome, onSelectGame }: GamesB
           weekGames.map((game) => {
             const final = String(game.Qtr).toUpperCase() === "FINAL";
             const possession = String(game.Possession).toLowerCase();
+            const unstarted = ["", "UNSTARTED"].includes(String(game.Qtr).trim().toUpperCase());
             return (
             <button
               className="banner-game"
@@ -54,17 +50,17 @@ export function GamesBanner({ games, currentWeek, onHome, onSelectGame }: GamesB
               aria-label={`Open gamecast for ${game.Away} at ${game.Home}`}
             >
               <div className="banner-game__meta">
-                <span>{final ? "FINAL" : `Q${game.Qtr} · ${formatClock(game.Time)}`}</span>
-                {!final && <span>{formatDownDistance(game.Down, game.Distance, game.BallOn, game.Possession)} · Ball on {formatBallOnForPoss(game.BallOn, game.Possession)}</span>}
+                <span>{final ? "FINAL" : unstarted ? "PRE-GAME" : `${Number(game.Qtr) >= 5 ? formatQuarter(game.Qtr) : `Q${game.Qtr}`} · ${formatClock(game.Time)}`}</span>
+                {!final && !unstarted && <span>{formatDownDistance(game.Down, game.Distance, game.BallOn, game.Possession)} · Ball on {formatBallOnForPoss(game.BallOn, game.Possession)}</span>}
               </div>
               <div>
                 <img src={game.AwayLogo || "/favicon.svg"} alt="" />
-                <strong>{game.Away} {possession === "away" && <i aria-label="Possession">🏈</i>}</strong>
+                <strong>{game.Away} {!final && !unstarted && possession === "away" && <i aria-label="Possession">🏈</i>}</strong>
                 <b>{game.AwayScore}</b>
               </div>
               <div>
                 <img src={game.HomeLogo || "/favicon.svg"} alt="" />
-                <strong>{game.Home} {possession === "home" && <i aria-label="Possession">🏈</i>}</strong>
+                <strong>{game.Home} {!final && !unstarted && possession === "home" && <i aria-label="Possession">🏈</i>}</strong>
                 <b>{game.HomeScore}</b>
               </div>
             </button>

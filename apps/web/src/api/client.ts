@@ -1,3 +1,4 @@
+import type { SeasonWeek } from "../components/league/seasonWeeks";
 import type { Player } from "../components/players/types";
 
 const API_BASE_URL = "http://localhost:4000/api";
@@ -125,11 +126,14 @@ export type LeagueArticle = {
 export async function getArticles(): Promise<{ articles: LeagueArticle[] }> {
   return getJson("/articles", "Failed to load league articles");
 }
-export async function getSeason(): Promise<{ week: number }> {
+export async function getSeason(): Promise<{ week: SeasonWeek }> {
   return getJson("/season", "Failed to load the current season week");
 }
-export async function advanceSeason(): Promise<{ ok: boolean; week: number }> {
-  return postJson("/season/advance", {}, "Failed to advance the season week");
+export async function advanceSeason(): Promise<{ ok: boolean; week: SeasonWeek }> {
+  const response = await fetch(`${API_BASE_URL}/season/advance`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Failed to advance the season week");
+  return result;
 }
 export async function getGameState(
   gameId: string | number,
@@ -179,3 +183,25 @@ export async function updateGameplaySetting(variable: "Visual_Mode", value: Visu
     "Failed to save game settings",
   );
 }
+
+export type PlayoffSeed = { division: string; seed: number; team: string };
+export async function getPlayoffBracket(): Promise<{ seeds: PlayoffSeed[] }> {
+  return getJson("/playoff-bracket", "Unable to load the playoff bracket.");
+}
+
+export type AwardResult = {
+  candidates: Array<{ name: string; team: string; position: string; placeVotes: number[]; total: number }>;
+  complete: boolean; winner: string | null; tied: boolean;
+};
+export type LeagueAwardsData = {
+  nominations: Partial<Record<"mvp" | "opoy" | "dpoy", AwardResult>>;
+  firstTeams: Array<{ row: number; position: string; side: string; division: string; name: string; team: string }>;
+};
+async function awardsRequest(path: string, method = "GET"): Promise<LeagueAwardsData> {
+  const response = await fetch(`${API_BASE_URL}${path}`, { method });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Unable to load awards.");
+  return data;
+}
+export const getLeagueAwards = () => awardsRequest("/awards");
+export const runLeagueAwardVote = (award: "mvp" | "opoy" | "dpoy") => awardsRequest(`/awards/${award}/vote`, "POST");

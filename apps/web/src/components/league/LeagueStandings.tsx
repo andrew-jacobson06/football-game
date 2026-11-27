@@ -1,38 +1,9 @@
 import { useState } from "react";
-import type { LeagueTeam } from "./types";
-import {
-  computeDiff,
-  parseInteger,
-  teamName,
-} from "./leagueMappers";
+import type { LeagueGame, LeagueTeam } from "./types";
+import { teamName } from "./leagueMappers";
+import { sortStandings, standingNumber, standingWinPercentage, standingDivisionPercentage, standingRecord, standingDiff } from "./standings";
 
 type StandingsView = "league" | "division";
-
-function winPercentage(team: LeagueTeam): number {
-  const wins = parseInteger(team.Wins ?? team.W);
-  const losses = parseInteger(team.Losses ?? team.L);
-  const ties = parseInteger(team.Ties ?? team.T);
-  const games = wins + losses + ties;
-
-  return games ? (wins + ties * 0.5) / games : 0;
-}
-
-function sortStandings(teams: LeagueTeam[]): LeagueTeam[] {
-  return [...teams].sort((a, b) => {
-    const winPercentageDifference = winPercentage(b) - winPercentage(a);
-    if (winPercentageDifference !== 0) return winPercentageDifference;
-
-    const pointDifference =
-      parseInteger(b.DIFF ?? b.Diff, computeDiff(b)) -
-      parseInteger(a.DIFF ?? a.Diff, computeDiff(a));
-    if (pointDifference !== 0) return pointDifference;
-
-    return (
-      parseInteger(b.PF ?? b.PointsFor) -
-      parseInteger(a.PF ?? a.PointsFor)
-    );
-  });
-}
 
 function value(team: LeagueTeam, ...keys: string[]): string {
   const match = keys.find((key) => team[key] !== undefined && team[key] !== "");
@@ -69,8 +40,8 @@ function TeamIdentity({ team, onSelect }: { team: LeagueTeam; onSelect?: (team: 
   );
 }
 
-function StandingsTable({ teams, onSelectTeam }: { teams: LeagueTeam[]; onSelectTeam?: (team: LeagueTeam) => void }) {
-  const orderedTeams = sortStandings(teams);
+function StandingsTable({ teams, games, onSelectTeam }: { teams: LeagueTeam[]; games: LeagueGame[]; onSelectTeam?: (team: LeagueTeam) => void }) {
+  const orderedTeams = sortStandings(teams, games);
 
   return (
     <div className="standings-table-scroll">
@@ -81,12 +52,11 @@ function StandingsTable({ teams, onSelectTeam }: { teams: LeagueTeam[]; onSelect
             <th>W</th>
             <th>L</th>
             <th>T</th>
-            <th>HOME W</th>
-            <th>HOME L</th>
-            <th>AWAY W</th>
-            <th>AWAY L</th>
-            <th>DIV W</th>
-            <th>DIV L</th>
+            <th className="pct-col" aria-sort="descending">PCT ↓</th>
+            <th>HOME</th>
+            <th>AWAY</th>
+            <th>DIV</th>
+            <th>DIV PCT</th>
             <th>PF</th>
             <th>PA</th>
             <th>DIFF</th>
@@ -97,18 +67,17 @@ function StandingsTable({ teams, onSelectTeam }: { teams: LeagueTeam[]; onSelect
           {orderedTeams.map((team, index) => (
             <tr key={`${teamName(team)}-${index}`}>
               <td className="team-col"><TeamIdentity team={team} onSelect={onSelectTeam} /></td>
-              <td>{parseInteger(team.Wins ?? team.W)}</td>
-              <td>{parseInteger(team.Losses ?? team.L)}</td>
-              <td>{parseInteger(team.Ties ?? team.T)}</td>
-              <td>{parseInteger(team["Home W"] ?? team.HomeWins)}</td>
-              <td>{parseInteger(team["Home L"] ?? team.HomeLosses)}</td>
-              <td>{parseInteger(team["Away W"] ?? team.AwayWins)}</td>
-              <td>{parseInteger(team["Away L"] ?? team.AwayLosses)}</td>
-              <td>{parseInteger(team["Div W"] ?? team.DivisionWins)}</td>
-              <td>{parseInteger(team["Div L"] ?? team.DivisionLosses)}</td>
-              <td>{parseInteger(team.PF ?? team.PointsFor)}</td>
-              <td>{parseInteger(team.PA ?? team.PointsAgainst)}</td>
-              <td>{value(team, "DIFF", "Diff") || computeDiff(team)}</td>
+              <td>{standingNumber(team, "W", "Wins")}</td>
+              <td>{standingNumber(team, "L", "Losses")}</td>
+              <td>{standingNumber(team, "T", "Ties")}</td>
+              <td className="pct-col">{(standingWinPercentage(team) * 100).toFixed(2)}%</td>
+              <td>{standingRecord(team, "Home")}</td>
+              <td>{standingRecord(team, "Away")}</td>
+              <td>{standingRecord(team, "Div")}</td>
+              <td>{(standingDivisionPercentage(team) * 100).toFixed(2)}%</td>
+              <td>{standingNumber(team, "PF", "PointsFor")}</td>
+              <td>{standingNumber(team, "PA", "PointsAgainst")}</td>
+              <td className={standingDiff(team) > 0 ? "standings-diff-positive" : standingDiff(team) < 0 ? "standings-diff-negative" : undefined}>{standingDiff(team) > 0 ? "+" : ""}{standingDiff(team)}</td>
               <td>{value(team, "STRK", "Streak") || "—"}</td>
             </tr>
           ))}
@@ -118,7 +87,7 @@ function StandingsTable({ teams, onSelectTeam }: { teams: LeagueTeam[]; onSelect
   );
 }
 
-export function LeagueStandings({ teams, onSelectTeam }: { teams: LeagueTeam[]; onSelectTeam?: (team: LeagueTeam) => void }) {
+export function LeagueStandings({ teams, games = [], onSelectTeam }: { teams: LeagueTeam[]; games?: LeagueGame[]; onSelectTeam?: (team: LeagueTeam) => void }) {
   const [view, setView] = useState<StandingsView>("league");
   const divisions = Object.entries(
     teams.reduce<Record<string, LeagueTeam[]>>((groups, team) => {
@@ -145,14 +114,14 @@ export function LeagueStandings({ teams, onSelectTeam }: { teams: LeagueTeam[]; 
         {view === "league" ? (
           <section className="standings-panel">
             <header className="standings-panel-header">League</header>
-            <StandingsTable teams={teams} onSelectTeam={onSelectTeam} />
+            <StandingsTable teams={teams} games={games} onSelectTeam={onSelectTeam} />
           </section>
         ) : (
           <div className="standings-division-list">
             {divisions.map(([division, divisionTeams]) => (
               <section className="standings-panel" key={division}>
                 <header className="standings-panel-header">{division} Division</header>
-                <StandingsTable teams={divisionTeams} onSelectTeam={onSelectTeam} />
+                <StandingsTable teams={divisionTeams} games={games} onSelectTeam={onSelectTeam} />
               </section>
             ))}
           </div>

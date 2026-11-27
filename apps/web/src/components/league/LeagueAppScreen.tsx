@@ -1,3 +1,4 @@
+import { canAdvanceSeasonWeek, seasonWeekLabel, type SeasonWeek } from "./seasonWeeks";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { advanceSeason, getGames, getPlayers, getSeason, getStandings, getTeams } from "../../api/client";
 import type { Player } from "../players/types";
@@ -9,6 +10,8 @@ import { LeagueNews } from "./LeagueNews";
 import { LeagueSchedule } from "./LeagueSchedule";
 import { LeagueSchedules } from "./LeagueSchedules";
 import { LeagueStandings } from "./LeagueStandings";
+import { LeaguePlayoffs } from "./LeaguePlayoffs";
+import { LeagueAwards } from "./LeagueAwards";
 import { LeagueStats } from "./LeagueStats";
 import { GameCenter } from "./GameCenter";
 import { GamesBanner } from "./GamesBanner";
@@ -24,7 +27,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
   const [teams, setTeams] = useState<LeagueTeam[]>(mockTeams);
   const [standings, setStandings] = useState<LeagueTeam[]>(mockTeams);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [seasonWeek, setSeasonWeek] = useState<number | null>(null);
+  const [seasonWeek, setSeasonWeek] = useState<SeasonWeek | null>(null);
   const [isAdvancingWeek, setIsAdvancingWeek] = useState(false);
   const [advanceWeekError, setAdvanceWeekError] = useState("");
   const [searchedPlayer, setSearchedPlayer] = useState<Player | null>(null);
@@ -65,8 +68,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
       })
   }, []);
 
-  const currentWeekGames = seasonWeek === null ? [] : games.filter((game) => Number(game.Week) === seasonWeek);
-  const canAdvanceWeek = currentWeekGames.length > 0 && currentWeekGames.every((game) => String(game.Qtr).trim().toUpperCase() === "FINAL");
+  const canAdvanceWeek = canAdvanceSeasonWeek(seasonWeek, games);
   const handleAdvanceWeek = async () => {
     setIsAdvancingWeek(true);
     setAdvanceWeekError("");
@@ -253,7 +255,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
               <div className="league-tab-content active">
                 {canAdvanceWeek && (
                   <section className="advance-week" aria-labelledby="advance-week-title">
-                    <div><span>WEEK {seasonWeek} COMPLETE</span><h2 id="advance-week-title">Ready for the next week?</h2></div>
+                    <div><span>{seasonWeekLabel(seasonWeek).toUpperCase()} COMPLETE</span><h2 id="advance-week-title">Ready for the next week?</h2></div>
                     <button type="button" onClick={handleAdvanceWeek} disabled={isAdvancingWeek}>{isAdvancingWeek ? "Advancing…" : "Advance Week"}</button>
                   </section>
                 )}
@@ -268,9 +270,11 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
             )}
             {activeTab === "standings" && (
               <div className="league-tab-content active">
-                <LeagueStandings teams={standings} onSelectTeam={setSelectedTeam} />
+                <LeagueStandings teams={standings} games={games} onSelectTeam={setSelectedTeam} />
               </div>
             )}
+            {activeTab === "playoffs" && <div className="league-tab-content active"><LeaguePlayoffs postseason={typeof seasonWeek === "string"} teams={teams} games={games} onTeam={setSelectedTeam} onGame={openGame} /></div>}
+            {activeTab === "awards" && <div className="league-tab-content active"><LeagueAwards postseason={typeof seasonWeek === "string"} /></div>}
             {activeTab === "stats" && (
               <div className="league-tab-content active">
                 <LeagueStats key={`${searchedPlayer?.Name || "leaders"}-${searchedPlayer?.Team || ""}`} teams={teams} games={games} onTeam={setSelectedTeam} requestedPlayer={searchedPlayer} onPlayerClose={() => setSearchedPlayer(null)} />

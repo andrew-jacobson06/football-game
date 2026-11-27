@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppSelect } from "../ui/AppSelect";
 import type { LeagueGame, LeagueTeam } from "./types";
 
-const getWeek = (game: LeagueGame, index: number) => Number(game.Week ?? index + 1);
+import { SEASON_WEEKS, gameSeasonWeek, seasonWeekLabel, type SeasonWeek } from "./seasonWeeks";
 const teamName = (team: LeagueTeam) => String(team.Team || team.Name || team.Abbrev || "Team");
 const teamAbbrev = (team: LeagueTeam) => String(team.Abbrev || team.Team || "");
 
@@ -44,12 +44,13 @@ export function LeagueSchedules({
 }: {
   games: LeagueGame[];
   teams: LeagueTeam[];
-  currentWeek: number | null;
+  currentWeek: SeasonWeek | null;
   onSelectGame: (game: LeagueGame) => void;
   onSelectTeam?: (team: LeagueTeam) => void;
 }) {
   const [selectedTeam, setSelectedTeam] = useState("");
-  const [activeWeek, setActiveWeek] = useState<number>();
+  const [activeWeek, setActiveWeek] = useState<SeasonWeek>();
+  useEffect(() => { setActiveWeek(undefined); }, [currentWeek]);
   const teamsByAbbrev = useMemo(() => new Map(teams.map((team) => [teamAbbrev(team), team])), [teams]);
   const teamOptions = useMemo(() => {
     const labels = new Map<string, string>();
@@ -63,11 +64,16 @@ export function LeagueSchedules({
     });
     return [...labels].sort((a, b) => a[1].localeCompare(b[1]));
   }, [games, teams]);
-  const weeks = useMemo(() => [...new Set([...games.map(getWeek), ...(currentWeek === null ? [] : [currentWeek])])].sort((a, b) => a - b), [currentWeek, games]);
+  const weeks = SEASON_WEEKS;
   const displayedWeek = activeWeek ?? currentWeek ?? weeks[0];
+  const weekNavigation = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = weekNavigation.current, active = nav?.querySelector<HTMLElement>("button.active");
+    if (nav && active) nav.scrollLeft += active.getBoundingClientRect().left - nav.getBoundingClientRect().left - (nav.clientWidth - active.clientWidth) / 2;
+  }, [displayedWeek]);
 
   const visibleGames = useMemo(() => games.filter((game, index) =>
-    getWeek(game, index) === displayedWeek
+    gameSeasonWeek(game, index) === displayedWeek
     && (!selectedTeam || game.Home === selectedTeam || game.Away === selectedTeam)), [displayedWeek, games, selectedTeam]);
   const gamesByDay = useMemo(() => {
     const grouped = new Map<string, LeagueGame[]>();
@@ -107,8 +113,8 @@ export function LeagueSchedules({
           </label>
         </header>
 
-        <nav className="schedule-weeks" aria-label="Schedule weeks">
-          {weeks.map((week) => <button className={week === displayedWeek ? "active" : ""} key={week} type="button" onClick={() => setActiveWeek(week)}><b>WEEK {week}</b><small>{games.filter((game, index) => getWeek(game, index) === week).length} games</small></button>)}
+        <nav ref={weekNavigation} className="schedule-weeks" aria-label="Schedule weeks">
+          {weeks.map((week) => <button data-playoff={typeof week === "string"} className={week === displayedWeek ? "active" : ""} key={week} type="button" onClick={() => setActiveWeek(week)}><b>{seasonWeekLabel(week).toUpperCase()}</b><small>{games.filter((game, index) => gameSeasonWeek(game, index) === week).length} games</small></button>)}
         </nav>
 
         <div className="schedule-table-wrap">
@@ -132,7 +138,7 @@ export function LeagueSchedules({
               </table>
             </section>
           ))}
-          {!visibleGames.length && <div className="schedule-no-games"><strong>No games scheduled</strong><span>No matchups have been announced for Week {displayedWeek ?? "—"}.</span></div>}
+          {!visibleGames.length && <div className="schedule-no-games"><strong>No games scheduled</strong><span>No matchups have been announced for {seasonWeekLabel(displayedWeek)}.</span></div>}
         </div>
       </section>
     </main>

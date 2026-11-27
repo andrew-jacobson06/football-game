@@ -1,4 +1,4 @@
-export type LeagueTab = "news" | "scores" | "schedules" | "standings" | "stats" | "draft";
+export type LeagueTab = "news" | "scores" | "schedules" | "standings" | "stats" | "draft" | "playoffs" | "awards";
 export type GameTab = "gamecast" | "playbyplay" | "boxscore" | "teamstats";
 
 export type LeagueGame = {
@@ -15,6 +15,8 @@ export type LeagueGame = {
   Possession: "Home" | "Away" | string;
   /** Team that received the opening kickoff; the other team receives in Q3. */
   OpeningPossession?: "Home" | "Away" | string;
+  /** JSON from the Games sheet or the current decoded overtime lifecycle. */
+  Overtime?: import("./overtime.js").OvertimeState | string;
   Week?: string | number;
   "Kickoff Time"?: string;
   Date?: string;
@@ -64,4 +66,7 @@ export type LeagueTeam = Record<string, string | number | undefined> & {
   "Away L"?: string | number;
   "Div W"?: string | number;
   "Div L"?: string | number;
+  "Div T"?: string | number;
+  "Win%"?: string | number;
+  "Div Win%"?: string | number;
 };
