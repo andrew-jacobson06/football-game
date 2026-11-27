@@ -1,9 +1,9 @@
 name: SQLite foundation
 on:
   pull_request:
-    paths: ['apps/api/**', '.github/workflows/sqlite.yml']
+    paths: ['apps/api/**', 'docs/imports/**', '.github/workflows/sqlite.yml']
   push:
-    paths: ['apps/api/**', '.github/workflows/sqlite.yml']
+    paths: ['apps/api/**', 'docs/imports/**', '.github/workflows/sqlite.yml']
 permissions:
   contents: read
 jobs:
@@ -25,3 +25,13 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: node --import tsx --test src/db/database.test.ts
+  import-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s docs/imports/core -p 'test_*.py' -v
+      - run: python -m unittest discover -s docs/imports/season -p 'test_*.py' -v
+      - run: python -m unittest discover -s docs/imports/remaining -p 'test_*.py' -v

@@ -1,0 +1,609 @@
+{
+  "source_filename": "Football Game DB spreadsheet (1).xlsx",
+  "source_sha256": "ea9f4319219b46711d28143c90ab27a9fd5ba80b0ade895a2aebf6516c59b704",
+  "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+  "settings_version_id": "05328eb3-a56b-5792-b238-e05c32377adc",
+  "settings_content_hash": "5fe3cbed093c254ca3e00c4bc2d73dc6fe9778839eefb35ae5cf7e705bdd90ea",
+  "divisions": [
+    {
+      "id": "3c9d9288-a1af-5594-aa63-a62d14c02937",
+      "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+      "name": "West",
+      "display_order": 0
+    },
+    {
+      "id": "e0ffe481-09a5-520c-ac27-03a608d6e570",
+      "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+      "name": "East",
+      "display_order": 1
+    }
+  ],
+  "teams": [
+    {
+      "id": "90da7069-5188-575b-b2b2-91babe77e14e",
+      "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+      "legacy_team_id": "1",
+      "retired_at": null
+    },
+    {
+      "id": "38214cb1-42e3-5517-9fd9-a45b97fc962c",
+      "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+      "legacy_team_id": "2",
+      "retired_at": null
+    },
+    {
+      "id": "02718a56-e7d2-553c-8cd5-441026f30ca5",
+      "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+      "legacy_team_id": "3",
+      "retired_at": null
+    },
+    {
+      "id": "e63aa8e6-f9e4-597c-bbc9-a031a0bf79b4",
+      "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+      "legacy_team_id": "4",
+      "retired_at": null
+    },
+    {
+      "id": "fd78f6ed-7a0d-5955-90db-dc27c3f3a9ab",
+      "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+      "legacy_team_id": "5",
+      "retired_at": null
+    },
+    {
+      "id": "f0abea88-d59e-5e39-8982-9af51677cc2c",
+      "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+      "legacy_team_id": "6",
+      "retired_at": null
+    },
+    {
+      "id": "c18daf46-b76a-510f-88b5-5084d325b24d",
+      "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+      "legacy_team_id": "7",
+      "retired_at": null
+    },
+    {
+      "id": "9fcb903b-26ca-584d-9911-161ef1c9dcc2",
+      "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+      "legacy_team_id": "8",
+      "retired_at": null
+    },
+    {
+      "id": "3165d4af-822f-5d44-a7d6-d9e0ac1e17c7",
+      "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+      "legacy_team_id": "9",
+      "retired_at": null
+    },
+    {
+      "id": "57e4291e-9ed9-52e3-b954-734860260698",
+      "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+      "legacy_team_id": "10",
+      "retired_at": null
+    }
+  ],
+  "branding_and_membership_for_future_team_seasons": [
+    {
+      "team_id": "90da7069-5188-575b-b2b2-91babe77e14e",
+      "division_id": "3c9d9288-a1af-5594-aa63-a62d14c02937",
+      "source_row": 2,
+      "source": {
+        "ID": 1.0,
+        "Abbrev": "POR",
+        "Location": "PORTLAND",
+        "Name": "WILDFIRE",
+        "Logo": "https://andrew-jacobson06.github.io/public-audio/wildfire.png",
+        "Home Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_wildfire_HOME.png",
+        "Away Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_wildfire_AWAY.png",
+        "Home Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_wildfire_home.png",
+        "Away Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_wildfire_away.png",
+        "Primary Color": "rgb(251, 119, 1)",
+        "secondary color": "rgb(250, 176, 2)",
+        "third color": "rgb(235, 49, 6)",
+        "CapSpace": 100.0,
+        "Division": "West"
+      }
+    },
+    {
+      "team_id": "38214cb1-42e3-5517-9fd9-a45b97fc962c",
+      "division_id": "e0ffe481-09a5-520c-ac27-03a608d6e570",
+      "source_row": 3,
+      "source": {
+        "ID": 2.0,
+        "Abbrev": "CLT",
+        "Location": "CHARLOTTE",
+        "Name": "KINGSMEN",
+        "Logo": "https://andrew-jacobson06.github.io/public-audio/kingsmen.png",
+        "Home Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_kings_HOME.png",
+        "Away Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_kings_AWAY.png",
+        "Home Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_kings_home.png",
+        "Away Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_kings_away.png",
+        "Primary Color": "rgb(72, 62, 93)",
+        "secondary color": "rgb(202, 134, 25)",
+        "third color": "rgb(35, 32, 59)",
+        "CapSpace": 100.0,
+        "Division": "East"
+      }
+    },
+    {
+      "team_id": "02718a56-e7d2-553c-8cd5-441026f30ca5",
+      "division_id": "3c9d9288-a1af-5594-aa63-a62d14c02937",
+      "source_row": 4,
+      "source": {
+        "ID": 3.0,
+        "Abbrev": "ABQ",
+        "Location": "ALBUQUERQUE",
+        "Name": "VORTEX",
+        "Logo": "https://andrew-jacobson06.github.io/public-audio/vortex.png",
+        "Home Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_vortex_HOME.png",
+        "Away Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_vortex_AWAY.png",
+        "Home Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_vortex_home.png",
+        "Away Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_vortex_away.png",
+        "Primary Color": "rgb(7, 193, 194)",
+        "secondary color": "rgb(82, 24, 127)",
+        "third color": "rgb(251, 103, 2)",
+        "CapSpace": 100.0,
+        "Division": "West"
+      }
+    },
+    {
+      "team_id": "e63aa8e6-f9e4-597c-bbc9-a031a0bf79b4",
+      "division_id": "3c9d9288-a1af-5594-aa63-a62d14c02937",
+      "source_row": 5,
+      "source": {
+        "ID": 4.0,
+        "Abbrev": "MIL",
+        "Location": "MILWAUKEE",
+        "Name": "FORGE",
+        "Logo": "https://andrew-jacobson06.github.io/public-audio/forge.png",
+        "Home Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_forge_HOME.png",
+        "Away Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_forge_AWAY.png",
+        "Home Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_forge_home.png",
+        "Away Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_forge_away.png",
+        "Primary Color": "rgb(67, 70, 114)",
+        "secondary color": "rgb(135, 139, 159)",
+        "third color": "rgb(255, 255, 255)",
+        "CapSpace": 100.0,
+        "Division": "West"
+      }
+    },
+    {
+      "team_id": "fd78f6ed-7a0d-5955-90db-dc27c3f3a9ab",
+      "division_id": "3c9d9288-a1af-5594-aa63-a62d14c02937",
+      "source_row": 6,
+      "source": {
+        "ID": 5.0,
+        "Abbrev": "SAN",
+        "Location": "SAN ANTONIO",
+        "Name": "OUTLAWS",
+        "Logo": "https://andrew-jacobson06.github.io/public-audio/outlaw.png",
+        "Home Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_outlaws_HOME.png",
+        "Away Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_outlaws_AWAY.png",
+        "Home Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_outlaws_home.png",
+        "Away Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_outlaws_away.png",
+        "Primary Color": "rgb(176, 31, 43)",
+        "secondary color": "rgb(223, 175, 122)",
+        "third color": "rgb(36, 44, 56)",
+        "CapSpace": 100.0,
+        "Division": "West"
+      }
+    },
+    {
+      "team_id": "f0abea88-d59e-5e39-8982-9af51677cc2c",
+      "division_id": "e0ffe481-09a5-520c-ac27-03a608d6e570",
+      "source_row": 7,
+      "source": {
+        "ID": 6.0,
+        "Abbrev": "NAS",
+        "Location": "NASHVILLE",
+        "Name": "SHOCK",
+        "Logo": "https://andrew-jacobson06.github.io/public-audio/shock.png",
+        "Home Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_shock_HOME.png",
+        "Away Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_shock_AWAY.png",
+        "Home Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_shock_home.png",
+        "Away Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_shock_away.png",
+        "Primary Color": "rgb(78, 15, 150)",
+        "secondary color": "rgb(254, 227, 3)",
+        "third color": "rgb(255, 255, 255)",
+        "CapSpace": 100.0,
+        "Division": "East"
+      }
+    },
+    {
+      "team_id": "c18daf46-b76a-510f-88b5-5084d325b24d",
+      "division_id": "3c9d9288-a1af-5594-aa63-a62d14c02937",
+      "source_row": 8,
+      "source": {
+        "ID": 7.0,
+        "Abbrev": "SAC",
+        "Location": "SACRAMENTO",
+        "Name": "GOLD RUSH",
+        "Logo": "https://andrew-jacobson06.github.io/public-audio/rush.png",
+        "Home Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_rush_HOME.png",
+        "Away Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_rush_AWAY.png",
+        "Home Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_rush_home.png",
+        "Away Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_rush_away.png",
+        "Primary Color": "rgb(0, 1, 2)",
+        "secondary color": "rgb(161, 112, 1)",
+        "third color": "rgb(251, 234, 131)",
+        "CapSpace": 100.0,
+        "Division": "West"
+      }
+    },
+    {
+      "team_id": "9fcb903b-26ca-584d-9911-161ef1c9dcc2",
+      "division_id": "e0ffe481-09a5-520c-ac27-03a608d6e570",
+      "source_row": 9,
+      "source": {
+        "ID": 8.0,
+        "Abbrev": "COL",
+        "Location": "COLUMBUS",
+        "Name": "TALONS",
+        "Logo": "https://andrew-jacobson06.github.io/public-audio/talon.png",
+        "Home Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_talons_HOME.png",
+        "Away Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_talons_AWAY.png",
+        "Home Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_talons_home.png",
+        "Away Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_talons_away.png",
+        "Primary Color": "rgb(228, 1, 19)",
+        "secondary color": "rgb(180, 178, 178)",
+        "third color": "rgb(0, 0, 0)",
+        "CapSpace": 100.0,
+        "Division": "East"
+      }
+    },
+    {
+      "team_id": "3165d4af-822f-5d44-a7d6-d9e0ac1e17c7",
+      "division_id": "e0ffe481-09a5-520c-ac27-03a608d6e570",
+      "source_row": 10,
+      "source": {
+        "ID": 9.0,
+        "Abbrev": "RIC",
+        "Location": "RICHMOND",
+        "Name": "REBELLION",
+        "Logo": "https://andrew-jacobson06.github.io/public-audio/rebel.png",
+        "Home Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_rebel_HOME.png",
+        "Away Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_rebel_AWAY.png",
+        "Home Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_rebel_home.png",
+        "Away Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_rebel_away.png",
+        "Primary Color": "rgb(0, 27, 75)",
+        "secondary color": "rgb(255, 255, 255)",
+        "third color": "rgb(223, 13, 26)",
+        "CapSpace": 100.0,
+        "Division": "East"
+      }
+    },
+    {
+      "team_id": "57e4291e-9ed9-52e3-b954-734860260698",
+      "division_id": "e0ffe481-09a5-520c-ac27-03a608d6e570",
+      "source_row": 11,
+      "source": {
+        "ID": 10.0,
+        "Abbrev": "TAL",
+        "Location": "TALLAHASSEE",
+        "Name": "MAKOS",
+        "Logo": "https://andrew-jacobson06.github.io/public-audio/mako.png",
+        "Home Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_mako_HOME.png",
+        "Away Jersey Crop": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_mako_AWAY.png",
+        "Home Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_mako_home.png",
+        "Away Uniform": "https://andrew-jacobson06.github.io/public-audio/uni_mako_away.png",
+        "Primary Color": "rgb(0, 14, 59)",
+        "secondary color": "rgb(138, 200, 251)",
+        "third color": "rgb(255, 255, 255)",
+        "CapSpace": 100.0,
+        "Division": "East"
+      }
+    }
+  ],
+  "configuration_catalog": [
+    {
+      "key": "legacy_run_thresholds",
+      "family": "Run outcome thresholds",
+      "range": "A1:D8",
+      "active": false,
+      "parsed_data": false,
+      "decision": "Retain compatibility"
+    },
+    {
+      "key": "legacy_break_ranges",
+      "family": "Legacy Break ranges",
+      "range": "A9:D13",
+      "active": false,
+      "parsed_data": false,
+      "decision": "Retain compatibility"
+    },
+    {
+      "key": "legacy_stamina_drains",
+      "family": "Legacy stamina drains",
+      "range": "A14:C22",
+      "active": false,
+      "parsed_data": false,
+      "decision": "Retain compatibility"
+    },
+    {
+      "key": "completion_table",
+      "family": "Completion versus air yards",
+      "range": "A23:C33",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "reference_hands_meter",
+      "family": "Hands increase meter",
+      "range": "A34:C35",
+      "active": false,
+      "parsed_data": false,
+      "decision": "Archive reference"
+    },
+    {
+      "key": "legacy_separation_completion",
+      "family": "Legacy separation completion",
+      "range": "A36:C43",
+      "active": false,
+      "parsed_data": false,
+      "decision": "Retain compatibility"
+    },
+    {
+      "key": "legacy_tackle_table",
+      "family": "Legacy tackle table",
+      "range": "A44:E48",
+      "active": false,
+      "parsed_data": false,
+      "decision": "Retain compatibility"
+    },
+    {
+      "key": "reference_time_rules",
+      "family": "Time determination prose",
+      "range": "A49:B62",
+      "active": false,
+      "parsed_data": false,
+      "decision": "Archive reference"
+    },
+    {
+      "key": "reference_fumble_rules",
+      "family": "Fumble prose",
+      "range": "A63:C65",
+      "active": false,
+      "parsed_data": false,
+      "decision": "Archive reference"
+    },
+    {
+      "key": "legacy_time_needed_to_throw",
+      "family": "Legacy time needed to throw",
+      "range": "A66:E71",
+      "active": false,
+      "parsed_data": false,
+      "decision": "Retain compatibility"
+    },
+    {
+      "key": "legacy_separation_yac",
+      "family": "Legacy separation YAC",
+      "range": "A72:I79",
+      "active": false,
+      "parsed_data": false,
+      "decision": "Retain compatibility"
+    },
+    {
+      "key": "legacy_sack_losses",
+      "family": "Legacy sack losses",
+      "range": "A80:D83",
+      "active": false,
+      "parsed_data": false,
+      "decision": "Retain compatibility"
+    },
+    {
+      "key": "reference_disabled_acceleration",
+      "family": "Old disabled acceleration",
+      "range": "A84:D92",
+      "active": false,
+      "parsed_data": false,
+      "decision": "Archive reference"
+    },
+    {
+      "key": "secondary_speed_yards",
+      "family": "Second-level speed yards",
+      "range": "A93:D97",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "secondary_breakaway_yards",
+      "family": "Second-level breakaway yards",
+      "range": "A98:D103",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "negative_yardage",
+      "family": "Negative yardage",
+      "range": "A104:D108",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "accel_to_lb_yards",
+      "family": "Acceleration to linebacker yards",
+      "range": "A109:D113",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "route_type_air_yards",
+      "family": "Air-yards route depths",
+      "range": "A114:D123",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "routes_by_depth",
+      "family": "Route/depth eligibility",
+      "range": "A124:J143",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "route_preview_metadata",
+      "family": "Route preview metadata",
+      "range": "A145:C164",
+      "active": false,
+      "parsed_data": true,
+      "decision": "Migrate/verify adapter"
+    },
+    {
+      "key": "time_to_throw_ranges",
+      "family": "Time-to-throw ranges",
+      "range": "A165:D175",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "openness_curves",
+      "family": "Base openness curves",
+      "range": "A176:H180",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "route_phase_weights",
+      "family": "Route-phase trait weights",
+      "range": "A181:E185",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "route_tree",
+      "family": "Route-tree timing and phases",
+      "range": "A186:H205",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "depth_base_tto",
+      "family": "Depth base time to open",
+      "range": "A206:C215",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "base_trait_impacts",
+      "family": "Base trait impact definitions",
+      "range": "A216:D220",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "qb_decision_table",
+      "family": "QB decision bands",
+      "range": "A221:H231",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "openness_completion_modifiers",
+      "family": "Openness completion modifiers",
+      "range": "A232:E242",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "accuracy_modifiers",
+      "family": "Accuracy ranges",
+      "range": "A243:C249",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "hands_impact_by_openness",
+      "family": "Hands impact by openness",
+      "range": "A250:D260",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "jump_effects",
+      "family": "Jump accuracy/openness matrix",
+      "range": "A261:H271",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "jump_air_yards",
+      "family": "Jump air-yards multiplier",
+      "range": "A272:B277",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "jump_routes",
+      "family": "Jump route multiplier",
+      "range": "A278:B284",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "yac_basis",
+      "family": "YAC basis matrix",
+      "range": "A285:G293",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "yac_throw_multipliers",
+      "family": "YAC throw multiplier",
+      "range": "A294:G300",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "db_beat_wr_accuracy_multipliers",
+      "family": "DB beat-WR accuracy multipliers",
+      "range": "A301:B306",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "pick_accuracy_multipliers",
+      "family": "Pick accuracy multipliers",
+      "range": "A307:B312",
+      "active": true,
+      "parsed_data": true,
+      "decision": "Migrate active"
+    },
+    {
+      "key": "reference_fatigue_experiments",
+      "family": "Side-panel fatigue experiments",
+      "range": "E1:V65",
+      "active": false,
+      "parsed_data": false,
+      "decision": "Archive reference"
+    }
+  ],
+  "settings_version": {
+    "id": "05328eb3-a56b-5792-b238-e05c32377adc",
+    "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+    "version": 1,
+    "label": "Initial uploaded workbook settings snapshot",
+    "status": "draft",
+    "content_hash": "5fe3cbed093c254ca3e00c4bc2d73dc6fe9778839eefb35ae5cf7e705bdd90ea"
+  }
+}

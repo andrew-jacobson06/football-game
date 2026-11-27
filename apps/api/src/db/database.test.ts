@@ -23,8 +23,8 @@ function seed(db:DatabaseConnection){db.exec(`
  INSERT INTO game_state(game_id,phase,possession_team_id) VALUES('g','playing','h');`);}
 const addPlay=(db:DatabaseConnection,id='play-1',sequence=1)=>db.prepare("INSERT INTO plays(id,game_id,sequence,period_before,play_type,yards) VALUES(?,'g',?,1,'Run',4)").run(id,sequence);
 test('initial schema is persistent, enforces foreign keys, uses WAL and initializes repeatedly',t=>{
- const {db}=fixture(t),s=databaseStatus(db);assert.equal(s.schemaVersion,1);assert.equal(s.journalMode,'wal');assert.equal(s.foreignKeys,1);assert.ok(s.tables.length>=20);
- assert.deepEqual(migrateDatabase(db),[]);assert.equal(migrationHistory(db).length,1);assert.deepEqual(checkDatabase(db),{integrity:'ok',foreignKeyViolations:0});
+ const {db}=fixture(t),s=databaseStatus(db);assert.equal(s.schemaVersion,loadMigrations().length);assert.equal(s.journalMode,'wal');assert.equal(s.foreignKeys,1);assert.ok(s.tables.length>=20);
+ assert.deepEqual(migrateDatabase(db),[]);assert.equal(migrationHistory(db).length,loadMigrations().length);assert.deepEqual(checkDatabase(db),{integrity:'ok',foreignKeyViolations:0});
 });
 test('database defaults use platform application data and explicit locations',()=>{
  assert.equal(resolveDatabasePath({databasePath:'',platform:'win32',homeDirectory:'C:\\Users\\Test',localAppData:'C:\\Users\\Test\\AppData\\Local'}),'C:\\Users\\Test\\AppData\\Local\\FootballGame\\data\\football.sqlite');
@@ -35,8 +35,8 @@ test('failed schema migration rolls back all pending tables and history',()=>{
 });
 test('schema checksums tolerate CRLF, apply upgrades once, and reject edited or unknown history',t=>{
  assert.equal(migration(1,'x','SELECT 1;\r\n').checksum,migration(1,'x','SELECT 1;\n').checksum);
- const {db}=fixture(t),base=loadMigrations(),up=[...base,migration(2,'0002_more.sql','CREATE TABLE extra(id TEXT PRIMARY KEY);')];assert.deepEqual(migrateDatabase(db,up),['0002_more.sql']);assert.deepEqual(migrateDatabase(db,up),[]);
- assert.throws(()=>verifyMigrationHistory(db),/newer|unknown/);assert.throws(()=>migrateDatabase(db,[{...base[0],checksum:'changed'},up[1]]),/changed/);assert.throws(()=>migrateDatabase(db,[base[0],migration(3,'gap','SELECT 1')]),/contiguous/);
+ const {db}=fixture(t),base=loadMigrations(),next=base.length+1,name=String(next).padStart(4,'0')+'_more.sql',up=[...base,migration(next,name,'CREATE TABLE extra(id TEXT PRIMARY KEY);')];assert.deepEqual(migrateDatabase(db,up),[name]);assert.deepEqual(migrateDatabase(db,up),[]);
+ assert.throws(()=>verifyMigrationHistory(db),/newer|unknown/);assert.throws(()=>migrateDatabase(db,[{...base[0],checksum:'changed'},...up.slice(1)]),/changed/);assert.throws(()=>migrateDatabase(db,[base[0],migration(3,'gap','SELECT 1')]),/contiguous/);
 });
 test('missing readonly paths are not created and unmanaged databases are preserved',t=>{
  const dir=mkdtempSync(path.join(tmpdir(),'sqlite-other-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));const filename=path.join(dir,'missing.sqlite');assert.throws(()=>openDatabase({filename,readonly:true}),/not found/);assert.equal(existsSync(filename),false);
@@ -76,4 +76,24 @@ test('reused legacy game numbers in another season are separate; play IDs and la
  assert.deepEqual(db.prepare("SELECT version,last_play_id FROM game_state WHERE game_id='g2'").get(),{version:0,last_play_id:null});
  commitPlay(db,{gameId:'g2',playId:'season-two-play',expectedVersion:0},c=>c.exec("INSERT INTO plays(id,game_id,sequence,period_before,play_type,yards) VALUES('season-two-play','g2',1,1,'Pass',7)"));
  assert.deepEqual(db.prepare('SELECT count(*) AS n FROM plays').get(),{n:2});
+});
+test('route eligibility cannot cross settings versions and negative Quick depths are valid',t=>{
+ const {db}=fixture(t);seed(db);
+ db.exec("INSERT INTO settings_versions(id,league_id,version,label) VALUES('v1','l',1,'one'),('v2','l',2,'two'); INSERT INTO routes(id,settings_version_id,route_key,display_name,curve_type,timing_modifier,release_pct,stem_pct,break_pct,sustain_pct) VALUES('route','v1','flat','Flat','Quick',0,35,0,5,60); INSERT INTO route_depths(id,settings_version_id,depth_key,display_name,sort_order,min_air_yards,max_air_yards,base_time_to_open) VALUES('depth','v2','Quick','Quick',0,-3,0,1)");
+ assert.throws(()=>db.exec("INSERT INTO route_depth_eligibility VALUES('v1','route','depth',1)"),/FOREIGN KEY/);
+ assert.throws(()=>db.exec("UPDATE routes SET release_pct=99 WHERE id='route'"),/CHECK/);
+});
+test('awards reject cross-award ballots, premature results and incomplete vote completion',t=>{
+ const {db}=fixture(t);seed(db);
+ db.exec("INSERT INTO settings_versions(id,league_id,version,label) VALUES('v','l',1,'one'); INSERT INTO award_definitions(id,code,display_name,nominee_count,eligibility_json,sort_order) VALUES('m','M','Test',2,'{}',0),('o','O','Other',2,'{}',1); INSERT INTO players(id,league_id,display_name) VALUES('p2','l','Two'); INSERT INTO award_nominations(id,season_id,award_id,player_id,nomination_order,selection_source) VALUES('n1','s','m','p',1,'test'),('n2','s','m','p2',2,'test'),('other','s','o','p',1,'test'); INSERT INTO award_weights VALUES('m','v',1,10),('m','v',2,7); INSERT INTO award_vote_runs(id,season_id,award_id,settings_version_id,status) VALUES('vote','s','m','v','running'); INSERT INTO award_ballots(id,vote_run_id,ballot_number) VALUES('b1','vote',1)");
+ assert.throws(()=>db.exec("INSERT INTO ballot_rankings VALUES('b1',1,'other')"),/does not belong/);
+ assert.throws(()=>db.exec("UPDATE award_vote_runs SET status='completed',completed_ballots=125 WHERE id='vote'"),/125 complete/);
+ assert.throws(()=>db.exec("INSERT INTO award_results(id,vote_run_id,nomination_id,total_points,final_rank,is_winner,is_tied) VALUES('r','vote','n1',0,1,1,0)"),/completed matching/);
+ assert.equal((db.prepare('SELECT count(*) AS n FROM award_rankings').get() as {n:number}).n,0);
+ for(let i=1;i<=125;i++){
+  if(i>1)db.prepare('INSERT INTO award_ballots(id,vote_run_id,ballot_number) VALUES(?,?,?)').run('b'+i,'vote',i);
+  db.prepare('INSERT INTO ballot_rankings VALUES(?,?,?)').run('b'+i,1,'n1');db.prepare('INSERT INTO ballot_rankings VALUES(?,?,?)').run('b'+i,2,'n2');
+ }
+ db.exec("UPDATE award_vote_runs SET status='completed',completed_ballots=125 WHERE id='vote'");
+ assert.deepEqual(db.prepare('SELECT nomination_id,total_points,rank FROM award_rankings ORDER BY rank').all(),[{nomination_id:'n1',total_points:1250,rank:1},{nomination_id:'n2',total_points:875,rank:2}]);
 });

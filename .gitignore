@@ -15,3 +15,7 @@ service-account.json
 *.sqlite3-*
 *.db
 *.db-*
+
+# Python import-validation caches
+__pycache__/
+*.pyc

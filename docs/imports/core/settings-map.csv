@@ -1,0 +1,39 @@
+family,source_range_in_Settings,decision,consumer_or_note,units_and_sentinels
+Run outcome thresholds,A1:D8,Retain compatibility,API exposes thresholds; current run engine does not directly consume this array.,percentage points; yard ranges
+Legacy Break ranges,A9:D13,Retain compatibility,API exposes breakaways; current engine uses secondaryBreakawayYards instead.,percentage points; yards
+Legacy stamina drains,A14:C22,Retain compatibility,API exposes staminaDrains/drainSettings; current fatigue engine uses TypeScript formulas.,points by role
+Completion versus air yards,A23:C33,Migrate active,10 depth rows.,yards; completion percentage points
+Hands increase meter,A34:C35,Archive reference,No current engine/API consumer identified for this specific block.,prototype
+Legacy separation completion,A36:C43,Retain compatibility,Returned API group; current completion uses actual openness modifier.,separation; percentage-point adjustment
+Legacy tackle table,A44:E48,Retain compatibility,Returned API group; current tackle logic uses engine traits.,yard cap; selection percentage points
+Time determination prose,A49:B62,Archive reference,Textual prototype formulas; actual clock rules live in code.,prose
+Fumble prose,A63:C65,Archive reference,Current interception/fumble rules live in code.,prose
+Legacy time needed to throw,A66:E71,Retain compatibility,5 rows; D66 exports as date rather than 10–20 heading; current new TTO uses later table.,seconds by read/depth bucket
+Legacy separation YAC,A72:I79,Retain compatibility,"Returned but not used by current calcYAC fallback; header is row72, current legacy builder has a fixed-row reference.",yard upper bounds; percentage points
+Legacy sack losses,A80:D83,Retain compatibility,Returned API array; current pipeline does not directly read sackLossTable.,yard ranges; percentage points
+Old disabled acceleration,A84:D92,Archive reference,123accel_to_LB prefix is excluded by current active parser.,prototype
+Second-level speed yards,A93:D97,Migrate active,4 bucket rows consumed by runEngineHelper.,percentage points; yards
+Second-level breakaway yards,A98:D103,Migrate active,5 bucket rows consumed by runEngineHelper.,percentage points; yards
+Negative yardage,A104:D108,Migrate active,4 bucket rows consumed by runEngineHelper.,percentage points; negative yards
+Acceleration to linebacker yards,A109:D113,Migrate active,4 bucket rows consumed by runEngineHelper.,percentage points; yards
+Air-yards route depths,A114:D123,Migrate active,9 depths; negative Quick bounds and unbounded Bomb.,integer yards; -- becomes NULL upper bound
+Route/depth eligibility,A124:J143,Migrate active,19 routes by9 depths; only1 enables a route.,boolean eligibility
+Route preview metadata,A145:C164,Migrate/verify adapter,19 route rows exist; prefix-based current API routeInfo can select header only. Import real metadata and verify preview contract.,route names/depth/shape
+Time-to-throw ranges,A165:D175,Migrate active,8 positive probability rows; ignore placeholder; total probability1.,seconds; formatted-percent fraction
+Base openness curves,A176:H180,Migrate active,4 curves by7 progress points.,TTO fractions; openness points
+Route-phase trait weights,A181:E185,Migrate active,4 phases by4 traits.,multipliers
+Route-tree timing and phases,A186:H205,Migrate active,19 routes; Screen alias links WR Screen.,seconds offset; phase percentages; curve type
+Depth base time to open,A206:C215,Migrate active,9 depth entries.,seconds
+Base trait impact definitions,A216:D220,Migrate active,4 traits.,base/max score; difference multiplier
+QB decision bands,A221:H231,Migrate active,9 bands; primary/2nd/3rd/4th; NA means no roll.,openness ceiling; percentage points or NULL
+Openness completion modifiers,A232:E242,Migrate active,9 bands; -1 upper openness sentinel.,open points; completion-point adjustment
+Accuracy ranges,A243:C249,Migrate active,5 throw types.,completion-percentage-point adjustment
+Hands impact by openness,A250:D260,Migrate active,9 bands.,multiplier; formatted percentages
+Jump accuracy/openness matrix,A261:H271,Migrate active,9 openness bands by5 throw types.,multiplier; formatted percentages
+Jump air-yards multiplier,A272:B277,Migrate active,4 cases; end-zone case has priority.,multiplier
+Jump route multiplier,A278:B284,Migrate active,5 entries including ALL ELSE.,multiplier; x-prefixed strings
+YAC basis matrix,A285:G293,Migrate active,7 air-yard rows by6 openness columns.,yard/open-score ceilings; base yards
+YAC throw multiplier,A294:G300,Migrate active,5 throw types by6 air-yard columns.,multiplier; zero is valid
+DB beat-WR accuracy multipliers,A301:B306,Migrate active,5 types.,multiplier
+Pick accuracy multipliers,A307:B312,Migrate active,5 types.,multiplier
+Side-panel fatigue experiments,E1:V65,Archive reference,"Includes formulas, a date-formatted header elsewhere, and error markers; no wholesale execution or activation.",prototype calculations
