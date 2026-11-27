@@ -1,0 +1,428 @@
+{
+  "source_file": "Football Game DB spreadsheet (1).xlsx",
+  "source_sha256": "ea9f4319219b46711d28143c90ab27a9fd5ba80b0ade895a2aebf6516c59b704",
+  "top40": {
+    "Read QB": [
+      {
+        "player": "Fuzz",
+        "score": 99.0
+      },
+      {
+        "player": "Rolf",
+        "score": 95.0
+      },
+      {
+        "player": "Ralph",
+        "score": 94.0
+      },
+      {
+        "player": "EMC",
+        "score": 93.0
+      },
+      {
+        "player": "Dolphin",
+        "score": 93.0
+      },
+      {
+        "player": "Mini",
+        "score": 91.0
+      },
+      {
+        "player": "PullFrog",
+        "score": 89.0
+      },
+      {
+        "player": "Moose",
+        "score": 89.0
+      },
+      {
+        "player": "Rory",
+        "score": 88.0
+      },
+      {
+        "player": "Kelso",
+        "score": 88.0
+      },
+      {
+        "player": "Baby",
+        "score": 86.0
+      },
+      {
+        "player": "Jumbo",
+        "score": 85.0
+      },
+      {
+        "player": "Monkey",
+        "score": 80.0
+      },
+      {
+        "player": "Skunkers",
+        "score": 79.0
+      },
+      {
+        "player": "McJagger",
+        "score": 77.0
+      },
+      {
+        "player": "Brownie",
+        "score": 77.0
+      },
+      {
+        "player": "Barnsworth",
+        "score": 76.0
+      },
+      {
+        "player": "Jimbo",
+        "score": 76.0
+      },
+      {
+        "player": "Nathan",
+        "score": 76.0
+      },
+      {
+        "player": "BMC",
+        "score": 76.0
+      },
+      {
+        "player": "Luke",
+        "score": 74.0
+      },
+      {
+        "player": "Old Lion",
+        "score": 74.0
+      },
+      {
+        "player": "David",
+        "score": 73.0
+      },
+      {
+        "player": "Tweety",
+        "score": 73.0
+      },
+      {
+        "player": "Streak",
+        "score": 72.0
+      },
+      {
+        "player": "Ezekiel",
+        "score": 71.0
+      },
+      {
+        "player": "Duncan",
+        "score": 71.0
+      },
+      {
+        "player": "Tiberius",
+        "score": 71.0
+      },
+      {
+        "player": "Tigger",
+        "score": 70.0
+      },
+      {
+        "player": "Toad",
+        "score": 70.0
+      },
+      {
+        "player": "Big Boy",
+        "score": 70.0
+      },
+      {
+        "player": "NS Bear",
+        "score": 69.0
+      },
+      {
+        "player": "Hippo",
+        "score": 69.0
+      },
+      {
+        "player": "Blackie",
+        "score": 69.0
+      },
+      {
+        "player": "Mama",
+        "score": 69.0
+      },
+      {
+        "player": "Lil Slushie",
+        "score": 69.0
+      },
+      {
+        "player": "Junior",
+        "score": 69.0
+      },
+      {
+        "player": "Trunky",
+        "score": 69.0
+      },
+      {
+        "player": "Babe TreeClimbers",
+        "score": 67.0
+      },
+      {
+        "player": "NL Bear",
+        "score": 66.0
+      }
+    ],
+    "Ball Hawk": [
+      {
+        "player": "Fuzz",
+        "score": 99.0
+      },
+      {
+        "player": "Baby",
+        "score": 97.0
+      },
+      {
+        "player": "Ralph",
+        "score": 96.0
+      },
+      {
+        "player": "EMC",
+        "score": 95.0
+      },
+      {
+        "player": "Jimbo",
+        "score": 90.0
+      },
+      {
+        "player": "McJagger",
+        "score": 89.0
+      },
+      {
+        "player": "David",
+        "score": 89.0
+      },
+      {
+        "player": "Rolf",
+        "score": 88.0
+      },
+      {
+        "player": "Moose",
+        "score": 87.0
+      },
+      {
+        "player": "Tigger",
+        "score": 87.0
+      },
+      {
+        "player": "Mini",
+        "score": 85.0
+      },
+      {
+        "player": "Big Boy",
+        "score": 85.0
+      },
+      {
+        "player": "Monkey",
+        "score": 83.0
+      },
+      {
+        "player": "Tom",
+        "score": 83.0
+      },
+      {
+        "player": "Barnsworth",
+        "score": 82.0
+      },
+      {
+        "player": "PullFrog",
+        "score": 81.0
+      },
+      {
+        "player": "NL Bear",
+        "score": 81.0
+      },
+      {
+        "player": "Rory",
+        "score": 80.0
+      },
+      {
+        "player": "Bobo",
+        "score": 80.0
+      },
+      {
+        "player": "Nathan",
+        "score": 80.0
+      },
+      {
+        "player": "NS Bear",
+        "score": 80.0
+      },
+      {
+        "player": "SEMC",
+        "score": 77.0
+      },
+      {
+        "player": "Jelly",
+        "score": 75.0
+      },
+      {
+        "player": "Jumbo",
+        "score": 71.0
+      },
+      {
+        "player": "Brownie",
+        "score": 71.0
+      },
+      {
+        "player": "Lil Slushie",
+        "score": 70.0
+      },
+      {
+        "player": "Junior",
+        "score": 70.0
+      },
+      {
+        "player": "Luke",
+        "score": 69.0
+      },
+      {
+        "player": "Dolphin",
+        "score": 68.0
+      },
+      {
+        "player": "Ezekiel",
+        "score": 68.0
+      },
+      {
+        "player": "Frog",
+        "score": 67.0
+      },
+      {
+        "player": "Skunkers",
+        "score": 65.0
+      },
+      {
+        "player": "Oliver",
+        "score": 65.0
+      },
+      {
+        "player": "Monkey Boo",
+        "score": 65.0
+      },
+      {
+        "player": "Duncan",
+        "score": 64.0
+      },
+      {
+        "player": "Hippo",
+        "score": 63.0
+      },
+      {
+        "player": "Blackie",
+        "score": 62.0
+      },
+      {
+        "player": "Spider",
+        "score": 62.0
+      },
+      {
+        "player": "Old Lion",
+        "score": 61.0
+      },
+      {
+        "player": "Kelso",
+        "score": 60.0
+      }
+    ]
+  },
+  "readQB": 77.8,
+  "ballHawk": 77.25,
+  "qbs": [
+    {
+      "name": "RBI Bear",
+      "accuracy": 97.0
+    },
+    {
+      "name": "Tweety",
+      "accuracy": 95.0
+    },
+    {
+      "name": "Marine Bear",
+      "accuracy": 94.0
+    },
+    {
+      "name": "John",
+      "accuracy": 92.0
+    },
+    {
+      "name": "Leon Gory",
+      "accuracy": 80.0
+    },
+    {
+      "name": "Micro",
+      "accuracy": 78.0
+    },
+    {
+      "name": "Woodstock",
+      "accuracy": 75.0
+    },
+    {
+      "name": "Olaf",
+      "accuracy": 66.0
+    },
+    {
+      "name": "Ernie",
+      "accuracy": 64.0
+    },
+    {
+      "name": "C Monster",
+      "accuracy": 60.0
+    },
+    {
+      "name": "Duncan",
+      "accuracy": 60.0
+    },
+    {
+      "name": "Piglet",
+      "accuracy": 60.0
+    }
+  ],
+  "multipliers": {
+    "DB beats WR to ball based on accuracy": [
+      {
+        "throwType": "Perfect",
+        "multiplier": 0.1
+      },
+      {
+        "throwType": "Accurate",
+        "multiplier": 0.5
+      },
+      {
+        "throwType": "Close",
+        "multiplier": 0.75
+      },
+      {
+        "throwType": "Catchable",
+        "multiplier": 1.0
+      },
+      {
+        "throwType": "Off Target",
+        "multiplier": 1.5
+      }
+    ],
+    "Pick Multiplier based on accuracy": [
+      {
+        "throwType": "Perfect",
+        "multiplier": 0.1
+      },
+      {
+        "throwType": "Accurate",
+        "multiplier": 0.25
+      },
+      {
+        "throwType": "Close",
+        "multiplier": 0.6
+      },
+      {
+        "throwType": "Catchable",
+        "multiplier": 1.0
+      },
+      {
+        "throwType": "Off Target",
+        "multiplier": 1.5
+      }
+    ]
+  }
+}
