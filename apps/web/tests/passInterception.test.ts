@@ -10,7 +10,7 @@ const seq = (...values: number[]) => () => { assert.ok(values.length, "Unexpecte
 const close = (a: number, b: number) => assert.ok(Math.abs(a-b) < 1e-9, `${a} != ${b}`);
 
 test("uses the supplied polynomials and actual openness bands including all boundaries", () => {
-  for (const [openness, expected] of [[0, 14.149898810860048], [39.999, 14.149898810860048], [40, 10.968853984091073], [49.999, 10.968853984091073], [50, 8.472303345383574], [60, 6.81188401118551], [70, 3.83687917519952], [80, 1.072581200037536], [89.999, 1.072581200037536], [90, 0], [120, 0]] as const)
+  for (const [openness, expected] of [[0, 16.864570132566499200000], [39.999, 16.864570132566499200000], [40, 14.812583739311728000000], [49.999, 14.812583739311728000000], [50, 11.91270655278830400000], [59.999, 11.91270655278830400000], [60, 10.460600496806662400000], [69.999, 10.460600496806662400000], [70, 8.37726751434369600000], [79.999, 8.37726751434369600000], [80, 3.483157746395398400000], [89.999, 3.483157746395398400000], [90, 0], [120, 0]] as const)
     close(routeJumpBaseChance(80, openness), expected);
   close(pickBaseChance(80), 19.455955489012032000000);
   assert.equal(routeJumpBaseChance(0, 40), 0);
@@ -19,9 +19,9 @@ test("uses the supplied polynomials and actual openness bands including all boun
 
 test("matches the Read QB 85/Ball Hawk 81 overall interception matrix", () => {
   const result = rollPassInterception(85, 81, 20, "Catchable", beat, pick, seq(0, 0));
-  close(result.beatWRtoBall, 15.38725762520821412500);
+  close(result.beatWRtoBall, 18.202170201249215259375);
   close(result.pickPctChance!, 19.894165759666692429615);
-  close(result.beatWRtoBall*result.pickPctChance!/100, 3.06116653782587476862377145220251411311875);
+  close(result.beatWRtoBall*result.pickPctChance!/100, 3.62116991169317526314415021570009851156390625);
 });
 
 test("both accuracy multipliers come from Settings for every throw type", () => {
@@ -189,34 +189,25 @@ test("a completed poor throw never runs the second interception path", t => {
 });
 
 
-test("updated route-jump and pick polynomials match independent reference ratings", () => {
-  close(routeJumpBaseChance(50, 20), 9.99999999748285000000);
-  close(routeJumpBaseChance(50, 45), 7.50000000282725000000);
-  close(routeJumpBaseChance(50, 55), 4.999999997921800000000);
-  close(routeJumpBaseChance(50, 65), 3.500000000685500000000);
-  close(routeJumpBaseChance(50, 75), 0.99999999803907500000);
-  close(routeJumpBaseChance(50, 85), 0.49999999835915000000);
+test("rebalanced route-jump polynomials match independent decimal reference ratings", () => {
+  // Reference values evaluated with 60-digit decimal arithmetic from the supplied coefficients.
+  const openness = [20, 45, 55, 65, 75, 85] as const;
+  const references = [
+    [0, 0E-21, 0E-21, 0E-20, 0E-21, 0E-20, 0E-21],
+    [50, 11.999999999326387500000, 9.999999999221837500000, 7.49999999761582500000, 6.499999998334850000000, 4.00000000076692500000, 1.250000002029012500000],
+    [68, 14.696331033897798964992, 12.715128429443901786880, 9.71444621996328633984, 8.766187912685718823424, 6.71362729251969369216, 2.347114068775734685184],
+    [80, 16.864570132566499200000, 14.812583739311728000000, 11.91270655278830400000, 10.460600496806662400000, 8.37726751434369600000, 3.483157746395398400000],
+    [85, 18.202170201249215259375, 16.166410504987522171875, 13.28494755667691784375, 11.539482154579821487500, 9.11233407995617121875, 4.160651601450545753125],
+    [99, 24.999999989239892709081, 22.999999987623476320965, 18.99999996324069099537, 16.999999974073533133332, 12.50000001181159161813, 7.000000031083735062387],
+    [100, 25.740566844615900000000, 23.723225555664300000000, 19.51381748779290000000, 17.580856640632200000000, 12.89335375029010000000, 7.265425423017400000000],
+  ] as const;
+  for (const [rating, ...expected] of references) {
+    openness.forEach((score, index) => close(routeJumpBaseChance(rating, score), expected[index]));
+  }
+  // Only the Read QB curves changed; keep Ball Hawk's independent reference values.
   close(pickBaseChance(50), 10.999999997292187500000);
-  close(routeJumpBaseChance(68, 20), 12.25412821714309353088);
-  close(routeJumpBaseChance(68, 45), 9.81924663617562409472);
-  close(routeJumpBaseChance(68, 55), 6.771131488794219545344);
-  close(routeJumpBaseChance(68, 65), 5.286286627676268053504);
-  close(routeJumpBaseChance(68, 75), 2.81626612619209376000);
-  close(routeJumpBaseChance(68, 85), 0.98061599000714391296);
   close(pickBaseChance(68), 15.450020086224119608320);
-  close(routeJumpBaseChance(85, 20), 15.38725762520821412500);
-  close(routeJumpBaseChance(85, 45), 11.74382107993253056250);
-  close(routeJumpBaseChance(85, 55), 9.551146325707836737500);
-  close(routeJumpBaseChance(85, 65), 7.746489196902952800000);
-  close(routeJumpBaseChance(85, 75), 4.31376072272392359375);
-  close(routeJumpBaseChance(85, 85), 1.19427769842041918750);
   close(pickBaseChance(85), 21.880825656649859546875);
-  close(routeJumpBaseChance(99, 20), 20.99999996095793033484);
-  close(routeJumpBaseChance(99, 45), 17.50000004381339721846);
-  close(routeJumpBaseChance(99, 55), 14.999999967840143213892);
-  close(routeJumpBaseChance(99, 65), 12.500000010190234726272);
-  close(routeJumpBaseChance(99, 75), 7.49999996988130733625);
-  close(routeJumpBaseChance(99, 85), 2.99999997431781651378);
   close(pickBaseChance(99), 32.999999958401085483885);
 });
 
