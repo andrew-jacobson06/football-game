@@ -447,10 +447,11 @@ END;
 INSERT INTO afl_schema_guard VALUES(1);
 '''+migration_sql+f'''
 INSERT INTO schema_migrations(version,name,checksum) VALUES(2,'0002_league_domains.sql',{q(checksum)}) ON CONFLICT(version) DO NOTHING;
-PRAGMA user_version=2;
 DROP TRIGGER afl_schema_check;
 DROP TABLE afl_schema_guard;
 RELEASE SAVEPOINT afl_remaining_10;
+-- DB Browser commits pending changes before PRAGMA assignments. Keep this OUTSIDE our savepoint.
+PRAGMA user_version=2;
 SELECT version,name FROM schema_migrations ORDER BY version;
 '''
 (OUT/'10-schema-upgrade.sql').write_text(upgrade)

@@ -6,6 +6,7 @@ import collections
 import hashlib
 import importlib.util
 import json
+import re
 import sqlite3
 import tempfile
 import unittest
@@ -60,6 +61,44 @@ class RemainingImportsTest(unittest.TestCase):
     def tearDown(self):
         if self.db.in_transaction:self.db.rollback()
         self.db.close()
+
+    def test_db_browser_pragma_commit_and_recovery_after_old_script_failure(self):
+        # RunSql.cpp commits all savepoints before a PRAGMA assignment. Standard
+        # sqlite3.execute() alone does not simulate this DB Browser behavior.
+        db=sqlite3.connect(':memory:')
+        self.addCleanup(db.close)
+        db.executescript(helpers.SCHEMA)
+        db.execute("CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,checksum TEXT NOT NULL,applied_at TEXT NOT NULL DEFAULT(strftime('%Y-%m-%dT%H:%M:%fZ','now'))) STRICT")
+        checksum=hashlib.sha256(helpers.SCHEMA.replace('\r\n','\n').encode()).hexdigest()
+        db.execute("INSERT INTO schema_migrations(version,name,checksum) VALUES(1,'0001_core.sql',?)",(checksum,))
+        db.execute("INSERT INTO leagues(id,name) VALUES('preserve','Existing league')")
+        db.commit()
+        def gui_execute(sql):
+            statement=''
+            for line in sql.splitlines(keepends=True):
+                statement+=line
+                if not sqlite3.complete_statement(statement):continue
+                query=re.sub(r'(?m)^\s*--[^\n]*\n','',statement).lstrip()
+                if re.match(r'PRAGMA\s+\w+\s*=',query,re.I):
+                    if db.in_transaction:db.commit()
+                elif not db.in_transaction:
+                    db.execute('SAVEPOINT dbbrowser_auto')
+                db.execute(statement).fetchall()
+                statement=''
+            self.assertFalse(statement.strip())
+        fixed=(HERE/'10-schema-upgrade.sql').read_text(encoding='utf-8')
+        old=fixed.replace('PRAGMA user_version=2;\n','').replace('DROP TRIGGER afl_schema_check;','PRAGMA user_version=2;\nDROP TRIGGER afl_schema_check;')
+        with self.assertRaisesRegex(sqlite3.OperationalError,'no such savepoint'):
+            gui_execute(old)
+        # The schema/ledger can already have committed at the failed RELEASE.
+        self.assertEqual(db.execute('SELECT max(version) FROM schema_migrations').fetchone()[0],2)
+        gui_execute(fixed)
+        db.commit()
+        gui_execute(fixed)  # Corrected file is also safe to repeat after recovery.
+        db.commit()
+        self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],2)
+        self.assertEqual(db.execute("SELECT name FROM leagues WHERE id='preserve'").fetchone()[0],'Existing league')
+        self.assertEqual(db.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchone()[0],51)
 
     def test_every_final_check_and_managed_checksum(self):
         result=self.db.execute((HERE/'24-verify-complete-import.sql').read_text(encoding='utf-8')).fetchall()

@@ -546,8 +546,9 @@ BEGIN SELECT RAISE(ABORT,'Team stats opponents must match this game'); END;
 CREATE INDEX IF NOT EXISTS import_target_lookup ON source_record_mappings(import_batch_id,target_table,target_id);
 
 INSERT INTO schema_migrations(version,name,checksum) VALUES(2,'0002_league_domains.sql','c896ba114ee99212963227f17b3515ebb32028320be451e168c284e39179a441') ON CONFLICT(version) DO NOTHING;
-PRAGMA user_version=2;
 DROP TRIGGER afl_schema_check;
 DROP TABLE afl_schema_guard;
 RELEASE SAVEPOINT afl_remaining_10;
+-- DB Browser commits pending changes before PRAGMA assignments. Keep this OUTSIDE our savepoint.
+PRAGMA user_version=2;
 SELECT version,name FROM schema_migrations ORDER BY version;

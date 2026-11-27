@@ -15,6 +15,12 @@ The scripts use SAVEPOINT/RELEASE and support DB Browser's existing transaction;
 
 Use the repository code from `codex/complete-sqlite-imports` (or merge its changes into `migrate-local-ui-sheets-db`) before running management commands against a version-2 database. Older code containing only migration 0001 will correctly refuse to inspect a newer migration history. This is a code/schema version check, not lost data. Updating this code does not activate the SQLite app provider.
 
+## Recovering from “no such savepoint: afl_remaining_10”
+
+The original file 10 put `PRAGMA user_version=2` before its final RELEASE. DB Browser's SQL runner commits all savepoints before a PRAGMA assignment, so the later RELEASE failed even though the schema and migration ledger could already be saved. The corrected file moves the assignment after RELEASE; the schema migration itself and checksum are unchanged.
+
+Save pending changes, close and reopen the database to clear temporary SQL objects, and run the corrected **entire file 10**. It safely handles an already-applied matching version 2. If DB Browser asks to save changes before the PRAGMA, approve saving this verified schema work. The final result should list migrations 1 and 2. Then continue with file 11. Do not remove SAVEPOINT statements from the other files.
+
 ## Exact order
 
 | # | File | Expected records / purpose |
