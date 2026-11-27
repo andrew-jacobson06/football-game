@@ -1,0 +1,242 @@
+{
+  "source_filename": "Football Game DB spreadsheet (1).xlsx",
+  "source_sha256": "ea9f4319219b46711d28143c90ab27a9fd5ba80b0ade895a2aebf6516c59b704",
+  "schema_version": 2,
+  "migration_checksum": "c896ba114ee99212963227f17b3515ebb32028320be451e168c284e39179a441",
+  "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+  "season_id": "97808f43-a0d5-5251-bf8d-fae1643c8258",
+  "files": [
+    {
+      "file": "10-schema-upgrade.sql",
+      "counts": {
+        "new_tables": 27
+      },
+      "note": "Exact managed schema migration 2."
+    },
+    {
+      "file": "11-aliases-and-preferences.sql",
+      "counts": {
+        "player_aliases": 107,
+        "app_preferences": 1
+      },
+      "note": ""
+    },
+    {
+      "file": "12-official-plays.sql",
+      "counts": {
+        "plays": 9575
+      },
+      "note": "9575 official plays; OLDPlayHistory excluded; original play IDs unchanged."
+    },
+    {
+      "file": "13-play-details.sql",
+      "counts": {
+        "play_details": 9575
+      },
+      "note": "Raw payloads, logs and fatigue recovery retained; unknown historical animation/clock stays NULL."
+    },
+    {
+      "file": "14-play-participants.sql",
+      "counts": {
+        "play_participants": 23811
+      },
+      "note": "No Home/Away/NA fake players; participant teams come from play roles."
+    },
+    {
+      "file": "15-line-matchups.sql",
+      "counts": {
+        "play_line_matchups": 32343
+      },
+      "note": "Structured source line winners, unchanged."
+    },
+    {
+      "file": "16-final-play-links.sql",
+      "counts": {
+        "final_play_links": 70
+      },
+      "note": "No runtime energy/fatigue state invented."
+    },
+    {
+      "file": "17-derived-statistics.sql",
+      "counts": {
+        "team_game_stats": 140,
+        "player_game_stats": "derived from recorded participation",
+        "play_stat_deltas": "derived metric events"
+      },
+      "note": "Returns, conversions, drive/possession time unknown; same-game defensive yardage."
+    },
+    {
+      "file": "18-source-baselines-and-standings.sql",
+      "counts": {
+        "season_stat_snapshots": 117,
+        "standing_snapshots": 36
+      },
+      "note": "107 player + 10 team comparison baselines; official regular/postseason/combined standings kept separate from mixed worksheet totals."
+    },
+    {
+      "file": "19-normalized-route-settings.sql",
+      "counts": {
+        "routes": 19,
+        "route_depths": 9,
+        "route_depth_eligibility": 171,
+        "openness_curve_points": 28
+      },
+      "note": "19 routes, 9 depths, 171 eligibility pairs, 28 curve points; draft settings remain draft."
+    },
+    {
+      "file": "20-playoff-bracket.sql",
+      "counts": {
+        "playoff_seedings": 6,
+        "bracket_slots": 12
+      },
+      "note": "Six frozen seeds; two first-seed byes; ten resolved game-side slots."
+    },
+    {
+      "file": "21-awards-and-first-teams.sql",
+      "counts": {
+        "award_definitions": 3,
+        "award_weights": 18,
+        "award_nominations": 18,
+        "award_vote_runs": 3,
+        "honor_slots": 34,
+        "honor_selections": 34
+      },
+      "note": "18 nominees, 34 honors; three NOT STARTED vote runs; 0 ballots, 0 winners. Exact workbook weights retained."
+    },
+    {
+      "file": "22-articles.sql",
+      "counts": {
+        "articles": 19
+      },
+      "note": "19 articles; exact IDs, Markdown including img tags, and publication timestamps retained."
+    },
+    {
+      "file": "23-coaches-and-draft-reference.sql",
+      "counts": {
+        "coaches": 20,
+        "coach_season_ratings": 20,
+        "draft_board_snapshots": 1
+      },
+      "note": "20 coaches + rating snapshots, 1 raw draft board; 0 coach assignments, 0 active drafts, 0 draft picks."
+    },
+    {
+      "file": "24-verify-complete-import.sql",
+      "counts": {},
+      "note": "Read-only; every check should say OK for this snapshot."
+    }
+  ],
+  "source_turnover_corrections": [
+    {
+      "play_id": "7-1786825795989-55",
+      "source_row": 711,
+      "source_turnover": "Yes",
+      "canonical_turnover": 0,
+      "reason": "Recovery by the recorded carrier retains possession; or explicit turnover-on-downs result."
+    },
+    {
+      "play_id": "20-1791578388356-17",
+      "source_row": 2268,
+      "source_turnover": "Yes",
+      "canonical_turnover": 0,
+      "reason": "Recovery by the recorded carrier retains possession; or explicit turnover-on-downs result."
+    },
+    {
+      "play_id": "30-1791940563599-141",
+      "source_row": 3955,
+      "source_turnover": "Yes",
+      "canonical_turnover": 0,
+      "reason": "Recovery by the recorded carrier retains possession; or explicit turnover-on-downs result."
+    },
+    {
+      "play_id": "63-1795453038419-121",
+      "source_row": 8851,
+      "source_turnover": "Yes",
+      "canonical_turnover": 0,
+      "reason": "Recovery by the recorded carrier retains possession; or explicit turnover-on-downs result."
+    },
+    {
+      "play_id": "69-1795584948615-86",
+      "source_row": 9232,
+      "source_turnover": "Yes",
+      "canonical_turnover": 0,
+      "reason": "Recovery by the recorded carrier retains possession; or explicit turnover-on-downs result."
+    },
+    {
+      "play_id": "68-1795627532284-39",
+      "source_row": 9333,
+      "source_turnover": "Yes",
+      "canonical_turnover": 0,
+      "reason": "Recovery by the recorded carrier retains possession; or explicit turnover-on-downs result."
+    }
+  ],
+  "award_team_inference_notes": [],
+  "historical_team_policy": "Per-play possession/role/line evidence; never retroactively assigned from PlayerTeams. Award teams use last unambiguous regular-season participation or NULL.",
+  "empty_by_design": [
+    "game_player_state",
+    "coach_team_assignments",
+    "drafts",
+    "draft_picks",
+    "award_ballots",
+    "ballot_rankings",
+    "award_results",
+    "ai_jobs"
+  ],
+  "excluded_source_data": [
+    "OLDGames",
+    "OLDPlayHistory",
+    "test analyses and design/prototype sheets; retain original workbook backup"
+  ],
+  "expected_table_counts": {
+    "leagues": 1,
+    "divisions": 2,
+    "teams": 10,
+    "players": 107,
+    "seasons": 1,
+    "team_seasons": 10,
+    "player_season_ratings": 107,
+    "player_team_assignments": 107,
+    "games": 70,
+    "game_state": 70,
+    "plays": 9575,
+    "play_details": 9575,
+    "play_participants": 23811,
+    "play_line_matchups": 32343,
+    "play_stat_deltas": 123766,
+    "player_game_stats": 1237,
+    "team_game_stats": 140,
+    "season_stat_snapshots": 117,
+    "standing_snapshots": 36,
+    "configuration_tables": 38,
+    "settings_versions": 1,
+    "routes": 19,
+    "route_depths": 9,
+    "route_depth_eligibility": 171,
+    "openness_curve_points": 28,
+    "app_preferences": 1,
+    "playoff_seedings": 6,
+    "bracket_slots": 12,
+    "award_definitions": 3,
+    "award_weights": 18,
+    "award_nominations": 18,
+    "award_vote_runs": 3,
+    "honor_slots": 34,
+    "honor_selections": 34,
+    "articles": 19,
+    "coaches": 20,
+    "coach_season_ratings": 20,
+    "draft_board_snapshots": 1,
+    "player_aliases": 107,
+    "schema_migrations": 2,
+    "import_batches": 22,
+    "source_record_mappings": 76396,
+    "game_player_state": 0,
+    "coach_team_assignments": 0,
+    "drafts": 0,
+    "draft_picks": 0,
+    "award_ballots": 0,
+    "ballot_rankings": 0,
+    "award_results": 0,
+    "ai_jobs": 0,
+    "audit_log": 0
+  }
+}

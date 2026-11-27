@@ -1,0 +1,44 @@
+[
+  {
+    "play_id": "7-1786825795989-55",
+    "source_row": 711,
+    "source_turnover": "Yes",
+    "canonical_turnover": 0,
+    "reason": "Recovery by the recorded carrier retains possession; or explicit turnover-on-downs result."
+  },
+  {
+    "play_id": "20-1791578388356-17",
+    "source_row": 2268,
+    "source_turnover": "Yes",
+    "canonical_turnover": 0,
+    "reason": "Recovery by the recorded carrier retains possession; or explicit turnover-on-downs result."
+  },
+  {
+    "play_id": "30-1791940563599-141",
+    "source_row": 3955,
+    "source_turnover": "Yes",
+    "canonical_turnover": 0,
+    "reason": "Recovery by the recorded carrier retains possession; or explicit turnover-on-downs result."
+  },
+  {
+    "play_id": "63-1795453038419-121",
+    "source_row": 8851,
+    "source_turnover": "Yes",
+    "canonical_turnover": 0,
+    "reason": "Recovery by the recorded carrier retains possession; or explicit turnover-on-downs result."
+  },
+  {
+    "play_id": "69-1795584948615-86",
+    "source_row": 9232,
+    "source_turnover": "Yes",
+    "canonical_turnover": 0,
+    "reason": "Recovery by the recorded carrier retains possession; or explicit turnover-on-downs result."
+  },
+  {
+    "play_id": "68-1795627532284-39",
+    "source_row": 9333,
+    "source_turnover": "Yes",
+    "canonical_turnover": 0,
+    "reason": "Recovery by the recorded carrier retains possession; or explicit turnover-on-downs result."
+  }
+]

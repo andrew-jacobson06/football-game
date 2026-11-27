@@ -113,3 +113,11 @@ npm run typecheck
 ```
 
 Database tests cover initialization, upgrades/checksums, migration failure rollback, constraints, roster interval validation, zero/NULL values, idempotent commits, stale-state rejection and online backup/restore without overwriting existing data. Existing service tests remain part of the same suite. The database tools are usable while the main API still depends on Sheets credentials.
+
+## Remaining domain schema and workbook imports
+
+Migration `0002_league_domains.sql` adds 27 remaining domain tables (51 including the migration ledger), indexes and views for stats, normalized routes, playoffs, awards, articles, coaches and draft reference storage. It does not switch the app off Sheets. See [remaining import instructions](imports/remaining/README.md) for ordered data files 10–24 after the earlier imports.
+
+Update to code containing migration 0002 before using management commands on a version-2 database. Run `npm run db:migrate` for the usual automatic pre-upgrade backup and managed upgrade, **or** execute the supplied `10-schema-upgrade.sql` in DB Browser. The SQL file records exactly the same migration name/checksum as the CLI. Do not edit migration 0001 or apply the raw 0002 file by itself without its migration ledger entry. Both supported methods are safe to repeat.
+
+Source baselines remain separate from canonical game-derived statistics. Unknown historical details and unrecorded ballots/draft picks are left empty. The import tests run in CI alongside the API database checks.
