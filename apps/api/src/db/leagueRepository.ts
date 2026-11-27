@@ -1,3 +1,4 @@
+import { leagueSelection } from "./leagueSelection.js";
 import { elapsedPlaySeconds } from "../../../web/src/components/league/gameplay/engine/playClock.js";
 import { randomUUID } from "node:crypto";
 import type { DatabaseConnection } from "./connection.js";
@@ -120,7 +121,7 @@ export const statColumns: Record<string, string> = {
   "Passing Long": "longest_pass",
 };
 export class LeagueRepository {
-  constructor(readonly db: DatabaseConnection) {}
+  constructor(readonly db: DatabaseConnection, readonly selectedLeagueId?: string) {}
   all(sql: string, ...args: any[]): RecordRow[] {
     return this.db.prepare(sql).all(...args) as RecordRow[];
   }
@@ -128,8 +129,10 @@ export class LeagueRepository {
     return this.db.prepare(sql).get(...args) as RecordRow | undefined;
   }
   season() {
-    const requested = process.env.SEASON_ID?.trim();
-    const league = process.env.LEAGUE_ID?.trim();
+    const explicitLeague = this.selectedLeagueId ?? leagueSelection.getStore()?.leagueId;
+    const requested = explicitLeague ? undefined : process.env.SEASON_ID?.trim();
+    const defaultLeague = parse(this.one("SELECT value_json FROM app_preferences WHERE key='default_league_id'")?.value_json);
+    const league = explicitLeague ?? (process.env.LEAGUE_ID?.trim() || defaultLeague || undefined);
     const rows = this.all(
       `SELECT * FROM seasons WHERE (? IS NULL OR id=?) AND (? IS NULL OR league_id=?) ORDER BY season_number DESC`,
       requested || null,
@@ -182,7 +185,7 @@ export class LeagueRepository {
   }
   teams() {
     return this.all(
-      `SELECT ts.*,t.legacy_team_id,d.name AS division FROM team_seasons ts JOIN teams t ON t.id=ts.team_id JOIN divisions d ON d.id=ts.division_id WHERE ts.season_id=? ORDER BY t.legacy_team_id`,
+      `SELECT ts.*,t.legacy_team_id,t.default_division,d.name AS division FROM team_seasons ts JOIN teams t ON t.id=ts.team_id JOIN divisions d ON d.id=ts.division_id WHERE ts.season_id=? ORDER BY t.legacy_team_id`,
       this.season().id,
     ).map((r) => ({
       id: r.team_id,
@@ -192,6 +195,7 @@ export class LeagueRepository {
       Name: r.nickname,
       Team: r.abbreviation,
       Division: r.division,
+      DefaultDivision: r.default_division,
       Logo: r.logo_url,
       "Home Jersey Crop": r.home_jersey_url,
       "Away Jersey Crop": r.away_jersey_url,

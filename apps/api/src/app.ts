@@ -1,11 +1,18 @@
 import express from "express";
 import cors from "cors";
+import { leagueSelection } from "./db/leagueSelection.js";
+import { leagueRoutes } from "./routes/leagueRoutes.js";
 import { gameRoutes } from "./routes/gameRoutes.js";
 import { StaleGameStateError } from "./db/gameTransactions.js";
 export function createApp() {
   const app = express();
   app.use(cors({ origin: ["http://localhost:5173", "http://localhost:5174"] }));
   app.use(express.json({ limit: "2mb" }));
+  app.use((req,_res,next)=>{
+    const leagueId=req.get("X-League-Id")?.trim();
+    leagueSelection.run({leagueId:leagueId||undefined},()=>next());
+  });
+  app.use("/api", leagueRoutes);
   app.use("/api", gameRoutes);
   app.use(
     (

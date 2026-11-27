@@ -23,7 +23,9 @@ The `sqlite-development` branch reads all league data from SQLite. It also saves
 
 ## League, season and settings selection
 
-Set `LEAGUE_ID` and/or `SEASON_ID` in `.env` to pin the application to existing records. With a single league and no explicit selection, the newest season number is used. Multiple leagues require an explicit selection. Games, rosters, traits, articles, standings, statistics and awards are scoped to that season.
+Use **Existing League** on the home screen to choose one of three saved slots, or **New League** to create another league and Season 1. Each browser tab sends its selected league ID with API requests, so selecting a league does not switch another tab or browser. Games, rosters, traits, articles, standings, statistics and awards use that league’s newest season.
+
+`LEAGUE_ID` and `SEASON_ID` in `.env` remain optional defaults for API calls without a browser selection. The initial league is also retained as the database default. You do not need to edit `.env` to switch saved leagues. See [league setup](league-setup.md) for creation and data-copy behavior.
 
 `seasons.settings_version_id` is the preferred settings selection. A season without it can use a single active version in its league, or an unambiguous single draft version from the reviewed import. Multiple candidates require you to assign the version explicitly.
 

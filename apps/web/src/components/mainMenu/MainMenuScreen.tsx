@@ -1,3 +1,5 @@
+import { LeagueDialog } from "./LeagueDialog";
+import type { LeagueSummary } from "../../api/client";
 import { useEffect, useRef, useState } from "react";
 import { MainMenuButton } from "./MainMenuButton";
 import type { MainMenuItem } from "./types";
@@ -10,17 +12,14 @@ const MENU_SONG_URL =
 
 const menuItems: MainMenuItem[] = [
   { label: "View Players", screen: "players" },
-  { label: "Existing League", screen: "league" },
-  {
-    label: "New League",
-    placeholderMessage:
-      "New League coming soon! TODO: port the old league creation flow when its backend/API behavior is available.",
-  },
+  { label: "Existing League", action: "existingLeague" },
+  { label: "New League", action: "newLeague" },
   { label: "Game Settings", screen: "settings" },
 ];
 
 type MainMenuScreenProps = {
   onNavigate: (screen: MainMenuItem["screen"]) => void;
+  onOpenLeague: (league: LeagueSummary) => void;
 };
 
 function fadeAudio(
@@ -46,11 +45,12 @@ function fadeAudio(
   requestAnimationFrame(step);
 }
 
-export function MainMenuScreen({ onNavigate }: MainMenuScreenProps) {
+export function MainMenuScreen({ onNavigate, onOpenLeague }: MainMenuScreenProps) {
   const ambienceRef = useRef<HTMLAudioElement | null>(null);
   const songRef = useRef<HTMLAudioElement | null>(null);
   const tickerRef = useRef<HTMLDivElement | null>(null);
 
+  const [leagueDialog,setLeagueDialog]=useState<"new"|"existing"|null>(null);
   const [placeholderMessage, setPlaceholderMessage] = useState<string | null>(
     null,
   );
@@ -110,7 +110,7 @@ export function MainMenuScreen({ onNavigate }: MainMenuScreenProps) {
     };
 
     const toggleMute = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== "m") return;
+      if (event.key.toLowerCase() !== "m" || (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, [contenteditable]"))) return;
 
       const shouldMute = !ambience.muted || !song.muted;
 
@@ -134,6 +134,7 @@ export function MainMenuScreen({ onNavigate }: MainMenuScreenProps) {
   }, []);
 
   const handleSelect = (item: MainMenuItem) => {
+    if(item.action){setLeagueDialog(item.action==="newLeague"?"new":"existing");return;}
     if (item.screen) {
       onNavigate(item.screen);
       return;
@@ -208,6 +209,7 @@ export function MainMenuScreen({ onNavigate }: MainMenuScreenProps) {
         )}
       </div>
 
+      {leagueDialog&&<LeagueDialog key={leagueDialog} mode={leagueDialog} onClose={()=>setLeagueDialog(null)} onNew={()=>setLeagueDialog("new")} onOpen={league=>{setLeagueDialog(null);onOpenLeague(league);}}/>}
       <audio
         ref={ambienceRef}
         id="menuAmbience"

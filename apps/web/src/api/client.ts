@@ -3,9 +3,85 @@ import type { Player } from "../components/players/types";
 
 const API_BASE_URL = "http://localhost:4000/api";
 
+const LEAGUE_SELECTION_KEY = "football-active-league";
+export function selectedLeagueId(): string | null {
+  try {
+    return sessionStorage.getItem(LEAGUE_SELECTION_KEY);
+  } catch {
+    return null;
+  }
+}
+export function selectLeague(id: string) {
+  try {
+    sessionStorage.setItem(LEAGUE_SELECTION_KEY, id);
+  } catch {
+    /* Request selection still works if browser storage is blocked. */
+  }
+  activeLeagueId = id;
+}
+let activeLeagueId = selectedLeagueId();
+function apiFetch(url: string, options: RequestInit = {}) {
+  const headers = new Headers(options.headers);
+  const id = activeLeagueId;
+  if (id) headers.set("X-League-Id", id);
+  return fetch(url, { ...options, headers });
+}
+export type LeagueSummary = {
+  id: string;
+  name: string;
+  slot: number;
+  seasonId: string;
+  seasonNumber: number;
+  status: string;
+  stage: string;
+  week: number | null;
+  teamCount: number;
+};
+export type CatalogTeam = {
+  id: string;
+  abbreviation: string;
+  location: string;
+  nickname: string;
+  logoUrl: string | null;
+  primaryColor: string | null;
+  defaultDivision: string;
+};
+export type LeagueCatalog = { divisions: string[]; teams: CatalogTeam[] };
+export type LeagueTeamChoice = {
+  catalogId?: string;
+  division: string;
+  custom?: {
+    abbreviation: string;
+    nickname: string;
+    location?: string;
+    logoUrl?: string;
+    primaryColor?: string;
+  };
+};
+export function getLeagueSlots(): Promise<{
+  leagues: LeagueSummary[];
+  maxSlots: number;
+}> {
+  return getJson("/leagues", "Unable to load saved leagues.");
+}
+export function getLeagueCatalog(): Promise<LeagueCatalog> {
+  return getJson(
+    "/league-catalog",
+    "Unable to load available teams and divisions.",
+  );
+}
+export function createLeague(input: {
+  name: string;
+  requestId: string;
+  divisions: string[];
+  teams: LeagueTeamChoice[];
+}): Promise<{ league: LeagueSummary }> {
+  return postJson("/leagues", input, "Unable to create this league.");
+}
+
 export type ApiHealth = { ok: boolean; app: string; message: string };
 async function getJson<T>(path: string, message: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`);
+  const response = await apiFetch(`${API_BASE_URL}${path}`);
   if (!response.ok) throw new Error(message);
   return response.json();
 }
@@ -14,7 +90,7 @@ async function postJson<T>(
   body: unknown,
   message: string,
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await apiFetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -25,8 +101,12 @@ async function postJson<T>(
   }
   return response.json();
 }
-async function putJson<T>(path: string, body: unknown, message: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+async function putJson<T>(
+  path: string,
+  body: unknown,
+  message: string,
+): Promise<T> {
+  const response = await apiFetch(`${API_BASE_URL}${path}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -57,8 +137,13 @@ export type TeamDefenseStats = {
   rushingYardsAllowed: number;
   totalYardsAllowed: number;
 };
-export async function getTeamDefenseStats(): Promise<{ teamDefenseStats: TeamDefenseStats[] }> {
-  return getJson("/team-defense-stats", "Failed to load game-specific defensive yardage");
+export async function getTeamDefenseStats(): Promise<{
+  teamDefenseStats: TeamDefenseStats[];
+}> {
+  return getJson(
+    "/team-defense-stats",
+    "Failed to load game-specific defensive yardage",
+  );
 }
 export type PlayerGame = {
   gameId: string;
@@ -70,11 +155,34 @@ export type PlayerGame = {
   touchdowns: number;
   long: number;
   date: string;
-  passing: { completions: number; attempts: number; yards: number; touchdowns: number; interceptions: number; long: number; sacks: number };
+  passing: {
+    completions: number;
+    attempts: number;
+    yards: number;
+    touchdowns: number;
+    interceptions: number;
+    long: number;
+    sacks: number;
+  };
   rushing: { carries: number; yards: number; touchdowns: number; long: number };
-  receiving: { receptions: number; targets: number; yards: number; touchdowns: number; long: number; firstDowns: number };
+  receiving: {
+    receptions: number;
+    targets: number;
+    yards: number;
+    touchdowns: number;
+    long: number;
+    firstDowns: number;
+  };
   fumbles: { total: number; lost: number };
-  defense: { dlWins: number; dlAttempts: number; tackles: number; tacklesForLoss: number; sacks: number; forcedFumbles: number; interceptions: number };
+  defense: {
+    dlWins: number;
+    dlAttempts: number;
+    tackles: number;
+    tacklesForLoss: number;
+    sacks: number;
+    forcedFumbles: number;
+    interceptions: number;
+  };
 };
 export async function getPlayerGames(
   playerName: string,
@@ -97,7 +205,9 @@ export async function getStandings(): Promise<{
   return getJson("/standings", "Failed to load standings from backend API");
 }
 export type TeamPlayer = Player & { Stats?: PlayerStats | null };
-export async function getTeamPlayers(team: string): Promise<{ players: TeamPlayer[] }> {
+export async function getTeamPlayers(
+  team: string,
+): Promise<{ players: TeamPlayer[] }> {
   return getJson(
     `/teams/${encodeURIComponent(team)}/players`,
     "Failed to load the team roster",
@@ -132,10 +242,18 @@ export async function getArticles(): Promise<{ articles: LeagueArticle[] }> {
 export async function getSeason(): Promise<{ week: SeasonWeek }> {
   return getJson("/season", "Failed to load the current season week");
 }
-export async function advanceSeason(): Promise<{ ok: boolean; week: SeasonWeek }> {
-  const response = await fetch(`${API_BASE_URL}/season/advance`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+export async function advanceSeason(): Promise<{
+  ok: boolean;
+  week: SeasonWeek;
+}> {
+  const response = await apiFetch(`${API_BASE_URL}/season/advance`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || "Failed to advance the season week");
+  if (!response.ok)
+    throw new Error(result.error || "Failed to advance the season week");
   return result;
 }
 export async function getGameState(
@@ -173,13 +291,20 @@ export async function getFrontendSettings(): Promise<Record<string, unknown>> {
   return getJson("/frontend-settings", "Failed to load frontend settings");
 }
 export type VisualMode = "Dark" | "Light";
-export type GameplaySettings = Record<string, string> & { Visual_Mode?: VisualMode };
+export type GameplaySettings = Record<string, string> & {
+  Visual_Mode?: VisualMode;
+};
 
-export async function getGameplaySettings(): Promise<{ settings: GameplaySettings }> {
+export async function getGameplaySettings(): Promise<{
+  settings: GameplaySettings;
+}> {
   return getJson("/gameplay-settings", "Failed to load game settings");
 }
 
-export async function updateGameplaySetting(variable: "Visual_Mode", value: VisualMode) {
+export async function updateGameplaySetting(
+  variable: "Visual_Mode",
+  value: VisualMode,
+) {
   return putJson<{ ok: boolean; variable: string; value: string }>(
     `/gameplay-settings/${encodeURIComponent(variable)}`,
     { value },
@@ -193,18 +318,37 @@ export async function getPlayoffBracket(): Promise<{ seeds: PlayoffSeed[] }> {
 }
 
 export type AwardResult = {
-  candidates: Array<{ name: string; team: string; position: string; placeVotes: number[]; total: number }>;
-  complete: boolean; winner: string | null; tied: boolean;
+  candidates: Array<{
+    name: string;
+    team: string;
+    position: string;
+    placeVotes: number[];
+    total: number;
+  }>;
+  complete: boolean;
+  winner: string | null;
+  tied: boolean;
 };
 export type LeagueAwardsData = {
   nominations: Partial<Record<"mvp" | "opoy" | "dpoy", AwardResult>>;
-  firstTeams: Array<{ row: number; position: string; side: string; division: string; name: string; team: string }>;
+  firstTeams: Array<{
+    row: number;
+    position: string;
+    side: string;
+    division: string;
+    name: string;
+    team: string;
+  }>;
 };
-async function awardsRequest(path: string, method = "GET"): Promise<LeagueAwardsData> {
-  const response = await fetch(`${API_BASE_URL}${path}`, { method });
+async function awardsRequest(
+  path: string,
+  method = "GET",
+): Promise<LeagueAwardsData> {
+  const response = await apiFetch(`${API_BASE_URL}${path}`, { method });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || "Unable to load awards.");
   return data;
 }
 export const getLeagueAwards = () => awardsRequest("/awards");
-export const runLeagueAwardVote = (award: "mvp" | "opoy" | "dpoy") => awardsRequest(`/awards/${award}/vote`, "POST");
+export const runLeagueAwardVote = (award: "mvp" | "opoy" | "dpoy") =>
+  awardsRequest(`/awards/${award}/vote`, "POST");

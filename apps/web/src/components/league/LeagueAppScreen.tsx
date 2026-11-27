@@ -1,9 +1,9 @@
 import { canAdvanceSeasonWeek, seasonWeekLabel, type SeasonWeek } from "./seasonWeeks";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { advanceSeason, getGames, getPlayers, getSeason, getStandings, getTeams } from "../../api/client";
+import type { LeagueSummary } from "../../api/client";
 import type { Player } from "../players/types";
 import type { LeagueGame, LeagueTab, LeagueTeam } from "./types";
-import { mockGames, mockTeams } from "./leagueMockData";
 import { mergeStandingsWithTeams, normalizeGames } from "./leagueMappers";
 import { LeagueHeader } from "./LeagueHeader";
 import { LeagueNews } from "./LeagueNews";
@@ -19,15 +19,17 @@ import { TeamDetail } from "./TeamDetail";
 import "./league.css";
 type LeagueAppScreenProps = {
   onBack?: () => void;
+  league: LeagueSummary;
 };
 
-export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
-  const [activeTab, setActiveTab] = useState<LeagueTab>("scores");
-  const [games, setGames] = useState<LeagueGame[]>(mockGames);
-  const [teams, setTeams] = useState<LeagueTeam[]>(mockTeams);
-  const [standings, setStandings] = useState<LeagueTeam[]>(mockTeams);
+export function LeagueAppScreen({ onBack, league }: LeagueAppScreenProps) {
+  const [activeTab, setActiveTab] = useState<LeagueTab>(league.status==="setup"?"news":"scores");
+  const [games, setGames] = useState<LeagueGame[]>([]);
+  const [teams, setTeams] = useState<LeagueTeam[]>([]);
+  const [standings, setStandings] = useState<LeagueTeam[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [seasonWeek, setSeasonWeek] = useState<SeasonWeek | null>(null);
+  const [loadError,setLoadError]=useState("");
   const [isAdvancingWeek, setIsAdvancingWeek] = useState(false);
   const [advanceWeekError, setAdvanceWeekError] = useState("");
   const [searchedPlayer, setSearchedPlayer] = useState<Player | null>(null);
@@ -38,7 +40,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
   const gameLoadTimeout = useRef<number | null>(null);
   const refreshGames = () =>
     getGames().then((response) => {
-      setGames((current) => normalizeGames(response.games, teams.length ? teams : mockTeams).map((game) => ({
+      setGames((current) => normalizeGames(response.games, teams).map((game) => ({
         ...current.find((item) => String(item.GameId) === String(game.GameId)),
         ...game,
       })));
@@ -61,14 +63,12 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
 
   useEffect(() => {
     refreshLeagueData()
-      .catch(() => {
-        setGames(normalizeGames(mockGames, mockTeams));
-        setTeams(mockTeams);
-        setStandings(mockTeams);
+      .catch((error:unknown) => {
+        setLoadError(error instanceof Error?error.message:"Unable to load this league.");
       })
   }, []);
 
-  const canAdvanceWeek = canAdvanceSeasonWeek(seasonWeek, games);
+  const canAdvanceWeek = league.status!=="setup" && canAdvanceSeasonWeek(seasonWeek, games);
   const handleAdvanceWeek = async () => {
     setIsAdvancingWeek(true);
     setAdvanceWeekError("");
@@ -229,15 +229,10 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
       )}
       {!loadingGame && (
         <>
-          {onBack && (
-            <button
-              className="back-button league-app__back"
-              type="button"
-              onClick={onBack}
-            >
-              ← Back
-            </button>
-          )}
+          <div className="league-context-bar">
+            {onBack&&<button className="league-context-bar__back" type="button" onClick={onBack}>← Back</button>}
+            <span><strong>{league.name}</strong><small>Season {league.seasonNumber}{league.status==="setup"?" · Draft setup":""}</small></span>
+          </div>
           <GamesBanner
             games={games}
             currentWeek={seasonWeek}
@@ -246,7 +241,9 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
           />
           <LeagueHeader activeTab={activeTab} onTabChange={setActiveTab} teams={teams} players={searchablePlayers} onTeam={setSelectedTeam} onPlayer={openSearchedPlayer} />
           <div id="tabContents">
-            {activeTab === "news" && (
+            {loadError&&<section className="league-setup-home" role="alert"><h2>Unable to load this league</h2><p>{loadError}</p><button type="button" onClick={()=>{setLoadError("");void refreshLeagueData().catch(e=>setLoadError(e.message));}}>Try again</button></section>}
+            {league.status==="setup"&&(activeTab==="scores"||activeTab==="news")&&<section className="league-setup-home" aria-labelledby="new-league-title"><span className="league-setup-home__eyebrow">Season 1 / League created</span><h1 id="new-league-title">{league.name}</h1><p>{teams.length||league.teamCount} teams. A fresh start. Your league is ready for the draft.</p><p>Draft setup is coming next. Players are in the draft pool, and the season has not started.</p><button type="button" onClick={()=>setActiveTab("draft")}>Go to Draft →</button></section>}
+            {activeTab === "news" && league.status!=="setup" && (
               <div className="league-tab-content active">
                 <LeagueNews />
               </div>
@@ -260,7 +257,7 @@ export function LeagueAppScreen({ onBack }: LeagueAppScreenProps) {
                   </section>
                 )}
                 {advanceWeekError && <p className="advance-week__error" role="alert">{advanceWeekError}</p>}
-                <LeagueSchedule games={games} currentWeek={seasonWeek} onSelectGame={openGame} />
+                {league.status!=="setup"&&<LeagueSchedule games={games} currentWeek={seasonWeek} onSelectGame={openGame} />}
               </div>
             )}
             {activeTab === "schedules" && (

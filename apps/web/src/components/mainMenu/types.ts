@@ -4,4 +4,5 @@ export type MainMenuItem = {
   label: string;
   screen?: Screen;
   placeholderMessage?: string;
+  action?: "newLeague" | "existingLeague";
 };
