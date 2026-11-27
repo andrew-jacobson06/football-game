@@ -112,3 +112,10 @@ test('current schema checks do not request a writer lock; pending upgrades still
   assert.deepEqual(migrateDatabase(other,[...migrations,next]),[next.name]);
  } finally {if(db.inTransaction)db.exec('ROLLBACK');other.close();}
 });
+test('tracking migration backfills only recorded clock pairs and leaves unknown historical pass facts NULL',t=>{
+ const dir=mkdtempSync(path.join(tmpdir(),'football-tracking-'));const db=openDatabase({filename:path.join(dir,'test.sqlite')});t.after(()=>{db.close();rmSync(dir,{recursive:true,force:true});});
+ const migrations=loadMigrations();migrateDatabase(db,migrations.slice(0,2));seed(db);
+ db.exec("INSERT INTO plays(id,game_id,sequence,period_before,seconds_before,period_after,seconds_after,play_type,yards) VALUES('known','g',1,1,3,2,900,'Run',4),('unknown','g',2,2,900,NULL,NULL,'Pass',0)");
+ migrateDatabase(db);const known=db.prepare("SELECT * FROM plays WHERE id='known'").get() as any,unknown=db.prepare("SELECT * FROM plays WHERE id='unknown'").get() as any;
+ assert.equal(known.play_length,3);assert.equal(unknown.play_length,null);assert.equal(unknown.blitz,null);assert.equal(unknown.qb_hits,null);assert.equal(unknown.covering_defender,null);
+});

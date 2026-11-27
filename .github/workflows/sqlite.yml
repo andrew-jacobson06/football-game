@@ -25,6 +25,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - run: node --import tsx --test ../web/tests/playClock.test.ts ../web/tests/routeOpenness.test.ts ../web/tests/passInterception.test.ts
   import-data:
     runs-on: ubuntu-latest
     steps:

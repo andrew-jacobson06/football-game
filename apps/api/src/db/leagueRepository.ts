@@ -1,3 +1,4 @@
+import { elapsedPlaySeconds } from "../../../web/src/components/league/gameplay/engine/playClock.js";
 import { randomUUID } from "node:crypto";
 import type { DatabaseConnection } from "./connection.js";
 import { runtimeDatabase } from "./runtime.js";
@@ -336,6 +337,15 @@ export class LeagueRepository {
         down: r.down_before,
         distance: r.distance_before,
         ballon: r.ball_before,
+        blitz: r.blitz == null ? null : Boolean(r.blitz),
+        blitzBy: r.blitz_by,
+        qbPressures: r.qb_pressures,
+        qbHits: r.qb_hits,
+        qbHitBy: r.qb_hit_by,
+        timeToThrow: r.time_to_throw,
+        timeUntilThrow: r.time_until_throw,
+        coveringDefender: r.covering_defender,
+        playLength: r.play_length,
         playtype: r.play_type,
         player:
           n.passer ??
@@ -829,6 +839,37 @@ export class LeagueRepository {
         if (play && game.status === "final")
           throw new Error("A final game cannot accept another play.");
         if (play) {
+          const optionalFlag = (header: string) => {
+            const value = playValueForHeader(play, header);
+            if (value === "" || value == null) return null;
+            if (
+              value === true ||
+              value === 1 ||
+              value === "true" ||
+              value === "1"
+            )
+              return 1;
+            if (
+              value === false ||
+              value === 0 ||
+              value === "false" ||
+              value === "0"
+            )
+              return 0;
+            throw new Error(`Invalid ${header}: expected a boolean or 0/1.`);
+          };
+          const optionalSeconds = (header: string) => {
+            const value = playValueForHeader(play, header);
+            if (value === "" || value == null) return null;
+            const result = Number(value);
+            if (!Number.isFinite(result) || result < 0)
+              throw new Error(
+                `Invalid ${header}: expected nonnegative seconds.`,
+              );
+            return result;
+          };
+          const nameOrNull = (header: string) =>
+            String(playValueForHeader(play, header) ?? "").trim() || null;
           const v = (h: string) => playValueForHeader(play, h),
             facts = passPlayFacts(play);
           const offense =
@@ -867,6 +908,21 @@ export class LeagueRepository {
               ? number(v("qtr"))
               : number(snapshot.quarter)
             : null;
+          const suppliedLength = optionalSeconds("playLength");
+          const clockLength = snapshot
+            ? elapsedPlaySeconds(
+                { period: v("qtr"), seconds: v("time") },
+                { period: snapshot.quarter, seconds: snapshot.time },
+              )
+            : null;
+          if (
+            suppliedLength !== null &&
+            clockLength !== null &&
+            Math.abs(suppliedLength - clockLength) > 0.000001
+          )
+            throw new Error(
+              "playLength does not match the recorded game clocks.",
+            );
           this.insert("plays", {
             id: playId,
             game_id: game.id,
@@ -912,6 +968,15 @@ export class LeagueRepository {
             home_score_after: number(v("homescore")),
             away_score_after: number(v("awayscore")),
             description_raw: description,
+            blitz: optionalFlag("blitz"),
+            blitz_by: nameOrNull("blitzBy"),
+            qb_pressures: optionalFlag("qbPressures"),
+            qb_hits: optionalFlag("qbHits"),
+            qb_hit_by: nameOrNull("qbHitBy"),
+            time_to_throw: optionalSeconds("timeToThrow"),
+            time_until_throw: optionalSeconds("timeUntilThrow"),
+            covering_defender: nameOrNull("coveringDefender"),
+            play_length: clockLength ?? suppliedLength,
           });
           const role = (name: unknown, role: string, team: string) => {
             const label = String(name ?? "");
@@ -953,6 +1018,11 @@ export class LeagueRepository {
             offense,
           );
           role(v("receiver"), "target", offense);
+          // Covering defender is the target's assigned guard, independently of
+          // whichever defender tackled, hit, intercepted or deflected the ball.
+          role(v("coveringDefender"), "covering_defender", defense);
+          role(v("blitzBy"), "blitz_rusher", defense);
+          role(v("qbHitBy"), "qb_hitter", defense);
           role(v("leadblocker"), "lead_blocker", offense);
           role(
             v("tackler"),
@@ -1229,8 +1299,18 @@ export class LeagueRepository {
           offensive,
           (p) => p.play_type === "Field Goal" && p.result === "Kick FG",
         ),
-        metric_availability_json:
-          '{"version":"engine-v1","unknown":["possession_seconds","drives"]}',
+        possession_seconds: offensive.every((p) => p.play_length !== null)
+          ? sum(offensive, "play_length")
+          : null,
+        metric_availability_json: JSON.stringify({
+          version: "engine-v2",
+          unknown: [
+            "drives",
+            ...(offensive.some((p) => p.play_length === null)
+              ? ["possession_seconds"]
+              : []),
+          ],
+        }),
         calculation_version: "engine-v1",
         source_game_version: this.one(
           "SELECT version FROM game_state WHERE game_id=?",

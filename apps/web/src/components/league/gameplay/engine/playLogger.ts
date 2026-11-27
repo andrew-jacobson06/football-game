@@ -1,3 +1,4 @@
+import { elapsedPlaySeconds } from "./playClock";
 import type { LeagueGame } from "../../types";
 import type { NormalizedOutcome, PlayKind } from "./types";
 import { n } from "./utils";
@@ -100,6 +101,15 @@ export function logPlayToDB(
         : undefined;
   const playid = `${prev.GameId}-${Date.now()}-${historyLength + 1}`;
   return {
+    playLength: elapsedPlaySeconds({ period: prev.Qtr, seconds: prev.Time }, { period: game.Qtr, seconds: game.Time }),
+    blitz: false,
+    blitzBy: null,
+    qbPressures: 0,
+    qbHits: 0,
+    qbHitBy: null,
+    timeToThrow: null,
+    timeUntilThrow: null,
+    coveringDefender: null,
     gameid: prev.GameId,
     playid,
     time: prev.Time,

@@ -52,6 +52,15 @@ export function playValueForHeader(play: Record<string, unknown>, header: string
     stopreason: ["stopReason", "stopreason"],
     runlog: ["runLog", "runlog"],
     fatiguerecovery: ["fatigueRecovery", "fatiguerecovery"],
+    blitz: ["blitz"],
+    blitzby: ["blitzBy", "blitz_by"],
+    qbpressures: ["qbPressures", "qb_pressures"],
+    qbhits: ["qbHits", "qb_hits"],
+    qbhitby: ["qbHitBy", "qb_hit_by"],
+    timetothrow: ["timeToThrow", "time_to_throw"],
+    timeuntilthrow: ["timeUntilThrow", "time_until_throw"],
+    coveringdefender: ["coveringDefender", "covering_defender"],
+    playlength: ["playLength", "play_length"],
   };
 
   for (const key of aliases[normalized] ?? [normalized]) {

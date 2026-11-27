@@ -267,6 +267,10 @@ test("the scramble option resolves a QB run rather than a sack or pass", (t) => 
   const result = passPlay(game, context, call);
   assert.equal(result.play.playtype, "Run");
   assert.equal(result.play.player, "QB");
+  assert.equal(result.play.qbPressures,1);
+  assert.equal(result.play.timeUntilThrow,null);
+  assert.equal(result.play.coveringDefender,null);
+  assert.ok(result.play.playLength!==null);
 });
 
 function completionContext(airYards: number): EngineContext {
@@ -712,4 +716,44 @@ test("Quick screens sample -3 through 0 and resolve completed catches behind the
     assert.equal(result.game.BallOn, possession === "Home" ? 47 : 53);
     assert.equal(result.game.Distance, Number(game.Distance) + 3);
   }
+});
+
+test('saved pass tracking distinguishes covering defender, tackler, available time and release time',t=>{
+  t.mock.method(console,'log',()=>{});t.mock.method(console,'debug',()=>{});t.mock.method(Math,'random',()=>.5);
+  const context=completionContext(8);
+  const state=runPassPlayPipeline(game,context,'Home QB',options);
+  const result=passPlay(game,context,options);
+  assert.equal(result.play.blitz,false);assert.equal(result.play.blitzBy,null);
+  assert.equal(result.play.coveringDefender,'Corner');
+  assert.equal(result.play.timeToThrow,state.finalTimeToThrow);
+  assert.equal(result.play.timeUntilThrow,state.readLoop!.currentTime);
+  assert.ok(result.play.timeUntilThrow!<=result.play.timeToThrow!);
+  assert.equal(result.play.qbPressures,0);assert.equal(result.play.qbHits,0);assert.equal(result.play.qbHitBy,null);
+  assert.equal(result.play.playLength,Number(game.Time)-Number(result.game.Time));
+});
+test('instant unblocked blitz sacks retain blitzer and hitter even though no reads or throw timing ran',t=>{
+  t.mock.method(console,'log',()=>{});t.mock.method(console,'debug',()=>{});t.mock.method(Math,'random',()=>0);
+  const context={...completionContext(8),players:[...ctx.players,{name:'QB',team:'Home',position:'QB',readDefense:50,juke:50,poise:50},{name:'Blitzer',team:'Away',defPos:'LB',passRush:100,tackling:100,defStars:5}]};
+  const call={...options,blitz:true,formation:{...options.formation,QB:'QB'},defense:[...options.defense!,{player:'Blitzer',position:'LB1',align:'QB' as const}]};
+  const result=passPlay(game,context,call);
+  assert.equal(result.play.isSack,true);assert.equal(result.play.blitz,true);assert.equal(result.play.blitzBy,'Blitzer');assert.equal(result.play.qbPressures,1);assert.equal(result.play.qbHits,1);assert.equal(result.play.qbHitBy,'Blitzer');
+  assert.equal(result.play.timeToThrow,0);assert.equal(result.play.timeUntilThrow,null);assert.equal(result.play.coveringDefender,null);
+});
+test('pressure hit attribution survives a forced throw and sack independently of target coverage',t=>{
+  t.mock.method(console,'log',()=>{});t.mock.method(console,'debug',()=>{});
+  const context=completionContext(1);context.players=[...context.players,{name:'QB',team:'Home',position:'QB'},{name:'OL',team:'Home',passProtect:1},{name:'DL',team:'Away',passRush:100}];context.settings.timeToThrowRanges=[{min:0,max:0,percentage:100}];
+  const call={...options,formation:{...options.formation,QB:'QB',C:'OL'},defense:[...options.defense!,{player:'DL',position:'DL1',align:'C' as const}]};
+  for(const [hitRoll,response,throws,hit]of [[.1,.15,true,true],[.1,.5,false,true],[.99,.1,true,false]] as const){
+    const rolls=[...Array(8).fill(.5),hitRoll,...(hit?[.5]:[]),response];t.mock.method(Math,'random',()=>rolls.shift()??.5);
+    const result=passPlay(game,context,call);
+    assert.equal(result.play.qbPressures,1);assert.equal(result.play.qbHits,Number(hit));assert.equal(result.play.qbHitBy,hit?'DL':null);assert.equal(result.play.blitz,false);
+    assert.equal(result.play.coveringDefender,throws?'Corner':null);assert.equal(result.play.timeUntilThrow,throws?0:null);assert.equal(result.play.timeToThrow,0);
+  }
+});
+test('a picked-up blitz records who blitzed without inventing a pressure or hit',t=>{
+  t.mock.method(console,'log',()=>{});t.mock.method(console,'debug',()=>{});t.mock.method(Math,'random',()=>.5);
+  const {context,call}=blitzRouteContext();
+  const result=passPlay(game,context,call);
+  assert.equal(result.play.blitz,true);assert.equal(result.play.blitzBy,'Blitzer');assert.equal(result.play.qbPressures,0);assert.equal(result.play.qbHits,0);assert.equal(result.play.qbHitBy,null);
+  assert.ok(result.play.coveringDefender);assert.equal(result.play.timeToThrow,2);
 });

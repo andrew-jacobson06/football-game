@@ -433,12 +433,9 @@ async function getPlayerTraitsFromDatabase() {
 }
 async function getPlayHistory(gameId: string) {
   const plays = repository().history(gameId);
-  const headers = Object.keys(plays[0] ?? {}),
-    rows = plays.map((play) =>
-      headers.map((h) => (play as Record<string, unknown>)[h] as Row[number]),
-    );
-  const result = rows.map((r) => {
-    const obj = objectFrom(headers, r) as Record<string, unknown>;
+  const result = plays.map((play) => {
+    // Preserve NULL tracking facts on historical plays; unknown is not zero.
+    const obj = { ...play } as Record<string, unknown>;
     if (obj["Defense Result"] !== undefined) {
       if (obj.DefenseResult === undefined)
         obj.DefenseResult = obj["Defense Result"];

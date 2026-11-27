@@ -570,3 +570,31 @@ test("season selection cannot leak a different league and newer seasons remain i
   });
   assert.throws(() => repo.season(), /Multiple leagues/);
 });
+
+test('pass facts save to dedicated columns and link the covering DB independently of the tackler',t=>{
+  const {repo,db}=fixture(t);
+  repo.insert('players',{id:'tackler',league_id:league,display_name:'Different Tackler'});
+  const p=play('tracked',{tackler:'Different Tackler',blitz:true,blitzBy:'Defender',qbPressures:1,qbHits:1,qbHitBy:'Defender',timeToThrow:2.675,timeUntilThrow:1.375,coveringDefender:'Defender',playLength:10});
+  repo.savePlayAndGame({play:p,game:snapshot},'1');
+  const row=repo.one("SELECT * FROM plays WHERE id='tracked'")!;
+  assert.equal(row.blitz,1);assert.equal(row.blitz_by,'Defender');assert.equal(row.qb_pressures,1);assert.equal(row.qb_hits,1);assert.equal(row.qb_hit_by,'Defender');assert.equal(row.time_to_throw,2.675);assert.equal(row.time_until_throw,1.375);assert.equal(row.covering_defender,'Defender');assert.equal(row.play_length,10);
+  const reloaded=repo.history('1')[0];assert.equal(reloaded.coveringDefender,'Defender');assert.equal(reloaded.tackler,'Different Tackler');assert.equal(reloaded.timeUntilThrow,1.375);assert.equal(reloaded.playLength,10);
+  assert.equal(repo.one("SELECT player_id FROM play_participants WHERE play_id='tracked' AND role='covering_defender'")!.player_id,'p2');
+  assert.equal(repo.one("SELECT possession_seconds FROM team_game_stats WHERE game_id='g' AND team_id=(SELECT home_team_id FROM games WHERE id='g')")!.possession_seconds,10);
+  assert.deepEqual(db.pragma('foreign_key_check'),[]);
+});
+test('clock length crosses quarters and belongs to the pre-play possession, including turnovers',t=>{
+  const {repo}=fixture(t);
+  repo.savePlayAndGame({play:play('boundary',{qtr:1,time:3,result:'Interception',isComplete:false,turnover:true,recoveredby:'Defender'}),game:{...snapshot,quarter:2,time:900,possession:'Away'}},'1');
+  assert.equal(repo.history('1')[0].playLength,3);
+  const rows=repo.all('SELECT * FROM team_game_stats');assert.equal(rows.find(r=>r.team_id===repo.game('1').home_team_id)!.possession_seconds,3);assert.equal(rows.find(r=>r.team_id===repo.game('1').away_team_id)!.possession_seconds,0);
+});
+test('unknown old tracking remains NULL; invalid names, durations and tracking flags roll back',t=>{
+  const {repo}=fixture(t);
+  repo.savePlayAndGame({play:play('legacy')},'1');
+  const old=repo.history('1')[0];assert.equal(old.blitz,null);assert.equal(old.qbHits,null);assert.equal(old.timeToThrow,null);assert.equal(old.playLength,null);
+  assert.equal(repo.one('SELECT possession_seconds FROM team_game_stats WHERE team_id=(SELECT home_team_id FROM games WHERE id=\'g\')')!.possession_seconds,null);
+  for(const [id,extra] of [['bad-name',{coveringDefender:'Not a real player'}],['bad-flag',{qbHits:3}],['bad-time',{timeUntilThrow:-1}],['bad-length',{playLength:2}]] as const)
+    assert.throws(()=>repo.savePlayAndGame({play:play(id,extra),game:snapshot},'1'));
+  assert.equal(repo.history('1').length,1);assert.equal(repo.games()[0].StateVersion,1);
+});

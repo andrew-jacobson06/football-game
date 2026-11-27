@@ -749,7 +749,25 @@ export function passPlay(
   }));
   const olWins = lineMatchups.filter((battle) => battle.winner === "OL").length;
   const dlWins = lineMatchups.length - olWins;
-  const passMetadata = { lineMatchups, olWins, olLosses: dlWins, dlWins, dlLosses: olWins,
+  // Persist observed pass facts without consuming any additional random rolls.
+  // A called-but-blocked blitz does not automatically count as pressure or a hit.
+  const instantSack = passState.blitzResult?.instantSack === true;
+  const expiredPocket = passState.readLoop?.expirationDecision !== undefined;
+  const availableTime = passState.finalTimeToThrow === null
+    ? instantSack ? 0 : null : Math.max(0, passState.finalTimeToThrow);
+  const passTracking = {
+    blitz: passState.blitz,
+    blitzBy: passState.blitzResult?.rusher ?? null,
+    qbPressures: Number(instantSack || Boolean(passState.pressureHit) || passState.instantPressure || passState.pressure.length > 0 || expiredPocket),
+    qbHits: Number(instantSack || passState.pressureHit?.hit === true),
+    qbHitBy: instantSack ? passState.blitzResult!.rusher : passState.pressureHit?.hitter ?? null,
+    timeToThrow: availableTime,
+    // A throwaway also releases the ball; sacks and tuck-and-runs do not.
+    timeUntilThrow: ["throw", "throw-away"].includes(passState.decision)
+      ? passState.readLoop?.currentTime ?? availableTime : null,
+    coveringDefender: passState.target ? String(passState.target.defender ?? "") || null : null,
+  };
+  const passMetadata = { ...passTracking, lineMatchups, olWins, olLosses: dlWins, dlWins, dlLosses: olWins,
     blitz: passState.blitz, blitzRoll: passState.blitzRoll,
     stopReason: passState.decision === "sack" ? "Sack" : passState.readLoop?.stopReason ?? passState.decision };
   const sackResult = () => {
@@ -762,7 +780,10 @@ export function passPlay(
     return sackResult();
   if (passState.decision === "scramble") {
     console.log("[Pass Engine] QB tucks and runs", { quarterback: qbName, time: passState.readLoop?.currentTime });
-    return runPlay(game, ctx, { ...options, runner: qbName, qbScramble: true, blitz: passState.blitz, blitzRoll: passState.blitzRoll });
+    const result = runPlay(game, ctx, { ...options, runner: qbName, qbScramble: true, blitz: passState.blitz, blitzRoll: passState.blitzRoll });
+    // Keep the run's own line results and clock length, but retain its pass origin.
+    Object.assign(result.play, passTracking, { qbPressures: result.play.isSack ? 1 : passTracking.qbPressures });
+    return result;
   }
   const target = passState.target as NonNullable<
     ReturnType<typeof choosePassTarget>
