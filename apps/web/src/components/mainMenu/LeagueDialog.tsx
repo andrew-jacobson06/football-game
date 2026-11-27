@@ -29,6 +29,7 @@ export function LeagueDialog({ mode, onClose, onOpen, onNew }: Props) {
   const [step, setStep] = useState<"name" | "teams">("name");
   const [leagues, setLeagues] = useState<LeagueSummary[]>([]),
     [slotsLoaded, setSlotsLoaded] = useState(false);
+  const [keeperCount, setKeeperCount] = useState("");
   const [name, setName] = useState(""),
     [teams, setTeams] = useState<TeamDraft[]>([]),
     [divisions, setDivisions] = useState<string[]>([]);
@@ -98,6 +99,13 @@ export function LeagueDialog({ mode, onClose, onOpen, onNew }: Props) {
     event.preventDefault();
     setError("");
     if (!name.trim()) return setError("Give your league a name.");
+    if (
+      keeperCount === "" ||
+      !Number.isSafeInteger(Number(keeperCount)) ||
+      Number(keeperCount) < 0 ||
+      Number(keeperCount) > 100
+    )
+      return setError("Enter a keeper count between 0 and 100.");
     if (leagues.length >= 3)
       return setError("All three league slots are occupied.");
     setBusy(true);
@@ -127,6 +135,7 @@ export function LeagueDialog({ mode, onClose, onOpen, onNew }: Props) {
           );
         const { league } = await createLeague({
           name: name.trim(),
+          keeperCount: Number(keeperCount),
           requestId: requestId.current,
           divisions,
           teams: chosen.map((t) => ({
@@ -334,6 +343,24 @@ export function LeagueDialog({ mode, onClose, onOpen, onNew }: Props) {
                     disabled={busy}
                   />
                 </label>
+                <label className="league-field">
+                  Keepers per team
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    required
+                    value={keeperCount}
+                    disabled={busy}
+                    onChange={(e) => setKeeperCount(e.target.value)}
+                    placeholder="Number of keepers"
+                  />
+                  <small>
+                    From Season 2, every team must keep exactly this many
+                    players. Season 1 starts with all players available.
+                  </small>
+                </label>
                 <p className="league-dialog__hint">
                   {loading
                     ? "Checking available slots…"
@@ -353,6 +380,7 @@ export function LeagueDialog({ mode, onClose, onOpen, onNew }: Props) {
                     <strong>{name.trim()}</strong>
                     <span>
                       Season 1 · {selected} teams · {divisions.length} divisions
+                      · {keeperCount} keepers
                     </span>
                   </div>
                   <button
@@ -361,7 +389,7 @@ export function LeagueDialog({ mode, onClose, onOpen, onNew }: Props) {
                     disabled={busy}
                     onClick={() => setStep("name")}
                   >
-                    Edit name
+                    Edit details
                   </button>
                 </div>
                 <p className="league-dialog__intro">

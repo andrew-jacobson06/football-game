@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseConnection } from "./connection.js";
 import { LeagueRepository, type RecordRow } from "./leagueRepository.js";
+import { SeasonPreparation } from "./seasonPreparation.js";
 export class LeagueSetupError extends Error {
   constructor(
     message: string,
@@ -22,6 +23,7 @@ export type TeamChoice = {
 };
 export type NewLeagueInput = {
   name: string;
+  keeperCount: number;
   requestId: string;
   divisions: string[];
   teams: TeamChoice[];
@@ -37,7 +39,7 @@ export class LeagueManagement {
   }
   leagues() {
     return this.repo
-      .all(`SELECT l.id,l.name,l.save_slot AS slot,s.id AS seasonId,s.season_number AS seasonNumber,s.status,s.current_stage AS stage,s.current_week AS week,
+      .all(`SELECT l.id,l.name,l.keeper_count AS keeperCount,l.save_slot AS slot,s.id AS seasonId,s.season_number AS seasonNumber,s.status,s.current_stage AS stage,s.current_week AS week,
       (SELECT count(*) FROM team_seasons ts WHERE ts.season_id=s.id) AS teamCount
       FROM leagues l LEFT JOIN seasons s ON s.league_id=l.id AND s.season_number=(SELECT max(x.season_number) FROM seasons x WHERE x.league_id=l.id)
       WHERE l.save_slot IS NOT NULL ORDER BY l.save_slot`);
@@ -116,7 +118,18 @@ export class LeagueManagement {
       input.teams.length > 32
     )
       throw new LeagueSetupError("Choose between 2 and 32 teams.");
-    const config = JSON.stringify({ name, divisions, teams: input.teams });
+    if (
+      !Number.isSafeInteger(input.keeperCount) ||
+      input.keeperCount < 0 ||
+      input.keeperCount > 100
+    )
+      throw new LeagueSetupError("Enter a keeper count between 0 and 100.");
+    const config = JSON.stringify({
+      name,
+      keeperCount: input.keeperCount,
+      divisions,
+      teams: input.teams,
+    });
     return this.db
       .transaction(() => {
         const prior = this.repo.one(
@@ -232,6 +245,7 @@ export class LeagueManagement {
         this.repo.insert("leagues", {
           id: leagueId,
           name,
+          keeper_count: input.keeperCount,
           save_slot: slot,
           creation_request_id: input.requestId,
           creation_config_json: config,
@@ -266,6 +280,8 @@ export class LeagueManagement {
           league_id: leagueId,
           season_number: 1,
           display_name: "Season 1",
+          display_year:
+            sourceSeason.display_year ?? new Date().getUTCFullYear(),
           status: "setup",
           current_stage: "regular",
           current_week: 1,
@@ -399,6 +415,36 @@ export class LeagueManagement {
             source: "New league draft pool",
           });
         }
+        // New teams hire from an independent, league-owned coach pool.
+        for (const coach of this.repo.all(
+          "SELECT * FROM coaches WHERE league_id=? AND retired_at IS NULL",
+          sourceSeason.league_id,
+        )) {
+          const id = randomUUID();
+          this.repo.insert("coaches", {
+            id,
+            league_id: leagueId,
+            display_name: coach.display_name,
+            coach_type: coach.coach_type,
+            image_url: coach.image_url,
+          });
+          const rating = this.repo.one(
+            "SELECT * FROM coach_season_ratings WHERE season_id=? AND coach_id=? ORDER BY version DESC LIMIT 1",
+            sourceSeason.id,
+            coach.id,
+          );
+          if (rating)
+            this.repo.insert("coach_season_ratings", {
+              ...rating,
+              id: randomUUID(),
+              season_id: seasonId,
+              coach_id: id,
+              version: 1,
+            });
+        }
+        new SeasonPreparation(
+          new LeagueRepository(this.db, leagueId),
+        ).initializeFirstSeason(seasonId);
         this.repo.insert("drafts", {
           id: randomUUID(),
           season_id: seasonId,

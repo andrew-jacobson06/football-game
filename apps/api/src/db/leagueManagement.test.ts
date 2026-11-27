@@ -69,12 +69,21 @@ function fixture(t: { after: (fn: () => void) => void }) {
     original,
   );
   migrateDatabase(db);
+  for (let i = 1; i <= 20; i++) {
+    db.prepare(
+      "INSERT INTO coaches(id,league_id,display_name) VALUES(?,?,?)",
+    ).run(`coach${i}`, original, `Coach ${i}`);
+    db.prepare(
+      "INSERT INTO coach_season_ratings(id,season_id,coach_id,version,attributes_json,passing) VALUES(?,(SELECT id FROM seasons WHERE league_id=? ORDER BY season_number DESC LIMIT 1),?,1,'{}',75)",
+    ).run(`coachRating${i}`, original, `coach${i}`);
+  }
   return { db, filename, manager: new LeagueManagement(db) };
 }
 function details(manager: LeagueManagement, name = "New League") {
   const catalog = manager.catalog();
   return {
     name,
+    keeperCount: 2,
     requestId: randomUUID(),
     divisions: catalog.divisions,
     teams: catalog.teams.map((t) => ({
@@ -137,9 +146,34 @@ test("creation is atomic: chosen divisions, extra team, isolated settings and an
   assert.equal(league.seasonNumber, 1);
   assert.equal(league.status, "setup");
   assert.equal(league.teamCount, 11);
+  assert.equal(league.keeperCount, 2);
   const repo = new LeagueRepository(db, league.id),
     source = new LeagueRepository(db, original);
   assert.equal(repo.games().length, 0);
+  const pool = repo.all("SELECT * FROM coaches WHERE league_id=?", league.id);
+  assert.equal(pool.length, 20);
+  assert.ok(pool.every((c) => !String(c.id).startsWith("coach")));
+  assert.equal(
+    repo.one(
+      "SELECT count(*) AS n FROM coach_season_ratings WHERE season_id=?",
+      league.seasonId,
+    )!.n,
+    20,
+  );
+  assert.equal(
+    repo.one(
+      "SELECT count(*) AS n FROM coach_team_assignments WHERE season_id=?",
+      league.seasonId,
+    )!.n,
+    0,
+  );
+  assert.equal(
+    repo.one(
+      "SELECT keepers_finalized FROM season_preparation WHERE season_id=?",
+      league.seasonId,
+    )!.keepers_finalized,
+    1,
+  );
   assert.equal(repo.playerStats().length, 0);
   assert.equal(repo.players().length, 107);
   assert.ok(repo.players().every((p) => p.Team === ""));
@@ -230,6 +264,11 @@ test("rejects invalid names, divisions, duplicate teams and unsafe custom team m
   const { manager } = fixture(t);
   const base = details(manager);
   assert.throws(() => manager.create({ ...base, name: " " }), /league name/);
+  for (const keeperCount of [-1, 1.5, 101])
+    assert.throws(
+      () => manager.create({ ...base, keeperCount }),
+      /keeper count/,
+    );
   assert.throws(
     () => manager.create({ ...base, divisions: ["East", "east"] }),
     /distinct/,
@@ -313,6 +352,26 @@ test("concurrent HTTP requests select independent leagues, including when env pi
       oldPlayers.players.some((old: any) => old.id === p.id),
     ),
   );
+  const preparation = await read(second.id, "season/preparation");
+  assert.equal(preparation.phase, "coach_hiring");
+  assert.equal(preparation.coachOrder.length, 10);
+  const hireBody = {
+    seasonId: second.seasonId,
+    teamId: preparation.nextTeamId,
+    coachId: preparation.availableCoaches[0].id,
+  };
+  const hire = await fetch(`${base}/season/coaches/hire`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-League-Id": second.id },
+    body: JSON.stringify(hireBody),
+  });
+  assert.equal(hire.status, 200);
+  const crossLeague = await fetch(`${base}/season/coaches/hire`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-League-Id": original },
+    body: JSON.stringify(hireBody),
+  });
+  assert.equal(crossLeague.status, 409);
   const created = await fetch(`${base}/leagues`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

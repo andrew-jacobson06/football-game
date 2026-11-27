@@ -1,3 +1,9 @@
+import type { Response, NextFunction } from "express";
+import { repository } from "../db/leagueRepository.js";
+import {
+  SeasonPreparation,
+  SeasonSetupError,
+} from "../db/seasonPreparation.js";
 import { Router } from "express";
 import { runtimeDatabase } from "../db/runtime.js";
 import { LeagueManagement, LeagueSetupError } from "../db/leagueManagement.js";
@@ -21,14 +27,72 @@ leagueRoutes.get("/league-catalog", (_req, res, next) => {
 });
 leagueRoutes.post("/leagues", (req, res, next) => {
   try {
-    res
-      .status(201)
-      .json({
-        league: new LeagueManagement(runtimeDatabase()).create(req.body),
-      });
+    res.status(201).json({
+      league: new LeagueManagement(runtimeDatabase()).create(req.body),
+    });
   } catch (error) {
     if (error instanceof LeagueSetupError)
       res.status(error.status).json({ error: error.message });
     else next(error);
   }
 });
+
+function preparation() {
+  return new SeasonPreparation(repository());
+}
+function setupResponse(
+  res: Response,
+  next: NextFunction,
+  action: () => unknown,
+) {
+  try {
+    res.json(action());
+  } catch (error) {
+    if (error instanceof SeasonSetupError)
+      res.status(error.status).json({ error: error.message });
+    else next(error);
+  }
+}
+leagueRoutes.get("/season/preparation", (_req, res, next) =>
+  setupResponse(res, next, () => preparation().state()),
+);
+leagueRoutes.post("/season/advance-year", (req, res, next) =>
+  setupResponse(res, next, () =>
+    preparation().advance(
+      String(req.body?.fromSeasonId),
+      req.body?.keeperCount,
+    ),
+  ),
+);
+leagueRoutes.put("/season/keepers/:teamId", (req, res, next) =>
+  setupResponse(res, next, () =>
+    preparation().lockTeam(
+      String(req.body?.seasonId),
+      String(req.params.teamId),
+      req.body?.playerIds,
+      req.body?.coachAction,
+    ),
+  ),
+);
+leagueRoutes.post("/season/keepers/:teamId/unlock", (req, res, next) =>
+  setupResponse(res, next, () =>
+    preparation().unlockTeam(
+      String(req.body?.seasonId),
+      String(req.params.teamId),
+    ),
+  ),
+);
+leagueRoutes.post("/season/keepers/finalize", (req, res, next) =>
+  setupResponse(res, next, () =>
+    preparation().finalize(String(req.body?.seasonId)),
+  ),
+);
+leagueRoutes.post("/season/coaches/hire", (req, res, next) =>
+  setupResponse(res, next, () =>
+    preparation().hire(
+      String(req.body?.seasonId),
+      String(req.body?.teamId),
+      String(req.body?.coachId),
+    ),
+  ),
+);

@@ -36,6 +36,7 @@ export type LeagueSummary = {
   stage: string;
   week: number | null;
   teamCount: number;
+  keeperCount: number | null;
 };
 export type CatalogTeam = {
   id: string;
@@ -72,6 +73,7 @@ export function getLeagueCatalog(): Promise<LeagueCatalog> {
 }
 export function createLeague(input: {
   name: string;
+  keeperCount: number;
   requestId: string;
   divisions: string[];
   teams: LeagueTeamChoice[];
@@ -82,7 +84,10 @@ export function createLeague(input: {
 export type ApiHealth = { ok: boolean; app: string; message: string };
 async function getJson<T>(path: string, message: string): Promise<T> {
   const response = await apiFetch(`${API_BASE_URL}${path}`);
-  if (!response.ok) throw new Error(message);
+  if (!response.ok) {
+    const detail = await response.json().catch(() => null);
+    throw new Error(detail?.error || message);
+  }
   return response.json();
 }
 async function postJson<T>(
@@ -111,7 +116,10 @@ async function putJson<T>(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!response.ok) throw new Error(message);
+  if (!response.ok) {
+    const detail = await response.json().catch(() => null);
+    throw new Error(detail?.error || message);
+  }
   return response.json();
 }
 export async function getApiHealth(): Promise<ApiHealth> {
@@ -352,3 +360,77 @@ async function awardsRequest(
 export const getLeagueAwards = () => awardsRequest("/awards");
 export const runLeagueAwardVote = (award: "mvp" | "opoy" | "dpoy") =>
   awardsRequest(`/awards/${award}/vote`, "POST");
+
+export type PreparationTeam = {
+  id: string;
+  abbreviation: string;
+  name: string;
+  logoUrl: string | null;
+  roster: { id: string; name: string; position: string | null }[];
+  selectedPlayerIds: string[];
+  locked: boolean;
+  coachAction: "keep" | "fire" | "hire" | null;
+  previousCoach: { id: string; name: string } | null;
+  coach: { id: string; name: string } | null;
+};
+export type SeasonPreparationState = {
+  seasonId: string;
+  seasonNumber: number;
+  year: number | null;
+  leagueKeeperCount: number | null;
+  keeperCount: number | null;
+  phase:
+    | "in_progress"
+    | "season_complete"
+    | "not_initialized"
+    | "keepers"
+    | "finalize_keepers"
+    | "coach_hiring"
+    | "draft_ready";
+  draftReady: boolean;
+  canAdvanceSeason: boolean;
+  teams: PreparationTeam[];
+  coachOrder: string[];
+  nextTeamId: string | null;
+  availableCoaches: { id: string; name: string; type: string | null }[];
+};
+export const getSeasonPreparation = () =>
+  getJson<SeasonPreparationState>(
+    "/season/preparation",
+    "Unable to load season preparation.",
+  );
+export const advanceYear = (fromSeasonId: string, keeperCount: number) =>
+  postJson<SeasonPreparationState>(
+    "/season/advance-year",
+    { fromSeasonId, keeperCount },
+    "Unable to advance the season.",
+  );
+export const lockKeepers = (
+  seasonId: string,
+  teamId: string,
+  playerIds: string[],
+  coachAction: string,
+) =>
+  putJson<SeasonPreparationState>(
+    `/season/keepers/${encodeURIComponent(teamId)}`,
+    { seasonId, playerIds, coachAction },
+    "Unable to lock this team’s keepers.",
+  );
+export const unlockKeepers = (seasonId: string, teamId: string) =>
+  postJson<SeasonPreparationState>(
+    `/season/keepers/${encodeURIComponent(teamId)}/unlock`,
+    { seasonId },
+    "Unable to unlock keepers.",
+  );
+export const finalizeKeepers = (seasonId: string) =>
+  postJson<SeasonPreparationState>(
+    "/season/keepers/finalize",
+    { seasonId },
+    "Unable to finalize keepers.",
+  );
+export const hireCoach = (seasonId: string, teamId: string, coachId: string) =>
+  postJson<SeasonPreparationState>(
+    "/season/coaches/hire",
+    { seasonId, teamId, coachId },
+    "Unable to hire this coach.",
+  );

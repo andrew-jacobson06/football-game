@@ -2,7 +2,7 @@
 
 From the main menu, **New League** opens a two-step modal:
 
-1. Enter a league name (1–80 characters), then **Next**.
+1. Enter a league name (1–80 characters) and keeper count (0–100), then **Next**.
 2. Select the included teams and assign their divisions. Available teams start in their original default division. You can include/exclude teams, add teams, and add divisions. **Next** creates the league and opens its home screen.
 
 **Cancel**, **X**, or Escape closes setup and leaves you on the main menu. Nothing is saved before the final Next. Team additions are local to the form until creation succeeds. Controls briefly disable while committing the creation so an in-flight save cannot be mistaken for a cancelled setup. Failed requests keep your entries and can be retried.
@@ -27,7 +27,7 @@ New league creation commits all of the following together:
 - Copies of the initial league's active player identities, aliases and latest season ratings, with new IDs. All players start unassigned in the new league's draft pool.
 - A planned draft record and creation audit entry.
 
-Games, plays, standings, statistics, articles, nominations, winners and existing player ownership are not copied. Draft execution, scheduling and season start are intentionally still future work. The new home page explains that the league is ready for draft setup; its Draft tab remains a placeholder.
+Games, plays, standings, statistics, articles, nominations, winners and existing player ownership are not copied. Draft execution, scheduling and season start are intentionally still future work. The new home page explains that the league is ready for draft setup; its Draft tab manages coaches and keepers, with player drafting still pending.
 
 ## League selection
 
@@ -48,3 +48,28 @@ No Google Sheets connection is used. Close DB Browser and restart the updated AP
 Database tests cover preserving the original league, defaults/catalog migration, division changes, custom teams, independent settings and IDs, unassigned player pools, no copied games/stats, transaction rollback, creation retries, three-slot capacity, validation and concurrent HTTP requests for different leagues (including an environment-pinned original season).
 
 Browser checks use a disposable copy of the imported database. They cover Cancel/X and cancelling team edits without saving, division reassignment, custom team creation, the new draft-ready home, slot switching, third-slot creation and full-capacity blocking. New screens are checked in dark and light themes at 1440×1000 and 390×844, including scrollable team/custom-team forms.
+
+## Seasons, keepers and coaches
+
+League creation now also asks for **Keepers per team** (0–100). This is stored in `leagues.keeper_count`. Season 1 skips keepers: all players are free agents, and each team hires a coach from the league-owned coach pool in a randomized, saved order. The Draft tab displays this preparation flow. Once all coaches are assigned, it shows **Draft ready**; player drafting and scheduling remain future work.
+
+After the National Championship is final with a winner, **Advance Season** opens a confirmation dialog. Confirm the league keeper limit, then advance. The API creates Season N+1 with the same teams, divisions, latest player/coach traits and settings, but no games, plays or statistics. It preserves previous seasons and copies their rosters as provisional new-season assignments.
+
+In the new season’s Draft tab:
+
+1. Each team selects exactly the league keeper limit from its previous roster and chooses **Keep coach** or **Fire coach**. Teams without a recorded coach hire one. **Lock keepers** saves both decisions; unlock to edit before finalization.
+2. Once every team is locked, **Finalize keepers** releases nonkeepers (`player_team_assignments.team_id=NULL` for the new season only) and releases fired coaches. This is final for that offseason.
+3. Teams needing coaches hire in a newly randomized, persisted order. Fired coaches are available again, including to their previous team. A coach can lead only one team in a season. When every team has a coach, the draft is ready.
+
+Migration `0005_season_preparation.sql` adds the league keeper setting, previous-season link, coach assignment status/uniqueness, and four offseason tables: `season_preparation`, `season_roster_candidates`, `season_team_decisions`, `season_keeper_selections`. Existing leagues without a keeper setting choose one when advancing. Existing leagues without coach assignments hire coaches; the upgrade does not guess historical assignments. Leagues previously created without their own coach pool receive a copy of the template league’s active coaches and latest ratings. New leagues clone this pool at creation.
+
+Endpoints (all scoped by `X-League-Id`):
+
+- `GET /api/season/preparation`
+- `POST /api/season/advance-year` — `{fromSeasonId, keeperCount}`; retry-safe.
+- `PUT /api/season/keepers/:teamId` — `{seasonId, playerIds, coachAction}`.
+- `POST /api/season/keepers/:teamId/unlock` — `{seasonId}`.
+- `POST /api/season/keepers/finalize` — `{seasonId}`.
+- `POST /api/season/coaches/hire` — `{seasonId, teamId, coachId}`.
+
+The API rejects stale seasons, incorrect keeper counts, players from another roster, out-of-turn coach selections, and already-assigned coaches. Transactions preserve the previous season and prevent partial offseason saves.
