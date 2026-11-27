@@ -35,6 +35,10 @@ export function verifyMigrationHistory(db: DatabaseConnection, migrations = load
 export function migrateDatabase(db: DatabaseConnection, migrations = loadMigrations()) {
   if (!migrations.length || migrations.some((item,index)=>item.version!==index+1)) throw new Error("Migration versions must start at 1 and be contiguous and unique.");
   if (db.inTransaction) throw new Error("Schema migration must own its transaction.");
+  // Normal startup only verifies an up-to-date schema. Do not request a writer
+  // lock just to repeat CREATE TABLE / PRAGMA statements with no pending work.
+  // Still verify checksums before returning; upgrades recheck under their lock.
+  if (verifyMigrationHistory(db, migrations).length === migrations.length) return [];
   return db.transaction(() => {
     const existing = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all() as Array<{name:string}>;
     if (existing.length && !existing.some(row=>row.name==="schema_migrations")) throw new Error("This database has tables but no Football Game migration history. Choose a new database path.");

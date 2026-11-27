@@ -97,3 +97,18 @@ test('awards reject cross-award ballots, premature results and incomplete vote c
  db.exec("UPDATE award_vote_runs SET status='completed',completed_ballots=125 WHERE id='vote'");
  assert.deepEqual(db.prepare('SELECT nomination_id,total_points,rank FROM award_rankings ORDER BY rank').all(),[{nomination_id:'n1',total_points:1250,rank:1},{nomination_id:'n2',total_points:875,rank:2}]);
 });
+test('current schema checks do not request a writer lock; pending upgrades still require it',t=>{
+ const {db,filename}=fixture(t),other=openDatabase({filename}),migrations=loadMigrations();
+ try {
+  other.pragma('busy_timeout=1');
+  db.exec('BEGIN IMMEDIATE'); // DB Browser can hold this lock while edits are pending.
+  assert.deepEqual(migrateDatabase(other),[]);
+  assert.throws(()=>migrateDatabase(other,[{...migrations[0],checksum:'changed'},...migrations.slice(1)]),/changed/);
+  const version=migrations.length+1;
+  const next=migration(version,`${String(version).padStart(4,'0')}_lock_test.sql`,'CREATE TABLE lock_test(id TEXT);');
+  assert.throws(()=>migrateDatabase(other,[...migrations,next]),{code:'SQLITE_BUSY'});
+  assert.equal(other.prepare("SELECT name FROM sqlite_master WHERE name='lock_test'").get(),undefined);
+  db.exec('ROLLBACK');
+  assert.deepEqual(migrateDatabase(other,[...migrations,next]),[next.name]);
+ } finally {if(db.inTransaction)db.exec('ROLLBACK');other.close();}
+});
