@@ -387,19 +387,19 @@
       },
       {
         "throwType": "Accurate",
-        "multiplier": 0.6
+        "multiplier": 0.75
       },
       {
         "throwType": "Close",
-        "multiplier": 0.8
-      },
-      {
-        "throwType": "Catchable",
         "multiplier": 1
       },
       {
+        "throwType": "Catchable",
+        "multiplier": 1.2
+      },
+      {
         "throwType": "Off Target",
-        "multiplier": 1.5
+        "multiplier": 1.6
       }
     ],
     "Pick Multiplier based on accuracy": [
@@ -409,19 +409,19 @@
       },
       {
         "throwType": "Accurate",
-        "multiplier": 0.6
+        "multiplier": 0.75
       },
       {
         "throwType": "Close",
-        "multiplier": 0.8
-      },
-      {
-        "throwType": "Catchable",
         "multiplier": 1
       },
       {
+        "throwType": "Catchable",
+        "multiplier": 1.2
+      },
+      {
         "throwType": "Off Target",
-        "multiplier": 1.5
+        "multiplier": 1.6
       }
     ]
   },

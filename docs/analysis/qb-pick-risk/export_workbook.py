@@ -75,7 +75,7 @@ for row in [
     ['Player source', inputs['source_file']],
     ['Player source SHA256', inputs['source_sha256']],
     ['Model', 'Latest Read QB rebalance; existing Ball Hawk polynomial'],
-    ['Settings override', 'Both tables: Perfect .25, Accurate .6, Close .8, Catchable 1, Off Target 1.5'],
+    ['Settings override', 'Both tables: ' + ', '.join(f"{row['throwType']} {row['multiplier']}" for row in beat)],
     ['Top 40 means', 'Read QB 77.8 and Ball Hawk 77.25; separate highest 40 scores across all players'],
     ['Completion assumption', 'Probability a non-jumped pass completes, held equal across throw qualities. Not final observed completion percentage.'],
     ['Openness', 'Actual openness. 0–39 shares Erased polynomial; 90+ skips jumping but can enter secondary interception.'],
