@@ -10,18 +10,18 @@ const seq = (...values: number[]) => () => { assert.ok(values.length, "Unexpecte
 const close = (a: number, b: number) => assert.ok(Math.abs(a-b) < 1e-9, `${a} != ${b}`);
 
 test("uses the supplied polynomials and actual openness bands including all boundaries", () => {
-  for (const [openness, expected] of [[0, 12.19119983721729], [39.999, 12.19119983721729], [40, 9.082486355194366], [49.999, 9.082486355194366], [50, 6.557676986779988], [60, 4.837249325146857], [70, 1.6370695137412206], [80, .19943476457559495], [89.999, .19943476457559495], [90, 0], [120, 0]] as const)
+  for (const [openness, expected] of [[0, 14.149898810860048], [39.999, 14.149898810860048], [40, 10.968853984091073], [49.999, 10.968853984091073], [50, 8.472303345383574], [60, 6.81188401118551], [70, 3.83687917519952], [80, 1.072581200037536], [89.999, 1.072581200037536], [90, 0], [120, 0]] as const)
     close(routeJumpBaseChance(80, openness), expected);
-  close(pickBaseChance(80), 13.703804580043933);
+  close(pickBaseChance(80), 19.455955489012032000000);
   assert.equal(routeJumpBaseChance(0, 40), 0);
   assert.equal(pickBaseChance(0), 0);
 });
 
 test("matches the Read QB 85/Ball Hawk 81 overall interception matrix", () => {
   const result = rollPassInterception(85, 81, 20, "Catchable", beat, pick, seq(0, 0));
-  close(result.beatWRtoBall, 13.410375458459491);
-  close(result.pickPctChance!, 14.182964219121207);
-  close(result.beatWRtoBall*result.pickPctChance!/100, 1.901988752923117);
+  close(result.beatWRtoBall, 15.38725762520821412500);
+  close(result.pickPctChance!, 19.894165759666692429615);
+  close(result.beatWRtoBall*result.pickPctChance!/100, 3.06116653782587476862377145220251411311875);
 });
 
 test("both accuracy multipliers come from Settings for every throw type", () => {
@@ -186,4 +186,45 @@ test("a completed poor throw never runs the second interception path", t => {
   const result = determinePassOutcome(ctx, "QB", target, 100, { ...completion, actualOpenness: 95 });
   assert.equal(result.completed, true);
   assert.equal("incompleteInterceptionCheck" in result, false);
+});
+
+
+test("updated route-jump and pick polynomials match independent reference ratings", () => {
+  close(routeJumpBaseChance(50, 20), 9.99999999748285000000);
+  close(routeJumpBaseChance(50, 45), 7.50000000282725000000);
+  close(routeJumpBaseChance(50, 55), 4.999999997921800000000);
+  close(routeJumpBaseChance(50, 65), 3.500000000685500000000);
+  close(routeJumpBaseChance(50, 75), 0.99999999803907500000);
+  close(routeJumpBaseChance(50, 85), 0.49999999835915000000);
+  close(pickBaseChance(50), 10.999999997292187500000);
+  close(routeJumpBaseChance(68, 20), 12.25412821714309353088);
+  close(routeJumpBaseChance(68, 45), 9.81924663617562409472);
+  close(routeJumpBaseChance(68, 55), 6.771131488794219545344);
+  close(routeJumpBaseChance(68, 65), 5.286286627676268053504);
+  close(routeJumpBaseChance(68, 75), 2.81626612619209376000);
+  close(routeJumpBaseChance(68, 85), 0.98061599000714391296);
+  close(pickBaseChance(68), 15.450020086224119608320);
+  close(routeJumpBaseChance(85, 20), 15.38725762520821412500);
+  close(routeJumpBaseChance(85, 45), 11.74382107993253056250);
+  close(routeJumpBaseChance(85, 55), 9.551146325707836737500);
+  close(routeJumpBaseChance(85, 65), 7.746489196902952800000);
+  close(routeJumpBaseChance(85, 75), 4.31376072272392359375);
+  close(routeJumpBaseChance(85, 85), 1.19427769842041918750);
+  close(pickBaseChance(85), 21.880825656649859546875);
+  close(routeJumpBaseChance(99, 20), 20.99999996095793033484);
+  close(routeJumpBaseChance(99, 45), 17.50000004381339721846);
+  close(routeJumpBaseChance(99, 55), 14.999999967840143213892);
+  close(routeJumpBaseChance(99, 65), 12.500000010190234726272);
+  close(routeJumpBaseChance(99, 75), 7.49999996988130733625);
+  close(routeJumpBaseChance(99, 85), 2.99999997431781651378);
+  close(pickBaseChance(99), 32.999999958401085483885);
+});
+
+
+test("both interception paths use the updated shared Ball Hawk polynomial before the Settings multiplier", () => {
+  const jumped = rollPassInterception(99, 85, 20, "Catchable", beat, pick, seq(0, 0));
+  const incomplete = rollIncompletePassInterception(85, "Catchable", pick, seq(0, 0));
+  close(jumped.basePickPctChance!, 21.880825656649859546875);
+  close(incomplete.basePickPctChance!, jumped.basePickPctChance!);
+  close(incomplete.pickPctChance!, jumped.pickPctChance!);
 });
