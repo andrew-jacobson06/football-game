@@ -1,3 +1,4 @@
+import { PlayerDraft } from "../db/playerDraft.js";
 import type { Response, NextFunction } from "express";
 import { repository } from "../db/leagueRepository.js";
 import {
@@ -93,6 +94,27 @@ leagueRoutes.post("/season/coaches/hire", (req, res, next) =>
       String(req.body?.seasonId),
       String(req.body?.teamId),
       String(req.body?.coachId),
+    ),
+  ),
+);
+
+leagueRoutes.get("/draft", (_req, res, next) =>
+  setupResponse(res, next, () => new PlayerDraft(repository()).state()),
+);
+leagueRoutes.post("/draft/start", (req, res, next) =>
+  setupResponse(res, next, () =>
+    new PlayerDraft(repository()).start(
+      String(req.body?.seasonId),
+      req.body?.rosterTarget,
+    ),
+  ),
+);
+leagueRoutes.post("/draft/pick", (req, res, next) =>
+  setupResponse(res, next, () =>
+    new PlayerDraft(repository()).pick(
+      String(req.body?.seasonId),
+      String(req.body?.pickId),
+      String(req.body?.playerId),
     ),
   ),
 );

@@ -181,6 +181,21 @@ test("creation is atomic: chosen divisions, extra team, isolated settings and an
     repo.all("SELECT * FROM drafts WHERE season_id=?", repo.season().id).length,
     1,
   );
+  const draftRules = JSON.parse(
+    repo.one(
+      "SELECT order_rules_json FROM drafts WHERE season_id=?",
+      league.seasonId,
+    )!.order_rules_json,
+  );
+  assert.equal(draftRules.format, "snake");
+  assert.equal(draftRules.method, "random_at_league_creation");
+  assert.deepEqual(
+    [...draftRules.teamOrder].sort(),
+    repo
+      .teams()
+      .map((t) => t.id)
+      .sort(),
+  );
   assert.notEqual(repo.settingsVersion(), source.settingsVersion());
   assert.deepEqual(repo.frontendSettings(), source.frontendSettings());
   const team = repo

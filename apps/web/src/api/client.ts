@@ -434,3 +434,52 @@ export const hireCoach = (seasonId: string, teamId: string, coachId: string) =>
     { seasonId, teamId, coachId },
     "Unable to hire this coach.",
   );
+
+export type DraftPlayer = Player & { id: string; teamId: string | null };
+export type DraftTeam = {
+  id: string;
+  abbreviation: string;
+  name: string;
+  logoUrl: string | null;
+  primaryColor: string | null;
+};
+export type DraftPick = {
+  id: string;
+  round: number;
+  pickInRound: number;
+  overallPick: number;
+  teamId: string;
+  playerId: string | null;
+};
+export type PlayerDraftState = {
+  seasonId: string;
+  draftId: string;
+  status: "planned" | "running" | "completed";
+  ready: boolean;
+  orderMethod: string;
+  teams: DraftTeam[];
+  players: DraftPlayer[];
+  picks: DraftPick[];
+  currentPick: DraftPick | null;
+  rounds: number;
+  rosterTarget: number | null;
+  suggestedRosterTarget: number;
+};
+export const getPlayerDraft = () =>
+  getJson<PlayerDraftState>("/draft", "Unable to load the draft.");
+export const startPlayerDraft = (seasonId: string, rosterTarget: number) =>
+  postJson<PlayerDraftState>(
+    "/draft/start",
+    { seasonId, rosterTarget },
+    "Unable to start the draft.",
+  );
+export const makeDraftPick = (
+  seasonId: string,
+  pickId: string,
+  playerId: string,
+) =>
+  postJson<PlayerDraftState>(
+    "/draft/pick",
+    { seasonId, pickId, playerId },
+    "Unable to save this pick.",
+  );

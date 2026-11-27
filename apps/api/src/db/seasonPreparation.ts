@@ -1,3 +1,4 @@
+import { initializeDraft } from "./draftOrder.js";
 import { randomInt, randomUUID } from "node:crypto";
 import type { DatabaseConnection } from "./connection.js";
 import { LeagueRepository } from "./leagueRepository.js";
@@ -337,11 +338,7 @@ export class SeasonPreparation {
           keeper_count: keeperCount,
           keepers_finalized: 0,
         });
-        this.repo.insert("drafts", {
-          id: randomUUID(),
-          season_id: id,
-          status: "planned",
-        });
+        initializeDraft(this.repo, id);
         this.db
           .prepare(
             "UPDATE seasons SET status='finalized',games_completed_at=coalesce(games_completed_at,?),finalized_at=?,updated_at=? WHERE id=?",

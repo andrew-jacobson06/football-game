@@ -27,7 +27,7 @@ New league creation commits all of the following together:
 - Copies of the initial league's active player identities, aliases and latest season ratings, with new IDs. All players start unassigned in the new league's draft pool.
 - A planned draft record and creation audit entry.
 
-Games, plays, standings, statistics, articles, nominations, winners and existing player ownership are not copied. Draft execution, scheduling and season start are intentionally still future work. The new home page explains that the league is ready for draft setup; its Draft tab manages coaches and keepers, with player drafting still pending.
+Games, plays, standings, statistics, articles, nominations, winners and existing player ownership are not copied. Scheduling and season start remain future work. The new home page explains that the league is ready for draft setup; its Draft tab manages coaches and keepers, and the player draft.
 
 ## League selection
 
@@ -51,7 +51,7 @@ Browser checks use a disposable copy of the imported database. They cover Cancel
 
 ## Seasons, keepers and coaches
 
-League creation now also asks for **Keepers per team** (0–100). This is stored in `leagues.keeper_count`. Season 1 skips keepers: all players are free agents, and each team hires a coach from the league-owned coach pool in a randomized, saved order. The Draft tab displays this preparation flow. Once all coaches are assigned, it shows **Draft ready**; player drafting and scheduling remain future work.
+League creation now also asks for **Keepers per team** (0–100). This is stored in `leagues.keeper_count`. Season 1 skips keepers: all players are free agents, and each team hires a coach from the league-owned coach pool in a randomized, saved order. The Draft tab displays this preparation flow. Once all coaches are assigned, it opens the player draft board; scheduling remains future work.
 
 After the National Championship is final with a winner, **Advance Season** opens a confirmation dialog. Confirm the league keeper limit, then advance. The API creates Season N+1 with the same teams, divisions, latest player/coach traits and settings, but no games, plays or statistics. It preserves previous seasons and copies their rosters as provisional new-season assignments.
 
@@ -73,3 +73,16 @@ Endpoints (all scoped by `X-League-Id`):
 - `POST /api/season/coaches/hire` — `{seasonId, teamId, coachId}`.
 
 The API rejects stale seasons, incorrect keeper counts, players from another roster, out-of-turn coach selections, and already-assigned coaches. Transactions preserve the previous season and prevent partial offseason saves.
+
+## Player draft
+
+Once coaching and keeper preparation is complete, the Draft tab opens the snake draft room. The left quarter of the layout keeps the selected team’s roster visible. The other three quarters switch between a draft board and available players. Click a team’s column header/logo to inspect its roster. The active pick opens the available-player view; selecting a player reveals **Draft for [team]**, which always drafts for the team on the clock.
+
+- Season 1’s first-round order is randomized and persisted during league creation, independently of coach selection. Older undrafted leagues receive a one-time saved order when first opened.
+- Season 2 onward uses reverse previous-season finish: non-playoff teams, divisional losers, divisional championship losers, runner-up, champion. Equal finishes use regular-season ranking (win percentage, head-to-head percentage, head-to-head differential, overall differential, division percentage). Only regular-season games participate in those tiebreakers.
+- Each even round reverses the first-round order. The board keeps each team in its own column and shows pick numbers and direction arrows.
+- The final roster target defaults to **10**, including keepers, and is editable before starting. The API checks the player pool and equal keeper counts before generating picks. All teams finish at the same target; surplus players remain free agents. A target equal to the keeper count needs no draft picks.
+- Available players can be filtered by offensive or defensive position, or shown together. Every displayed trait is sortable using the column headers or sort control. Drafted players disappear from this pool and appear on their team’s roster immediately.
+- Picks, their snake slots, roster ownership and draft status persist in SQLite. Saving a pick is atomic and retry-safe; stale turns and already-owned players are rejected. The draft resumes after reload and becomes read-only when completed. Completing it does not create a schedule or start games.
+
+Migration `0006_player_draft.sql` adds `drafts.roster_target` and draft lookup indexes. Existing `drafts.order_rules_json` stores the saved order, and `draft_picks` stores round/overall numbers, team, player and pick time. Endpoints: `GET /api/draft`, `POST /api/draft/start` (`seasonId`, `rosterTarget`) and `POST /api/draft/pick` (`seasonId`, `pickId`, `playerId`).

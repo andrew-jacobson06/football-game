@@ -1,3 +1,4 @@
+import { PlayerDraft } from "./PlayerDraft";
 import { useEffect, useState } from "react";
 import {
   getSeasonPreparation,
@@ -83,6 +84,7 @@ export function SeasonPreparation({
         )}
       </section>
     );
+  if (state.draftReady) return <PlayerDraft onUpdated={onUpdated} />;
   const keepersOpen =
     state.phase === "keepers" || state.phase === "finalize_keepers";
   const next = state.teams.find((t) => t.id === state.nextTeamId);
@@ -337,18 +339,6 @@ export function SeasonPreparation({
             </div>
           )}
         </>
-      )}
-      {state.draftReady && (
-        <div className="offseason__ready">
-          <span className="offseason__eyebrow">PREPARATION COMPLETE</span>
-          <h2>Ready for the draft.</h2>
-          <p>
-            All teams have coaches
-            {state.seasonNumber > 1 ? " and their keepers are finalized" : ""}.
-            Player drafting will be available when the draft system is added.
-            The schedule is empty.
-          </p>
-        </div>
       )}
       {!keepersOpen && state.phase !== "coach_hiring" && (
         <div className="offseason__staff">

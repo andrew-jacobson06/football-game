@@ -1,3 +1,4 @@
+import { initializeDraft } from "./draftOrder.js";
 import { randomUUID } from "node:crypto";
 import type { DatabaseConnection } from "./connection.js";
 import { LeagueRepository, type RecordRow } from "./leagueRepository.js";
@@ -445,11 +446,7 @@ export class LeagueManagement {
         new SeasonPreparation(
           new LeagueRepository(this.db, leagueId),
         ).initializeFirstSeason(seasonId);
-        this.repo.insert("drafts", {
-          id: randomUUID(),
-          season_id: seasonId,
-          status: "planned",
-        });
+        initializeDraft(this.repo, seasonId);
         for (const pref of ["default_league_id", "league_template_source_id"])
           this.db
             .prepare(
