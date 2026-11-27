@@ -10,6 +10,7 @@ const completions=[75,70,65,60,55,50];
 const clamp=(pct:number)=>Math.max(0,Math.min(100,pct))/100;
 const H=clamp((inputs.ballHawk/12)**2),basePick=pickBaseChance(inputs.ballHawk);
 if(Math.abs(basePick-18.353240029120766)>1e-9)throw Error('Engine differs from the revised model for this snapshot.');
+for(const [i,expected] of [25,23,19,17,12.5,7].entries())if(Math.abs(routeJumpBaseChance(99,definitions[i][1])-expected)>1e-6)throw Error('Read QB curves differ from the latest requested rebalance.');
 const qbs=inputs.qbs.map((qb:{name:string,accuracy:number})=>{
  const weights=getThrowTypeChances(qb.accuracy);
  if(Math.abs(weights.reduce((s,r)=>s+r.chancePct,0)-100)>1e-9)throw Error('Invalid accuracy weights.');
@@ -31,7 +32,7 @@ const qbs=inputs.qbs.map((qb:{name:string,accuracy:number})=>{
  });
  return {...qb,throwTypes:weights,bands};
 });
-const output={source_file:inputs.source_file,source_sha256:inputs.source_sha256,model:'Revised requested polynomials',readQB:inputs.readQB,ballHawk:inputs.ballHawk,completion_rates:completions,bands:definitions.map(x=>x[0]),base_pick_pct:basePick,ball_hawk_gate_pct:H*100,quarterbacks:qbs};
+const output={source_file:inputs.source_file,source_sha256:inputs.source_sha256,model:'Latest rebalanced Read QB curves with user-updated accuracy multipliers',multipliers:inputs.multipliers,settings_override:inputs.settings_override,readQB:inputs.readQB,ballHawk:inputs.ballHawk,completion_rates:completions,bands:definitions.map(x=>x[0]),base_pick_pct:basePick,ball_hawk_gate_pct:H*100,quarterbacks:qbs};
 fs.writeFileSync(folder+'results.json',JSON.stringify(output,null,2));
 for(const c of completions){
  const lines=[['QB','Accuracy',...definitions.map(x=>x[0]+' pick chance (%)')].join(',')];

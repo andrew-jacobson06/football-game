@@ -383,19 +383,19 @@
     "DB beats WR to ball based on accuracy": [
       {
         "throwType": "Perfect",
-        "multiplier": 0.1
+        "multiplier": 0.25
       },
       {
         "throwType": "Accurate",
-        "multiplier": 0.5
+        "multiplier": 0.6
       },
       {
         "throwType": "Close",
-        "multiplier": 0.75
+        "multiplier": 0.8
       },
       {
         "throwType": "Catchable",
-        "multiplier": 1.0
+        "multiplier": 1
       },
       {
         "throwType": "Off Target",
@@ -405,24 +405,28 @@
     "Pick Multiplier based on accuracy": [
       {
         "throwType": "Perfect",
-        "multiplier": 0.1
-      },
-      {
-        "throwType": "Accurate",
         "multiplier": 0.25
       },
       {
-        "throwType": "Close",
+        "throwType": "Accurate",
         "multiplier": 0.6
       },
       {
+        "throwType": "Close",
+        "multiplier": 0.8
+      },
+      {
         "throwType": "Catchable",
-        "multiplier": 1.0
+        "multiplier": 1
       },
       {
         "throwType": "Off Target",
         "multiplier": 1.5
       }
     ]
+  },
+  "settings_override": {
+    "source": "User-provided replacement of both accuracy multiplier tables after the workbook export",
+    "note": "Player ratings and top-40 averages still come from the identified XLSX; these multipliers supersede its values for this analysis."
   }
 }
