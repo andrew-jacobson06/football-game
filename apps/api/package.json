@@ -7,22 +7,32 @@
   "scripts": {
     "dev": "tsx src/server.ts",
     "test": "node --import tsx --test src/**/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:init": "tsx src/db/cli.ts init",
+    "db:migrate": "tsx src/db/cli.ts migrate",
+    "db:status": "tsx src/db/cli.ts status",
+    "db:check": "tsx src/db/cli.ts check",
+    "db:backup": "tsx src/db/cli.ts backup",
+    "db:restore": "tsx src/db/cli.ts restore"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "better-sqlite3": "13.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
-    "express": "^5.2.1",
-    "googleapis": "^166.0.0"
+    "express": "^5.2.1"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.0.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

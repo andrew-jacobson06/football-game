@@ -1,0 +1,1696 @@
+{
+  "source_filename": "Football Game DB spreadsheet (1).xlsx",
+  "source_sha256": "ea9f4319219b46711d28143c90ab27a9fd5ba80b0ade895a2aebf6516c59b704",
+  "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+  "season": {
+    "id": "97808f43-a0d5-5251-bf8d-fae1643c8258",
+    "league_id": "36c6e53f-7be2-5a94-84a8-0df871aae9fd",
+    "season_number": 1,
+    "display_name": "Season 1",
+    "display_year": 2026,
+    "status": "awards_pending",
+    "current_stage": "National Championship",
+    "current_week": null,
+    "settings_version_id": null,
+    "started_at": null,
+    "games_completed_at": null,
+    "finalized_at": null
+  },
+  "counts": {
+    "seasons": 1,
+    "team_seasons": 10,
+    "player_season_ratings": 107,
+    "player_team_assignments": 107,
+    "games": 70,
+    "game_state": 70
+  },
+  "roster_effective_from_policy": "Time of first successful import of file 08, reused on reruns. Not a historical season-start date.",
+  "rosters": [
+    {
+      "name": "Fuzz",
+      "team": "ABQ",
+      "players_sheet_team_reference": "SAN",
+      "different": true
+    },
+    {
+      "name": "Ralph",
+      "team": "ABQ",
+      "players_sheet_team_reference": "RIC",
+      "different": true
+    },
+    {
+      "name": "EMC",
+      "team": "ABQ",
+      "players_sheet_team_reference": "COL",
+      "different": true
+    },
+    {
+      "name": "Rolf",
+      "team": "ABQ",
+      "players_sheet_team_reference": "ABQ",
+      "different": false
+    },
+    {
+      "name": "PullFrog",
+      "team": "ABQ",
+      "players_sheet_team_reference": "COL",
+      "different": true
+    },
+    {
+      "name": "Dolphin",
+      "team": "ABQ",
+      "players_sheet_team_reference": "ABQ",
+      "different": false
+    },
+    {
+      "name": "Rory",
+      "team": "ABQ",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "Barnsworth",
+      "team": "ABQ",
+      "players_sheet_team_reference": "NAS",
+      "different": true
+    },
+    {
+      "name": "Mini",
+      "team": "CLT",
+      "players_sheet_team_reference": "NAS",
+      "different": true
+    },
+    {
+      "name": "Moose",
+      "team": "CLT",
+      "players_sheet_team_reference": "SAC",
+      "different": true
+    },
+    {
+      "name": "Monkey",
+      "team": "CLT",
+      "players_sheet_team_reference": "TAL",
+      "different": true
+    },
+    {
+      "name": "Luke",
+      "team": "CLT",
+      "players_sheet_team_reference": "SAN",
+      "different": true
+    },
+    {
+      "name": "Tigger",
+      "team": "CLT",
+      "players_sheet_team_reference": "CLT",
+      "different": false
+    },
+    {
+      "name": "Baby",
+      "team": "CLT",
+      "players_sheet_team_reference": "RIC",
+      "different": true
+    },
+    {
+      "name": "McJagger",
+      "team": "CLT",
+      "players_sheet_team_reference": "MIL",
+      "different": true
+    },
+    {
+      "name": "Ezekiel",
+      "team": "CLT",
+      "players_sheet_team_reference": "POR",
+      "different": true
+    },
+    {
+      "name": "David",
+      "team": "CLT",
+      "players_sheet_team_reference": "TAL",
+      "different": true
+    },
+    {
+      "name": "Jimbo",
+      "team": "COL",
+      "players_sheet_team_reference": "CLT",
+      "different": true
+    },
+    {
+      "name": "Bobo",
+      "team": "COL",
+      "players_sheet_team_reference": "SAN",
+      "different": true
+    },
+    {
+      "name": "Jumbo",
+      "team": "COL",
+      "players_sheet_team_reference": "SAC",
+      "different": true
+    },
+    {
+      "name": "Kelso",
+      "team": "COL",
+      "players_sheet_team_reference": "NAS",
+      "different": true
+    },
+    {
+      "name": "Brownie",
+      "team": "COL",
+      "players_sheet_team_reference": "RIC",
+      "different": true
+    },
+    {
+      "name": "Skunkers",
+      "team": "COL",
+      "players_sheet_team_reference": "ABQ",
+      "different": true
+    },
+    {
+      "name": "Nathan",
+      "team": "COL",
+      "players_sheet_team_reference": "SAN",
+      "different": true
+    },
+    {
+      "name": "NS Bear",
+      "team": "COL",
+      "players_sheet_team_reference": "MIL",
+      "different": true
+    },
+    {
+      "name": "Hippo",
+      "team": "COL",
+      "players_sheet_team_reference": "POR",
+      "different": true
+    },
+    {
+      "name": "Old Lion",
+      "team": "MIL",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "NL Bear",
+      "team": "MIL",
+      "players_sheet_team_reference": "COL",
+      "different": true
+    },
+    {
+      "name": "Streak",
+      "team": "MIL",
+      "players_sheet_team_reference": "SAC",
+      "different": true
+    },
+    {
+      "name": "Toad",
+      "team": "MIL",
+      "players_sheet_team_reference": "TAL",
+      "different": true
+    },
+    {
+      "name": "Oliver",
+      "team": "MIL",
+      "players_sheet_team_reference": "NAS",
+      "different": true
+    },
+    {
+      "name": "Blackie",
+      "team": "MIL",
+      "players_sheet_team_reference": "TAL",
+      "different": true
+    },
+    {
+      "name": "BMC",
+      "team": "MIL",
+      "players_sheet_team_reference": "RIC",
+      "different": true
+    },
+    {
+      "name": "Clipper",
+      "team": "MIL",
+      "players_sheet_team_reference": "SAN",
+      "different": true
+    },
+    {
+      "name": "Jack",
+      "team": "MIL",
+      "players_sheet_team_reference": "SAC",
+      "different": true
+    },
+    {
+      "name": "Big Boy",
+      "team": "NAS",
+      "players_sheet_team_reference": "POR",
+      "different": true
+    },
+    {
+      "name": "Jelly",
+      "team": "NAS",
+      "players_sheet_team_reference": "NAS",
+      "different": false
+    },
+    {
+      "name": "SEMC",
+      "team": "NAS",
+      "players_sheet_team_reference": "SAN",
+      "different": true
+    },
+    {
+      "name": "Leo",
+      "team": "NAS",
+      "players_sheet_team_reference": "POR",
+      "different": true
+    },
+    {
+      "name": "Mama",
+      "team": "NAS",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "Kiwi",
+      "team": "NAS",
+      "players_sheet_team_reference": "SAC",
+      "different": true
+    },
+    {
+      "name": "Tom",
+      "team": "NAS",
+      "players_sheet_team_reference": "MIL",
+      "different": true
+    },
+    {
+      "name": "Bulldog",
+      "team": "NAS",
+      "players_sheet_team_reference": "TAL",
+      "different": true
+    },
+    {
+      "name": "Lil Slushie",
+      "team": "NAS",
+      "players_sheet_team_reference": "CLT",
+      "different": true
+    },
+    {
+      "name": "Beaks",
+      "team": "POR",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "Frog",
+      "team": "POR",
+      "players_sheet_team_reference": "POR",
+      "different": false
+    },
+    {
+      "name": "Doodle",
+      "team": "POR",
+      "players_sheet_team_reference": "COL",
+      "different": true
+    },
+    {
+      "name": "Spider",
+      "team": "POR",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "McGilla",
+      "team": "POR",
+      "players_sheet_team_reference": "ABQ",
+      "different": true
+    },
+    {
+      "name": "Dog",
+      "team": "POR",
+      "players_sheet_team_reference": "MIL",
+      "different": true
+    },
+    {
+      "name": "Gregg",
+      "team": "POR",
+      "players_sheet_team_reference": "SAN",
+      "different": true
+    },
+    {
+      "name": "Duncan",
+      "team": "POR",
+      "players_sheet_team_reference": "TAL",
+      "different": true
+    },
+    {
+      "name": "Babe TreeClimbers",
+      "team": "POR",
+      "players_sheet_team_reference": "CLT",
+      "different": true
+    },
+    {
+      "name": "T'Challa",
+      "team": "RIC",
+      "players_sheet_team_reference": "CLT",
+      "different": true
+    },
+    {
+      "name": "RBI Bear",
+      "team": "RIC",
+      "players_sheet_team_reference": "ABQ",
+      "different": true
+    },
+    {
+      "name": "Marine Bear",
+      "team": "RIC",
+      "players_sheet_team_reference": "COL",
+      "different": true
+    },
+    {
+      "name": "John",
+      "team": "RIC",
+      "players_sheet_team_reference": "RIC",
+      "different": false
+    },
+    {
+      "name": "Joey",
+      "team": "RIC",
+      "players_sheet_team_reference": "TAL",
+      "different": true
+    },
+    {
+      "name": "Wasabi",
+      "team": "RIC",
+      "players_sheet_team_reference": "POR",
+      "different": true
+    },
+    {
+      "name": "Leon Gory",
+      "team": "RIC",
+      "players_sheet_team_reference": "NAS",
+      "different": true
+    },
+    {
+      "name": "Rusty",
+      "team": "RIC",
+      "players_sheet_team_reference": "SAC",
+      "different": true
+    },
+    {
+      "name": "Banjo",
+      "team": "RIC",
+      "players_sheet_team_reference": "COL",
+      "different": true
+    },
+    {
+      "name": "Recycle",
+      "team": "SAC",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "Junior",
+      "team": "SAC",
+      "players_sheet_team_reference": "RIC",
+      "different": true
+    },
+    {
+      "name": "King Tiger",
+      "team": "SAC",
+      "players_sheet_team_reference": "SAN",
+      "different": true
+    },
+    {
+      "name": "O'sheep",
+      "team": "SAC",
+      "players_sheet_team_reference": "RIC",
+      "different": true
+    },
+    {
+      "name": "Ming",
+      "team": "SAC",
+      "players_sheet_team_reference": "ABQ",
+      "different": true
+    },
+    {
+      "name": "Duckie",
+      "team": "SAC",
+      "players_sheet_team_reference": "TAL",
+      "different": true
+    },
+    {
+      "name": "Rat",
+      "team": "SAC",
+      "players_sheet_team_reference": "CLT",
+      "different": true
+    },
+    {
+      "name": "Pooh",
+      "team": "SAC",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "Koala",
+      "team": "SAC",
+      "players_sheet_team_reference": "NAS",
+      "different": true
+    },
+    {
+      "name": "Trunky",
+      "team": "SAN",
+      "players_sheet_team_reference": "MIL",
+      "different": true
+    },
+    {
+      "name": "Armadillo",
+      "team": "SAN",
+      "players_sheet_team_reference": "MIL",
+      "different": true
+    },
+    {
+      "name": "Buzz",
+      "team": "SAN",
+      "players_sheet_team_reference": "CLT",
+      "different": true
+    },
+    {
+      "name": "Sloth",
+      "team": "SAN",
+      "players_sheet_team_reference": "NAS",
+      "different": true
+    },
+    {
+      "name": "Groose",
+      "team": "SAN",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "Zinger",
+      "team": "SAN",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "Kenny",
+      "team": "SAN",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "Carl",
+      "team": "SAN",
+      "players_sheet_team_reference": "COL",
+      "different": true
+    },
+    {
+      "name": "Biz",
+      "team": "SAN",
+      "players_sheet_team_reference": "SAC",
+      "different": true
+    },
+    {
+      "name": "GreyBird",
+      "team": "TAL",
+      "players_sheet_team_reference": "MIL",
+      "different": true
+    },
+    {
+      "name": "Brion",
+      "team": "TAL",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "Snout",
+      "team": "TAL",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "Black Dog",
+      "team": "TAL",
+      "players_sheet_team_reference": "COL",
+      "different": true
+    },
+    {
+      "name": "Jerry",
+      "team": "TAL",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "Zippy",
+      "team": "TAL",
+      "players_sheet_team_reference": null,
+      "different": true
+    },
+    {
+      "name": "Ernie",
+      "team": "TAL",
+      "players_sheet_team_reference": "NAS",
+      "different": true
+    },
+    {
+      "name": "Tiberius",
+      "team": "TAL",
+      "players_sheet_team_reference": "POR",
+      "different": true
+    },
+    {
+      "name": "FlyingFish",
+      "team": "TAL",
+      "players_sheet_team_reference": "COL",
+      "different": true
+    },
+    {
+      "name": "Garfield",
+      "team": null,
+      "players_sheet_team_reference": "TAL",
+      "different": true
+    },
+    {
+      "name": "Monkey Boo",
+      "team": null,
+      "players_sheet_team_reference": null,
+      "different": false
+    },
+    {
+      "name": "Tweety",
+      "team": null,
+      "players_sheet_team_reference": "CLT",
+      "different": true
+    },
+    {
+      "name": "Woodstock",
+      "team": null,
+      "players_sheet_team_reference": "MIL",
+      "different": true
+    },
+    {
+      "name": "Piglet",
+      "team": null,
+      "players_sheet_team_reference": "RIC",
+      "different": true
+    },
+    {
+      "name": "Yankee",
+      "team": null,
+      "players_sheet_team_reference": "MIL",
+      "different": true
+    },
+    {
+      "name": "BlackBird",
+      "team": null,
+      "players_sheet_team_reference": "CLT",
+      "different": true
+    },
+    {
+      "name": "Wookie",
+      "team": null,
+      "players_sheet_team_reference": "RIC",
+      "different": true
+    },
+    {
+      "name": "Olaf",
+      "team": null,
+      "players_sheet_team_reference": "SAN",
+      "different": true
+    },
+    {
+      "name": "Joe the Shark",
+      "team": null,
+      "players_sheet_team_reference": "POR",
+      "different": true
+    },
+    {
+      "name": "Eyeore",
+      "team": null,
+      "players_sheet_team_reference": null,
+      "different": false
+    },
+    {
+      "name": "Otter",
+      "team": null,
+      "players_sheet_team_reference": null,
+      "different": false
+    },
+    {
+      "name": "C Monster",
+      "team": null,
+      "players_sheet_team_reference": "POR",
+      "different": true
+    },
+    {
+      "name": "Bevo",
+      "team": null,
+      "players_sheet_team_reference": "ABQ",
+      "different": true
+    },
+    {
+      "name": "Micro",
+      "team": null,
+      "players_sheet_team_reference": "SAC",
+      "different": true
+    },
+    {
+      "name": "Bunny",
+      "team": null,
+      "players_sheet_team_reference": null,
+      "different": false
+    },
+    {
+      "name": "Fire Bear",
+      "team": null,
+      "players_sheet_team_reference": "ABQ",
+      "different": true
+    },
+    {
+      "name": "Percy",
+      "team": null,
+      "players_sheet_team_reference": "SAC",
+      "different": true
+    }
+  ],
+  "games": [
+    {
+      "legacy_game_number": 1,
+      "week": 1.0,
+      "home": "POR",
+      "away": "CLT",
+      "home_score": 18,
+      "away_score": 12,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-01T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 2,
+      "week": 1.0,
+      "home": "NAS",
+      "away": "COL",
+      "home_score": 21,
+      "away_score": 6,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-02T13:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 3,
+      "week": 1.0,
+      "home": "TAL",
+      "away": "RIC",
+      "home_score": 27,
+      "away_score": 9,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-02T13:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 4,
+      "week": 1.0,
+      "home": "ABQ",
+      "away": "MIL",
+      "home_score": 3,
+      "away_score": 9,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-02T16:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 5,
+      "week": 1.0,
+      "home": "SAN",
+      "away": "SAC",
+      "home_score": 27,
+      "away_score": 15,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-02T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 6,
+      "week": 2.0,
+      "home": "CLT",
+      "away": "TAL",
+      "home_score": 20,
+      "away_score": 15,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-06T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 7,
+      "week": 2.0,
+      "home": "RIC",
+      "away": "NAS",
+      "home_score": 9,
+      "away_score": 24,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-07T12:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 8,
+      "week": 2.0,
+      "home": "SAN",
+      "away": "COL",
+      "home_score": 15,
+      "away_score": 12,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-07T12:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 9,
+      "week": 2.0,
+      "home": "MIL",
+      "away": "POR",
+      "home_score": 3,
+      "away_score": 20,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-07T15:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 10,
+      "week": 2.0,
+      "home": "SAC",
+      "away": "ABQ",
+      "home_score": 21,
+      "away_score": 6,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-07T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 11,
+      "week": 3.0,
+      "home": "RIC",
+      "away": "CLT",
+      "home_score": 21,
+      "away_score": 24,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-11T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 12,
+      "week": 3.0,
+      "home": "NAS",
+      "away": "TAL",
+      "home_score": 21,
+      "away_score": 21,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-12T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 13,
+      "week": 3.0,
+      "home": "COL",
+      "away": "SAC",
+      "home_score": 21,
+      "away_score": 45,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-13T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 14,
+      "week": 3.0,
+      "home": "POR",
+      "away": "SAN",
+      "home_score": 41,
+      "away_score": 24,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-14T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 15,
+      "week": 3.0,
+      "home": "MIL",
+      "away": "ABQ",
+      "home_score": 18,
+      "away_score": 33,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-15T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 16,
+      "week": 4,
+      "home": "COL",
+      "away": "CLT",
+      "home_score": 24,
+      "away_score": 30,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-16T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 17,
+      "week": 4,
+      "home": "ABQ",
+      "away": "NAS",
+      "home_score": 36,
+      "away_score": 36,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-17T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 18,
+      "week": 4,
+      "home": "RIC",
+      "away": "TAL",
+      "home_score": 21,
+      "away_score": 18,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-18T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 19,
+      "week": 4,
+      "home": "POR",
+      "away": "MIL",
+      "home_score": 30,
+      "away_score": 9,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-19T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 20,
+      "week": 4,
+      "home": "SAC",
+      "away": "SAN",
+      "home_score": 24,
+      "away_score": 27,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-20T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 21,
+      "week": 5,
+      "home": "CLT",
+      "away": "NAS",
+      "home_score": 12,
+      "away_score": 24,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-21T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 22,
+      "week": 5,
+      "home": "TAL",
+      "away": "COL",
+      "home_score": 24,
+      "away_score": 21,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-22T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 23,
+      "week": 5,
+      "home": "RIC",
+      "away": "POR",
+      "home_score": 21,
+      "away_score": 24,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-23T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 24,
+      "week": 5,
+      "home": "ABQ",
+      "away": "SAC",
+      "home_score": 24,
+      "away_score": 27,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-24T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 25,
+      "week": 5,
+      "home": "MIL",
+      "away": "SAN",
+      "home_score": 24,
+      "away_score": 20,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-25T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 26,
+      "week": 6,
+      "home": "SAN",
+      "away": "CLT",
+      "home_score": 12,
+      "away_score": 24,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-26T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 27,
+      "week": 6,
+      "home": "SAC",
+      "away": "NAS",
+      "home_score": 18,
+      "away_score": 24,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-27T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 28,
+      "week": 6,
+      "home": "COL",
+      "away": "MIL",
+      "home_score": 27,
+      "away_score": 21,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-28T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 29,
+      "week": 6,
+      "home": "RIC",
+      "away": "ABQ",
+      "home_score": 27,
+      "away_score": 15,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-29T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 30,
+      "week": 6,
+      "home": "POR",
+      "away": "TAL",
+      "home_score": 21,
+      "away_score": 21,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-09-30T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 31,
+      "week": 7,
+      "home": "CLT",
+      "away": "SAC",
+      "home_score": 21,
+      "away_score": 9,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-01T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 32,
+      "week": 7,
+      "home": "NAS",
+      "away": "SAN",
+      "home_score": 12,
+      "away_score": 6,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-02T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 33,
+      "week": 7,
+      "home": "COL",
+      "away": "POR",
+      "home_score": 15,
+      "away_score": 18,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-03T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 34,
+      "week": 7,
+      "home": "MIL",
+      "away": "RIC",
+      "home_score": 18,
+      "away_score": 36,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-04T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 35,
+      "week": 7,
+      "home": "TAL",
+      "away": "ABQ",
+      "home_score": 15,
+      "away_score": 15,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-05T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 36,
+      "week": 8,
+      "home": "CLT",
+      "away": "MIL",
+      "home_score": 27,
+      "away_score": 30,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-06T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 37,
+      "week": 8,
+      "home": "POR",
+      "away": "NAS",
+      "home_score": 21,
+      "away_score": 15,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-07T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 38,
+      "week": 8,
+      "home": "ABQ",
+      "away": "COL",
+      "home_score": 29,
+      "away_score": 30,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-08T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 39,
+      "week": 8,
+      "home": "SAN",
+      "away": "RIC",
+      "home_score": 12,
+      "away_score": 21,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-09T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 40,
+      "week": 8,
+      "home": "SAC",
+      "away": "TAL",
+      "home_score": 30,
+      "away_score": 33,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-10T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 41,
+      "week": 9,
+      "home": "TAL",
+      "away": "CLT",
+      "home_score": 18,
+      "away_score": 30,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-11T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 42,
+      "week": 9,
+      "home": "NAS",
+      "away": "MIL",
+      "home_score": 30,
+      "away_score": 30,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-12T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 43,
+      "week": 9,
+      "home": "COL",
+      "away": "RIC",
+      "home_score": 21,
+      "away_score": 18,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-13T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 44,
+      "week": 9,
+      "home": "SAC",
+      "away": "POR",
+      "home_score": 27,
+      "away_score": 24,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-14T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 45,
+      "week": 9,
+      "home": "SAN",
+      "away": "ABQ",
+      "home_score": 30,
+      "away_score": 24,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-15T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 46,
+      "week": 10,
+      "home": "CLT",
+      "away": "COL",
+      "home_score": 30,
+      "away_score": 15,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-16T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 47,
+      "week": 10,
+      "home": "TAL",
+      "away": "NAS",
+      "home_score": 18,
+      "away_score": 27,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-17T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 48,
+      "week": 10,
+      "home": "SAC",
+      "away": "RIC",
+      "home_score": 0,
+      "away_score": 27,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-18T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 49,
+      "week": 10,
+      "home": "ABQ",
+      "away": "POR",
+      "home_score": 33,
+      "away_score": 33,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-19T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 50,
+      "week": 10,
+      "home": "SAN",
+      "away": "MIL",
+      "home_score": 15,
+      "away_score": 24,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-20T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 51,
+      "week": 11,
+      "home": "ABQ",
+      "away": "CLT",
+      "home_score": 21,
+      "away_score": 24,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-21T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 52,
+      "week": 11,
+      "home": "NAS",
+      "away": "RIC",
+      "home_score": 27,
+      "away_score": 18,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-22T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 53,
+      "week": 11,
+      "home": "COL",
+      "away": "TAL",
+      "home_score": 21,
+      "away_score": 18,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-23T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 54,
+      "week": 11,
+      "home": "SAN",
+      "away": "POR",
+      "home_score": 24,
+      "away_score": 15,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-24T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 55,
+      "week": 11,
+      "home": "MIL",
+      "away": "SAC",
+      "home_score": 18,
+      "away_score": 30,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-25T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 56,
+      "week": 12,
+      "home": "CLT",
+      "away": "RIC",
+      "home_score": 18,
+      "away_score": 30,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-26T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 57,
+      "week": 12,
+      "home": "COL",
+      "away": "NAS",
+      "home_score": 12,
+      "away_score": 33,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-27T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 58,
+      "week": 12,
+      "home": "MIL",
+      "away": "TAL",
+      "home_score": 21,
+      "away_score": 12,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-28T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 59,
+      "week": 12,
+      "home": "POR",
+      "away": "SAC",
+      "home_score": 21,
+      "away_score": 24,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-29T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 60,
+      "week": 12,
+      "home": "ABQ",
+      "away": "SAN",
+      "home_score": 24,
+      "away_score": 27,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-30T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 61,
+      "week": 13,
+      "home": "NAS",
+      "away": "CLT",
+      "home_score": 18,
+      "away_score": 15,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-10-31T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 62,
+      "week": 13,
+      "home": "RIC",
+      "away": "COL",
+      "home_score": 21,
+      "away_score": 24,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-11-01T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 63,
+      "week": 13,
+      "home": "TAL",
+      "away": "SAN",
+      "home_score": 12,
+      "away_score": 15,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-11-02T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 64,
+      "week": 13,
+      "home": "POR",
+      "away": "ABQ",
+      "home_score": 30,
+      "away_score": 12,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-11-03T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 65,
+      "week": 13,
+      "home": "SAC",
+      "away": "MIL",
+      "home_score": 36,
+      "away_score": 21,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-11-04T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 66,
+      "week": "Divisionals",
+      "home": "SAN",
+      "away": "SAC",
+      "home_score": 21,
+      "away_score": 18,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-11-05T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 67,
+      "week": "Divisionals",
+      "home": "CLT",
+      "away": "RIC",
+      "home_score": 18,
+      "away_score": 21,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-11-06T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 68,
+      "week": "Divisional Championships",
+      "home": "POR",
+      "away": "SAN",
+      "home_score": 9,
+      "away_score": 12,
+      "period": 5,
+      "seconds_remaining": 274.0,
+      "kickoff_source_local": "2026-11-07T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 69,
+      "week": "Divisional Championships",
+      "home": "NAS",
+      "away": "RIC",
+      "home_score": 24,
+      "away_score": 18,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-11-08T19:30:00",
+      "neutral_site": false
+    },
+    {
+      "legacy_game_number": 70,
+      "week": "National Championship",
+      "home": "SAN",
+      "away": "NAS",
+      "home_score": 18,
+      "away_score": 30,
+      "period": 4,
+      "seconds_remaining": 0.0,
+      "kickoff_source_local": "2026-11-09T19:30:00",
+      "neutral_site": true
+    }
+  ],
+  "team_seasons": [
+    {
+      "id": "e75274d2-2cf4-5373-86c3-8f32c3b925d7",
+      "season_id": "97808f43-a0d5-5251-bf8d-fae1643c8258",
+      "team_id": "90da7069-5188-575b-b2b2-91babe77e14e",
+      "division_id": "3c9d9288-a1af-5594-aa63-a62d14c02937",
+      "abbreviation": "POR",
+      "location": "PORTLAND",
+      "nickname": "WILDFIRE",
+      "logo_url": "https://andrew-jacobson06.github.io/public-audio/wildfire.png",
+      "home_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_wildfire_HOME.png",
+      "away_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_wildfire_AWAY.png",
+      "home_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_wildfire_home.png",
+      "away_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_wildfire_away.png",
+      "primary_color": "rgb(251, 119, 1)",
+      "secondary_color": "rgb(250, 176, 2)",
+      "third_color": "rgb(235, 49, 6)",
+      "cap_space": 100.0
+    },
+    {
+      "id": "0092680d-cc39-5df9-817a-fea5b2d59059",
+      "season_id": "97808f43-a0d5-5251-bf8d-fae1643c8258",
+      "team_id": "38214cb1-42e3-5517-9fd9-a45b97fc962c",
+      "division_id": "e0ffe481-09a5-520c-ac27-03a608d6e570",
+      "abbreviation": "CLT",
+      "location": "CHARLOTTE",
+      "nickname": "KINGSMEN",
+      "logo_url": "https://andrew-jacobson06.github.io/public-audio/kingsmen.png",
+      "home_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_kings_HOME.png",
+      "away_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_kings_AWAY.png",
+      "home_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_kings_home.png",
+      "away_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_kings_away.png",
+      "primary_color": "rgb(72, 62, 93)",
+      "secondary_color": "rgb(202, 134, 25)",
+      "third_color": "rgb(35, 32, 59)",
+      "cap_space": 100.0
+    },
+    {
+      "id": "b51d49e3-1690-5610-890d-798babd621cd",
+      "season_id": "97808f43-a0d5-5251-bf8d-fae1643c8258",
+      "team_id": "02718a56-e7d2-553c-8cd5-441026f30ca5",
+      "division_id": "3c9d9288-a1af-5594-aa63-a62d14c02937",
+      "abbreviation": "ABQ",
+      "location": "ALBUQUERQUE",
+      "nickname": "VORTEX",
+      "logo_url": "https://andrew-jacobson06.github.io/public-audio/vortex.png",
+      "home_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_vortex_HOME.png",
+      "away_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_vortex_AWAY.png",
+      "home_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_vortex_home.png",
+      "away_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_vortex_away.png",
+      "primary_color": "rgb(7, 193, 194)",
+      "secondary_color": "rgb(82, 24, 127)",
+      "third_color": "rgb(251, 103, 2)",
+      "cap_space": 100.0
+    },
+    {
+      "id": "edcb07f6-3e55-5215-9252-60a946cda95c",
+      "season_id": "97808f43-a0d5-5251-bf8d-fae1643c8258",
+      "team_id": "e63aa8e6-f9e4-597c-bbc9-a031a0bf79b4",
+      "division_id": "3c9d9288-a1af-5594-aa63-a62d14c02937",
+      "abbreviation": "MIL",
+      "location": "MILWAUKEE",
+      "nickname": "FORGE",
+      "logo_url": "https://andrew-jacobson06.github.io/public-audio/forge.png",
+      "home_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_forge_HOME.png",
+      "away_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_forge_AWAY.png",
+      "home_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_forge_home.png",
+      "away_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_forge_away.png",
+      "primary_color": "rgb(67, 70, 114)",
+      "secondary_color": "rgb(135, 139, 159)",
+      "third_color": "rgb(255, 255, 255)",
+      "cap_space": 100.0
+    },
+    {
+      "id": "d9b86c80-f3a7-58cc-b13f-9320f1118c39",
+      "season_id": "97808f43-a0d5-5251-bf8d-fae1643c8258",
+      "team_id": "fd78f6ed-7a0d-5955-90db-dc27c3f3a9ab",
+      "division_id": "3c9d9288-a1af-5594-aa63-a62d14c02937",
+      "abbreviation": "SAN",
+      "location": "SAN ANTONIO",
+      "nickname": "OUTLAWS",
+      "logo_url": "https://andrew-jacobson06.github.io/public-audio/outlaw.png",
+      "home_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_outlaws_HOME.png",
+      "away_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_outlaws_AWAY.png",
+      "home_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_outlaws_home.png",
+      "away_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_outlaws_away.png",
+      "primary_color": "rgb(176, 31, 43)",
+      "secondary_color": "rgb(223, 175, 122)",
+      "third_color": "rgb(36, 44, 56)",
+      "cap_space": 100.0
+    },
+    {
+      "id": "46ac7f4e-31ff-5c91-a192-f542ccd7e350",
+      "season_id": "97808f43-a0d5-5251-bf8d-fae1643c8258",
+      "team_id": "f0abea88-d59e-5e39-8982-9af51677cc2c",
+      "division_id": "e0ffe481-09a5-520c-ac27-03a608d6e570",
+      "abbreviation": "NAS",
+      "location": "NASHVILLE",
+      "nickname": "SHOCK",
+      "logo_url": "https://andrew-jacobson06.github.io/public-audio/shock.png",
+      "home_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_shock_HOME.png",
+      "away_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_shock_AWAY.png",
+      "home_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_shock_home.png",
+      "away_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_shock_away.png",
+      "primary_color": "rgb(78, 15, 150)",
+      "secondary_color": "rgb(254, 227, 3)",
+      "third_color": "rgb(255, 255, 255)",
+      "cap_space": 100.0
+    },
+    {
+      "id": "4095c639-ba91-5a25-9a3f-2b26b5058aa8",
+      "season_id": "97808f43-a0d5-5251-bf8d-fae1643c8258",
+      "team_id": "c18daf46-b76a-510f-88b5-5084d325b24d",
+      "division_id": "3c9d9288-a1af-5594-aa63-a62d14c02937",
+      "abbreviation": "SAC",
+      "location": "SACRAMENTO",
+      "nickname": "GOLD RUSH",
+      "logo_url": "https://andrew-jacobson06.github.io/public-audio/rush.png",
+      "home_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_rush_HOME.png",
+      "away_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_rush_AWAY.png",
+      "home_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_rush_home.png",
+      "away_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_rush_away.png",
+      "primary_color": "rgb(0, 1, 2)",
+      "secondary_color": "rgb(161, 112, 1)",
+      "third_color": "rgb(251, 234, 131)",
+      "cap_space": 100.0
+    },
+    {
+      "id": "9fa3ca0a-d57c-5545-9b81-26050ce507b1",
+      "season_id": "97808f43-a0d5-5251-bf8d-fae1643c8258",
+      "team_id": "9fcb903b-26ca-584d-9911-161ef1c9dcc2",
+      "division_id": "e0ffe481-09a5-520c-ac27-03a608d6e570",
+      "abbreviation": "COL",
+      "location": "COLUMBUS",
+      "nickname": "TALONS",
+      "logo_url": "https://andrew-jacobson06.github.io/public-audio/talon.png",
+      "home_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_talons_HOME.png",
+      "away_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_talons_AWAY.png",
+      "home_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_talons_home.png",
+      "away_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_talons_away.png",
+      "primary_color": "rgb(228, 1, 19)",
+      "secondary_color": "rgb(180, 178, 178)",
+      "third_color": "rgb(0, 0, 0)",
+      "cap_space": 100.0
+    },
+    {
+      "id": "c9d91948-e5cf-55fd-9903-f97d3bdcbfbd",
+      "season_id": "97808f43-a0d5-5251-bf8d-fae1643c8258",
+      "team_id": "3165d4af-822f-5d44-a7d6-d9e0ac1e17c7",
+      "division_id": "e0ffe481-09a5-520c-ac27-03a608d6e570",
+      "abbreviation": "RIC",
+      "location": "RICHMOND",
+      "nickname": "REBELLION",
+      "logo_url": "https://andrew-jacobson06.github.io/public-audio/rebel.png",
+      "home_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_rebel_HOME.png",
+      "away_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_rebel_AWAY.png",
+      "home_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_rebel_home.png",
+      "away_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_rebel_away.png",
+      "primary_color": "rgb(0, 27, 75)",
+      "secondary_color": "rgb(255, 255, 255)",
+      "third_color": "rgb(223, 13, 26)",
+      "cap_space": 100.0
+    },
+    {
+      "id": "54f22c96-c4c3-5a0a-84df-80d60981bb5b",
+      "season_id": "97808f43-a0d5-5251-bf8d-fae1643c8258",
+      "team_id": "57e4291e-9ed9-52e3-b954-734860260698",
+      "division_id": "e0ffe481-09a5-520c-ac27-03a608d6e570",
+      "abbreviation": "TAL",
+      "location": "TALLAHASSEE",
+      "nickname": "MAKOS",
+      "logo_url": "https://andrew-jacobson06.github.io/public-audio/mako.png",
+      "home_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_mako_HOME.png",
+      "away_jersey_url": "https://andrew-jacobson06.github.io/public-audio/PLYJRS_mako_AWAY.png",
+      "home_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_mako_home.png",
+      "away_uniform_url": "https://andrew-jacobson06.github.io/public-audio/uni_mako_away.png",
+      "primary_color": "rgb(0, 14, 59)",
+      "secondary_color": "rgb(138, 200, 251)",
+      "third_color": "rgb(255, 255, 255)",
+      "cap_space": 100.0
+    }
+  ]
+}

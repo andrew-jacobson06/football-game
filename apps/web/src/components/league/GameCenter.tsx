@@ -1602,7 +1602,8 @@ export function GameCenter({
     setTossPhase("saving");
     setTossError("");
     try {
-      await savePlayAndGame(startedGame.GameId, {
+      const saved = await savePlayAndGame(startedGame.GameId, {
+        expectedVersion: currentGame.StateVersion,
         game: {
           gameId: startedGame.GameId,
           quarter: startedGame.Qtr,
@@ -1620,6 +1621,7 @@ export function GameCenter({
           awayTimeouts: 3,
         },
       });
+      startedGame.StateVersion = saved.version;
       setCurrentGame(startedGame);
       previousPossessionRef.current = receivingTeam;
       setIsGameFieldCollapsed(false);
@@ -1707,10 +1709,12 @@ export function GameCenter({
         .AwayTimeouts,
     };
     try {
-      await savePlayAndGame(result.game.GameId, {
+      const saved = await savePlayAndGame(result.game.GameId, {
+        expectedVersion: currentGame.StateVersion,
         play: result.play,
         game: gamePayload,
       });
+      result.game.StateVersion = saved.version;
       const animation = (result.play as Record<string, unknown>).animation;
       if (animation && typeof animation === "object") {
         const id = ++animationSequenceRef.current;

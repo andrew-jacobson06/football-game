@@ -1,88 +1,146 @@
 import { Router } from "express";
-import { parseTimeToThrowSettings } from "../services/timeToThrowSettings.js";
-import { parseRouteOpennessSettings } from "../services/routeOpennessSettings.js";
-import { parseRouteCatalogSettings } from "../services/routeCatalogSettings.js";
-import { parseQBDecisionSettings } from "../services/qbDecisionSettings.js";
-import { parseCompletionSettings } from "../services/completionSettings.js";
-import { parseInterceptionSettings } from "../services/interceptionSettings.js";
-import { parseAccuracySettings } from "../services/accuracySettings.js";
-import { parseHandsImpactSettings } from "../services/handsSettings.js";
-import { parseJumpSettings } from "../services/jumpSettings.js";
-import { parseYACSettings } from "../services/yacSettings.js";
 import {
-  appendSheetRow,
-  ensureSheetColumns,
-  batchUpdateSheetValues,
-  readSheetObjects,
-  readSheetValues,
-} from "../services/sheets.js";
-import { aggregatePlayStats, passPlayFacts } from "../services/playStats.js";
-import { playValueForHeader, sheetSafe } from "../services/playHistory.js";
+  repository,
+  readTableObjects,
+  readTableValues,
+  writeTableValues,
+} from "../db/leagueRepository.js";
 import { parsePlayerStats } from "../services/playerStats.js";
-import { overtimeWrites } from "../services/overtimePersistence.js";
 import { parsePlayoffBracket } from "../services/playoffBracket.js";
-import { AwardsError, AWARD_COUNTS, awardsPlayers, parseAwards, type AwardId } from "../services/awards.js";
-import { awardView, prepareAwardNominations, runAwardVote } from "../services/awardsWorkflow.js";
-import { aggregateTeamDefenseStats } from "../services/teamDefenseStats.js";
+import {
+  AwardsError,
+  AWARD_COUNTS,
+  awardsPlayers,
+  parseAwards,
+  type AwardId,
+} from "../services/awards.js";
+import {
+  awardView,
+  prepareAwardNominations,
+  runAwardVote,
+} from "../services/awardsWorkflow.js";
 
-import { planSeasonAdvance, seasonAdvanceWrites, SeasonProgressionError } from "../services/seasonProgression.js";
+import {
+  planSeasonAdvance,
+  seasonAdvanceWrites,
+  SeasonProgressionError,
+} from "../services/seasonProgression.js";
 import { parseSeasonWeek } from "../../../web/src/components/league/seasonWeeks.js";
-import type { LeagueGame, LeagueTeam } from "../../../web/src/components/league/types.js";
+import type {
+  LeagueGame,
+  LeagueTeam,
+} from "../../../web/src/components/league/types.js";
 
 export const gameRoutes = Router();
 
 type Row = (string | number | boolean | null | undefined)[];
-const cell = (row: Row, idx: number) => (idx >= 0 ? row[idx] ?? "" : "");
-const asNumber = (v: unknown) => Number(v) || 0;
-const normHeader = (h: unknown) => String(h || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const cell = (row: Row, idx: number) => (idx >= 0 ? (row[idx] ?? "") : "");
+const normHeader = (h: unknown) =>
+  String(h || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 
-async function sheetRows(name: string) {
-  const rows = (await readSheetValues(`${name}!A1:ZZ`)) as Row[];
-  if (!rows.length) throw new Error(`Sheet '${name}' not found or empty.`);
+async function tableRows(name: string) {
+  const rows = (await readTableValues(`${name}!A1:ZZ`)) as Row[];
+  if (!rows.length)
+    throw new Error(`SQLite table view '${name}' not found or empty.`);
   return { headers: rows[0].map(String), rows: rows.slice(1) };
 }
 async function getSeasonWeek() {
-  const { headers, rows } = await sheetRows("Season");
-  const variableIndex = headers.findIndex((header) => normHeader(header) === "variable");
-  const valueIndex = headers.findIndex((header) => normHeader(header) === "value");
-  const weekRow = rows.find((row) => normHeader(cell(row, variableIndex)) === "week");
+  const { headers, rows } = await tableRows("Season");
+  const variableIndex = headers.findIndex(
+    (header) => normHeader(header) === "variable",
+  );
+  const valueIndex = headers.findIndex(
+    (header) => normHeader(header) === "value",
+  );
+  const weekRow = rows.find(
+    (row) => normHeader(cell(row, variableIndex)) === "week",
+  );
   const week = parseSeasonWeek(cell(weekRow ?? [], valueIndex));
   if (variableIndex === -1 || valueIndex === -1 || !weekRow || week === null) {
-    throw new SeasonProgressionError("Season Week must be 1–13, Divisionals, Divisional Championships, or National Championship.");
+    throw new SeasonProgressionError(
+      "Season Week must be 1–13, Divisionals, Divisional Championships, or National Championship.",
+    );
   }
-  return { week, rowNumber: rows.indexOf(weekRow) + 2, valueColumn: valueIndex };
+  return {
+    week,
+    rowNumber: rows.indexOf(weekRow) + 2,
+    valueColumn: valueIndex,
+  };
 }
 // Serialize season advancement and awards writes within this API instance.
 let awardsBusy = false;
 async function withAwardsLock<T>(work: () => Promise<T>) {
-  if (awardsBusy) throw new AwardsError("Awards or season advancement is already running. Please wait.");
+  if (awardsBusy)
+    throw new AwardsError(
+      "Awards or season advancement is already running. Please wait.",
+    );
   awardsBusy = true;
-  try { return await work(); } finally { awardsBusy = false; }
+  try {
+    return await work();
+  } finally {
+    awardsBusy = false;
+  }
 }
 async function awardsContext() {
-  const [players, stats, teams, assignments, standings, games] = await Promise.all([
-    readSheetObjects("Players!A1:AM"), getPlayerSeasonStats(), getTeamsFromSheet(),
-    readSheetObjects("PlayerTeams!A1:B"), getStandingsFromSheet(), getGamesList(),
-  ]);
-  return { players: awardsPlayers(players, stats, teams, assignments), standings, games: (games as unknown as LeagueGame[]).filter(g => typeof parseSeasonWeek(g.Week) === "number") };
+  const [players, stats, teams, assignments, standings, games] =
+    await Promise.all([
+      readTableObjects("Players!A1:AM"),
+      getPlayerSeasonStats(),
+      getTeamsFromDatabase(),
+      readTableObjects("PlayerTeams!A1:B"),
+      getStandingsFromDatabase(),
+      getGamesList(),
+    ]);
+  return {
+    players: awardsPlayers(players, stats, teams, assignments),
+    standings,
+    games: (games as unknown as LeagueGame[]).filter(
+      (g) => typeof parseSeasonWeek(g.Week) === "number",
+    ),
+  };
 }
 async function advanceSeasonWeek() {
   const season = await getSeasonWeek();
-  const games = await getGamesList() as unknown as LeagueGame[];
-  const [standings, teams, bracket] = season.week === 13
-    ? await Promise.all([getStandingsFromSheet(), getTeamsFromSheet(), readSheetValues("'Playoff Bracket'!A1:C7")])
-    : [[], [], []];
-  const plan = planSeasonAdvance(season.week, games, standings, teams as LeagueTeam[], bracket);
+  const games = (await getGamesList()) as unknown as LeagueGame[];
+  const [standings, teams, bracket] =
+    season.week === 13
+      ? await Promise.all([
+          getStandingsFromDatabase(),
+          getTeamsFromDatabase(),
+          readTableValues("'Playoff Bracket'!A1:C7"),
+        ])
+      : [[], [], []];
+  const plan = planSeasonAdvance(
+    season.week,
+    games,
+    standings,
+    teams as LeagueTeam[],
+    bracket,
+  );
   const column = String.fromCharCode(65 + season.valueColumn);
-  const updates = seasonAdvanceWrites(plan, `Season!${column}${season.rowNumber}`);
+  const updates = seasonAdvanceWrites(
+    plan,
+    `Season!${column}${season.rowNumber}`,
+  );
   if (season.week === 13) {
-    const rows = await readSheetValues("'Awards'!A1:K");
-    const nominations = await prepareAwardNominations(rows, await awardsContext());
-    if (JSON.stringify(await readSheetValues("'Awards'!A1:K")) !== JSON.stringify(rows)) throw new AwardsError("Awards changed while nominations were being generated. No season changes were saved.");
+    const rows = await readTableValues("'Awards'!A1:K");
+    const nominations = await prepareAwardNominations(
+      rows,
+      await awardsContext(),
+    );
+    if (
+      JSON.stringify(await readTableValues("'Awards'!A1:K")) !==
+      JSON.stringify(rows)
+    )
+      throw new AwardsError(
+        "Awards changed while nominations were being generated. No season changes were saved.",
+      );
     updates.unshift(...nominations);
   }
   // Names, vote resets, playoff seeds and week advance commit together; Total formulas stay intact.
-  await batchUpdateSheetValues(updates);
+  await writeTableValues(updates);
   return plan.nextWeek;
 }
 function objectFrom(headers: string[], row: Row) {
@@ -92,27 +150,34 @@ function objectFrom(headers: string[], row: Row) {
 }
 
 async function getGamesList() {
-  const { headers, rows } = await sheetRows("Games");
+  const { headers, rows } = await tableRows("Games");
   const idx = (h: string) => headers.indexOf(h);
   return rows
     .filter((row) => cell(row, idx("Id")) !== "")
     .map((row) => ({
       ...objectFrom(headers, row),
-      // The UI historically called this value GameId. Keep the alias while also
-      // returning every Games sheet column under its workbook header.
+      // Keep legacy numeric game IDs at the API boundary.
       GameId: cell(row, idx("Id")),
     }));
 }
 async function getPublishedArticles() {
-  const { headers, rows } = await sheetRows("Articles");
+  const { headers, rows } = await tableRows("Articles");
   const articles = rows
     .map((row) => objectFrom(headers, row))
     .filter((article) => String(article.Id ?? "").trim() !== "")
-    .filter((article) => String(article.Status ?? "").trim().toLowerCase() === "published")
+    .filter(
+      (article) =>
+        String(article.Status ?? "")
+          .trim()
+          .toLowerCase() === "published",
+    )
     .sort((left, right) => {
       const leftTime = Date.parse(String(left.PublishedAt ?? ""));
       const rightTime = Date.parse(String(right.PublishedAt ?? ""));
-      return (Number.isNaN(rightTime) ? 0 : rightTime) - (Number.isNaN(leftTime) ? 0 : leftTime);
+      return (
+        (Number.isNaN(rightTime) ? 0 : rightTime) -
+        (Number.isNaN(leftTime) ? 0 : leftTime)
+      );
     })
     .map((article) => ({
       id: String(article.Id ?? ""),
@@ -124,27 +189,32 @@ async function getPublishedArticles() {
       summary: String(article.Summary ?? ""),
       articleMarkdown: String(article.Article ?? ""),
       publishedAt: String(article.PublishedAt ?? ""),
-      featured: String(article.Featured ?? "").trim().toLowerCase() === "true",
+      featured:
+        String(article.Featured ?? "")
+          .trim()
+          .toLowerCase() === "true",
       heroImageUrl: String(article.HeroImageUrl ?? ""),
     }));
 
   return articles;
 }
 async function getGameState(gameId: string) {
-  const { headers, rows } = await sheetRows("Games");
-  const row = rows.find((r) => String(r[0]) === String(gameId));
-  return row ? objectFrom(headers, row) : null;
+  const repo = repository();
+  const game = repo.game(gameId);
+  return repo.games().find((row) => row.DatabaseId === game.id) ?? null;
 }
-async function getTeamsFromSheet() {
-  const { headers, rows } = await sheetRows("Teams");
+async function getTeamsFromDatabase() {
+  const { headers, rows } = await tableRows("Teams");
   return rows
     .filter((r) => r?.[0] !== "" && r?.[0] != null)
     .map((r) => objectFrom(headers, r));
 }
-async function getStandingsFromSheet() {
-  const standings = await readSheetObjects("standings!A1:Z");
+async function getStandingsFromDatabase() {
+  const standings = await readTableObjects("standings!A1:Z");
   const standingsAbbrev = (row: Record<string, string>) =>
-    String(row.Abbrev ?? row.Team ?? row[""] ?? "").trim().toUpperCase();
+    String(row.Abbrev ?? row.Team ?? row[""] ?? "")
+      .trim()
+      .toUpperCase();
 
   // The first standings column is intentionally unlabeled in the workbook.
   // Expose it as Abbrev while otherwise returning the sheet columns verbatim.
@@ -152,11 +222,15 @@ async function getStandingsFromSheet() {
     .filter((row) => standingsAbbrev(row) !== "")
     .map((row) => ({ ...row, Abbrev: standingsAbbrev(row) }));
 }
-async function getTeamJerseys(column: "Home Jersey Crop" | "Away Jersey Crop" = "Away Jersey Crop") {
-  const teams = await getTeamsFromSheet();
+async function getTeamJerseys(
+  column: "Home Jersey Crop" | "Away Jersey Crop" = "Away Jersey Crop",
+) {
+  const teams = await getTeamsFromDatabase();
   const jerseys = new Map<string, unknown>();
   const add = (key: unknown, jersey: unknown) => {
-    const normalized = String(key ?? "").trim().toLowerCase();
+    const normalized = String(key ?? "")
+      .trim()
+      .toLowerCase();
     if (normalized && jersey) jerseys.set(normalized, jersey);
   };
   teams.forEach((team) => {
@@ -169,470 +243,467 @@ async function getTeamJerseys(column: "Home Jersey Crop" | "Away Jersey Crop" = 
 }
 async function getPlayersWithTeamJerseys() {
   const [players, jerseys] = await Promise.all([
-    readSheetObjects("Players!A1:AM"),
+    readTableObjects("Players!A1:AM"),
     getTeamJerseys("Away Jersey Crop"),
   ]);
   return players.map((player) => ({
     ...player,
-    Jersey: jerseys.get(String(player.Team ?? "").trim().toLowerCase()) ?? "",
+    Jersey:
+      jerseys.get(
+        String(player.Team ?? "")
+          .trim()
+          .toLowerCase(),
+      ) ?? "",
   }));
 }
 async function getTeamPlayers(teamAbbrev: string) {
-  const [assignments, players, playerStats, jerseys, playHistory] = await Promise.all([
-    readSheetObjects("PlayerTeams!A1:B"),
-    readSheetObjects("Players!A1:AM"),
+  const [assignments, players, playerStats, jerseys] = await Promise.all([
+    readTableObjects("PlayerTeams!A1:B"),
+    readTableObjects("Players!A1:AM"),
     getPlayerSeasonStats(),
     getTeamJerseys("Away Jersey Crop"),
-    sheetRows("PlayHistory"),
   ]);
   const teamKey = teamAbbrev.trim().toLowerCase();
   const rosterNames = new Set(
     assignments
-      .filter((row) => String(row.Team ?? "").trim().toLowerCase() === teamKey)
-      .map((row) => String(row.Name ?? "").trim().toLowerCase())
+      .filter(
+        (row) =>
+          String(row.Team ?? "")
+            .trim()
+            .toLowerCase() === teamKey,
+      )
+      .map((row) =>
+        String(row.Name ?? "")
+          .trim()
+          .toLowerCase(),
+      )
       .filter(Boolean),
   );
   const playersByName = new Map(
-    players.map((player) => [String(player.Name ?? "").trim().toLowerCase(), player]),
+    players.map((player) => [
+      String(player.Name ?? "")
+        .trim()
+        .toLowerCase(),
+      player,
+    ]),
   );
   const statsByName = new Map<string, Record<string, string>>();
   playerStats.forEach((stats) => {
-    const name = String(stats.Player ?? stats.Name ?? "").trim().toLowerCase();
+    const name = String(stats.Player ?? stats.Name ?? "")
+      .trim()
+      .toLowerCase();
     if (name && rosterNames.has(name)) statsByName.set(name, stats);
   });
-  const historyStats = aggregatePlayStats(playHistory.rows.map((row) => objectFrom(playHistory.headers, row)));
 
   return [...rosterNames].map((name) => ({
-    ...(playersByName.get(name) ?? { Name: assignments.find((row) => String(row.Name).trim().toLowerCase() === name)?.Name ?? name }),
+    ...(playersByName.get(name) ?? {
+      Name:
+        assignments.find(
+          (row) => String(row.Name).trim().toLowerCase() === name,
+        )?.Name ?? name,
+    }),
     Team: teamAbbrev,
     Jersey: jerseys.get(teamKey) ?? "",
-    Stats: { ...(statsByName.get(name) ?? {}), ...(historyStats.get(name) ?? {}) },
+    Stats: statsByName.get(name) ?? {},
   }));
 }
-function normalizeSettingLabel(label: unknown) {
-  return String(label || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-function settingRows(rows: Row[], prefix: string) {
-  const normalizedPrefix = normalizeSettingLabel(prefix);
-  return rows.filter((r) => normalizeSettingLabel(r[0]).startsWith(normalizedPrefix));
-}
-async function getFrontendSettingsFromSheet() {
-  const { headers, rows } = await sheetRows("Settings");
-  const routeCatalog = parseRouteCatalogSettings([headers, ...rows]);
-
-  console.log("Route catalog debug", {
-    runningFile: import.meta.url,
-    returnedKeys: Object.keys(routeCatalog),
-    routesByDepth: routeCatalog.routesByDepth,
-  });
-
-  let cumulative = 0;
-
-  const thresholds = rows.flatMap((r) => {
-    const [label, pctRaw, minYardsRaw, maxYardsRaw] = r;
-
-    const pct = Number(pctRaw);
-    const minYards = Number(minYardsRaw);
-    const maxYards = Number(maxYardsRaw);
-
-    if (
-      typeof label !== "string" ||
-      !label.startsWith("RunType_") ||
-      !Number.isFinite(pct) ||
-      pct <= 0
-    ) {
-      return [];
-    }
-
-    const out = {
-      label,
-      minYards,
-      maxYards,
-      rollMin: cumulative,
-      rollMax: cumulative + pct,
-    };
-
-    cumulative += pct;
-    return [out];
-  });
-  const yacBySeparation: Record<string, unknown[]> = {};
-  const yardBreaks = (rows[74] || []).slice(1).map(Number);
-  rows.forEach((row) => {
-    const label = row[0];
-    if (typeof label === "string" && label.startsWith("yacCalc_bySep_")) {
-      const sep = Number(label.split("_").pop()); let cum = 0; yacBySeparation[String(sep)] = [];
-      for (let i = 0; i < yardBreaks.length; i++) { const pct = Number(row[i + 1]); if (!pct) continue;
-        const min = i === 0 ? yardBreaks[0] : yardBreaks[i - 1] + 1; const max = yardBreaks[i];
-        yacBySeparation[String(sep)].push({ rollMin: cum, rollMax: cum + pct, minYards: min, maxYards: max }); cum += pct; }
-    }
-  });
-  const staminaDrains: Record<string, number> = {};
-  rows.forEach((r) => { if (typeof r[0] === "string" && r[0].startsWith("Stamina_Drain_") && r[2]) staminaDrains[String(r[2])] = Number(r[1]); });
-  return {
-    thresholds,
-    breakaways: settingRows(rows, "Break_").map((r) => ({ label: r[0], percentage: parseFloat(String(r[1])), minYards: parseInt(String(r[2]), 10), maxYards: parseInt(String(r[3]), 10) })),
-    accelToLBYards: settingRows(rows, "accel_to_LB_")
-      .map((r) => ({
-        label: r[0],
-        percentage: parseFloat(String(r[1])),
-        minYards: parseInt(String(r[2]), 10),
-        maxYards: parseInt(String(r[3]), 10),
-      }))
-      .filter((r) => Number.isFinite(r.percentage) && Number.isFinite(r.minYards) && Number.isFinite(r.maxYards)),
-    secondarySpeedYards: settingRows(rows, "speed_lvl2_")
-      .map((r) => ({ label: r[0], percentage: parseFloat(String(r[1])), minYards: parseInt(String(r[2]), 10), maxYards: parseInt(String(r[3]), 10) }))
-      .filter((r) => Number.isFinite(r.percentage) && Number.isFinite(r.minYards) && Number.isFinite(r.maxYards)),
-    secondaryBreakawayYards: settingRows(rows, "Breakaway_")
-      .map((r) => ({ label: r[0], percentage: parseFloat(String(r[1])), minYards: parseInt(String(r[2]), 10), maxYards: parseInt(String(r[3]), 10) }))
-      .filter((r) => Number.isFinite(r.percentage) && Number.isFinite(r.minYards) && Number.isFinite(r.maxYards)),
-    negativeYardage: settingRows(rows, "negative_")
-      .map((r) => ({ label: r[0], percentage: parseFloat(String(r[1])), minYards: parseInt(String(r[2]), 10), maxYards: parseInt(String(r[3]), 10) }))
-      .filter((r) => Number.isFinite(r.percentage) && Number.isFinite(r.minYards) && Number.isFinite(r.maxYards)),
-    staminaDrains,
-    tackleTable: settingRows(rows, "Tackle_").map((r) => ({ label: r[0], yardageCap: Number(r[1]), DL: Number(r[2]) || 0, LB: Number(r[3]) || 0, DBS: Number(r[4]) || 0 })).sort((a,b)=>a.yardageCap-b.yardageCap),
-    ...parseCompletionSettings([headers, ...rows]),
-    accuracyModifiers: parseAccuracySettings([headers, ...rows]),
-    ...parseInterceptionSettings([headers, ...rows]),
-    handsImpactByOpenness: parseHandsImpactSettings([headers, ...rows]),
-    ...parseJumpSettings([headers, ...rows]),
-    ...parseYACSettings([headers, ...rows]),
-    ...parseRouteCatalogSettings([headers, ...rows]),
-    routeInfo: settingRows(rows, "RouteInfo").map((r) => ({
-      label: String(r[0]),
-      routeType: String(r[1]),
-      shape: String(r[2] ?? ""),
-    })),
-    timeNeededToThrow: settingRows(rows, "TNTT_").map((r) => ({ label: r[0], qbRead: String(r[1]), lt10: Number(r[2]), tenTo20: Number(r[3]), twentyOnePlus: Number(r[4]) })),
-    timeToThrowRanges: parseTimeToThrowSettings([headers, ...rows]),
-    routeOpennessSettings: parseRouteOpennessSettings([headers, ...rows]),
-    qbDecisionTable: parseQBDecisionSettings([headers, ...rows]),
-    completionSeparationAdjustment: settingRows(rows, "separation_").map((r) => ({ label: r[0], separation: Number(r[1]), catchPctChange: Number(r[2]) })),
-    yacBySeparation,
-    sackLossTable: settingRows(rows, "SackLoss_").map((r) => ({ label: r[0], pct: Number(r[1]), max: Number(r[2]), min: Number(r[3]) })),
-  };
+async function getFrontendSettingsFromDatabase() {
+  return repository().frontendSettings();
 }
 
 const GAMEPLAY_SETTING_VALUES = {
   Visual_Mode: ["Dark", "Light"],
 } as const;
 
-async function getGameplaySettingsFromSheet() {
-  const { headers, rows } = await sheetRows("GamePlaySettings");
-  const variableColumn = headers.findIndex((header) => normHeader(header) === "variable");
-  const valueColumn = headers.findIndex((header) => normHeader(header) === "value");
+async function getGameplaySettingsFromDatabase() {
+  const { headers, rows } = await tableRows("GamePlaySettings");
+  const variableColumn = headers.findIndex(
+    (header) => normHeader(header) === "variable",
+  );
+  const valueColumn = headers.findIndex(
+    (header) => normHeader(header) === "value",
+  );
   if (variableColumn === -1 || valueColumn === -1) {
     throw new Error("GamePlaySettings must have Variable and Value columns.");
   }
 
   return Object.fromEntries(
     rows
-      .map((row) => [String(cell(row, variableColumn)).trim(), String(cell(row, valueColumn)).trim()])
+      .map((row) => [
+        String(cell(row, variableColumn)).trim(),
+        String(cell(row, valueColumn)).trim(),
+      ])
       .filter(([variable]) => variable),
   );
 }
 
 async function updateGameplaySetting(variable: string, value: string) {
-  const allowedValues = GAMEPLAY_SETTING_VALUES[variable as keyof typeof GAMEPLAY_SETTING_VALUES];
+  const allowedValues =
+    GAMEPLAY_SETTING_VALUES[variable as keyof typeof GAMEPLAY_SETTING_VALUES];
   if (!allowedValues || !(allowedValues as readonly string[]).includes(value)) {
     throw new Error(`Invalid GamePlaySettings value for '${variable}'.`);
   }
 
-  const { headers, rows } = await sheetRows("GamePlaySettings");
-  const variableColumn = headers.findIndex((header) => normHeader(header) === "variable");
-  const valueColumn = headers.findIndex((header) => normHeader(header) === "value");
-  const rowIndex = rows.findIndex((row) => String(cell(row, variableColumn)).trim() === variable);
+  const { headers, rows } = await tableRows("GamePlaySettings");
+  const variableColumn = headers.findIndex(
+    (header) => normHeader(header) === "variable",
+  );
+  const valueColumn = headers.findIndex(
+    (header) => normHeader(header) === "value",
+  );
+  const rowIndex = rows.findIndex(
+    (row) => String(cell(row, variableColumn)).trim() === variable,
+  );
   if (variableColumn === -1 || valueColumn === -1 || rowIndex === -1) {
     throw new Error(`GamePlaySettings variable '${variable}' was not found.`);
   }
 
-  await batchUpdateSheetValues([{
-    range: `GamePlaySettings!${columnToLetters(valueColumn + 1)}${rowIndex + 2}`,
-    values: [[value]],
-  }]);
+  await writeTableValues([
+    {
+      range: `GamePlaySettings!${columnToLetters(valueColumn + 1)}${rowIndex + 2}`,
+      values: [[value]],
+    },
+  ]);
 }
-async function getPlayerTraitsFromSheet() {
+async function getPlayerTraitsFromDatabase() {
   // Player-trait consumers outside a live matchup (including stats views) use
   // the away crop. GameCenter replaces this with the matchup-specific crop.
   const jerseys = await getTeamJerseys("Away Jersey Crop");
-  const { headers, rows } = await sheetRows("Players"); const headerIndex: Record<string, number> = {};
-  headers.forEach((h, i) => { const k = normHeader(h); if (k) headerIndex[k] = i; });
-  const val = (row: Row, ...hs: string[]) => { for (const h of hs) { const i = headerIndex[normHeader(h)]; if (i !== undefined) return row[i] ?? ""; } return ""; };
-  return rows.filter((r) => val(r, "Team") !== "" && val(r, "Team") != null).map((r) => { const stamina = val(r, "Stamina"); return {
-    team: val(r,"Team"), name: val(r,"Name"), position: val(r,"Pos"), offStars: val(r,"Off Stars"), defStars: val(r,"Def Stars"), size: val(r,"Size"), strength: val(r,"Strength"), speed: val(r,"Speed"), stamina, poise: val(r,"Poise"), accuracy: val(r,"Accuracy"), armStrength: val(r,"Arm-Strength","Arm Strength"), readDefense: val(r,"Read Defense"), juke: val(r,"Juke"), vision: val(r,"Vision"), acceleration: val(r,"Acceleration"), routeRunning: val(r,"Route Running"), jump: val(r,"Jump"), hands: val(r,"Hands"), ballsecurity: val(r,"Ball Security"), qbFavorite: val(r,"QB Favorite"), runBlocking: val(r,"Run Blocking"), passProtect: val(r,"Pass Protect"), runStop: val(r,"RunStop","Run Stop"), tackling: val(r,"Tackling"), runDef: val(r,"Run Def"), tackleChance: val(r,"Tackle Chance"), strip: val(r,"Strip"), passRush: val(r,"PassRush","Pass Rush"), sackChance: val(r,"Sack Chance"), ballHawk: val(r,"Ball Hawk"), readQB: val(r,"Read QB"), coverage: val(r,"Coverage"), defPos: val(r,"DefPos","Def Pos"), image: val(r,"Image","Player Image from AI"), translateX: val(r,"translateX"), translateY: val(r,"translateY"), scale: val(r,"scale"), jersey: jerseys.get(String(val(r,"Team")).trim().toLowerCase()) ?? "", carries: 0, fatigue: stamina } });
+  const { headers, rows } = await tableRows("Players");
+  const headerIndex: Record<string, number> = {};
+  headers.forEach((h, i) => {
+    const k = normHeader(h);
+    if (k) headerIndex[k] = i;
+  });
+  const val = (row: Row, ...hs: string[]) => {
+    for (const h of hs) {
+      const i = headerIndex[normHeader(h)];
+      if (i !== undefined) return row[i] ?? "";
+    }
+    return "";
+  };
+  return rows
+    .filter((r) => val(r, "Team") !== "" && val(r, "Team") != null)
+    .map((r) => {
+      const stamina = val(r, "Stamina");
+      return {
+        team: val(r, "Team"),
+        name: val(r, "Name"),
+        position: val(r, "Pos"),
+        offStars: val(r, "Off Stars"),
+        defStars: val(r, "Def Stars"),
+        size: val(r, "Size"),
+        strength: val(r, "Strength"),
+        speed: val(r, "Speed"),
+        stamina,
+        poise: val(r, "Poise"),
+        accuracy: val(r, "Accuracy"),
+        armStrength: val(r, "Arm-Strength", "Arm Strength"),
+        readDefense: val(r, "Read Defense"),
+        juke: val(r, "Juke"),
+        vision: val(r, "Vision"),
+        acceleration: val(r, "Acceleration"),
+        routeRunning: val(r, "Route Running"),
+        jump: val(r, "Jump"),
+        hands: val(r, "Hands"),
+        ballsecurity: val(r, "Ball Security"),
+        qbFavorite: val(r, "QB Favorite"),
+        runBlocking: val(r, "Run Blocking"),
+        passProtect: val(r, "Pass Protect"),
+        runStop: val(r, "RunStop", "Run Stop"),
+        tackling: val(r, "Tackling"),
+        runDef: val(r, "Run Def"),
+        tackleChance: val(r, "Tackle Chance"),
+        strip: val(r, "Strip"),
+        passRush: val(r, "PassRush", "Pass Rush"),
+        sackChance: val(r, "Sack Chance"),
+        ballHawk: val(r, "Ball Hawk"),
+        readQB: val(r, "Read QB"),
+        coverage: val(r, "Coverage"),
+        defPos: val(r, "DefPos", "Def Pos"),
+        image: val(r, "Image", "Player Image from AI"),
+        translateX: val(r, "translateX"),
+        translateY: val(r, "translateY"),
+        scale: val(r, "scale"),
+        jersey: jerseys.get(String(val(r, "Team")).trim().toLowerCase()) ?? "",
+        carries: 0,
+        fatigue: stamina,
+      };
+    });
 }
 async function getPlayHistory(gameId: string) {
-  const { headers, rows } = await sheetRows("PlayHistory");
-  const result = rows.filter((r) => String(r[0]) === String(gameId)).map((r) => {
+  const plays = repository().history(gameId);
+  const headers = Object.keys(plays[0] ?? {}),
+    rows = plays.map((play) =>
+      headers.map((h) => (play as Record<string, unknown>)[h] as Row[number]),
+    );
+  const result = rows.map((r) => {
     const obj = objectFrom(headers, r) as Record<string, unknown>;
-    if (obj["Defense Result"] !== undefined) { if (obj.DefenseResult === undefined) obj.DefenseResult = obj["Defense Result"]; delete obj["Defense Result"]; }
-    if (obj["Turnover?"] !== undefined) { if (obj.Turnover === undefined) obj.Turnover = obj["Turnover?"]; delete obj["Turnover?"]; }
-    if (obj.Description !== undefined) { obj.ResultCategory = obj.Result; if (obj.Description !== "") obj.Result = obj.Description; }
-    if (obj.newballon !== undefined && obj.NewBallOn === undefined) { obj.NewBallOn = obj.newballon; delete obj.newballon; }
-    if (obj.quarter !== undefined && obj.Qtr === undefined) { obj.Qtr = obj.quarter; delete obj.quarter; }
-    if (obj.homescore !== undefined && obj.HomeScore === undefined) { obj.HomeScore = obj.homescore; delete obj.homescore; }
-    if (obj.awayscore !== undefined && obj.AwayScore === undefined) { obj.AwayScore = obj.awayscore; delete obj.awayscore; }
+    if (obj["Defense Result"] !== undefined) {
+      if (obj.DefenseResult === undefined)
+        obj.DefenseResult = obj["Defense Result"];
+      delete obj["Defense Result"];
+    }
+    if (obj["Turnover?"] !== undefined) {
+      if (obj.Turnover === undefined) obj.Turnover = obj["Turnover?"];
+      delete obj["Turnover?"];
+    }
+    if (obj.Description !== undefined) {
+      obj.ResultCategory = obj.Result;
+      if (obj.Description !== "") obj.Result = obj.Description;
+    }
+    if (obj.newballon !== undefined && obj.NewBallOn === undefined) {
+      obj.NewBallOn = obj.newballon;
+      delete obj.newballon;
+    }
+    if (obj.quarter !== undefined && obj.Qtr === undefined) {
+      obj.Qtr = obj.quarter;
+      delete obj.quarter;
+    }
+    if (obj.homescore !== undefined && obj.HomeScore === undefined) {
+      obj.HomeScore = obj.homescore;
+      delete obj.homescore;
+    }
+    if (obj.awayscore !== undefined && obj.AwayScore === undefined) {
+      obj.AwayScore = obj.awayscore;
+      delete obj.awayscore;
+    }
     return obj;
   });
-  const parseTime = (t: unknown) => typeof t === "number" ? t : String(t ?? "0").includes(":") ? String(t).split(":").map(Number).reduce((m,s)=>m*60+s) : Number(t) || 0;
-  result.sort((a,b) => (Number(a.QTR ?? a.Qtr ?? 0) - Number(b.QTR ?? b.Qtr ?? 0)) || (parseTime(b.Time) - parseTime(a.Time)));
+  const parseTime = (t: unknown) =>
+    typeof t === "number"
+      ? t
+      : String(t ?? "0").includes(":")
+        ? String(t)
+            .split(":")
+            .map(Number)
+            .reduce((m, s) => m * 60 + s)
+        : Number(t) || 0;
+  result.sort(
+    (a, b) =>
+      Number(a.QTR ?? a.Qtr ?? 0) - Number(b.QTR ?? b.Qtr ?? 0) ||
+      parseTime(b.Time) - parseTime(a.Time),
+  );
   return result;
 }
-function gameStateUpdates(headers: string[], rowIndex: number, game: Record<string, unknown>) {
-  const updates: Record<string, unknown> = { Qtr: game.quarter, Time: game.time, Down: game.down, Distance: game.distance, BallOn: game.ballOn, HomeScore: game.homeScore, AwayScore: game.awayScore, DriveStart: game.driveStart, Previous: game.previous, Possession: game.possession, HomeTimeouts: game.homeTimeouts, AwayTimeouts: game.awayTimeouts };
-  return Object.entries(updates).flatMap(([key, value]) => {
-    const col = headers.indexOf(key);
-    return value === undefined || col === -1 ? [] : [{
-      range: `Games!${columnToLetters(col + 1)}${rowIndex + 2}`,
-      values: [[value]],
-    }];
-  });
-}
-
 function columnToLetters(column: number) {
-  let value = column;
   let letters = "";
-  while (value > 0) {
-    const remainder = (value - 1) % 26;
+  while (column > 0) {
+    const remainder = (column - 1) % 26;
     letters = String.fromCharCode(65 + remainder) + letters;
-    value = Math.floor((value - remainder) / 26);
+    column = Math.floor((column - 1) / 26);
   }
   return letters;
 }
-
-function isRetryableSheetError(error: unknown) {
-  const status = Number((error as { response?: { status?: unknown }; code?: unknown })?.response?.status
-    ?? (error as { code?: unknown })?.code);
-  return status === 429 || status >= 500;
-}
-
-async function savePlayAndGame(data: Record<string, unknown>, gameId: string) {
-  const play = data.play as Record<string, unknown> | undefined;
-  const suppliedGame = data.game as Record<string, unknown> | undefined;
-  if (!play && !suppliedGame) return;
-
-  const [playSheet, gamesSheet] = await Promise.all([
-    play ? sheetRows("PlayHistory") : undefined,
-    suppliedGame ? sheetRows("Games") : undefined,
-  ]);
-  const writes: { range: string; values: unknown[][] }[] = [];
-
-  if (play && playSheet) {
-    const playIdColumn = playSheet.headers.findIndex((header) => normHeader(header) === "playid");
-    const playId = String(play.playid || play.PlayId || "");
-    const alreadySaved = Boolean(playId) && playSheet.rows.some((row) => String(row[playIdColumn] ?? "") === playId);
-    if (!alreadySaved) {
-      const lastColumn = columnToLetters(playSheet.headers.length);
-      writes.push({
-        range: `PlayHistory!A${playSheet.rows.length + 2}:${lastColumn}${playSheet.rows.length + 2}`,
-        values: [playSheet.headers.map((header) => sheetSafe(playValueForHeader(play, header)))],
-      });
-    }
-  }
-
-  if (suppliedGame && gamesSheet) {
-    const game: Record<string, unknown> = { ...suppliedGame, gameId: suppliedGame.gameId ?? gameId };
-    const rowIndex = gamesSheet.rows.findIndex((row) => String(row[0]) === String(game.gameId));
-    if (rowIndex === -1) throw new Error(`No row found for gameId: ${game.gameId}`);
-    writes.push(...gameStateUpdates(gamesSheet.headers, rowIndex, game));
-    if (game.overtime !== undefined) {
-      const updates = overtimeWrites(gamesSheet.headers, rowIndex, game.overtime);
-      if (!gamesSheet.headers.some(h => h.trim().toLowerCase() === "overtime")) await ensureSheetColumns("Games", gamesSheet.headers.length + 1);
-      writes.push(...updates);
-    }
-  }
-
-  // One Sheets API write request commits the play row and game snapshot together.
-  await batchUpdateSheetValues(writes);
-}
-
-async function savePlayAndGameWithRetry(data: Record<string, unknown>, gameId: string) {
-  const maxAttempts = 3;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      await savePlayAndGame(data, gameId);
-      return;
-    } catch (error) {
-      if (attempt === maxAttempts || !isRetryableSheetError(error)) throw error;
-      const backoffMs = 1000 * 2 ** (attempt - 1) + Math.floor(Math.random() * 1000);
-      await new Promise((resolve) => setTimeout(resolve, backoffMs));
-    }
-  }
-}
-
-gameRoutes.get("/health", (_req, res) => res.json({ ok: true, app: "football-game-api", message: "API is running" }));
-gameRoutes.get("/players", async (_req, res, next) => { try { res.json({ players: await getPlayersWithTeamJerseys() }); } catch (e) { next(e); } });
-async function getPlayerSeasonStats() {
-  return parsePlayerStats(await readSheetValues("PlayerStats!A1:ZZ"));
-}
-gameRoutes.get("/player-stats", async (_req, res, next) => { try { res.json({ playerStats: await getPlayerSeasonStats() }); } catch (e) { next(e); } });
-gameRoutes.get("/players/:playerName/games", async (req, res, next) => {
+gameRoutes.get("/health", (_req, res) =>
+  res.json({
+    ok: true,
+    storage: "sqlite",
+    app: "football-game-api",
+    message: "SQLite API is running",
+  }),
+);
+gameRoutes.get("/players", async (_req, res, next) => {
   try {
-    const [gamesSheet, historySheet, playerTeams] = await Promise.all([
-      sheetRows("Games"),
-      sheetRows("PlayHistory"),
-      readSheetObjects("PlayerTeams!A1:B"),
-    ]);
-    const playerName = req.params.playerName.trim().toLowerCase();
-    const assignedTeam = String(playerTeams.find((assignment) =>
-      String(assignment.Name ?? "").trim().toLowerCase() === playerName,
-    )?.Team ?? "").trim();
-    // Prefer the current roster context supplied by the profile's entry point.
-    const requestedTeam = String(req.query.team ?? "").trim();
-    const currentTeam = requestedTeam || assignedTeam;
-    const index = (headers: string[], ...names: string[]) =>
-      headers.findIndex((header) => names.includes(normHeader(header)));
-    const playGame = index(historySheet.headers, "gameid");
-    const playPlayer = index(historySheet.headers, "player", "rusher");
-    const playReceiver = index(historySheet.headers, "receiver");
-    const playType = index(historySheet.headers, "playtype");
-    const playYards = index(historySheet.headers, "yards", "yardsgained");
-    const playResult = index(historySheet.headers, "result", "description");
-    const playDefenseResult = index(historySheet.headers, "defenseresult");
-    const playTackler = index(historySheet.headers, "tackler");
-    const playRecoveredBy = index(historySheet.headers, "recoveredby");
-    const playLineMatchups = index(historySheet.headers, "linematchups");
-    const lineMatchups = (row: Row) => {
-      try {
-        const parsed: unknown = JSON.parse(String(cell(row, playLineMatchups) || "[]"));
-        return Array.isArray(parsed) ? parsed as Array<Record<string, unknown>> : [];
-      } catch {
-        return [];
-      }
-    };
-    const isPlayer = (value: unknown) => String(value).trim().toLowerCase() === playerName;
-    const playerPlays = historySheet.rows.filter((row) =>
-      [cell(row, playPlayer), cell(row, playReceiver), cell(row, playTackler), cell(row, playRecoveredBy)].some(isPlayer) ||
-      lineMatchups(row).some((matchup) => isPlayer(matchup.defensePlayer)),
-    );
-    const byGame = new Map<string, Row[]>();
-    playerPlays.forEach((row) => {
-      const id = String(cell(row, playGame));
-      byGame.set(id, [...(byGame.get(id) ?? []), row]);
-    });
-    const gameId = index(gamesSheet.headers, "id", "gameid");
-    const home = index(gamesSheet.headers, "home");
-    const away = index(gamesSheet.headers, "away");
-    const homeScore = index(gamesSheet.headers, "homescore");
-    const awayScore = index(gamesSheet.headers, "awayscore");
-    const quarter = index(gamesSheet.headers, "qtr", "quarter");
-    const date = index(gamesSheet.headers, "date", "gamedate");
-    const possession = index(historySheet.headers, "possession", "team");
-    const games = gamesSheet.rows.flatMap((game) => {
-      const id = String(cell(game, gameId));
-      const plays = byGame.get(id) ?? [];
-      if (String(cell(game, quarter)).trim().toUpperCase() !== "FINAL") return [];
-      const homeTeam = String(cell(game, home));
-      const awayTeam = String(cell(game, away));
-      const normalizedCurrentTeam = currentTeam.toLowerCase();
-      const belongsToCurrentTeam = normalizedCurrentTeam && [homeTeam, awayTeam]
-        .some((candidate) => candidate.trim().toLowerCase() === normalizedCurrentTeam);
-      // A player's current schedule—not their first recorded snap—determines
-      // their game log. Keep play-based behavior only for legacy assignments.
-      if (currentTeam ? !belongsToCurrentTeam : !plays.length) return [];
-      const rushingPlays = plays.filter((play) =>
-        String(cell(play, playPlayer)).trim().toLowerCase() === playerName &&
-        (!cell(play, playType) || /run|rush/i.test(String(cell(play, playType)))),
-      );
-      // Possession belongs to the offense on a play, so it cannot identify the
-      // player's team when this log contains one of their defensive plays.
-      // Prefer the roster assignment and retain possession as a fallback for
-      // legacy players without a PlayerTeams row.
-      const possessionTeam = plays[0] ? String(cell(plays[0], possession)).trim() : "";
-      const playerTeam = currentTeam || possessionTeam;
-      const normalizedPlayerTeam = playerTeam.toLowerCase();
-      const isHome = normalizedPlayerTeam === "home" || normalizedPlayerTeam === homeTeam.trim().toLowerCase();
-      const teamScore = asNumber(cell(game, isHome ? homeScore : awayScore));
-      const opponentScore = asNumber(cell(game, isHome ? awayScore : homeScore));
-      const yards = rushingPlays.map((play) => asNumber(cell(play, playYards)));
-      const touchdowns = rushingPlays.filter((play) => /touchdown|\btd\b/i.test(String(cell(play, playResult)))).length;
-      const isNamed = (play: Row, column: number) => String(cell(play, column)).trim().toLowerCase() === playerName;
-      const isPass = (play: Row) => /pass/i.test(String(cell(play, playType)));
-      const result = (play: Row) => String(cell(play, playResult));
-      const passingPlays = plays.filter((play) => isNamed(play, playPlayer) && isPass(play));
-      const facts = (play: Row) => passPlayFacts(objectFrom(historySheet.headers, play));
-      const passingAttempts = passingPlays.filter((play) => !facts(play).isSack);
-      const completions = passingAttempts.filter((play) => facts(play).isComplete);
-      const receivingPlays = plays.filter((play) => isNamed(play, playReceiver) && isPass(play));
-      const receptions = receivingPlays.filter((play) => facts(play).isComplete);
-      const fumblePlays = plays.filter((play) => (isNamed(play, playPlayer) || isNamed(play, playReceiver)) && /fumble/i.test(result(play)));
-      const defensiveResult = (play: Row) => String(cell(play, playDefenseResult) || cell(play, playResult));
-      const tackles = plays.filter((play) => isNamed(play, playTackler) && !/deflection|interception/i.test(defensiveResult(play)));
-      const matchupRows = plays.flatMap((play) => lineMatchups(play)).filter((matchup) => isPlayer(matchup.defensePlayer));
-      const interceptions = plays.filter((play) => isNamed(play, playRecoveredBy) && /interception/i.test(defensiveResult(play)));
-      const values = (rows: Row[]) => rows.map((play) => asNumber(cell(play, playYards)));
-      const passYards = values(completions);
-      const receivingYards = values(receptions);
-      return [{ gameId: id, opponent: isHome ? awayTeam : homeTeam, location: isHome ? "vs" : "@",
-        result: `${teamScore > opponentScore ? "W" : teamScore < opponentScore ? "L" : "T"} ${teamScore}-${opponentScore}`,
-        carries: rushingPlays.length, yards: yards.reduce((sum, value) => sum + value, 0), touchdowns,
-        long: Math.max(0, ...yards), date: String(cell(game, date)),
-        passing: { completions: completions.length, attempts: passingAttempts.length, yards: passYards.reduce((sum, value) => sum + value, 0), touchdowns: completions.filter((play) => /touchdown|\btd\b/i.test(result(play))).length, interceptions: passingAttempts.filter((play) => /interception/i.test(result(play))).length, long: Math.max(0, ...passYards), sacks: passingPlays.filter((play) => facts(play).isSack).length },
-        rushing: { carries: rushingPlays.length, yards: yards.reduce((sum, value) => sum + value, 0), touchdowns, long: Math.max(0, ...yards) },
-        receiving: { receptions: receptions.length, targets: receivingPlays.length, yards: receivingYards.reduce((sum, value) => sum + value, 0), touchdowns: receptions.filter((play) => /touchdown|\btd\b/i.test(result(play))).length, long: Math.max(0, ...receivingYards), firstDowns: 0 },
-        fumbles: { total: fumblePlays.length, lost: fumblePlays.filter((play) => /lost|turnover/i.test(result(play))).length },
-        defense: { dlWins: matchupRows.filter((matchup) => matchup.winner === "DL").length, dlAttempts: matchupRows.length, tackles: tackles.length, tacklesForLoss: tackles.filter((play) => /TFL/i.test(defensiveResult(play))).length, sacks: tackles.filter((play) => /sack/i.test(defensiveResult(play))).length, forcedFumbles: tackles.filter((play) => /fumble/i.test(defensiveResult(play))).length, interceptions: interceptions.length },
-      }];
-    });
-    res.json({ games });
-  } catch (e) { next(e); }
+    res.json({ players: await getPlayersWithTeamJerseys() });
+  } catch (e) {
+    next(e);
+  }
 });
-gameRoutes.get("/player-traits", async (_req, res, next) => { try { res.json({ players: await getPlayerTraitsFromSheet() }); } catch (e) { next(e); } });
-gameRoutes.get("/teams", async (_req, res, next) => { try { res.json({ teams: await getTeamsFromSheet() }); } catch (e) { next(e); } });
-gameRoutes.get("/team-defense-stats", async (_req, res, next) => {
+async function getPlayerSeasonStats() {
+  return parsePlayerStats(await readTableValues("PlayerStats!A1:ZZ"));
+}
+gameRoutes.get("/player-stats", async (_req, res, next) => {
   try {
-    const [teams, games, history] = await Promise.all([getTeamsFromSheet(), getGamesList(), sheetRows("PlayHistory")]);
-    res.json({ teamDefenseStats: aggregateTeamDefenseStats(teams, games, history.rows.map((row) => objectFrom(history.headers, row))) });
-  } catch (e) { next(e); }
+    res.json({ playerStats: await getPlayerSeasonStats() });
+  } catch (e) {
+    next(e);
+  }
+});
+gameRoutes.get("/players/:playerName/games", (req, res, next) => {
+  try {
+    res.json({
+      games: repository().playerGames(
+        req.params.playerName,
+        String(req.query.team ?? ""),
+      ),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+gameRoutes.get("/player-traits", async (_req, res, next) => {
+  try {
+    res.json({ players: await getPlayerTraitsFromDatabase() });
+  } catch (e) {
+    next(e);
+  }
+});
+gameRoutes.get("/teams", async (_req, res, next) => {
+  try {
+    res.json({ teams: await getTeamsFromDatabase() });
+  } catch (e) {
+    next(e);
+  }
+});
+gameRoutes.get("/team-defense-stats", (_req, res, next) => {
+  try {
+    res.json({ teamDefenseStats: repository().defenseStats() });
+  } catch (e) {
+    next(e);
+  }
 });
 gameRoutes.get("/awards", async (_req, res, next) => {
   try {
-    if (typeof (await getSeasonWeek()).week === "number") { res.json({ nominations: {}, firstTeams: [] }); return; }
-    const [rows, context] = await Promise.all([readSheetValues("'Awards'!A1:K"), awardsContext()]);
+    if (typeof (await getSeasonWeek()).week === "number") {
+      res.json({ nominations: {}, firstTeams: [] });
+      return;
+    }
+    const [rows, context] = await Promise.all([
+      readTableValues("'Awards'!A1:K"),
+      awardsContext(),
+    ]);
     res.json(awardView(parseAwards(rows), context.players));
-  } catch (e) { if (e instanceof AwardsError) res.status(400).json({ error:e.message }); else next(e); }
+  } catch (e) {
+    if (e instanceof AwardsError) res.status(400).json({ error: e.message });
+    else next(e);
+  }
 });
 gameRoutes.post("/awards/:award/vote", async (req, res, next) => {
   try {
     const award = String(req.params.award).toUpperCase();
-    if (!Object.hasOwn(AWARD_COUNTS, award)) throw new AwardsError("Unknown award.");
+    if (!Object.hasOwn(AWARD_COUNTS, award))
+      throw new AwardsError("Unknown award.");
     const result = await withAwardsLock(async () => {
-      if (typeof (await getSeasonWeek()).week === "number") throw new AwardsError("Awards voting opens after the regular season.");
-      return runAwardVote(award as AwardId, { read:()=>readSheetValues("'Awards'!A1:K"), write:batchUpdateSheetValues, context:awardsContext });
+      if (typeof (await getSeasonWeek()).week === "number")
+        throw new AwardsError("Awards voting opens after the regular season.");
+      return runAwardVote(award as AwardId, {
+        read: () => readTableValues("'Awards'!A1:K"),
+        write: writeTableValues,
+        context: awardsContext,
+        saveBallots: async (a, b, o) => repository().saveBallots(a, b, o),
+      });
     });
     res.json(result);
-  } catch (e) { if (e instanceof AwardsError) res.status(400).json({ error:e.message }); else next(e); }
+  } catch (e) {
+    if (e instanceof AwardsError) res.status(400).json({ error: e.message });
+    else next(e);
+  }
 });
 gameRoutes.get("/playoff-bracket", async (_req, res, next) => {
-  try { res.json({ seeds: parsePlayoffBracket(await readSheetValues("'Playoff Bracket'!A1:C7")) }); } catch (e) { next(e); }
+  try {
+    res.json({
+      seeds: parsePlayoffBracket(
+        await readTableValues("'Playoff Bracket'!A1:C7"),
+      ),
+    });
+  } catch (e) {
+    next(e);
+  }
 });
-gameRoutes.get("/standings", async (_req, res, next) => { try { res.json({ standings: await getStandingsFromSheet() }); } catch (e) { next(e); } });
-gameRoutes.get("/teams/:team/players", async (req, res, next) => { try { res.json({ players: await getTeamPlayers(req.params.team) }); } catch (e) { next(e); } });
-gameRoutes.get("/games", async (_req, res, next) => { try { res.json({ games: await getGamesList() }); } catch (e) { next(e); } });
-gameRoutes.get("/articles", async (_req, res, next) => { try { res.json({ articles: await getPublishedArticles() }); } catch (e) { next(e); } });
-gameRoutes.get("/season", async (_req, res, next) => { try { res.json({ week: (await getSeasonWeek()).week }); } catch (e) { next(e); } });
-gameRoutes.post("/season/advance", async (_req, res, next) => { try { res.json({ ok: true, week: await withAwardsLock(advanceSeasonWeek) }); } catch (e) { if (e instanceof SeasonProgressionError || e instanceof AwardsError) res.status(400).json({ error: e.message }); else next(e); } });
-gameRoutes.get("/games/:gameId/state", async (req, res, next) => { try { res.json({ gameState: await getGameState(req.params.gameId) }); } catch (e) { next(e); } });
-gameRoutes.get("/games/:gameId/play-history", async (req, res, next) => { try { res.json({ plays: await getPlayHistory(req.params.gameId) }); } catch (e) { next(e); } });
-gameRoutes.get("/frontend-settings", async (_req, res, next) => { try { res.json(await getFrontendSettingsFromSheet()); } catch (e) { next(e); } });
-gameRoutes.get("/gameplay-settings", async (_req, res, next) => { try { res.json({ settings: await getGameplaySettingsFromSheet() }); } catch (e) { next(e); } });
+gameRoutes.get("/standings", async (_req, res, next) => {
+  try {
+    res.json({ standings: await getStandingsFromDatabase() });
+  } catch (e) {
+    next(e);
+  }
+});
+gameRoutes.get("/teams/:team/players", async (req, res, next) => {
+  try {
+    res.json({ players: await getTeamPlayers(req.params.team) });
+  } catch (e) {
+    next(e);
+  }
+});
+gameRoutes.get("/games", async (_req, res, next) => {
+  try {
+    res.json({ games: await getGamesList() });
+  } catch (e) {
+    next(e);
+  }
+});
+gameRoutes.get("/articles", async (_req, res, next) => {
+  try {
+    res.json({ articles: await getPublishedArticles() });
+  } catch (e) {
+    next(e);
+  }
+});
+gameRoutes.get("/season", async (_req, res, next) => {
+  try {
+    res.json({ week: (await getSeasonWeek()).week });
+  } catch (e) {
+    next(e);
+  }
+});
+gameRoutes.post("/season/advance", async (_req, res, next) => {
+  try {
+    res.json({ ok: true, week: await withAwardsLock(advanceSeasonWeek) });
+  } catch (e) {
+    if (e instanceof SeasonProgressionError || e instanceof AwardsError)
+      res.status(400).json({ error: e.message });
+    else next(e);
+  }
+});
+gameRoutes.get("/games/:gameId/state", async (req, res, next) => {
+  try {
+    res.json({ gameState: await getGameState(req.params.gameId) });
+  } catch (e) {
+    next(e);
+  }
+});
+gameRoutes.get("/games/:gameId/play-history", async (req, res, next) => {
+  try {
+    res.json({ plays: await getPlayHistory(req.params.gameId) });
+  } catch (e) {
+    next(e);
+  }
+});
+gameRoutes.get("/frontend-settings", async (_req, res, next) => {
+  try {
+    res.json(await getFrontendSettingsFromDatabase());
+  } catch (e) {
+    next(e);
+  }
+});
+gameRoutes.get("/gameplay-settings", async (_req, res, next) => {
+  try {
+    res.json({ settings: await getGameplaySettingsFromDatabase() });
+  } catch (e) {
+    next(e);
+  }
+});
 gameRoutes.put("/gameplay-settings/:variable", async (req, res, next) => {
   try {
     const value = String(req.body?.value ?? "");
     await updateGameplaySetting(req.params.variable, value);
     res.json({ ok: true, variable: req.params.variable, value });
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
-gameRoutes.post("/games/:gameId/save-play-and-game", async (req, res, next) => { try { await savePlayAndGameWithRetry(req.body, req.params.gameId); res.json({ ok: true }); } catch (e) { next(e); } });
-
-// Legacy route retained for existing callers while LeagueApp uses save-play-and-game.
-gameRoutes.post("/plays", async (req, res, next) => {
+gameRoutes.post("/games/:gameId/save-play-and-game", async (req, res, next) => {
   try {
-    const { game_id, play_number, offense_team_id, defense_team_id, down, distance, yard_line, play_call, result, yards_gained } = req.body;
-    const playId = crypto.randomUUID();
-    const row = [playId, game_id, play_number, offense_team_id, defense_team_id, down, distance, yard_line, play_call, result, yards_gained, new Date().toISOString()];
-    await appendSheetRow("Plays!A:L", row);
-    res.json({ ok: true, play: { play_id: playId, game_id, play_number, play_call, result, yards_gained } });
-  } catch (error) { next(error); }
+    const saved = repository().savePlayAndGame(req.body, req.params.gameId);
+    res.json({ ok: true, ...saved });
+  } catch (e) {
+    next(e);
+  }
 });
 
-gameRoutes.get("/game-state", async (_req, res, next) => { try { const rows = await readSheetObjects("GameState!A1:Z"); res.json({ gameState: rows[0] ?? null }); } catch (e) { next(e); } });
+// The obsolete flat Plays sheet payload cannot identify normalized participants.
+gameRoutes.post("/plays", (_req, res) =>
+  res.status(410).json({
+    error:
+      "Use /games/:gameId/save-play-and-game to save a play and game atomically.",
+  }),
+);
+
+gameRoutes.get("/game-state", async (_req, res, next) => {
+  try {
+    const rows = await readTableObjects("GameState!A1:Z");
+    res.json({ gameState: rows[0] ?? null });
+  } catch (e) {
+    next(e);
+  }
+});

@@ -1,0 +1,37 @@
+name: SQLite storage
+on:
+  pull_request:
+    paths: ['apps/api/**', 'docs/imports/**', '.github/workflows/sqlite.yml']
+  push:
+    paths: ['apps/api/**', 'docs/imports/**', '.github/workflows/sqlite.yml']
+permissions:
+  contents: read
+jobs:
+  sqlite:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+  import-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s docs/imports/core -p 'test_*.py' -v
+      - run: python -m unittest discover -s docs/imports/season -p 'test_*.py' -v
+      - run: python -m unittest discover -s docs/imports/remaining -p 'test_*.py' -v

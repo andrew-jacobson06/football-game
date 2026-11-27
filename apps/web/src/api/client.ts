@@ -19,7 +19,10 @@ async function postJson<T>(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!response.ok) throw new Error(message);
+  if (!response.ok) {
+    const detail = await response.json().catch(() => null);
+    throw new Error(detail?.error || message);
+  }
   return response.json();
 }
 async function putJson<T>(path: string, body: unknown, message: string): Promise<T> {
@@ -154,7 +157,7 @@ export async function getPlayHistory(
 export async function savePlayAndGame(
   gameId: string | number,
   data: unknown,
-): Promise<{ ok: boolean }> {
+): Promise<{ ok: boolean; version: number; duplicate: boolean }> {
   return postJson(
     `/games/${encodeURIComponent(String(gameId))}/save-play-and-game`,
     data,

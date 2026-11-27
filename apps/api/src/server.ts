@@ -1,35 +1,15 @@
-import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
-import { gameRoutes } from "./routes/gameRoutes.js";
-
+import { createApp } from "./app.js";
+import { repository } from "./db/leagueRepository.js";
+import { resolveDatabasePath } from "./db/connection.js";
 dotenv.config();
-
-const app = express();
+const repo = repository();
+const season = repo.season();
+repo.settingsVersion();
 const port = Number(process.env.PORT ?? 4000);
-
-app.use(
-  cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"]
-  })
-);
-
-app.use(express.json());
-
-app.use("/api", gameRoutes);
-
-app.use(
-  (
-    err: unknown,
-    _req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction
-  ) => {
-    console.error(err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-);
-
-app.listen(port, () => {
+createApp().listen(port, () => {
   console.log(`Football game API running on http://localhost:${port}`);
+  console.log(
+    `SQLite: ${resolveDatabasePath()} | ${season.display_name} (${season.id})`,
+  );
 });

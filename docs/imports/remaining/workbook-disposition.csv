@@ -1,0 +1,44 @@
+sheet,used_range,populated_rows_including_headers,nonempty_cells,formula_cells,error_cells_or_markers,references_to_workbook_tabs,migration_decision,reason
+Run breakdown,A1:AE156,156,1331,542,1,,Archive reference,Design calculations; current simulation is implemented in TypeScript.
+DB Design,A1:B19,17,17,0,0,,Archive reference,Useful design notes; not runtime records.
+pass breakdown,A1:V154,132,915,144,0,,Archive reference,Design calculations; do not activate prototype formulas.
+Sheet22,A1:AI118,115,1815,210,0,,Archive reference,Old player/trait layout; not read by current API; current catalog is Players.
+TO DO,A1:C15,14,15,0,0,,Archive reference,"Planning notes, not production entities."
+defense stuff,A1:O1,1,15,0,0,,Archive reference,Header-only design notes.
+Play History Reasoning,A1:K46,44,91,0,0,,Archive reference,Field reasoning/documentation; retain for reference.
+Sheet14,A1:Z162,159,1911,720,243,OLDPlayHistory,Archive test analysis,Calculated from OLDPlayHistory; not official season stats.
+GamePlaySettings,A1:B2,2,4,0,0,,Migrate configuration,Visual_Mode preference; not season-specific statistics.
+News,A1:A7,6,6,0,0,,Archive editorial reference,Six editorial ideas; Articles is the published feed.
+Articles,A1:K20,20,210,0,0,,Migrate data,"19 articles; preserve Markdown, IDs, season/week/game references and publication state."
+Season,A1:B3,3,6,0,0,,Migrate state,"Season 1 / National Championship; all games final, award voting pending."
+Teams,A1:N11,11,154,0,0,,Migrate data,10 stable identities and season branding/division snapshots.
+Divisions,A1:A3,3,3,0,0,,Migrate data,Two division definitions.
+TeamDivisions,A1:B11,11,22,0,0,,Consolidate,Merge with season-specific team/division membership after parity check.
+Games,A1:AG71,71,1983,683,0,Teams; TeamDivisions; Playoff Bracket,Migrate data; rebuild helpers,70 official games; helper formulas become metadata joins/result/bracket logic.
+Playoff Bracket,A1:C7,7,21,0,0,,Migrate data,Six already-stamped seeds; preserve rather than reselect from changed totals.
+Awards,A1:K58,56,208,18,0,,Migrate data and rules,"18 nominees, 34 honors, zero votes, and exact rank weights; no AI rerun."
+Standings,A1:Q11,11,186,160,0,Games,Rebuild; retain baseline,Derived regular-season records with mixed-scope PF/PA; preserve original values and reconcile.
+Players,A1:AN119,116,3442,279,17,Teams,Migrate data,107 identities including 18 unassigned; currently used roster source. Exclude footer calculations from player rows.
+Sheet48,A1:A1,0,0,0,0,,Do not create table,Empty; retained only in original backup.
+PlayerTeams,A1:B108,108,198,1,0,Players,Consolidate with reconciliation,Desired single roster authority; 97 disagreements with currently used Players.Team. Replace row-based name spill with player IDs.
+inPlayDefense decisions,A1:P33,27,203,60,0,,Archive reference,"Prototype decisions/formulas, not runtime input."
+Coaches,A1:O23,23,315,9,0,,Preserve dormant catalog,20 named coaches and allocations; no current API consumer or invented dynamic coaching.
+CoachTeams,A1:B1,1,2,0,0,,Schema only,Header-only; create future assignment relation but import no rows.
+Draft,A1:K38,34,323,222,8,Teams; Players,Preserve reference/staging,"91 board entries, duplicates and aliases; no reliable overall pick ordering; app tab is a placeholder."
+PlayerStats,A1:AW108,108,4436,4387,0,PlayerTeams; PlayHistory,Rebuild; retain baseline,107 derived rows; 4387 formulas; duplicate headers and missing metric formulas require semantic mapping.
+Settings,A1:V312,311,1609,198,1,,Migrate typed configuration,Active tables plus retained compatibility groups; archive side experiments. See SETTINGS-MAP.csv.
+Animation Example,A1:D1,1,4,0,0,,Do not create table,Header-only animation example; current rendering is code.
+PlayHistory,A1:AP9576,9576,352269,2390,0,,Migrate data,"9575 unique official plays; keep flags and JSON, normalize participants and indexing."
+rEAL NEW RUN,A1:AK158,144,868,297,0,Players,Archive reference,Run-design prototype; implementation is TypeScript.
+Sheet26,A1:J2,1,9,0,0,,Do not create table,Nine header/example cells only.
+new pass,A1:AQ232,218,2274,897,3,Players,Archive reference,Pass-design prototype; preserve formulas in catalog but do not execute.
+Full Pass Engine,A1:Q178,166,546,80,0,,Archive reference,"Design walkthrough, not live engine storage."
+Backlog,A1:E20,20,34,0,0,,Archive reference,Future feature notes.
+new run,A1:Y253,243,1361,555,0,Players,Archive reference,Run-design prototype.
+aNIMATION WALKTHROUGH,A1:AP173,121,548,6,0,,Archive reference,Animation notes/examples; not production records.
+Sheet29,A1:A1,0,0,0,0,,Do not create table,Empty.
+Sheet28,A1:A1,0,0,0,0,,Do not create table,Empty.
+OLDGames,A1:X73,73,1752,576,420,Teams,Exclude official history,User confirmed old test/simulation data; 72 rows; preserve only in backup.
+OLDPlayHistory,A1:AI342,342,7932,0,0,,Exclude official history,User confirmed old test/simulation data; 341 rows and overlapping game IDs; no official/career totals.
+Stat Query,A1:R72,53,90,86,21,OLDPlayHistory,Archive test analysis,Queries OLDPlayHistory; output is not official stats.
+MVP Candidates,A1:H127,125,761,0,0,,Archive editorial reference,"Narrative candidate dossiers, not recorded ballots or authoritative totals."

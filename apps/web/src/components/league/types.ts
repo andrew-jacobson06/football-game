@@ -3,6 +3,7 @@ export type GameTab = "gamecast" | "playbyplay" | "boxscore" | "teamstats";
 
 export type LeagueGame = {
   GameId: string | number;
+  StateVersion?: number;
   Home: string;
   Away: string;
   HomeScore: string | number;

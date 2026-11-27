@@ -1,0 +1,92 @@
+-- Run entire file, then Write Changes. Only fills known last-play links on archived final states.
+PRAGMA foreign_keys=ON;
+SAVEPOINT afl_remaining_16;
+CREATE TEMP TABLE afl_final_links(game_id TEXT PRIMARY KEY,last_play_id TEXT NOT NULL);
+INSERT INTO afl_final_links (game_id, last_play_id) VALUES
+('b1803c9c-56a6-5405-9c91-1459d2b56754', '1-1785609000029-107'),
+('45d1a88a-3ab5-5b66-80f7-f1d2d265fecf', '2-1786299382021-103'),
+('d4c84c01-1802-5cf9-a08e-fa9cf93a6d30', '3-1786589323250-104'),
+('506cabe0-d9e5-540b-b4e4-a0055fa3999c', '5-1786327888218-107'),
+('5095e70e-76a9-5b81-aa61-94c6c64a755c', '4-1786300383876-112'),
+('b67a2afc-5eca-5f3f-a4c8-787d3ec82412', '6-1786596637374-122'),
+('aa54bb81-384c-5473-a7f6-d3d035a6dbba', '7-1786907598428-107'),
+('d5c2ee8a-dbf8-5fd9-9594-5e76542d25cd', '9-1787446105585-107'),
+('9e0f607b-a803-523a-ab44-655a09df2e10', '8-1788311846474-115'),
+('9757fbe6-b2ee-518a-98bb-2ae3ca0f390f', '10-1791413393631-104'),
+('fb511b04-ed9e-52c9-aa5e-e2e2329767bb', '11-1791477372110-138'),
+('c7a4f813-dd4c-5cc5-955b-f2b08922a4fb', '12-1791482640902-140'),
+('330ca8c0-779b-564d-9b9a-60e6c1a25d52', '13-1791490999624-150'),
+('0a7be798-3c38-5bad-a73b-00dc8bdca919', '14-1791497877202-173'),
+('d8bd4933-1a2a-5ab5-a813-eba7e258698f', '15-1791501653030-129'),
+('a688d7bf-eeb9-5097-a4e7-2428e744e32b', '16-1791553033044-155'),
+('ce9fc3d2-faeb-56df-b572-21b83cc3f5d9', '17-1791565455344-137'),
+('8f73db4d-f0d8-539c-a299-7a715e6b76f1', '18-1791577140253-140'),
+('f8930fc6-fce4-5830-898d-129ca9f5c088', '20-1791751212267-140'),
+('d0246c00-e96a-509d-8056-8d384655b9b9', '19-1791755777652-131'),
+('f4d0c75d-04e4-5a66-9154-2008c8a1dee4', '21-1791770257468-148'),
+('d41ff97f-63ad-5e99-84d0-708fc1c28db6', '22-1791820646072-145'),
+('0e3b9029-ed1a-5285-83ac-9d127fc3e1a2', '24-1791826680661-151'),
+('af99492a-9353-51f0-959f-f66cdbdad326', '25-1791831866059-136'),
+('e1758b42-4ab2-51f9-92a4-d4e186990a6b', '23-1791901573161-135'),
+('9c7d174f-0844-5ab6-b664-5ee56825e673', '26-1791916316554-140'),
+('910a8a60-b245-5481-b0d1-0863749f86c8', '27-1791922744576-145'),
+('ed70797b-a09b-5c7e-a6cc-122c74a0ec6c', '28-1791927235370-141'),
+('dadba1d9-8e10-5a0f-980c-26ea7fc00070', '29-1791936320006-151'),
+('bb19da9a-b0d0-5c9f-83cb-72c63c1035a9', '30-1791940563599-141'),
+('cb45594f-992d-5336-817f-31a0404cedd9', '31-1792993290553-128'),
+('a25d0357-4256-5103-b0a6-6f75a124db55', '35-1793023886998-144'),
+('e83919f3-1038-554a-b42c-3e6ccc5f0486', '33-1793060250715-135'),
+('27227175-27e4-5428-a8ff-4e18b679e81f', '34-1793071686764-119'),
+('dbf54195-4605-5c9f-b6d2-220f4fe5221a', '32-1793075458652-126'),
+('77a79017-0c51-52fe-8cc8-2b858b518a60', '36-1793159837399-149'),
+('60342627-24bf-56e3-a319-80cf5e0af74f', '39-1793237971747-147'),
+('59b1b051-66f7-5ddb-b23e-4765579e8979', '40-1793250102638-136'),
+('10ecc092-963e-520d-bee4-9a9af6c09164', '37-1793415259563-143'),
+('676d813c-b30f-545e-b079-4d1cb910f702', '38-1793419465864-148'),
+('b097704a-7c73-502b-91d2-127c098cd705', '41-1793423136539-136'),
+('4a4496d5-52bc-5879-98ff-7185589f6271', '43-1793501604679-149'),
+('dc3d367e-83f6-5d03-b2e2-8d3b1b33b9ca', '44-1793595158559-141'),
+('9fc0267f-1a0e-5fd5-b907-d51d9529a655', '45-1793599491650-142'),
+('e92382d9-f799-5712-8c94-feb1f2074bee', '42-1794037515158-144'),
+('5358ba03-3770-5be0-ae81-ce5fd8c169cb', '47-1794042241560-142'),
+('7c7b03d0-7fa1-54f8-bf5b-2b28a60d1f30', '48-1794113753624-131'),
+('6f8e50d1-ad6c-5557-97dc-b89b94509851', '46-1794117427350-134'),
+('b7b4df44-8505-5bfc-8455-ccd8ac20f29b', '50-1794122008391-142'),
+('a8747816-98a7-5cc4-88d3-834c3017ed38', '49-1794126609045-153'),
+('f9f0e003-a540-5fe5-a57f-0acc664b3fa5', '51-1794201305433-128'),
+('53560de1-c576-573c-9a16-6681eb560cd3', '52-1794251084374-137'),
+('68973e4b-0fff-52ff-af5a-60b6c729df14', '53-1794377173837-161'),
+('2f3f1e8b-cecd-5468-9426-70e4387d3239', '55-1794381412526-151'),
+('c72c3252-70c5-5281-94c7-7c35acada7d9', '54-1795030799204-136'),
+('9a83209e-1d06-555d-bd89-111f82bf5c8e', '56-1795105669609-145'),
+('3b804762-c3d1-5d59-83bb-653d0cc995df', '58-1795129168169-137'),
+('a2ebde08-ded1-5c07-a9a7-d6f584f3979f', '59-1795132918858-144'),
+('2c08e8f8-12f4-554b-ad15-016efe0723dc', '57-1795142552046-132'),
+('554acfc5-01fa-5f53-b215-a129bdbc7ea2', '60-1795156424237-146'),
+('cefff00e-a0bc-58b7-8efb-abead6e86daf', '61-1795160557817-147'),
+('62e0ffac-9cd4-560d-9be2-6744f322bcd1', '65-1795164061190-141'),
+('cf333c88-70e8-5e87-a871-561d60679577', '62-1795203366132-143'),
+('41a0c351-5b43-533b-9851-0ef3a7ca279f', '64-1795213460614-137'),
+('74e8bbd9-0b30-56d3-b402-a70b51d9f17a', '63-1795453308041-130'),
+('60f31902-6756-5988-8061-0eb40f926984', '66-1795547619971-135'),
+('d20d1b4f-33cd-58e4-bb93-068986ed57a6', '67-1795550702126-151'),
+('26abcbcd-7506-5ad3-8857-37ad89825ebe', '69-1795586214300-148'),
+('7532f147-44e3-57c8-91ff-8a498dc6fa2c', '68-1795630747742-139'),
+('62a2553e-d64a-585a-a4f1-56983bcd7824', '70-1795635564676-143');
+
+CREATE TEMP TABLE afl_links_guard(ok INTEGER);
+CREATE TEMP TRIGGER afl_links_check BEFORE INSERT ON afl_links_guard BEGIN
+ SELECT CASE WHEN EXISTS(SELECT 1 FROM afl_final_links i LEFT JOIN game_state s ON s.game_id=i.game_id LEFT JOIN plays p ON p.id=i.last_play_id AND p.game_id=i.game_id
+ WHERE s.game_id IS NULL OR s.phase<>'final' OR p.id IS NULL OR (s.last_play_id IS NOT NULL AND s.last_play_id<>i.last_play_id))
+ THEN RAISE(ROLLBACK,'Missing or conflicting final state/play links') END;
+END;
+INSERT INTO afl_links_guard VALUES(1);
+UPDATE game_state SET last_play_id=(SELECT last_play_id FROM afl_final_links WHERE game_id=game_state.game_id)
+WHERE last_play_id IS NULL AND game_id IN (SELECT game_id FROM afl_final_links);
+INSERT INTO import_batches (id, source_filename, source_sha256, importer_version, status, counts_json, reconciliation_json) VALUES
+('44a357c8-846b-5520-9297-719aae8102de', 'Football Game DB spreadsheet (1).xlsx', 'ea9f4319219b46711d28143c90ab27a9fd5ba80b0ade895a2aebf6516c59b704', 'remaining-snapshot-v1-16-final-play-links', 'imported', '{"final_play_links":70}', '{"source":"last play by per-game workbook order; no clocks/scores changed"}') ON CONFLICT(id) DO NOTHING;
+DROP TRIGGER afl_links_check;
+DROP TABLE afl_links_guard;
+DROP TABLE afl_final_links;
+RELEASE SAVEPOINT afl_remaining_16;
+SELECT count(*) AS linked_final_games FROM game_state s JOIN games g ON g.id=s.game_id WHERE g.season_id='97808f43-a0d5-5251-bf8d-fae1643c8258' AND s.last_play_id IS NOT NULL;
