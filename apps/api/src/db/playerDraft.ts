@@ -62,7 +62,7 @@ export class PlayerDraft {
       }));
     const teams = order.map((id) =>
       this.repo.one(
-        "SELECT team_id AS id,abbreviation,nickname AS name,logo_url AS logoUrl,primary_color AS primaryColor FROM team_seasons WHERE season_id=? AND team_id=?",
+        "SELECT team_id AS id,abbreviation,nickname AS name,logo_url AS logoUrl,primary_color AS primaryColor,away_jersey_url AS awayJerseyUrl FROM team_seasons WHERE season_id=? AND team_id=?",
         season.id,
         id,
       )!,

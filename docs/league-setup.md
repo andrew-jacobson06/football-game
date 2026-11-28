@@ -86,3 +86,9 @@ Once coaching and keeper preparation is complete, the Draft tab opens the snake 
 - Picks, their snake slots, roster ownership and draft status persist in SQLite. Saving a pick is atomic and retry-safe; stale turns and already-owned players are rejected. The draft resumes after reload and becomes read-only when completed. Completing it does not create a schedule or start games.
 
 Migration `0006_player_draft.sql` adds `drafts.roster_target` and draft lookup indexes. Existing `drafts.order_rules_json` stores the saved order, and `draft_picks` stores round/overall numbers, team, player and pick time. Endpoints: `GET /api/draft`, `POST /api/draft/start` (`seasonId`, `rosterTarget`) and `POST /api/draft/pick` (`seasonId`, `pickId`, `playerId`).
+
+### Expanded draft roster
+
+**Expand roster** in the on-the-clock card opens that team's roster even when another team's column is selected. The sidebar's **Full roster & metrics** button opens the currently viewed team instead. The expanded dialog includes a full player skill table with ascending/descending sorting on every column, plus a **Team metrics** tab for passing, rushing, receiving, run blocking, pass protection, runstop, pass rush and coverage. These scores remain uncalculated until their formulas are supplied; they use the current roster, not draft-pool players.
+
+Sidebar roster entries combine each player's portrait with the selected team's away jersey and show both offensive and defensive stars. Missing artwork falls back to the player's initial. `GET /api/draft` now includes each team's `awayJerseyUrl` from its season record, so changing teams also changes the jersey artwork.

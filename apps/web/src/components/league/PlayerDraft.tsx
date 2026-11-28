@@ -15,39 +15,49 @@ import {
 } from "../../api/client";
 import { AppSelect } from "../ui/AppSelect";
 import "./playerDraft.css";
-const traits = [
-  "Off Stars",
-  "Def Stars",
-  "Size",
-  "Strength",
-  "Speed",
-  "Stamina",
-  "Poise",
-  "Accuracy",
-  "Arm-Strength",
-  "Read Defense",
-  "Juke",
-  "Vision",
-  "Acceleration",
-  "Route Running",
-  "Jump",
-  "Hands",
-  "Ball Security",
-  "QB Favorite",
-  "Run Blocking",
-  "Pass Protect",
-  "RunStop",
-  "Tackling",
-  "Run Def",
-  "Tackle Chance",
-  "Strip",
-  "PassRush",
-  "Sack Chance",
-  "Ball Hawk",
-  "Read QB",
-  "Coverage",
-] as const;
-type SortKey = (typeof traits)[number] | "Name" | "Pos" | "DefPos";
+import { traits, type SortKey } from "./draftSkills";
+import { DraftRosterDetails } from "./DraftRosterDetails";
+import { PlayerImage } from "../players/PlayerImage";
+import { Stars } from "../players/Stars";
+function DraftRosterPortrait({
+  player,
+  jersey,
+  teamName,
+}: {
+  player: DraftPlayer;
+  jersey: string;
+  teamName: string;
+}) {
+  const [portraitLoaded, setPortraitLoaded] = useState(false);
+  return (
+    <span
+      className="draft-roster__portrait"
+      role="img"
+      aria-label={`${player.Name} · ${teamName} away jersey`}
+      onLoadCapture={(event) => {
+        if (
+          event.target instanceof HTMLImageElement &&
+          event.target.classList.contains("player-image-layer--player")
+        )
+          setPortraitLoaded(true);
+      }}
+      onErrorCapture={(event) => {
+        if (event.target instanceof HTMLImageElement)
+          event.target.style.display = "none";
+      }}
+    >
+      <PlayerImage
+        player={{ ...player, jersey }}
+        className="draft-roster__layers"
+      />
+      {!portraitLoaded && (
+        <span className="draft-roster__portrait-initial" aria-hidden="true">
+          {String(player.Name ?? "?").slice(0, 1)}
+        </span>
+      )}
+    </span>
+  );
+}
 function TeamMark({ team }: { team: DraftTeam }) {
   return (
     <span className="draft-mark">
@@ -79,6 +89,7 @@ export function PlayerDraft({
     [descending, setDescending] = useState(true);
   const [target, setTarget] = useState(""),
     [selectedPlayer, setSelectedPlayer] = useState("");
+  const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
   const selectedRow = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     let live = true;
@@ -207,6 +218,13 @@ export function PlayerDraft({
   );
   return (
     <section className="draft-room">
+      {expandedTeam && state.teams.find((t) => t.id === expandedTeam) && (
+        <DraftRosterDetails
+          team={state.teams.find((t) => t.id === expandedTeam)!}
+          players={state.players.filter((p) => p.teamId === expandedTeam)}
+          onClose={() => setExpandedTeam(null)}
+        />
+      )}
       <header className="draft-room__heading">
         <div>
           <span className="draft-eyebrow">SEASON DRAFT / SNAKE FORMAT</span>
@@ -226,6 +244,12 @@ export function PlayerDraft({
               <span>
                 <small>ON THE CLOCK</small>
                 <strong>{onClock.name}</strong>
+                <button
+                  className="draft-secondary"
+                  onClick={() => setExpandedTeam(onClock.id)}
+                >
+                  Expand roster
+                </button>
               </span>
             </>
           ) : (
@@ -305,15 +329,39 @@ export function PlayerDraft({
               View team on the clock
             </button>
           )}
+          {team && (
+            <button
+              className="draft-secondary draft-roster__expand"
+              onClick={() => setExpandedTeam(team.id)}
+              aria-label={`Expand ${team.name} roster`}
+            >
+              Full roster & metrics ↗
+            </button>
+          )}
           <ul>
             {roster.map((p) => (
-              <li key={p.id}>
-                {playerName(p)}
-                <span>
-                  {state.picks.some((pick) => pick.playerId === p.id)
-                    ? "Drafted"
-                    : "Keeper"}
-                </span>
+              <li key={p.id} className="draft-roster__player">
+                <DraftRosterPortrait
+                  player={p}
+                  jersey={team?.awayJerseyUrl ?? ""}
+                  teamName={team?.name ?? ""}
+                />
+                <div className="draft-roster__player-info">
+                  {playerName(p)}
+                  <div className="draft-roster__stars">
+                    <span>
+                      OFF <Stars value={p["Off Stars"]} />
+                    </span>
+                    <span>
+                      DEF <Stars value={p["Def Stars"]} />
+                    </span>
+                  </div>
+                  <span className="draft-roster__origin">
+                    {state.picks.some((pick) => pick.playerId === p.id)
+                      ? "Drafted"
+                      : "Keeper"}
+                  </span>
+                </div>
               </li>
             ))}
           </ul>

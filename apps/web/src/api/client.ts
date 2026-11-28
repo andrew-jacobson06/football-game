@@ -437,6 +437,7 @@ export const hireCoach = (seasonId: string, teamId: string, coachId: string) =>
 
 export type DraftPlayer = Player & { id: string; teamId: string | null };
 export type DraftTeam = {
+  awayJerseyUrl: string | null;
   id: string;
   abbreviation: string;
   name: string;

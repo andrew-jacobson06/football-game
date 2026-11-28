@@ -28,6 +28,7 @@ function fixture(t: { after: (f: () => void) => void }) {
       division_id: "d",
       abbreviation: team.toUpperCase(),
       nickname: `Team ${team}`,
+      away_jersey_url: `https://example.com/${team}-away.png`,
     });
     repo.insert("coaches", {
       id: `c${team}`,
@@ -71,6 +72,12 @@ test("snake order is locked once, reverses every round, and ends at the roster t
   const { repo, draft } = fixture(t),
     initial = draft.state();
   const order = initial.teams.map((t) => t.id);
+  assert.ok(
+    initial.teams.every(
+      (team) =>
+        team.awayJerseyUrl === `https://example.com/${team.id}-away.png`,
+    ),
+  );
   assert.deepEqual(
     draft.state().teams.map((t) => t.id),
     order,

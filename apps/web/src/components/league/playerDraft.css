@@ -193,12 +193,7 @@
   color: var(--text-secondary);
   font-size: 0.7rem;
 }
-.draft-roster li > span {
-  color: var(--accent-red);
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
+
 .draft-roster__hint,
 .draft-roster__empty {
   font-size: 0.8rem;
@@ -528,5 +523,196 @@
   .draft-player-table td:first-child,
   .draft-player-table th:first-child {
     min-width: 120px;
+  }
+}
+.draft-roster__expand {
+  width: 100%;
+  margin-top: 12px;
+  white-space: normal;
+}
+.draft-roster li.draft-roster__player {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.draft-roster__portrait {
+  position: relative;
+  display: block;
+  flex: 0 0 68px;
+  width: 68px;
+  height: 84px;
+  object-fit: contain;
+  object-position: center bottom;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--surface-raised);
+}
+.draft-roster__portrait-initial {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 3;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+}
+.draft-roster__layers {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.draft-roster__player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.draft-roster__player-info > strong {
+  overflow-wrap: anywhere;
+}
+.draft-roster__stars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.draft-roster__stars > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 0.6rem;
+}
+.draft-roster__stars .star {
+  font-size: 12px;
+}
+.draft-roster__stars .star.empty {
+  color: var(--text-secondary);
+}
+.draft-roster__origin {
+  color: var(--accent-red);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.draft-roster-dialog {
+  width: min(1400px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 40px);
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  box-shadow: 0 24px 90px var(--shadow-color);
+  overflow: hidden;
+}
+.draft-roster-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.draft-roster-dialog::backdrop {
+  background: color-mix(in srgb, var(--surface-canvas) 76%, transparent);
+  backdrop-filter: blur(7px);
+}
+.draft-roster-dialog__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+.draft-roster-dialog__header h2 {
+  margin: 8px 0;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+}
+.draft-roster-dialog__header p {
+  margin: 0;
+  font-size: 0.8rem;
+}
+.draft-roster-dialog > .draft-tabs {
+  flex-shrink: 0;
+}
+.draft-roster-dialog__body {
+  min-height: 0;
+  overflow: auto;
+}
+.draft-roster-dialog__hint {
+  padding: 16px 24px;
+  margin: 0;
+  font-size: 0.8rem;
+}
+.draft-roster-dialog .draft-player-scroll {
+  max-height: 55dvh;
+}
+.draft-team-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 8px 24px 24px;
+}
+.draft-team-metrics > div {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--surface-canvas);
+  padding: 20px;
+}
+.draft-team-metrics dt {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.draft-team-metrics dd {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 16px 0;
+  color: var(--text-secondary);
+}
+.draft-team-metrics small {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.draft-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 800px) {
+  .draft-roster li.draft-roster__player {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .draft-roster__portrait {
+    flex-basis: auto;
+    width: 100%;
+    height: 100px;
+  }
+  .draft-roster__stars > span {
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+  .draft-roster__stars .star {
+    font-size: 11px;
+  }
+  .draft-roster__expand {
+    padding: 10px 6px;
+    font-size: 0.7rem !important;
+  }
+  .draft-team-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 8px 16px 16px;
+    gap: 12px;
+  }
+  .draft-roster-dialog__header {
+    padding: 20px;
+  }
+  .draft-team-metrics > div {
+    padding: 14px;
   }
 }
