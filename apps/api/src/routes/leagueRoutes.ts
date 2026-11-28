@@ -1,3 +1,4 @@
+import { SeasonLaunch } from "../db/seasonLaunch.js";
 import { PlayerDraft } from "../db/playerDraft.js";
 import type { Response, NextFunction } from "express";
 import { repository } from "../db/leagueRepository.js";
@@ -117,4 +118,12 @@ leagueRoutes.post("/draft/pick", (req, res, next) =>
       String(req.body?.playerId),
     ),
   ),
+);
+
+leagueRoutes.post("/draft/finalize", (req, res, next) =>
+  setupResponse(res, next, () => {
+    const repo = repository();
+    new SeasonLaunch(repo).run(String(req.body?.seasonId), req.body?.stage);
+    return new PlayerDraft(repo).state();
+  }),
 );

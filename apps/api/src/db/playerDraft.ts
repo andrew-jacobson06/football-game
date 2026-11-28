@@ -77,6 +77,11 @@ export class PlayerDraft {
       draftId: draft.id,
       status: draft.status,
       ready: preparation.draftReady,
+      launch:
+        this.repo.one(
+          "SELECT * FROM season_launch WHERE season_id=?",
+          season.id,
+        ) ?? null,
       orderMethod: JSON.parse(draft.order_rules_json).method,
       teams,
       players,
@@ -176,7 +181,11 @@ export class PlayerDraft {
   pick(seasonId: string, pickId: string, playerId: string) {
     return this.repo.db
       .transaction(() => {
-        this.expectSeason(seasonId);
+        if (this.repo.season().id !== seasonId)
+          throw new SeasonSetupError(
+            "The active season changed. Reload the draft.",
+            409,
+          );
         const draft = this.draft();
         const requested = this.repo.one(
           "SELECT * FROM draft_picks WHERE id=? AND draft_id=?",
@@ -193,6 +202,7 @@ export class PlayerDraft {
             409,
           );
         }
+        this.expectSeason(seasonId);
         if (draft.status !== "running")
           throw new SeasonSetupError(
             "Start the draft before selecting a player.",

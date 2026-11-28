@@ -374,6 +374,7 @@ export type PreparationTeam = {
   coach: { id: string; name: string } | null;
 };
 export type SeasonPreparationState = {
+  draftCompleted: boolean;
   seasonId: string;
   seasonNumber: number;
   year: number | null;
@@ -453,6 +454,12 @@ export type DraftPick = {
   playerId: string | null;
 };
 export type PlayerDraftState = {
+  launch: {
+    rosters_finalized_at: string | null;
+    schedule_set_at: string | null;
+    headlines_stubbed_at: string | null;
+    completed_at: string | null;
+  } | null;
   seasonId: string;
   draftId: string;
   status: "planned" | "running" | "completed";
@@ -483,4 +490,14 @@ export const makeDraftPick = (
     "/draft/pick",
     { seasonId, pickId, playerId },
     "Unable to save this pick.",
+  );
+
+export const finalizePlayerDraft = (
+  seasonId: string,
+  stage: "rosters" | "schedule" | "headlines",
+) =>
+  postJson<PlayerDraftState>(
+    "/draft/finalize",
+    { seasonId, stage },
+    "Unable to finalize the season.",
   );

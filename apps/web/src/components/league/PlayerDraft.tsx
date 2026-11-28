@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -15,6 +16,7 @@ import {
 } from "../../api/client";
 import { AppSelect } from "../ui/AppSelect";
 import "./playerDraft.css";
+import { DraftCompletionToast } from "./DraftCompletionToast";
 import { traits, type SortKey } from "./draftSkills";
 import { DraftRosterDetails } from "./DraftRosterDetails";
 import { PlayerImage } from "../players/PlayerImage";
@@ -90,6 +92,13 @@ export function PlayerDraft({
   const [target, setTarget] = useState(""),
     [selectedPlayer, setSelectedPlayer] = useState("");
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
+  const onFinalized = useCallback(
+    async (next: PlayerDraftState) => {
+      setState(next);
+      await onUpdated();
+    },
+    [onUpdated],
+  );
   const selectedRow = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     let live = true;
@@ -218,6 +227,13 @@ export function PlayerDraft({
   );
   return (
     <section className="draft-room">
+      {state.status === "completed" && (
+        <DraftCompletionToast
+          seasonId={state.seasonId}
+          completed={Boolean(state.launch?.completed_at)}
+          onFinished={onFinalized}
+        />
+      )}
       {expandedTeam && state.teams.find((t) => t.id === expandedTeam) && (
         <DraftRosterDetails
           team={state.teams.find((t) => t.id === expandedTeam)!}

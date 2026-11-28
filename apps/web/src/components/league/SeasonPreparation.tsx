@@ -84,7 +84,8 @@ export function SeasonPreparation({
         )}
       </section>
     );
-  if (state.draftReady) return <PlayerDraft onUpdated={onUpdated} />;
+  if (state.draftReady || state.draftCompleted)
+    return <PlayerDraft onUpdated={onUpdated} />;
   const keepersOpen =
     state.phase === "keepers" || state.phase === "finalize_keepers";
   const next = state.teams.find((t) => t.id === state.nextTeamId);

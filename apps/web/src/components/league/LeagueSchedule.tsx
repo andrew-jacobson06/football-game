@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { isPregame } from "./gameStart";
 import type { LeagueGame } from "./types";
 import { formatBallOnForPoss, formatClock, formatDownDistance } from "./leagueMappers";
 
@@ -58,7 +59,7 @@ export function LeagueSchedule({ games, currentWeek, onSelectGame }: { games: Le
         {weekGames.length ? weekGames.map((game) => {
           const gameStatus = String(game.Qtr ?? "").trim().toUpperCase();
           const final = gameStatus === "FINAL";
-          const unstarted = gameStatus === "" || gameStatus === "UNSTARTED";
+          const unstarted = isPregame(game);
           const possession = String(game.Possession).toLowerCase();
           const awayScore = Number(game.AwayScore);
           const homeScore = Number(game.HomeScore);

@@ -27,7 +27,7 @@ New league creation commits all of the following together:
 - Copies of the initial league's active player identities, aliases and latest season ratings, with new IDs. All players start unassigned in the new league's draft pool.
 - A planned draft record and creation audit entry.
 
-Games, plays, standings, statistics, articles, nominations, winners and existing player ownership are not copied. Scheduling and season start remain future work. The new home page explains that the league is ready for draft setup; its Draft tab manages coaches and keepers, and the player draft.
+Games, plays, standings, statistics, articles, nominations, winners and existing player ownership are not copied. Draft completion now creates the regular-season schedule and opens Week 1. The new home page explains that the league is ready for draft setup; its Draft tab manages coaches and keepers, and the player draft.
 
 ## League selection
 
@@ -51,7 +51,7 @@ Browser checks use a disposable copy of the imported database. They cover Cancel
 
 ## Seasons, keepers and coaches
 
-League creation now also asks for **Keepers per team** (0–100). This is stored in `leagues.keeper_count`. Season 1 skips keepers: all players are free agents, and each team hires a coach from the league-owned coach pool in a randomized, saved order. The Draft tab displays this preparation flow. Once all coaches are assigned, it opens the player draft board; scheduling remains future work.
+League creation now also asks for **Keepers per team** (0–100). This is stored in `leagues.keeper_count`. Season 1 skips keepers: all players are free agents, and each team hires a coach from the league-owned coach pool in a randomized, saved order. The Draft tab displays this preparation flow. Once all coaches are assigned, it opens the player draft board; completion sets up Week 1.
 
 After the National Championship is final with a winner, **Advance Season** opens a confirmation dialog. Confirm the league keeper limit, then advance. The API creates Season N+1 with the same teams, divisions, latest player/coach traits and settings, but no games, plays or statistics. It preserves previous seasons and copies their rosters as provisional new-season assignments.
 
@@ -83,7 +83,7 @@ Once coaching and keeper preparation is complete, the Draft tab opens the snake 
 - Each even round reverses the first-round order. The board keeps each team in its own column and shows pick numbers and direction arrows.
 - The final roster target defaults to **10**, including keepers, and is editable before starting. The API checks the player pool and equal keeper counts before generating picks. All teams finish at the same target; surplus players remain free agents. A target equal to the keeper count needs no draft picks.
 - Available players can be filtered by offensive or defensive position, or shown together. Every displayed trait is sortable using the column headers or sort control. Drafted players disappear from this pool and appear on their team’s roster immediately.
-- Picks, their snake slots, roster ownership and draft status persist in SQLite. Saving a pick is atomic and retry-safe; stale turns and already-owned players are rejected. The draft resumes after reload and becomes read-only when completed. Completing it does not create a schedule or start games.
+- Picks, their snake slots, roster ownership and draft status persist in SQLite. Saving a pick is atomic and retry-safe; stale turns and already-owned players are rejected. The draft resumes after reload and becomes read-only when completed. Completion runs the season-launch flow described below.
 
 Migration `0006_player_draft.sql` adds `drafts.roster_target` and draft lookup indexes. Existing `drafts.order_rules_json` stores the saved order, and `draft_picks` stores round/overall numbers, team, player and pick time. Endpoints: `GET /api/draft`, `POST /api/draft/start` (`seasonId`, `rosterTarget`) and `POST /api/draft/pick` (`seasonId`, `pickId`, `playerId`).
 
@@ -92,3 +92,13 @@ Migration `0006_player_draft.sql` adds `drafts.roster_target` and draft lookup i
 **Expand roster** in the on-the-clock card opens that team's roster even when another team's column is selected. The sidebar's **Full roster & metrics** button opens the currently viewed team instead. The expanded dialog includes a full player skill table with ascending/descending sorting on every column, plus a **Team metrics** tab for passing, rushing, receiving, run blocking, pass protection, runstop, pass rush and coverage. These scores remain uncalculated until their formulas are supplied; they use the current roster, not draft-pool players.
 
 Sidebar roster entries combine each player's portrait with the selected team's away jersey and show both offensive and defensive stars. Missing artwork falls back to the player's initial. `GET /api/draft` now includes each team's `awayJerseyUrl` from its season record, so changing teams also changes the jersey artwork.
+
+## Completing the draft and launching Week 1
+
+The final pick (or reopening an already completed draft) automatically starts a saved, three-step completion flow. The toast shows **finalizing rosters…**, **setting schedule…**, and **drafting headlines…**. Failed steps show a retry button; a reload resumes the remaining work. Completed drafts remain viewable during the season.
+
+1. Roster finalization uses the saved keeper selections and draft picks as ownership. Each team must have the draft's final roster size, every team must have exactly one active coach, and retained coaches must match saved keep decisions. Undrafted/non-keeper players become free agents in this season only. Fired and replacement coach assignments remain as decided during preparation.
+2. Scheduling requires **two divisions of five teams**. Divisions are visited alphabetically; a random boolean assigns the first division to `div1` or `div2`, and the other division receives the remaining slot. Teams are visited alphabetically by abbreviation and draw unique indices 1–5 without replacement. These `div{1/2}-{1–5}` aliases are stored in `season_schedule_teams`. The supplied template in `seasonSchedule.ts` resolves them to exactly 65 numbered games over 13 weeks. Every game starts scoreless with 900 seconds and `awaiting_toss` state. An existing schedule is never overwritten, and a saved schedule never reshuffles on retry.
+3. Seven empty, unpublished `articles` drafts are created for draft recap/grades, coaching carousel, early team predictions, preseason awards, Week 1 predictions, game of the week, and player spotlight. `season_headline_stubs` records their stable keys. No AI call is made and nothing is published. The season then becomes `regular`, Week 1, and the league screen refreshes its schedule and rosters.
+
+Migration `0007_season_launch.sql` adds `season_launch` progress, `season_schedule_teams` aliases, and `season_headline_stubs`. `POST /api/draft/finalize` takes `{seasonId, stage}`, with stage `rosters`, `schedule` or `headlines`. Each stage commits atomically, enforces its prerequisites, and is safe to retry. `GET /api/draft` includes saved launch progress.

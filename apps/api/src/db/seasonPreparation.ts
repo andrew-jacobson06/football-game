@@ -177,6 +177,12 @@ export class SeasonPreparation {
       keeperCount: prep?.keeper_count ?? league.keeper_count,
       phase,
       draftReady: phase === "draft_ready",
+      draftCompleted: Boolean(
+        this.repo.one(
+          "SELECT id FROM drafts WHERE season_id=? AND status='completed' LIMIT 1",
+          season.id,
+        ),
+      ),
       canAdvanceSeason: this.canAdvance(),
       teams,
       coachOrder: order,
