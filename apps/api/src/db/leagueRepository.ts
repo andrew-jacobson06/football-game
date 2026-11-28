@@ -135,9 +135,9 @@ export class LeagueRepository {
   season() {
     const explicitLeague =
       this.selectedLeagueId ?? leagueSelection.getStore()?.leagueId;
-    const requested = explicitLeague
+    const requested = leagueSelection.getStore()?.seasonId ?? (explicitLeague
       ? undefined
-      : process.env.SEASON_ID?.trim();
+      : process.env.SEASON_ID?.trim());
     const defaultLeague = parse(
       this.one(
         "SELECT value_json FROM app_preferences WHERE key='default_league_id'",
@@ -162,6 +162,21 @@ export class LeagueRepository {
         "Multiple leagues found. Set LEAGUE_ID or SEASON_ID explicitly.",
       );
     return rows[0];
+  }
+  seasons() {
+    return this.all(
+      "SELECT id, season_number AS number, display_name AS name, display_year AS year, status FROM seasons WHERE league_id=? ORDER BY season_number DESC",
+      this.season().league_id,
+    );
+  }
+  teamSeasonStats() {
+    return this.all(`SELECT s.team_id AS teamId, count(DISTINCT s.game_id) AS gp,
+      sum(coalesce(s.passing_yards,0)) AS passing, sum(coalesce(s.rushing_yards,0)) AS rushing,
+      sum(coalesce(s.defensive_sacks,0)) AS sacks, sum(coalesce(s.interceptions_made,0)) AS interceptions,
+      sum(coalesce(s.fumbles_recovered,0)) AS fumbleRecoveries,
+      sum(coalesce(s.interceptions_thrown,0)) AS interceptionsThrown, sum(coalesce(s.fumbles_lost,0)) AS fumblesLost
+      FROM team_game_stats s JOIN games g ON g.id=s.game_id
+      WHERE g.season_id=? AND g.status='final' AND g.stage='regular' GROUP BY s.team_id`, this.season().id);
   }
   settingsVersion() {
     const season = this.season();
@@ -420,7 +435,7 @@ export class LeagueRepository {
       };
     });
   }
-  playerStats() {
+  playerStats(teamId?: string) {
     const season = this.season().id;
     // Aggregate the per-game rows, never add season snapshots on top of them.
     const sums = Object.values(statColumns)
@@ -430,8 +445,8 @@ export class LeagueRepository {
       )
       .join(",");
     return this.all(
-      `SELECT s.player_id,p.display_name,count(DISTINCT s.game_id) AS gp,${sums} FROM player_game_stats s JOIN games g ON g.id=s.game_id JOIN players p ON p.id=s.player_id WHERE g.season_id=? AND g.status='final' AND g.stage='regular' GROUP BY s.player_id`,
-      season,
+      `SELECT s.player_id,p.display_name,count(DISTINCT s.game_id) AS gp,${sums} FROM player_game_stats s JOIN games g ON g.id=s.game_id JOIN players p ON p.id=s.player_id WHERE g.season_id=? AND g.status='final' AND g.stage='regular' AND (? IS NULL OR s.team_id=?) GROUP BY s.player_id`,
+      season, teamId ?? null, teamId ?? null,
     ).map((r) => {
       const out: RecordRow = {
         Player: r.display_name,
@@ -466,7 +481,7 @@ export class LeagueRepository {
   playerGames(name: string, team: string) {
     const player = this.playerId(name);
     if (!player) return [];
-    const teamId = team ? this.teamId(team) : this.rosterTeam(player);
+    const teamId = team ? this.teamId(team) : undefined;
     return this.games()
       .filter((g) => g.Qtr === "FINAL")
       .flatMap((g) => {
@@ -477,6 +492,7 @@ export class LeagueRepository {
           player,
         );
         const stats = rows.find((s) => !teamId || s.team_id === teamId);
+        if (!stats) return [];
         if (
           teamId
             ? ![game.home_team_id, game.away_team_id].includes(teamId)
@@ -498,6 +514,9 @@ export class LeagueRepository {
             gameId: g.GameId,
             week: g.Week,
             opponent: home ? g.Away : g.Home,
+            team: home ? g.Home : g.Away,
+            stage: game.stage,
+            blocking: { wins: r.ol_wins ?? 0, losses: r.ol_losses ?? 0, leadBlocks: r.lead_blocks ?? 0 },
             location: home ? "vs" : "@",
             result: `${score > opp ? "W" : score < opp ? "L" : "T"} ${score}-${opp}`,
             date: g.Date,

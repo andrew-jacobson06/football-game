@@ -2884,3 +2884,21 @@ button.playoff-team-row:focus-visible { background: var(--stat-highlight); outli
 @media(prefers-reduced-motion:reduce){.touchdown-banner{animation-name:none;}}
 .conversion-choice{position:fixed;bottom:24px;right:24px;z-index:450;width:min(380px,calc(100vw - 32px));box-sizing:border-box;box-shadow:0 12px 48px var(--shadow-color);border-top:3px solid var(--accent-red);}
 @media(max-width:600px){.conversion-choice{bottom:16px;right:16px;}}
+
+.player-game-log { padding: 24px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-raised); color: var(--text-primary); }
+.player-game-log > header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+.player-game-log h2 { margin: 0; font-size: 1.8rem; }
+.player-game-log .stats-select { min-width: min(280px, 100%); }
+.player-game-log-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.player-game-log-table th, .player-game-log-table td { padding: 14px 12px; text-align: right; border-bottom: 1px solid var(--border-color); }
+.player-game-log-table thead th { font-size: .8rem; font-weight: 700; color: var(--text-secondary); }
+.player-game-log-table thead tr:first-child th { text-align: center; color: var(--text-primary); }
+.player-game-log-table th:first-child, .player-game-log-table td:first-child { text-align: left; }
+.player-game-log-table tbody tr:nth-child(even) { background: var(--surface-subtle); }
+.player-game-log-table .game-log-group-start { border-left: 1px solid var(--border-color); }
+.player-game-log-table tfoot { font-weight: 700; background: var(--surface-subtle); }
+.game-log-opponent { display: inline-flex; align-items: center; gap: 8px; }
+.game-log-opponent img { width: 26px; height: 26px; object-fit: contain; }
+.game-log-result { min-width: 100px; }
+.game-result-tie { color: var(--text-secondary); }
+@media (max-width: 640px) { .player-game-log { padding: 16px; } .player-game-log > header { align-items: stretch; flex-direction: column; } }

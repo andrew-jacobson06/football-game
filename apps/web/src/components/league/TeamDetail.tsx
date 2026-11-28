@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { getTeamPlayers, type PlayerStats, type TeamPlayer } from "../../api/client";
+import { getTeamPlayers, getSeasons, type LeagueSeason, type PlayerStats, type TeamPlayer } from "../../api/client";
+import { SeasonSelect } from "./PlayerGameLog";
 import { PlayerImage } from "../players/PlayerImage";
 import type { LeagueGame, LeagueTeam } from "./types";
 import { computeWinPct, parseInteger } from "./leagueMappers";
@@ -105,6 +106,9 @@ function kickoffParts(game: LeagueGame) {
 }
 
 export function TeamDetail({ team, standings, games, onBack, onGame }: { team: LeagueTeam; standings: LeagueTeam[]; games: LeagueGame[]; onBack: () => void; onGame: (game: LeagueGame) => void }) {
+  const [seasons, setSeasons] = useState<LeagueSeason[]>([]);
+  const [seasonId, setSeasonId] = useState(String(team.StatsSeasonId || ""));
+  const [rosterSeason, setRosterSeason] = useState("");
   const [section, setSection] = useState<TeamSection>("stats");
   const [players, setPlayers] = useState<TeamPlayer[]>([]);
   const [rosterError, setRosterError] = useState("");
@@ -114,11 +118,20 @@ export function TeamDetail({ team, standings, games, onBack, onGame }: { team: L
   const teamGames = useMemo(() => games.filter((game) => key(game.Home) === key(id) || key(game.Away) === key(id)), [games, id]);
 
   useEffect(() => {
-    getTeamPlayers(id).then((result) => {
+    let active = true;
+    getSeasons().then(result => { if (active) { setSeasons(result.seasons); setSeasonId(current => current || result.seasons[0]?.id || ""); } }).catch(error => { if (active) setRosterError(error.message); });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    if (!seasonId) return;
+    let active = true;
+    getTeamPlayers(id, seasonId).then((result) => {
+      if (!active) return;
       setPlayers(result.players);
       setRosterError("");
-    }).catch((error: unknown) => setRosterError(error instanceof Error ? error.message : "Unable to load roster"));
-  }, [id]);
+    }).catch((error: unknown) => { if (active) setRosterError(error instanceof Error ? error.message : "Unable to load roster"); }).finally(() => { if (active) setRosterSeason(seasonId); });
+    return () => { active = false; };
+  }, [id, seasonId]);
 
   const division = String(standing.Division ?? "").trim();
   const divisionRows = standings.filter((row) => key(row.Division) === key(division)).sort((a, b) => Number(computeWinPct(b)) - Number(computeWinPct(a)) || parseInteger(b.Wins) - parseInteger(a.Wins));
@@ -142,11 +155,11 @@ export function TeamDetail({ team, standings, games, onBack, onGame }: { team: L
     <header className="team-page-hero">{team.Logo ? <img src={String(team.Logo)} alt="" /> : <div className="team-page-crest">{id.slice(0, 2)}</div>}<div><span>AFL TEAM</span><h1>{name}</h1><p>{record} · {divisionPlace >= 0 ? `${ordinal(divisionPlace + 1)} in ${division}` : division || "2026 Regular Season"}</p></div></header>
     <nav className="team-page-nav" aria-label={`${name} sections`}>{(["overview", "stats", "schedule", "roster"] as TeamSection[]).map((item) => <button type="button" className={section === item ? "active" : ""} onClick={() => setSection(item)} key={item}>{item}</button>)}</nav>
     {section === "stats" ? <section className="team-stats-shell">
-      <header className="team-stats-heading"><div><h2>{name} Player Stats 2026</h2></div><button type="button">2026 Regular Season⌄</button></header>
+      <header className="team-stats-heading"><div><h2>{name} Player Stats · {seasons.find(s => s.id === seasonId)?.name}</h2></div><SeasonSelect seasons={seasons} seasonId={seasonId} onChange={id => { setPlayers([]); setRosterError(""); setSeasonId(id); }} /></header>
       <div className="team-stats-mode"><strong>Players</strong><span>Team</span></div>
       <h3>Team Leaders</h3>
-      {rosterError ? <p className="players-message players-message--error">{rosterError}</p> : <div className="team-leaders">{leaders.map((leader, index) => leader && <article key={`${leader.Name}-${index}`}><small>{leaderSpecs[index].label}</small><PlayerImage player={leader} className="leader-avatar" /><p><b>{leader.Name}</b> <em>{leader.Pos || leader.DefPos}</em></p><strong>{hasStats ? formatStat(numericStat(leader.Stats, leaderSpecs[index].fields)) : `${stars(leader, leaderSpecs[index].side)}★`}</strong></article>)}</div>}
-      {!players.length && !rosterError ? <p>Loading roster…</p> : statGroups.map((group) => <SortableStatTable group={group} players={players} key={group.title} />)}
+      {rosterError ? <p className="players-message players-message--error">{rosterError}</p> : <div className="team-leaders">{leaders.map((leader, index) => leader && <article key={`${leader.Name}-${index}`}><small>{leaderSpecs[index].label}</small><PlayerImage player={leader} className="leader-avatar" /><p><b>{leader.Name}</b> <em>{leader.Pos || leader.DefPos}</em></p><strong>{hasStats ? formatStat(numericStat(leader.Stats, leaderSpecs[index].fields)) : "0"}</strong></article>)}</div>}
+      {rosterSeason !== seasonId && !rosterError ? <p>Loading season statistics…</p> : statGroups.map((group) => <SortableStatTable group={group} players={players} key={group.title} />)}
     </section> : section === "schedule" ? <section className="team-schedule-panel"><header><span>2026 SEASON</span><h2>{name} Schedule 2026</h2></header>{teamGames.length ? <><h3>Regular Season</h3><div className="team-schedule-scroll"><table><thead><tr><th>WK</th><th>DATE</th><th>OPPONENT</th><th>TIME</th><th>TV</th></tr></thead><tbody>{teamGames.map((game, index) => {
       const isHome = key(game.Home) === key(id);
       const opponent = isHome ? game.Away : game.Home;

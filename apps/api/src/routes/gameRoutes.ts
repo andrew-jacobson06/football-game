@@ -257,10 +257,12 @@ async function getPlayersWithTeamJerseys() {
   }));
 }
 async function getTeamPlayers(teamAbbrev: string) {
+  const teamId = repository().teamId(teamAbbrev);
+  if (!teamId) return [];
   const [assignments, players, playerStats, jerseys] = await Promise.all([
     readTableObjects("PlayerTeams!A1:B"),
     readTableObjects("Players!A1:AM"),
-    getPlayerSeasonStats(),
+    Promise.resolve(repository().playerStats(teamId)),
     getTeamJerseys("Away Jersey Crop"),
   ]);
   const teamKey = teamAbbrev.trim().toLowerCase();
@@ -292,7 +294,7 @@ async function getTeamPlayers(teamAbbrev: string) {
     const name = String(stats.Player ?? stats.Name ?? "")
       .trim()
       .toLowerCase();
-    if (name && rosterNames.has(name)) statsByName.set(name, stats);
+    if (name) { rosterNames.add(name); statsByName.set(name, stats); }
   });
 
   return [...rosterNames].map((name) => ({

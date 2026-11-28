@@ -125,18 +125,27 @@ async function putJson<T>(
 export async function getApiHealth(): Promise<ApiHealth> {
   return getJson("/health", "Failed to reach backend API");
 }
-export async function getPlayers(): Promise<{ players: Player[] }> {
-  return getJson("/players", "Failed to load players from backend API");
+export type LeagueSeason = { id: string; number: number; name: string; year: number | null; status: string };
+export type TeamSeasonStats = { teamId: string; gp: number; passing: number; rushing: number; sacks: number; interceptions: number; fumbleRecoveries: number; interceptionsThrown: number; fumblesLost: number };
+const seasonQuery = (seasonId?: string) => seasonId ? `?seasonId=${encodeURIComponent(seasonId)}` : "";
+export function getSeasons(): Promise<{ seasons: LeagueSeason[] }> {
+  return getJson("/seasons", "Failed to load league seasons");
+}
+export function getTeamSeasonStats(seasonId?: string): Promise<{ teamStats: TeamSeasonStats[] }> {
+  return getJson(`/team-season-stats${seasonQuery(seasonId)}`, "Failed to load team season statistics");
+}
+export async function getPlayers(seasonId?: string): Promise<{ players: Player[] }> {
+  return getJson(`/players${seasonQuery(seasonId)}`, "Failed to load players from backend API");
 }
 export type PlayerStats = Record<string, string> & {
   Player: string;
   Carries: string;
   Yards: string;
 };
-export async function getPlayerStats(): Promise<{
+export async function getPlayerStats(seasonId?: string): Promise<{
   playerStats: PlayerStats[];
 }> {
-  return getJson("/player-stats", "Failed to load player stats");
+  return getJson(`/player-stats${seasonQuery(seasonId)}`, "Failed to load player stats");
 }
 export type TeamDefenseStats = {
   team: string;
@@ -145,15 +154,19 @@ export type TeamDefenseStats = {
   rushingYardsAllowed: number;
   totalYardsAllowed: number;
 };
-export async function getTeamDefenseStats(): Promise<{
+export async function getTeamDefenseStats(seasonId?: string): Promise<{
   teamDefenseStats: TeamDefenseStats[];
 }> {
   return getJson(
-    "/team-defense-stats",
+    `/team-defense-stats${seasonQuery(seasonId)}`,
     "Failed to load game-specific defensive yardage",
   );
 }
 export type PlayerGame = {
+  week: string | number;
+  stage: string;
+  team: string;
+  blocking: { wins: number; losses: number; leadBlocks: number };
   gameId: string;
   opponent: string;
   location: "vs" | "@";
@@ -180,6 +193,7 @@ export type PlayerGame = {
     touchdowns: number;
     long: number;
     firstDowns: number;
+    yac: number;
   };
   fumbles: { total: number; lost: number };
   defense: {
@@ -195,29 +209,34 @@ export type PlayerGame = {
 export async function getPlayerGames(
   playerName: string,
   team?: string,
+  seasonId?: string,
 ): Promise<{ games: PlayerGame[] }> {
-  const teamQuery = team ? `?team=${encodeURIComponent(team)}` : "";
+  const query = new URLSearchParams();
+  if (team) query.set("team", team);
+  if (seasonId) query.set("seasonId", seasonId);
+  const teamQuery = query.size ? `?${query}` : "";
   return getJson(
     `/players/${encodeURIComponent(playerName)}/games${teamQuery}`,
     "Failed to load player game log",
   );
 }
-export async function getTeams(): Promise<{
+export async function getTeams(seasonId?: string): Promise<{
   teams: Record<string, unknown>[];
 }> {
-  return getJson("/teams", "Failed to load teams from backend API");
+  return getJson(`/teams${seasonQuery(seasonId)}`, "Failed to load teams from backend API");
 }
-export async function getStandings(): Promise<{
+export async function getStandings(seasonId?: string): Promise<{
   standings: Record<string, unknown>[];
 }> {
-  return getJson("/standings", "Failed to load standings from backend API");
+  return getJson(`/standings${seasonQuery(seasonId)}`, "Failed to load standings from backend API");
 }
 export type TeamPlayer = Player & { Stats?: PlayerStats | null };
 export async function getTeamPlayers(
   team: string,
+  seasonId?: string,
 ): Promise<{ players: TeamPlayer[] }> {
   return getJson(
-    `/teams/${encodeURIComponent(team)}/players`,
+    `/teams/${encodeURIComponent(team)}/players${seasonQuery(seasonId)}`,
     "Failed to load the team roster",
   );
 }
@@ -226,10 +245,10 @@ export async function getGames(): Promise<{
 }> {
   return getGamesList();
 }
-export async function getGamesList(): Promise<{
+export async function getGamesList(seasonId?: string): Promise<{
   games: Record<string, unknown>[];
 }> {
-  return getJson("/games", "Failed to load games from backend API");
+  return getJson(`/games${seasonQuery(seasonId)}`, "Failed to load games from backend API");
 }
 export type LeagueArticle = {
   id: string;

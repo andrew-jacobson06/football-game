@@ -10,6 +10,12 @@ import { Router } from "express";
 import { runtimeDatabase } from "../db/runtime.js";
 import { LeagueManagement, LeagueSetupError } from "../db/leagueManagement.js";
 export const leagueRoutes = Router();
+leagueRoutes.get("/seasons", (_req, res, next) => {
+  try { res.json({ seasons: repository().seasons() }); } catch (error) { next(error); }
+});
+leagueRoutes.get("/team-season-stats", (_req, res, next) => {
+  try { res.json({ teamStats: repository().teamSeasonStats() }); } catch (error) { next(error); }
+});
 leagueRoutes.get("/leagues", (_req, res, next) => {
   try {
     res.json({

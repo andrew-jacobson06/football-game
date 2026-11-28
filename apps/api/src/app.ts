@@ -8,9 +8,18 @@ export function createApp() {
   const app = express();
   app.use(cors({ origin: ["http://localhost:5173", "http://localhost:5174"] }));
   app.use(express.json({ limit: "2mb" }));
-  app.use((req,_res,next)=>{
+  app.use((req,res,next)=>{
     const leagueId=req.get("X-League-Id")?.trim();
-    leagueSelection.run({leagueId:leagueId||undefined},()=>next());
+    const requestedSeason = req.query.seasonId;
+    const seasonalRead = req.method === "GET" && (
+      /^\/api\/(players|teams|games|standings|player-stats|team-defense-stats|team-season-stats)$/.test(req.path) ||
+      /^\/api\/players\/[^/]+\/games$/.test(req.path) || /^\/api\/teams\/[^/]+\/players$/.test(req.path)
+    );
+    if (requestedSeason !== undefined && (!seasonalRead || typeof requestedSeason !== "string" || !requestedSeason.trim())) {
+      res.status(400).json({ error: "seasonId is supported only for seasonal statistics reads." });
+      return;
+    }
+    leagueSelection.run({leagueId:leagueId||undefined, seasonId: seasonalRead ? requestedSeason as string | undefined : undefined},()=>next());
   });
   app.use("/api", leagueRoutes);
   app.use("/api", gameRoutes);
