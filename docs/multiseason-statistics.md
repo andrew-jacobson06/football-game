@@ -34,3 +34,18 @@ season reads, rejected cross-league access, historical team contributions, and
 read-only season selection; game-log unit coverage checks position groups,
 longest-play totals, and weighted averages. The UI was checked with controlled
 API fixtures at desktop/mobile sizes in both light and dark themes.
+
+## Player Stats tab
+
+`GET /api/players/:playerName/career-stats?scope=regular` returns all completed
+season/team stat lines and a career total within the selected league. Use
+`scope=playoffs` for postseason totals. A player who changes teams has separate
+rows for each historical team. Career GP counts distinct games; longest plays
+use maxima, while counting metrics sum. The Stats tab calculates rates from
+these counts, shows historical season/year and team logos, and always renders
+Passing, Rushing, Receiving and Blocking in positional priority order.
+Uncalculated QBR is displayed as unavailable.
+
+The game-log calculation helper is named `gameLogStats.ts` to avoid Windows
+resolving the helper instead of the `PlayerGameLog.tsx` component. Component
+imports explicitly use `.tsx`.

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { PlayerGame } from "../src/api/client";
-import { gameLogGroups, gameLogTotals } from "../src/components/league/playerGameLog";
+import { gameLogGroups, gameLogTotals } from "../src/components/league/gameLogStats";
 test("offensive positions use the requested ordered stat groups", () => {
   for (const [position, expected] of Object.entries({ QB: ["PASSING", "RUSHING"], RB: ["RUSHING", "RECEIVING"], WR: ["RECEIVING", "RUSHING"], TE: ["RECEIVING", "BLOCKING"], OL: ["BLOCKING"] })) assert.deepEqual(gameLogGroups(position).map(g => g.label), expected);
   assert.deepEqual(gameLogGroups("DB"), []);

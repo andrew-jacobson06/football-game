@@ -2902,3 +2902,21 @@ button.playoff-team-row:focus-visible { background: var(--stat-highlight); outli
 .game-log-result { min-width: 100px; }
 .game-result-tie { color: var(--text-secondary); }
 @media (max-width: 640px) { .player-game-log { padding: 16px; } .player-game-log > header { align-items: stretch; flex-direction: column; } }
+
+.player-career-stats { padding: 24px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-raised); color: var(--text-primary); }
+.player-career-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 32px; }
+.player-career-heading h2 { margin: 0; font-size: 1.8rem; }
+.player-career-category + .player-career-category { margin-top: 36px; }
+.player-career-category h3 { margin: 0 0 16px; font-size: 1.3rem; }
+.player-career-table { width: 100%; border-collapse: collapse; white-space: nowrap; font-variant-numeric: tabular-nums; font-size: .95rem; }
+.player-career-table .career-season-column, .player-career-table .career-team-column { width: 110px; }
+.player-career-table th, .player-career-table td { padding: 14px 12px; text-align: right; border: 0; border-bottom: 1px solid var(--border-color); }
+.player-career-table thead th { color: var(--text-secondary); font-size: .8rem; }
+.player-career-table tbody th { font-weight: 400; }
+.player-career-table th:first-child, .player-career-table thead th:nth-child(2), .player-career-table tbody td:nth-child(2) { text-align: left; }
+.player-career-table thead th:nth-child(2), .player-career-table tbody td:nth-child(2), .player-career-table tfoot th { border-right: 1px solid var(--border-color); }
+.player-career-table tbody tr:nth-child(even) { background: var(--surface-subtle); }
+.player-career-table tfoot { font-weight: 700; }
+.career-team { display: inline-flex; align-items: center; gap: 8px; }
+.career-team img { width: 26px; height: 26px; object-fit: contain; }
+@media (max-width: 640px) { .player-career-stats { padding: 16px; } .player-career-heading { align-items: stretch; flex-direction: column; } }

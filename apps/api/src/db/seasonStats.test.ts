@@ -74,4 +74,24 @@ test("historical stats isolate seasons and leagues and follow recorded game team
   assert.equal(teamPlayers[0].Name, "Traveler");
   assert.equal(teamPlayers[0].Stats["Receiving Yards"], "101");
   assert.equal((await get("/players/Traveler/games?seasonId=s1")).status, 200);
+  const career = repo.playerCareer("Traveler");
+  assert.equal(career.seasons.length, 4, "retain both historical teams in each season");
+  assert.deepEqual(career.seasons.map(row => row.seasonNumber), [1, 1, 2, 2]);
+  assert.equal(career.career.gamesPlayed, 4);
+  assert.equal(career.career.stats.receiving_yards, 606);
+  assert.equal(career.career.stats.longest_reception, 202);
+  assert.deepEqual(career.seasons.map(row => row.team), ["A", "B", "A", "B"]);
+  assert.equal(repo.playerCareer("Missing").seasons.length, 0);
+  repo.insert("games", { id: "post", season_id: "s1", legacy_game_number: 66, stage: "playoffs", playoff_round: "Divisionals", home_team_id: "a", away_team_id: "b", status: "final" });
+  repo.insert("player_game_stats", { game_id: "post", team_id: "a", player_id: "p", receptions: 1, receiving_yards: 50, longest_reception: 50, metric_availability_json: "{}", calculation_version: "test" });
+  assert.equal(repo.playerCareer("Traveler", "playoffs").career.stats.receiving_yards, 50);
+  assert.equal(repo.playerCareer("Traveler").career.stats.receiving_yards, 606);
+  const careerRead = await get("/players/Traveler/career-stats");
+  assert.equal(careerRead.status, 200);
+  assert.equal((await careerRead.json()).career.gamesPlayed, 4);
+  assert.equal((await (await get("/players/Traveler/career-stats?scope=playoffs")).json()).career.stats.receiving_yards, 50);
+  assert.equal((await get("/players/Traveler/career-stats?scope=unknown")).status, 400);
+  const isolated = await fetch(base + "/players/Traveler/career-stats", { headers: { "X-League-Id": "other" } });
+  assert.deepEqual((await isolated.json()).seasons, []);
+
 });

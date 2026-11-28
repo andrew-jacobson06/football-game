@@ -478,6 +478,32 @@ export class LeagueRepository {
       );
     });
   }
+  playerCareer(name: string, scope: "regular" | "playoffs" = "regular") {
+    const league = this.season().league_id;
+    const players = this.all("SELECT id FROM players WHERE league_id=? AND display_name=? COLLATE NOCASE", league, name.trim());
+    if (!players.length) return { seasons: [], career: { gamesPlayed: 0, stats: {} } };
+    if (players.length !== 1) throw new Error(`Ambiguous player: ${name}`);
+    const player = players[0].id;
+    const columns = [...new Set(Object.values(statColumns))];
+    const aggregates = columns.map(key => `${key.startsWith("longest_") ? "max" : "sum"}(coalesce(s.${key},0)) AS ${key}`).join(",");
+    const from = `FROM player_game_stats s JOIN games g ON g.id=s.game_id JOIN seasons z ON z.id=g.season_id
+      WHERE s.player_id=? AND z.league_id=? AND g.status='final' AND g.stage=?`;
+    const args = [player, league, scope];
+    const stats = (row: RecordRow) => Object.fromEntries(columns.map(key => [key, number(row[key])]));
+    const rows = this.all(`SELECT g.season_id,z.season_number,z.display_name,z.display_year,s.team_id,
+      count(DISTINCT s.game_id) AS gp,${aggregates} ${from}
+      GROUP BY g.season_id,s.team_id ORDER BY z.season_number,s.team_id`, ...args);
+    const total = this.one(`SELECT count(DISTINCT s.game_id) AS gp,${aggregates} ${from}`, ...args)!;
+    return {
+      seasons: rows.map(row => {
+        const team = this.one("SELECT abbreviation,logo_url FROM team_seasons WHERE season_id=? AND team_id=?", row.season_id, row.team_id)!;
+        return { seasonId: row.season_id, seasonNumber: row.season_number, seasonName: row.display_name,
+          year: row.display_year, teamId: row.team_id, team: team.abbreviation, logo: team.logo_url,
+          gamesPlayed: row.gp, stats: stats(row) };
+      }),
+      career: { gamesPlayed: total.gp, stats: stats(total) },
+    };
+  }
   playerGames(name: string, team: string) {
     const player = this.playerId(name);
     if (!player) return [];

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getTeamPlayers, getSeasons, type LeagueSeason, type PlayerStats, type TeamPlayer } from "../../api/client";
-import { SeasonSelect } from "./PlayerGameLog";
+import { SeasonSelect } from "./PlayerGameLog.tsx";
 import { PlayerImage } from "../players/PlayerImage";
 import type { LeagueGame, LeagueTeam } from "./types";
 import { computeWinPct, parseInteger } from "./leagueMappers";

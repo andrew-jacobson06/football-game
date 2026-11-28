@@ -1,7 +1,7 @@
 import type { LeagueSeason, PlayerGame } from "../../api/client";
 import { AppSelect } from "../ui/AppSelect";
 import type { LeagueTeam } from "./types";
-import { gameLogGroups, gameLogTotals } from "./playerGameLog";
+import { gameLogGroups, gameLogTotals } from "./gameLogStats";
 
 export function SeasonSelect({ seasons, seasonId, onChange }: { seasons: LeagueSeason[]; seasonId: string; onChange: (id: string) => void }) {
   return <label className="stats-select"><span className="sr-only">Season / year</span><AppSelect aria-label="Season / year" value={seasonId} onChange={e => onChange(e.target.value)} disabled={!seasons.length}>

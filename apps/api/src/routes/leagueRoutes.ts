@@ -10,6 +10,15 @@ import { Router } from "express";
 import { runtimeDatabase } from "../db/runtime.js";
 import { LeagueManagement, LeagueSetupError } from "../db/leagueManagement.js";
 export const leagueRoutes = Router();
+leagueRoutes.get("/players/:playerName/career-stats", (req, res, next) => {
+  const scope = req.query.scope ?? "regular";
+  if (scope !== "regular" && scope !== "playoffs") {
+    res.status(400).json({ error: "scope must be regular or playoffs." });
+    return;
+  }
+  try { res.json(repository().playerCareer(String(req.params.playerName), scope)); }
+  catch (error) { next(error); }
+});
 leagueRoutes.get("/seasons", (_req, res, next) => {
   try { res.json({ seasons: repository().seasons() }); } catch (error) { next(error); }
 });

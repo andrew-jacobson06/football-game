@@ -162,6 +162,15 @@ export async function getTeamDefenseStats(seasonId?: string): Promise<{
     "Failed to load game-specific defensive yardage",
   );
 }
+export type CareerStatLine = { gamesPlayed: number; stats: Record<string, number> };
+export type PlayerSeasonLine = CareerStatLine & {
+  seasonId: string; seasonNumber: number; seasonName: string; year: number | null;
+  teamId: string; team: string; logo: string | null;
+};
+export type PlayerCareerStats = { seasons: PlayerSeasonLine[]; career: CareerStatLine };
+export function getPlayerCareerStats(name: string, scope: "regular" | "playoffs" = "regular"): Promise<PlayerCareerStats> {
+  return getJson(`/players/${encodeURIComponent(name)}/career-stats?scope=${scope}`, "Failed to load player career statistics");
+}
 export type PlayerGame = {
   week: string | number;
   stage: string;
