@@ -49,6 +49,7 @@ export { calculateJumpRange, rollReceiverJump, getJumpRouteMultiplier } from "./
 export {
   punt,
   kickFG,
+  kickExtraPoint,
   goForTwo,
   handleTimeout,
   spikeBall,

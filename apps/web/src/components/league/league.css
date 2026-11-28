@@ -2870,3 +2870,17 @@ button.playoff-team-row:focus-visible { background: var(--stat-highlight); outli
 @media (max-width: 640px) { .playoff-layout, .award-nominees-grid, .honors-grid { grid-template-columns: minmax(0, 1fr); } .playoff-division--east, .playoff-division--west, .playoff-national { grid-column: 1; grid-row: auto; width: 100%; } .playoff-national { order: 1; } .honors-card th, .honors-card td { padding: 12px 10px; } }
 .award-winner { margin: 16px; color: var(--status-success); overflow-wrap: anywhere; }
 .award-candidates { overflow-wrap: anywhere; }
+.touchdown-banner{position:absolute;inset:0;z-index:5;display:flex;align-items:center;gap:clamp(12px,4vw,60px);padding:0 6%;background:var(--td-primary);color:var(--td-secondary);animation:touchdown-unfurl-left 2.6s both;overflow:hidden;pointer-events:none;border-radius:inherit;}
+.touchdown-banner--away{flex-direction:row-reverse;animation-name:touchdown-unfurl-right;}
+.touchdown-banner strong{font-size:clamp(1.5rem,5vw,3.5rem);font-weight:900;letter-spacing:.1em;line-height:1;}
+.touchdown-banner__logo{position:relative;display:grid;place-items:center;flex:0 0 auto;width:clamp(40px,8vw,84px);height:clamp(40px,8vw,84px);font-size:.8rem;font-weight:800;}
+.touchdown-banner__logo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:var(--td-primary);}
+@keyframes touchdown-unfurl-left{0%{clip-path:inset(0 100% 0 0);}25%,80%{clip-path:inset(0 0 0 0);}100%{clip-path:inset(0 100% 0 0);}}
+@keyframes touchdown-unfurl-right{0%{clip-path:inset(0 0 0 100%);}25%,80%{clip-path:inset(0 0 0 0);}100%{clip-path:inset(0 0 0 100%);}}
+.conversion-choice{padding:20px;border:1px solid var(--border-color);border-radius:12px;background:var(--surface-raised);color:var(--text-primary);}
+.conversion-choice p{color:var(--text-secondary);font-size:.85rem;}
+.conversion-choice button{padding:12px 18px;margin:8px 12px 0 0;border:1px solid var(--accent-red);border-radius:10px;background:var(--accent-red);color:var(--text-inverse);font:inherit;font-weight:700;cursor:pointer;}
+.conversion-choice button:disabled{opacity:.45;cursor:not-allowed;}
+@media(prefers-reduced-motion:reduce){.touchdown-banner{animation-name:none;}}
+.conversion-choice{position:fixed;bottom:24px;right:24px;z-index:450;width:min(380px,calc(100vw - 32px));box-sizing:border-box;box-shadow:0 12px 48px var(--shadow-color);border-top:3px solid var(--accent-red);}
+@media(max-width:600px){.conversion-choice{bottom:16px;right:16px;}}

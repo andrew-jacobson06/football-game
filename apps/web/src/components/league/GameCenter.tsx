@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LeagueGame, GameTab, LeagueTeam } from "./types";
 import "./GameCenter.css";
 import {
@@ -9,7 +9,8 @@ import {
   parseInteger,
 } from "./leagueMappers";
 import { groupPlaysByDrive, currentDriveSummary } from "./driveSummary";
-import { playText } from "./playDescription";
+import { isConversionPlay } from "./conversionFacts";
+import { playText, playsWithConversions } from "./playDescription";
 import { FormattedPlayText } from "./FormattedPlayText";
 import { playFlag } from "./gameplay/engine/playLogger";
 import {
@@ -276,8 +277,9 @@ function PlayByPlayTab({
 }) {
   const [view, setView] = useState<"all" | "scoring">("all");
   const drives = useMemo(() => groupPlaysByDrive(history, game), [history, game]);
-  const chronologicalScoring = history.filter((play, index) => {
-    const previous = history[index - 1];
+  const scoringHistory = useMemo(()=>playsWithConversions(history),[history]);
+  const chronologicalScoring = scoringHistory.filter((play, index) => {
+    const previous = scoringHistory[index - 1];
     return num(playField(play, "HomeScore", "homescore")) > num(playField(previous, "HomeScore", "homescore")) ||
       num(playField(play, "AwayScore", "awayscore")) > num(playField(previous, "AwayScore", "awayscore"));
   });
@@ -337,7 +339,7 @@ function PlayByPlayTab({
             </span>
           </summary>
           <div className="drive-plays">
-            {[...drive.plays].reverse().map((play, i) => {
+            {playsWithConversions(drive.plays).reverse().map((play, i) => {
               const downDist = formatDownDistance(
                 (playField(play, "Down", "down") as string | number) ?? 1,
                 (playField(play, "Distance", "distance") as string | number) ??
@@ -428,6 +430,7 @@ function calcStats(history: Play[]) {
     return s;
   };
   history.forEach((p) => {
+    if(isConversionPlay(p))return;
     const team = str(playField(p, "Possession", "possession"));
     if (!team) return;
     const defTeam = team === "Home" ? "Away" : "Home";
@@ -937,6 +940,7 @@ function computeTeamStats(history: Play[], game: LeagueGame) {
     Qtr: 1,
   };
   history.forEach((play) => {
+    if(isConversionPlay(play))return;
     const team = str(playField(play, "Possession", "possession")) as
       | "Home"
       | "Away";
@@ -1607,7 +1611,7 @@ export function GameCenter({
         game: {
           gameId: startedGame.GameId,
           quarter: startedGame.Qtr,
-          overtime: startedGame.Overtime,
+          overtime: overtimeState(startedGame),
           time: 900,
           down: 1,
           distance: 10,
@@ -1659,6 +1663,10 @@ export function GameCenter({
     setSelectedPlayType(null);
     setSelectedRoutePlayer("");
   }, [currentGame.Possession]);
+  const [touchdownSide,setTouchdownSide]=useState<'Home'|'Away'|null>(null);
+  const touchdownResolver=useRef<(()=>void)|null>(null);
+  const finishTouchdown=useCallback(()=>{setTouchdownSide(null);touchdownResolver.current?.();touchdownResolver.current=null;},[]);
+  useEffect(()=>()=>{touchdownResolver.current?.();},[]);
   const persist = async (result: ReturnType<typeof runPlay>) => {
     if (playInFlightRef.current) return;
     playInFlightRef.current = true;
@@ -1692,7 +1700,8 @@ export function GameCenter({
     const gamePayload = {
       gameId: result.game.GameId,
       quarter: result.game.Qtr,
-      overtime: result.game.Overtime,
+      overtime: overtimeState(result.game),
+      pendingConversion:result.game.PendingConversion??null,
       time: result.game.Time,
       down: result.game.Down,
       distance: result.game.Distance,
@@ -1739,6 +1748,10 @@ export function GameCenter({
         reads: {},
         routeDepths: {},
       }));
+      if(result.play.result==='Touchdown'&&!isConversionPlay(result.play)){
+        setTouchdownSide(Number(result.game.HomeScore)>Number(previousGame.HomeScore)?'Home':'Away');
+        await new Promise<void>(resolve=>{touchdownResolver.current=resolve;});
+      }
     } catch (error) {
       fatigueSnapshot.forEach(({ player, energy, temporaryFatigue }) => {
         player.energy = energy;
@@ -1764,12 +1777,18 @@ export function GameCenter({
       ]);
       return;
     }
-    if (label === "Run Play") void persist(runPlay(currentGame, ctx, options));
+    if(currentGame.PendingConversion?.choice==='choose'&&!['Extra Point','Two Point'].includes(label))return;
+    if(currentGame.PendingConversion?.choice==='two'&&!['Run Play','Pass Play'].includes(label))return;
+    if(label==='Extra Point')void persist(kickFG(currentGame,ctx));
+    else if (label === "Run Play") void persist(runPlay(currentGame, ctx, options));
     else if (label === "Pass Play")
       void persist(passPlay(currentGame, ctx, options));
     else if (label === "Field Goal") void persist(kickFG(currentGame, ctx));
     else if (label === "Punt") void persist(punt(currentGame, ctx));
-    else if (label === "Two Point") void persist(goForTwo(currentGame, ctx));
+    else if (label === "Two Point") {
+      const next=goForTwo(currentGame,ctx);playInFlightRef.current=true;setIsSavingPlay(true);
+      void savePlayAndGame(currentGame.GameId,{expectedVersion:currentGame.StateVersion,game:{gameId:next.GameId,quarter:next.Qtr,time:next.Time,down:next.Down,distance:next.Distance,ballOn:next.BallOn,homeScore:next.HomeScore,awayScore:next.AwayScore,possession:next.Possession,pendingConversion:next.PendingConversion}}).then(saved=>{next.StateVersion=saved.version;setCurrentGame(next);onGameUpdate?.(next);}).catch(error=>setLog(l=>[`Could not select try: ${error.message}`,...l])).finally(()=>{playInFlightRef.current=false;setIsSavingPlay(false);});
+    }
     else if (label === "Timeout") void persist(handleTimeout(currentGame, ctx));
     else if (label === "Spike") void persist(spikeBall(currentGame, ctx));
     else if (label === "Kneel") void persist(kneel(currentGame, ctx, options));
@@ -1778,7 +1797,8 @@ export function GameCenter({
     () => currentDriveSummary(history, currentGame),
     [history, currentGame],
   );
-  const lastPlay = history.length ? playText(history[history.length - 1]) : "";
+  const displayedHistory=playsWithConversions(history);
+  const lastPlay = displayedHistory.length ? playText(displayedHistory[displayedHistory.length - 1]) : "";
   return (
     <div id="gameUI">
       <button
@@ -1789,7 +1809,7 @@ export function GameCenter({
         ← Back
       </button>
       <div className="game-sticky-header">
-        <GameScoreboard game={currentGame} home={homeTeamDetails} away={awayTeamDetails} />
+        <GameScoreboard game={currentGame} home={homeTeamDetails} away={awayTeamDetails} touchdown={touchdownSide} onTouchdownComplete={finishTouchdown} />
         {/* <div className="spectate-control">
           <label className="spectate-switch">
             <input
@@ -1833,9 +1853,9 @@ export function GameCenter({
         <div className="tab-content active">
           <div className="game-info">
             <div className="info-block">
-              <div className="info-label">DOWN:</div>
+              <div className="info-label">{currentGame.PendingConversion?'TRY:':'DOWN:'}</div>
               <div className="info-value">
-                {formatDownDistance(currentGame.Down, currentGame.Distance, currentGame.BallOn, currentGame.Possession)}
+                {currentGame.PendingConversion?(currentGame.PendingConversion.choice==='two'?'2-PT TRY':'PAT / 2-PT'):formatDownDistance(currentGame.Down, currentGame.Distance, currentGame.BallOn, currentGame.Possession)}
               </div>
             </div>
             <div className="info-block">
@@ -1847,12 +1867,12 @@ export function GameCenter({
                 )}
               </div>
             </div>
-            <div className="info-block">
+            {!currentGame.PendingConversion&&<div className="info-block">
               <div className="info-label">DRIVE:</div>
               <div className="info-value">
                 {drivePlays} plays, {driveYards} yards
               </div>
-            </div>
+            </div>}
           </div>
           {awaitingToss && (
             <>

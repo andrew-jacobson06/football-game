@@ -1,3 +1,4 @@
+import { TouchdownBanner } from "./TouchdownBanner";
 import { useState, type CSSProperties } from "react";
 import type { LeagueGame, LeagueTeam } from "./types";
 import { formatClock, formatQuarter } from "./leagueMappers";
@@ -62,7 +63,11 @@ function ScoreboardTeam({
       >
         <span className="game-scoreboard__score">{team.score}</span>
         {possession && (
-          <span className="game-scoreboard__possession" role="img" aria-label="Possession" />
+          <span
+            className="game-scoreboard__possession"
+            role="img"
+            aria-label="Possession"
+          />
         )}
       </div>
     </div>
@@ -73,10 +78,14 @@ export function GameScoreboard({
   game,
   home,
   away,
+  touchdown,
+  onTouchdownComplete,
 }: {
   game: LeagueGame;
   home?: LeagueTeam;
   away?: LeagueTeam;
+  touchdown?: "Home" | "Away" | null;
+  onTouchdownComplete?: () => void;
 }) {
   const homeTeam = scoreboardTeam(game, "Home", home),
     awayTeam = scoreboardTeam(game, "Away", away);
@@ -91,6 +100,20 @@ export function GameScoreboard({
       style={styles}
       aria-label="Game scoreboard"
     >
+      {touchdown && onTouchdownComplete && (
+        <TouchdownBanner
+          side={touchdown}
+          logo={(touchdown === "Home" ? homeTeam : awayTeam).logo}
+          abbreviation={
+            (touchdown === "Home" ? homeTeam : awayTeam).abbreviation
+          }
+          primary={(touchdown === "Home" ? homeTeam : awayTeam).primaryColor}
+          secondary={
+            (touchdown === "Home" ? homeTeam : awayTeam).secondaryColor
+          }
+          onDone={onTouchdownComplete}
+        />
+      )}
       <ScoreboardTeam
         team={homeTeam}
         side="home"
@@ -99,13 +122,15 @@ export function GameScoreboard({
       />
       <div className="game-scoreboard__status" aria-live="polite">
         <span className="game-scoreboard__period">
-          {final
-            ? "Final"
-            : Number(game.Qtr) > 0
-              ? formatQuarter(game.Qtr)
-              : "Pre-game"}
+          {game.PendingConversion
+            ? "Conversion"
+            : final
+              ? "Final"
+              : Number(game.Qtr) > 0
+                ? formatQuarter(game.Qtr)
+                : "Pre-game"}
         </span>
-        {!final && (
+        {!final && !game.PendingConversion && (
           <span className="game-scoreboard__clock">
             {formatClock(game.Time)}
           </span>

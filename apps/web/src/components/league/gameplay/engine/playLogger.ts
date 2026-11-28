@@ -1,3 +1,4 @@
+import { queueTouchdownTry, finishConversion } from "./conversions";
 import { elapsedPlaySeconds } from "./playClock";
 import type { LeagueGame } from "../../types";
 import type { NormalizedOutcome, PlayKind } from "./types";
@@ -6,8 +7,14 @@ import { resolveOvertime } from "../../overtime";
 
 /** Sheet flags can arrive as booleans, numbers, or Google Sheets TRUE/FALSE text. */
 export function playFlag(value: unknown, legacy: boolean) {
-  const flag = String(value ?? "").trim().toLowerCase();
-  return ["true", "yes", "1"].includes(flag) ? true : ["false", "no", "0"].includes(flag) ? false : legacy;
+  const flag = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  return ["true", "yes", "1"].includes(flag)
+    ? true
+    : ["false", "no", "0"].includes(flag)
+      ? false
+      : legacy;
 }
 
 export function determinePlayOutcome(
@@ -58,6 +65,7 @@ export function buildGameData(game: LeagueGame, previous: unknown) {
     previous,
     possession: game.Possession,
     overtime: game.Overtime,
+    pendingConversion: game.PendingConversion ?? null,
     homeTimeouts: (game as unknown as Record<string, unknown>).HomeTimeouts,
     awayTimeouts: (game as unknown as Record<string, unknown>).AwayTimeouts,
   };
@@ -76,7 +84,10 @@ export function logPlayToDB(
   extra: Record<string, unknown> = {},
 ) {
   const updatedState = game as unknown as Record<string, unknown>;
-  const endedHalf = Number(prev.Qtr) === 2 && Number(game.Qtr) === 3 && updatedState.EndOfHalf === true;
+  const endedHalf =
+    Number(prev.Qtr) === 2 &&
+    Number(game.Qtr) === 3 &&
+    updatedState.EndOfHalf === true;
   const normalized = determinePlayOutcome(
     result,
     playtype,
@@ -101,7 +112,10 @@ export function logPlayToDB(
         : undefined;
   const playid = `${prev.GameId}-${Date.now()}-${historyLength + 1}`;
   return {
-    playLength: elapsedPlaySeconds({ period: prev.Qtr, seconds: prev.Time }, { period: game.Qtr, seconds: game.Time }),
+    playLength: elapsedPlaySeconds(
+      { period: prev.Qtr, seconds: prev.Time },
+      { period: game.Qtr, seconds: game.Time },
+    ),
     blitz: false,
     blitzBy: null,
     qbPressures: 0,
@@ -134,7 +148,10 @@ export function logPlayToDB(
     // Resolution can override these flags when a sack also causes a fumble,
     // safety, or turnover on downs. The final result is a separate fact.
     isSack: result === "Sack",
-    isComplete: playtype === "Pass" && !["Sack", "Incomplete", "Interception"].includes(result) && Boolean(receiver),
+    isComplete:
+      playtype === "Pass" &&
+      !["Sack", "Incomplete", "Interception"].includes(result) &&
+      Boolean(receiver),
     yac: 0,
     airyards: extra.airyards ?? (playtype === "Pass" ? yards : 0),
     lineMatchups: [],
@@ -177,7 +194,18 @@ export function buildResult(
   historyLength: number,
   extra: Record<string, unknown> = {},
 ) {
-  game = resolveOvertime(prev, game, result);
+  const conversion = prev.PendingConversion?.choice === "two";
+  const good =
+    conversion &&
+    result === "Touchdown" &&
+    Number(game[`${prev.PendingConversion!.team}Score`]) >
+      Number(prev[`${prev.PendingConversion!.team}Score`]);
+  if (conversion) game = finishConversion(prev, Boolean(good));
+  else
+    game =
+      result === "Touchdown"
+        ? queueTouchdownTry(prev, game)
+        : resolveOvertime(prev, game, result);
   const play = logPlayToDB(
     prev,
     game,
@@ -188,7 +216,44 @@ export function buildResult(
     tackler,
     result,
     historyLength,
-    extra,
+    conversion
+      ? {
+          ...extra,
+          isConversion: true,
+          conversionType: "2pt",
+          conversionPlayType: playtype,
+          conversionOutcome: result,
+          conversionCompleted: extra.isComplete ?? false,
+          touchdownPlayId: prev.PendingConversion!.touchdownPlayId,
+          time: "2pt",
+          qtr: prev.PendingConversion?.quarter ?? prev.Qtr,
+          playLength: 0,
+          down: null,
+          distance: null,
+          turnover: "",
+          defenseresult: "",
+          isSack: false,
+          isComplete: false,
+          lineMatchups: [],
+          olWins: 0,
+          olLosses: 0,
+          dlWins: 0,
+          dlLosses: 0,
+        }
+      : extra,
   );
-  return { game, play, text: `${playtype}: ${result}` };
+  if (conversion) {
+    play.playtype = "Two Point";
+    play.result = good ? "2PT Successful" : "2PT Failed";
+    play.description = play.result;
+    play.desc = play.result;
+  } else if (game.PendingConversion)
+    game.PendingConversion.touchdownPlayId = play.playid;
+  return {
+    game,
+    play,
+    text: conversion
+      ? `2-PT try is ${good ? "GOOD" : "NO GOOD"}!`
+      : `${playtype}: ${result}`,
+  };
 }

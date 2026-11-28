@@ -1,13 +1,27 @@
+import { finishConversion } from "./conversions";
+import { logPlayToDB } from "./playLogger";
 import type { LeagueGame } from "../../types";
 import type { EngineContext, PlayCallOptions } from "./types";
-import { advanceQuarter, applyHalftimeRules, kickoffSpot, n, nextDownDistance, randomInt, switchPoss } from "./utils";
+import {
+  advanceQuarter,
+  applyHalftimeRules,
+  kickoffSpot,
+  n,
+  nextDownDistance,
+  randomInt,
+  switchPoss,
+} from "./utils";
 import { buildResult } from "./playLogger";
 
 /** These simplified plays do not currently run either turnover check. */
 function logSkippedTurnoverChecks(game: LeagueGame, reason: string) {
-  for (const check of ["Interception", "Fumble"]) console.log(`[${check}] Checks skipped`, {
-    gameId: game.GameId, checked: false, roll: null, reason,
-  });
+  for (const check of ["Interception", "Fumble"])
+    console.log(`[${check}] Checks skipped`, {
+      gameId: game.GameId,
+      checked: false,
+      roll: null,
+      reason,
+    });
 }
 
 export function punt(game: LeagueGame, ctx: EngineContext) {
@@ -48,6 +62,7 @@ export function punt(game: LeagueGame, ctx: EngineContext) {
   );
 }
 export function kickFG(game: LeagueGame, ctx: EngineContext) {
+  if (game.PendingConversion) return kickExtraPoint(game, ctx);
   logSkippedTurnoverChecks(game, "field-goal-or-extra-point");
   const pendingFGTeam = (game as unknown as Record<string, unknown>)
     .pendingFGTeam as string | undefined;
@@ -91,41 +106,61 @@ export function kickFG(game: LeagueGame, ctx: EngineContext) {
     ctx.historyLength,
   );
 }
-export function goForTwo(game: LeagueGame, ctx: EngineContext) {
-  logSkippedTurnoverChecks(game, "two-point-conversion");
-  const scoring =
-    ((game as unknown as Record<string, unknown>).pendingFGTeam as
-      string | undefined) || game.Possession;
-  const made = randomInt(1, 100) <= 47;
-  let hs = n(game.HomeScore),
-    as = n(game.AwayScore);
-  if (made) {
-    if (scoring === "Home") hs += 2;
-    else as += 2;
-  }
-  const possession = switchPoss(game);
-  const spot = kickoffSpot(possession);
-  const updated = applyHalftimeRules(game, {
-    ...game,
-    HomeScore: hs,
-    AwayScore: as,
-    Down: 1,
-    Distance: 10,
-    BallOn: spot,
-    DriveStart: spot,
-    Possession: possession,
-  });
-  return buildResult(
+/** A guaranteed PAT is an untimed conversion event, not a field goal. */
+export function kickExtraPoint(game: LeagueGame, ctx: EngineContext) {
+  if (!game.PendingConversion)
+    throw new Error("No touchdown is awaiting a try.");
+  const scoring = game.PendingConversion.team;
+  const kicker = ctx.players.find(
+    (p) =>
+      String(p.team ?? p.Team) ===
+        (scoring === "Home" ? game.Home : game.Away) &&
+      String(p.position ?? p.Pos).toUpperCase() === "K",
+  );
+  const name = String(kicker?.name ?? kicker?.Name ?? "");
+  const updated = finishConversion(
+    {
+      ...game,
+      PendingConversion: { ...game.PendingConversion, choice: "choose" },
+    },
+    true,
+  );
+  const play = logPlayToDB(
     game,
     updated,
-    "Two Point",
-    scoring,
+    "Extra Point",
+    name,
     "",
-    made ? 2 : 0,
+    0,
     "",
-    made ? "2PT Successful" : "2PT Failed",
+    "Kick XP",
     ctx.historyLength,
+    {
+      isConversion: true,
+      conversionType: "xp",
+      touchdownPlayId: game.PendingConversion.touchdownPlayId,
+      time: "xp",
+      qtr: game.PendingConversion.quarter ?? game.Qtr,
+      playLength: 0,
+      down: null,
+      distance: null,
+      isComplete: false,
+    },
   );
+  return { game: updated, play, text: `${name || "Team"} PAT is GOOD` };
+}
+/** Selecting a two-point try enables the normal single-snap run/pass controls. */
+export function goForTwo(game: LeagueGame, _ctx: EngineContext) {
+  void _ctx;
+  if (!game.PendingConversion)
+    throw new Error("No touchdown is awaiting a try.");
+  return {
+    ...game,
+    BallOn: game.PendingConversion.team === "Home" ? 98 : 2,
+    Down: 1,
+    Distance: 2,
+    PendingConversion: { ...game.PendingConversion, choice: "two" as const },
+  };
 }
 export function handleTimeout(game: LeagueGame, ctx: EngineContext) {
   logSkippedTurnoverChecks(game, "timeout");
@@ -183,8 +218,10 @@ export function kneel(
   const next = nextDownDistance(game, -1, ball);
   const updated = applyHalftimeRules(game, {
     ...game,
-    HomeScore: n(game.HomeScore) + (next.safety && game.Possession === "Away" ? 2 : 0),
-    AwayScore: n(game.AwayScore) + (next.safety && game.Possession === "Home" ? 2 : 0),
+    HomeScore:
+      n(game.HomeScore) + (next.safety && game.Possession === "Away" ? 2 : 0),
+    AwayScore:
+      n(game.AwayScore) + (next.safety && game.Possession === "Home" ? 2 : 0),
     Qtr: clock.qtr,
     Time: clock.time,
     Down: next.down,

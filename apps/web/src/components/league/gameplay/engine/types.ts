@@ -8,6 +8,7 @@ export type PlayKind =
   | "Punt"
   | "Field Goal"
   | "Two Point"
+  | "Extra Point"
   | "Timeout"
   | "Spike"
   | "Kneel";

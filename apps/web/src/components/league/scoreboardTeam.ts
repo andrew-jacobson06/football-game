@@ -52,6 +52,9 @@ export function scoreboardTeam(
     record,
     timeouts,
     logo: String(field(team, "Logo") || game[`${side}Logo`] || ""),
+    secondaryColor: String(
+      field(team, "secondary color") || "var(--text-inverse)",
+    ),
     primaryColor: String(field(team, "Primary Color") || "transparent").trim(),
     score: game[`${side}Score`],
   };

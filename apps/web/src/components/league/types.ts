@@ -2,6 +2,7 @@ export type LeagueTab = "news" | "scores" | "schedules" | "standings" | "stats" 
 export type GameTab = "gamecast" | "playbyplay" | "boxscore" | "teamstats";
 
 export type LeagueGame = {
+  PendingConversion?: {team:"Home"|"Away";choice:"choose"|"two";touchdownPlayId?:string;quarter?:string|number;resume:Omit<LeagueGame,"PendingConversion">}|null;
   GameId: string | number;
   StateVersion?: number;
   Home: string;

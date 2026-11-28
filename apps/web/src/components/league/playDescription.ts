@@ -1,3 +1,4 @@
+import { isConversionPlay } from "./conversionFacts";
 import type { LeagueGame } from "./types";
 import { formatBallOnForPoss } from "./leagueMappers";
 import {
@@ -22,6 +23,11 @@ const escapeHtml = (value: unknown) =>
  * sacks/safeties, then passes, and finally standard run results.
  */
 export function playText(play: Play, game?: LeagueGame): string {
+  if (play.conversionSummary) {
+    const copy = { ...play };
+    delete copy.conversionSummary;
+    return `${playText(copy, game)} (${String(play.conversionSummary)})`;
+  }
   const description = str(playField(play, "Description", "description")).trim();
   const result = escapeHtml(
     playField(play, "ResultCategory", "Result", "result"),
@@ -40,18 +46,19 @@ export function playText(play: Play, game?: LeagueGame): string {
   const recoveredBy = escapeHtml(playField(play, "RecoveredBy", "recoveredby"));
   if (result === "Timeout") return `${player} Timeout`;
   if (type === "Kick FG" || result === "Kick FG") return "Field Goal is Good!";
-  if (type === "Kick XP" || result === "Kick XP") return "Extra Point is Good!";
+  if (type === "Extra Point" || type === "Kick XP" || result === "Kick XP")
+    return `${player || "Team"} PAT is GOOD`;
   if (type === "Field Goal") return "Field Goal is No Good.";
   if (type === "Punt") return `${player} punts for ${yards} yards.`;
   if (type === "2PT" || type === "Two Point") {
     const success = result.toLowerCase().includes("successful");
-    if (receiver)
-      return success
-        ? `${player} ${yards} yard pass to ${receiver}. 2-point conversion is SUCCESSFUL!`
-        : `${player} pass incomplete intended for ${receiver}. 2-point conversion FAILS!`;
-    return success
-      ? `${player} runs for ${yards} yards. 2-point conversion is SUCCESSFUL!`
-      : `${player} run fails. 2-point conversion FAILS!`;
+    const status = `2-PT try is ${success ? "GOOD" : "NO GOOD"}!`;
+    const isPass = play.conversionPlayType === "Pass" || Boolean(receiver);
+    if (isPass && !success && !playFlag(play.conversionCompleted, false))
+      return `${player} pass INCOMPLETE.${receiver ? ` Intended for ${receiver}.` : ""} ${status}`;
+    return isPass
+      ? `${player} ${yards} yard pass to ${receiver}. ${status}`
+      : `${player} runs for ${yards} yards. ${status}`;
   }
   if (
     description === "Sack" ||
@@ -141,4 +148,35 @@ export function playText(play: Play, game?: LeagueGame): string {
   }
   void game;
   return text;
+}
+
+/** Raw conversion rows stay saved; display them as a suffix of their touchdown. */
+export function playsWithConversions(history: Play[]): Play[] {
+  const result: Play[] = [];
+  for (const play of history) {
+    if (!isConversionPlay(play)) {
+      result.push({ ...play });
+      continue;
+    }
+    const parent = String(playField(play, "touchdownPlayId") ?? "");
+    const touchdown = [...result]
+      .reverse()
+      .find((p) =>
+        parent
+          ? String(playField(p, "playid")) === parent
+          : String(playField(p, "result")).toLowerCase() === "touchdown" &&
+            playField(p, "possession") === playField(play, "possession"),
+      );
+    if (!touchdown) {
+      result.push(play);
+      continue;
+    }
+    touchdown.conversionSummary = playText(play);
+    for (const field of ["homescore", "awayscore"]) {
+      const key =
+        Object.keys(touchdown).find((k) => k.toLowerCase() === field) ?? field;
+      touchdown[key] = playField(play, field);
+    }
+  }
+  return result;
 }

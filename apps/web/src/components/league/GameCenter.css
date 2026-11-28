@@ -230,3 +230,5 @@
   .game-scoreboard__period { font-size: clamp(11px, min(3.3vw, calc(var(--scoreboard-height) * 0.17)), 16px); }
   .game-scoreboard__clock { font-size: clamp(13px, min(3.5vw, calc(var(--scoreboard-height) * 0.22)), 20px); }
 }
+/* Keep the celebration inside the scoreboard while its outer header stays sticky. */
+#gameUI .game-sticky-header div.game-scoreboard { position: relative; }

@@ -1,3 +1,4 @@
+import { isConversionPlay } from "../../../web/src/components/league/conversionFacts.js";
 import { leagueSelection } from "./leagueSelection.js";
 import { elapsedPlaySeconds } from "../../../web/src/components/league/gameplay/engine/playClock.js";
 import { randomUUID } from "node:crypto";
@@ -121,7 +122,10 @@ export const statColumns: Record<string, string> = {
   "Passing Long": "longest_pass",
 };
 export class LeagueRepository {
-  constructor(readonly db: DatabaseConnection, readonly selectedLeagueId?: string) {}
+  constructor(
+    readonly db: DatabaseConnection,
+    readonly selectedLeagueId?: string,
+  ) {}
   all(sql: string, ...args: any[]): RecordRow[] {
     return this.db.prepare(sql).all(...args) as RecordRow[];
   }
@@ -129,10 +133,19 @@ export class LeagueRepository {
     return this.db.prepare(sql).get(...args) as RecordRow | undefined;
   }
   season() {
-    const explicitLeague = this.selectedLeagueId ?? leagueSelection.getStore()?.leagueId;
-    const requested = explicitLeague ? undefined : process.env.SEASON_ID?.trim();
-    const defaultLeague = parse(this.one("SELECT value_json FROM app_preferences WHERE key='default_league_id'")?.value_json);
-    const league = explicitLeague ?? (process.env.LEAGUE_ID?.trim() || defaultLeague || undefined);
+    const explicitLeague =
+      this.selectedLeagueId ?? leagueSelection.getStore()?.leagueId;
+    const requested = explicitLeague
+      ? undefined
+      : process.env.SEASON_ID?.trim();
+    const defaultLeague = parse(
+      this.one(
+        "SELECT value_json FROM app_preferences WHERE key='default_league_id'",
+      )?.value_json,
+    );
+    const league =
+      explicitLeague ??
+      (process.env.LEAGUE_ID?.trim() || defaultLeague || undefined);
     const rows = this.all(
       `SELECT * FROM seasons WHERE (? IS NULL OR id=?) AND (? IS NULL OR league_id=?) ORDER BY season_number DESC`,
       requested || null,
@@ -262,6 +275,9 @@ export class LeagueRepository {
       Weather: r.weather_text,
       Venue: r.venue_name,
       NeutralSite: Boolean(r.is_neutral_site),
+      PendingConversion: r.pending_conversion_team_id
+        ? parse(r.pending_action)
+        : null,
       Overtime: r.overtime_period
         ? {
             period: r.overtime_period,
@@ -335,7 +351,12 @@ export class LeagueRepository {
       return {
         gameid: r.legacy_game_number ?? r.game_id,
         playid: r.id,
-        time: r.seconds_before,
+        time: r.is_conversion ? r.conversion_type : r.seconds_before,
+        isConversion: Boolean(r.is_conversion),
+        conversionType: r.conversion_type,
+        touchdownPlayId: r.touchdown_play_id,
+        conversionPlayType: parse(r.original_payload_json, {})
+          .conversionPlayType,
         qtr: r.period_before,
         possession: r.offense_team_id === r.home_team_id ? "Home" : "Away",
         down: r.down_before,
@@ -350,6 +371,9 @@ export class LeagueRepository {
         timeUntilThrow: r.time_until_throw,
         coveringDefender: r.covering_defender,
         playLength: r.play_length,
+        conversionCompleted: parse(r.original_payload_json, {})
+          .conversionCompleted,
+        conversionOutcome: parse(r.original_payload_json, {}).conversionOutcome,
         playtype: r.play_type,
         player:
           n.passer ??
@@ -912,13 +936,72 @@ export class LeagueRepository {
               ? number(v("qtr"))
               : number(snapshot.quarter)
             : null;
-          const suppliedLength = optionalSeconds("playLength");
-          const clockLength = snapshot
-            ? elapsedPlaySeconds(
-                { period: v("qtr"), seconds: v("time") },
-                { period: snapshot.quarter, seconds: snapshot.time },
-              )
+          const conversion = isConversionPlay(play);
+          const conversionType =
+            /^(xp)$/i.test(String(v("time"))) ||
+            /extra point|kick xp/i.test(String(v("playtype")))
+              ? "xp"
+              : "2pt";
+          const parentId = conversion
+            ? String(play.touchdownPlayId ?? "")
             : null;
+          if (conversion) {
+            if (
+              !current.pending_conversion_team_id ||
+              current.pending_conversion_team_id !== offense
+            )
+              throw new Error("No conversion is pending for this offense.");
+            if (parse(current.pending_action, {})?.touchdownPlayId !== parentId)
+              throw new Error(
+                "Conversion does not match the pending touchdown.",
+              );
+            if (!snapshot || snapshot.pendingConversion !== null)
+              throw new Error("A conversion must clear the pending try.");
+            const homeDelta = Number(snapshot.homeScore) - current.home_score,
+              awayDelta = Number(snapshot.awayScore) - current.away_score;
+            const points =
+                offense === game.home_team_id ? homeDelta : awayDelta,
+              opponentPoints =
+                offense === game.home_team_id ? awayDelta : homeDelta;
+            if (
+              opponentPoints !== 0 ||
+              !(conversionType === "xp"
+                ? points === 1
+                : [0, 2].includes(points))
+            )
+              throw new Error("Invalid conversion score.");
+            if (
+              !parentId ||
+              !this.one(
+                "SELECT id FROM plays WHERE id=? AND game_id=? AND is_touchdown=1",
+                parentId,
+                game.id,
+              )
+            )
+              throw new Error(
+                "Conversion must reference this game’s touchdown.",
+              );
+            if (
+              snapshot &&
+              seconds(snapshot.time) !== current.seconds_remaining &&
+              String(snapshot.quarter) === String(current.period)
+            )
+              throw new Error(
+                "Conversion attempts cannot consume game-clock time.",
+              );
+          } else if (current.pending_conversion_team_id)
+            throw new Error(
+              "Resolve the pending conversion before another regular play.",
+            );
+          const suppliedLength = optionalSeconds("playLength");
+          const clockLength = conversion
+            ? 0
+            : snapshot
+              ? elapsedPlaySeconds(
+                  { period: v("qtr"), seconds: v("time") },
+                  { period: snapshot.quarter, seconds: snapshot.time },
+                )
+              : null;
           if (
             suppliedLength !== null &&
             clockLength !== null &&
@@ -932,7 +1015,11 @@ export class LeagueRepository {
             game_id: game.id,
             sequence,
             period_before: number(v("qtr")) || current.period,
-            seconds_before: seconds(v("time")),
+            seconds_before: conversion
+              ? number(v("qtr")) < current.period
+                ? 0
+                : current.seconds_remaining
+              : seconds(v("time")),
             period_after: periodAfter,
             seconds_after: snapshot ? seconds(snapshot.time) : null,
             offense_team_id: offense,
@@ -953,15 +1040,16 @@ export class LeagueRepository {
             is_complete: facts.isComplete,
             is_sack: facts.isSack,
             is_first_down:
+              !conversion &&
               !turnover &&
               !touchdown &&
               number(v("newdown")) === 1 &&
               number(v("yards")) >= number(v("distance")),
-            is_touchdown: touchdown,
-            is_safety: safety,
-            is_fumble: fumble,
-            fumble_lost: fumble && turnover,
-            is_turnover: turnover,
+            is_touchdown: !conversion && touchdown,
+            is_safety: !conversion && safety,
+            is_fumble: !conversion && fumble,
+            fumble_lost: !conversion && fumble && turnover,
+            is_turnover: !conversion && turnover,
             turnover_type: interception
               ? "interception"
               : fumble && turnover
@@ -981,6 +1069,9 @@ export class LeagueRepository {
             time_until_throw: optionalSeconds("timeUntilThrow"),
             covering_defender: nameOrNull("coveringDefender"),
             play_length: clockLength ?? suppliedLength,
+            is_conversion: conversion,
+            conversion_type: conversion ? conversionType : null,
+            touchdown_play_id: parentId,
           });
           const role = (name: unknown, role: string, team: string) => {
             const label = String(name ?? "");
@@ -1157,6 +1248,37 @@ export class LeagueRepository {
               ),
             });
           }
+          if (snapshot.pendingConversion !== undefined) {
+            const pending = snapshot.pendingConversion;
+            if (pending) {
+              if (
+                !["Home", "Away"].includes(pending.team) ||
+                !["choose", "two"].includes(pending.choice) ||
+                !pending.resume ||
+                !pending.touchdownPlayId
+              )
+                throw new Error("Invalid pending conversion.");
+              const team =
+                pending.team === "Home" ? game.home_team_id : game.away_team_id;
+              if (
+                !this.one(
+                  "SELECT id FROM plays WHERE id=? AND game_id=? AND is_touchdown=1 AND offense_team_id=?",
+                  pending.touchdownPlayId,
+                  game.id,
+                  team,
+                )
+              )
+                throw new Error(
+                  "Pending conversion must belong to the scoring team.",
+                );
+              updates.pending_conversion_team_id = team;
+              updates.pending_action = JSON.stringify(pending);
+              updates.phase = "pending_conversion";
+            } else {
+              updates.pending_conversion_team_id = null;
+              updates.pending_action = null;
+            }
+          }
           if (game.status === "scheduled" && updates.possession_team_id)
             updates.opening_receiving_team_id = updates.possession_team_id;
           const keys = Object.keys(updates);
@@ -1187,7 +1309,7 @@ export class LeagueRepository {
       plays = this.history(gameId),
       totals = aggregatePlayStats(plays);
     const participants = this.all(
-      "SELECT DISTINCT a.player_id,a.team_id,p.display_name FROM play_participants a JOIN plays x ON x.id=a.play_id JOIN players p ON p.id=a.player_id WHERE x.game_id=? UNION SELECT DISTINCT m.offense_player_id,m.offense_team_id,p.display_name FROM play_line_matchups m JOIN plays x ON x.id=m.play_id JOIN players p ON p.id=m.offense_player_id WHERE x.game_id=? UNION SELECT DISTINCT m.defense_player_id,m.defense_team_id,p.display_name FROM play_line_matchups m JOIN plays x ON x.id=m.play_id JOIN players p ON p.id=m.defense_player_id WHERE x.game_id=?",
+      "SELECT DISTINCT a.player_id,a.team_id,p.display_name FROM play_participants a JOIN plays x ON x.id=a.play_id JOIN players p ON p.id=a.player_id WHERE x.game_id=? AND x.is_conversion=0 UNION SELECT DISTINCT m.offense_player_id,m.offense_team_id,p.display_name FROM play_line_matchups m JOIN plays x ON x.id=m.play_id JOIN players p ON p.id=m.offense_player_id WHERE x.game_id=? AND x.is_conversion=0 UNION SELECT DISTINCT m.defense_player_id,m.defense_team_id,p.display_name FROM play_line_matchups m JOIN plays x ON x.id=m.play_id JOIN players p ON p.id=m.defense_player_id WHERE x.game_id=? AND x.is_conversion=0",
       gameId,
       gameId,
       gameId,
@@ -1215,7 +1337,7 @@ export class LeagueRepository {
       for (const [h, k] of Object.entries(statColumns))
         values[k] = stats[h] ?? 0;
       for (const matchup of this.all(
-        "SELECT * FROM play_line_matchups WHERE play_id IN (SELECT id FROM plays WHERE game_id=?) AND (offense_player_id=? OR defense_player_id=?)",
+        "SELECT * FROM play_line_matchups WHERE play_id IN (SELECT id FROM plays WHERE game_id=? AND is_conversion=0) AND (offense_player_id=? OR defense_player_id=?)",
         gameId,
         player.player_id,
         player.player_id,
@@ -1226,7 +1348,7 @@ export class LeagueRepository {
           values[matchup.winner_side === "DL" ? "dl_wins" : "dl_losses"]++;
       }
       values.lead_blocks = this.one(
-        "SELECT count(*) AS n FROM play_participants a JOIN plays p ON p.id=a.play_id WHERE p.game_id=? AND a.player_id=? AND a.role='lead_blocker'",
+        "SELECT count(*) AS n FROM play_participants a JOIN plays p ON p.id=a.play_id WHERE p.game_id=? AND p.is_conversion=0 AND a.player_id=? AND a.role='lead_blocker'",
         gameId,
         player.player_id,
       )!.n;
@@ -1237,12 +1359,12 @@ export class LeagueRepository {
       const opponent =
         team === game.home_team_id ? game.away_team_id : game.home_team_id;
       const offensive = this.all(
-          "SELECT * FROM plays WHERE game_id=? AND offense_team_id=?",
+          "SELECT * FROM plays WHERE game_id=? AND is_conversion=0 AND offense_team_id=?",
           gameId,
           team,
         ),
         defensive = this.all(
-          "SELECT * FROM plays WHERE game_id=? AND defense_team_id=?",
+          "SELECT * FROM plays WHERE game_id=? AND is_conversion=0 AND defense_team_id=?",
           gameId,
           team,
         );

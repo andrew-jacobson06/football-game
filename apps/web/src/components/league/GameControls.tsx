@@ -377,7 +377,7 @@ export function GameControls({
     formationPlayerCount === EXPECTED_PLAYERS_PER_SIDE &&
     [...REQUIRED].every((slot) => formation[slot]);
   const pendingPointAfter = Boolean(
-    (game as unknown as Record<string, unknown>).pendingFGTeam,
+    game.PendingConversion,
   );
   const canPunt = Number(game.Down) === 4;
   const canKickoff =
@@ -451,6 +451,29 @@ export function GameControls({
     setSelected("");
   };
 
+  if (game.PendingConversion?.choice === "choose") {
+    return createPortal(
+      <section className="conversion-choice" aria-label="Touchdown conversion">
+        <strong>Touchdown! Choose your try</strong>
+        <p>The scoring team keeps possession for this untimed attempt.</p>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onAction("Extra Point", optionsWithDefense())}
+        >
+          Kick XP (+1)
+        </button>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onAction("Two Point", optionsWithDefense())}
+        >
+          Go for 2
+        </button>
+      </section>,
+      document.querySelector(".league-app") ?? document.body,
+    );
+  }
   return (
     <div className="control-panel play-caller radial-play-caller">
       <div
@@ -483,7 +506,7 @@ export function GameControls({
               >
                 Personnel
               </button>
-              <button type="button" onClick={() => setModal("clock")}>
+              <button type="button" disabled={Boolean(game.PendingConversion)} onClick={() => setModal("clock")}>
                 Clock Management
               </button>
               <button type="button" onClick={() => setModal("roster")}>
@@ -491,7 +514,7 @@ export function GameControls({
               </button>
               <button
                 type="button"
-                disabled={disabled || currentTimeouts <= 0}
+                disabled={disabled || Boolean(game.PendingConversion) || currentTimeouts <= 0}
                 onClick={() => onAction("Timeout", optionsWithDefense())}
               >
                 Call Timeout
@@ -539,14 +562,14 @@ export function GameControls({
               >
                 Pass
               </button>
-              <button
+              {!pendingPointAfter && <button
                 disabled={disabled}
                 onClick={() => onAction("Field Goal", optionsWithDefense())}
                 type="button"
               >
                 Field Goal
-              </button>
-              {canPunt && (
+              </button>}
+              {canPunt && !pendingPointAfter && (
                 <button
                   disabled={disabled}
                   onClick={() => onAction("Punt", optionsWithDefense())}
@@ -573,24 +596,7 @@ export function GameControls({
                   </button>
                 </>
               )}
-              {pendingPointAfter && (
-                <>
-                  <button
-                    disabled={disabled}
-                    onClick={() => onAction("Field Goal", optionsWithDefense())}
-                    type="button"
-                  >
-                    XP
-                  </button>
-                  <button
-                    disabled={disabled}
-                    onClick={() => onAction("Two Point", optionsWithDefense())}
-                    type="button"
-                  >
-                    2-Pt
-                  </button>
-                </>
-              )}
+
             </div>
           )}
         </div>

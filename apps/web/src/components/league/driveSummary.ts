@@ -67,7 +67,7 @@ const resultOf = (play: DrivePlay) =>
   text(play, "ResultCategory", "result", "description").trim();
 const typeOf = (play: DrivePlay) => text(play, "playtype").toLowerCase();
 const conversion = (play: DrivePlay) =>
-  /kick xp|extra point|2pt|two point/.test(
+  /^(true|1)$/i.test(text(play,"isConversion")) || /^(xp|2pt)$/i.test(text(play,"time")) || /kick xp|extra point|2pt|two point/.test(
     `${typeOf(play)} ${resultOf(play).toLowerCase()}`,
   );
 const kick = (play: DrivePlay) =>
